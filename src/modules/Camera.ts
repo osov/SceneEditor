@@ -2,6 +2,7 @@
     Модуль для работы с камерой и преобразованиями
 */
 
+import { Vector3 } from "three";
 import { get_window_size } from "../helpers/window_utils";
 
 declare global {
@@ -148,6 +149,11 @@ function CameraModule() {
         // todo
     }
 
+    function screen_to_world(x: number, y: number) {
+        const camera = RenderEngine.camera;
+        return new Vector3( x, y, -1 ).unproject( camera );
+    }
+
     function on_resize() {
         let [left, right, top, bottom] = [0, 0, 0, 0];
         // Базовая проекция, размер = размеру канваса
@@ -171,5 +177,5 @@ function CameraModule() {
     }
 
     init();
-    return { set_width_prjection, get_zoom, set_zoom, set_auto_zoom, is_dynamic_orientation, set_dynamic_orientation };
+    return { set_width_prjection, get_zoom, set_zoom, set_auto_zoom, is_dynamic_orientation, set_dynamic_orientation,screen_to_world };
 }
