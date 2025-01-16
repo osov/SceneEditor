@@ -1,4 +1,4 @@
-import './style.css'
+import '@/assets/css/style.css'
 import { register_manager } from "./modules/Manager";
 import { register_engine } from './render_engine/engine';
 import { run_debug_scene } from './test_scene';

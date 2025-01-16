@@ -1,0 +1,316 @@
+*, ::after, ::before { box-sizing: border-box; }
+
+body, h1, h2, h3, h4, p, ul[class], ol[class], li, figure, figcaption, blockquote, dl, dd { margin: 0; }
+
+ul[class], ol[class] { list-style: none; padding: 0; }
+
+a:not([class]) { -webkit-text-decoration-skip: ink; text-decoration-skip-ink: auto; }
+
+img { max-width: 100%; display: block; }
+
+a img { border: none; }
+
+input, button, textarea, select { font: inherit; }
+
+textarea:focus, input:focus, select:focus, button:focus { outline: none; }
+
+table { border-collapse: collapse; border-spacing: 0; }
+
+html .ftb { height: 100%; }
+
+.ftb body { display: flex; flex-direction: column; min-height: 100%; height: auto; }
+
+.ftb footer { margin-top: auto; }
+
+.fg2 { flex-grow: 2; }
+
+::placeholder { color: currentColor; }
+
+:focus::placeholder { color: transparent; }
+
+.switch { cursor: pointer; }
+
+[data-swb] { display: none; }
+
+[data-swb]:nth-child(1) { display: block; }
+
+.tac, center { text-align: center; }
+
+.tal { text-align: left; }
+
+.tar { text-align: right; }
+
+.wsnw { white-space: nowrap; }
+
+.wsnw_3p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.wsn { white-space: normal; }
+
+.usn { -webkit-user-select: none; user-select: none; }
+
+.ma { margin: auto; }
+
+.mla { margin-left: auto; }
+
+.mta { margin-top: auto; }
+
+.mra { margin-right: auto; }
+
+.mba { margin-bottom: auto; }
+
+.m0 { margin: 0px; }
+
+.mt0 { margin-top: 0px; }
+
+.mr0 { margin-right: 0px; }
+
+.mb0 { margin-bottom: 0px; }
+
+.ml0 { margin-left: 0px; }
+
+.p0 { padding: 0px; }
+
+.pt0 { padding-top: 0px; }
+
+.pr0 { padding-right: 0px; }
+
+.pb0 { padding-bottom: 0px; }
+
+.pl0 { padding-left: 0px; }
+
+.m5 { margin: 5px; }
+
+.mt5 { margin-top: 5px; }
+
+.mr5 { margin-right: 5px; }
+
+.mb5 { margin-bottom: 5px; }
+
+.ml5 { margin-left: 5px; }
+
+.p5 { padding: 5px; }
+
+.pt5 { padding-top: 5px; }
+
+.pr5 { padding-right: 5px; }
+
+.pb5 { padding-bottom: 5px; }
+
+.pl5 { padding-left: 5px; }
+
+.m10 { margin: 10px; }
+
+.mt10 { margin-top: 10px; }
+
+.mr10 { margin-right: 10px; }
+
+.mb10 { margin-bottom: 10px; }
+
+.ml10 { margin-left: 10px; }
+
+.p10 { padding: 10px; }
+
+.pt10 { padding-top: 10px; }
+
+.pr10 { padding-right: 10px; }
+
+.pb10 { padding-bottom: 10px; }
+
+.pl10 { padding-left: 10px; }
+
+.m15 { margin: 15px; }
+
+.mt15 { margin-top: 15px; }
+
+.mr15 { margin-right: 15px; }
+
+.mb15 { margin-bottom: 15px; }
+
+.ml15 { margin-left: 15px; }
+
+.p15 { padding: 15px; }
+
+.pt15 { padding-top: 15px; }
+
+.pr15 { padding-right: 15px; }
+
+.pb15 { padding-bottom: 15px; }
+
+.pl15 { padding-left: 15px; }
+
+.m20 { margin: 20px; }
+
+.mt20 { margin-top: 20px; }
+
+.mr20 { margin-right: 20px; }
+
+.mb20 { margin-bottom: 20px; }
+
+.ml20 { margin-left: 20px; }
+
+.p20 { padding: 20px; }
+
+.pt20 { padding-top: 20px; }
+
+.pr20 { padding-right: 20px; }
+
+.pb20 { padding-bottom: 20px; }
+
+.pl20 { padding-left: 20px; }
+
+.m25 { margin: 25px; }
+
+.mt25 { margin-top: 25px; }
+
+.mr25 { margin-right: 25px; }
+
+.mb25 { margin-bottom: 25px; }
+
+.ml25 { margin-left: 25px; }
+
+.p25 { padding: 25px; }
+
+.pt25 { padding-top: 25px; }
+
+.pr25 { padding-right: 25px; }
+
+.pb25 { padding-bottom: 25px; }
+
+.pl25 { padding-left: 25px; }
+
+.m30 { margin: 30px; }
+
+.mt30 { margin-top: 30px; }
+
+.mr30 { margin-right: 30px; }
+
+.mb30 { margin-bottom: 30px; }
+
+.ml30 { margin-left: 30px; }
+
+.p30 { padding: 30px; }
+
+.pt30 { padding-top: 30px; }
+
+.pr30 { padding-right: 30px; }
+
+.pb30 { padding-bottom: 30px; }
+
+.pl30 { padding-left: 30px; }
+
+.xl_0 { width: 0%; }
+
+.xl_5 { width: 5%; }
+
+.xl_10 { width: 10%; }
+
+.xl_15 { width: 15%; }
+
+.xl_20 { width: 20%; }
+
+.xl_25 { width: 25%; }
+
+.xl_30 { width: 30%; }
+
+.xl_35 { width: 35%; }
+
+.xl_40 { width: 40%; }
+
+.xl_45 { width: 45%; }
+
+.xl_50 { width: 50%; }
+
+.xl_55 { width: 55%; }
+
+.xl_60 { width: 60%; }
+
+.xl_65 { width: 65%; }
+
+.xl_70 { width: 70%; }
+
+.xl_75 { width: 75%; }
+
+.xl_80 { width: 80%; }
+
+.xl_85 { width: 85%; }
+
+.xl_90 { width: 90%; }
+
+.xl_95 { width: 95%; }
+
+.xl_100 { width: 100%; }
+
+.db { display: block; }
+
+.dib { display: inline-block; }
+
+.show_xl { display: block; }
+
+.hide_xl { display: none; }
+
+.flex { display: flex; }
+
+.inline_flex { display: inline-flex; }
+
+.fdc { flex-direction: column; }
+
+.fdcr { flex-direction: column-reverse; }
+
+.fdr { flex-direction: row; }
+
+.fdrr { flex-direction: row-reverse; }
+
+.jcsb { justify-content: space-between; }
+
+.jcsa { justify-content: space-around; }
+
+.jcc { justify-content: center; }
+
+.jcfe { justify-content: flex-end; }
+
+.jcfs { justify-content: flex-start; }
+
+.aic { align-items: center; }
+
+.ais { align-items: stretch; }
+
+.aifs { align-items: flex-start; }
+
+.aife { align-items: flex-end; }
+
+.fww { flex-wrap: wrap; }
+
+.fwnw { flex-wrap: nowrap; }
+
+.fwwr { flex-wrap: wrap-reverse; }
+
+.order1 { order: 1; }
+
+.order2 { order: 2; }
+
+.order3 { order: 3; }
+
+.acs { align-content: stretch; }
+
+.acc { align-content: center; }
+
+.acsb { align-content: space-between; }
+
+.acsa { align-content: space-around; }
+
+.acfs { align-content: flex-start; }
+
+.acfe { align-content: flex-end; }
+
+.asfs { align-self: flex-start; }
+
+.asfe { align-self: flex-end; }
+
+.asc { align-self: center; }
+
+.asa { align-self: auto; }
+
+.ass { align-self: stretch; }
+
+.asb { align-self: baseline; }
+/*# sourceMappingURL=grid.css.map */
