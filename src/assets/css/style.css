@@ -15,8 +15,11 @@
   --menu_bg: #364346;
   --menu_border: 1px solid #6d6d6d;
   --text_color: #fff; 
+  --color_blue: #17c7f6; 
   --transition: 0.3s linear; 
   --head_bg: #293538; 
+  --bg_input: #2c393c;
+  --color_input: #b1b8ba;
 }
 
 body,
@@ -28,7 +31,7 @@ body {
   background: #000000da;
   color: #fff;
   position: relative;
-  /* overflow: hidden; */
+  overflow: hidden;
 }
 
 canvas {
@@ -43,19 +46,16 @@ canvas {
   z-index: 1;
 }
 
-.menu_footer,
-.menu_left,
-.menu_right {
-  bottom: calc(-100% + 30px);
+.menu_section {
+  bottom: 0;
   position: absolute;
   height: 100%;
   background-color: var(--menu_bg);
-  transition: bottom var(--transition);
+  transform: translateY(calc(100% - 32px));
+  transition: transform var(--transition);
 }
-.menu_footer.active,
-.menu_left.active,
-.menu_right.active {
-  bottom: 0;
+.menu_section.active {
+  transform: translateY(0);
 	z-index: 1;
 }
 .menu_left{
@@ -87,7 +87,7 @@ canvas {
   padding: 12px;
   width: 45px;
   height: 45px;
-  color: #17c7f6;
+  color: var(--color_blue);
 }
 .menu_min a:hover {
   background-color: #3a7fbd;
@@ -107,9 +107,45 @@ canvas {
 .menu_head h3{
   font-weight: 400;
   font-size: 16px;
+  padding-left: 7px;
 }
 .btn_menu {
   width: 20px;
   height: 20px;
-  color: red;
+  color: #fff;
+  margin-right: 2px;
+}
+.btn_menu:hover {
+  color: var(--color_blue);
+}
+.btn_menu .svg_icon {
+  transition: transform var(--transition);
+}
+.menu_section:not(.active) .btn_menu .svg_icon {
+  transform: rotate(180deg);
+}
+
+input,
+select,
+option,
+textarea {
+  display: block;
+  width: 100%;
+  padding: 0 8px;
+  line-height: 1.5;
+  height: 20px;
+  font-size: 14px;
+  border: none;
+  border-radius: 3px;
+  background-color: var(--bg_input);
+  color: var(--color_input);
+}
+textarea {
+  height: auto;
+  max-width: 100%;
+  max-height: 350px;
+}
+
+input.poisk_us{
+  height: 28px;
 }
