@@ -88,41 +88,43 @@ export async function run_debug_scene() {
     if (!is_down) {
       document.body.style.cursor = 'default';
       dir[0] = 0; dir[1] = 0;
-      if (Math.abs(bounds[0] - wp.x) < range) {
-        document.body.style.cursor = 'e-resize';
-        dir[0] = 1;
-      }
-      if (Math.abs(bounds[2] - wp.x) < range) {
-        document.body.style.cursor = 'e-resize';
-        dir[0] = 1;
-      }
-      if (Math.abs(bounds[1] - wp.y) < range) {
-        document.body.style.cursor = 'n-resize';
-        dir[1] = 1;
-      }
-      if (Math.abs(bounds[3] - wp.y) < range) {
-        document.body.style.cursor = 'n-resize';
-        dir[1] = 1;
-      }
-      if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
-        document.body.style.cursor = 'nw-resize';
-        dir[0] = 1;
-        dir[1] = 1;
-      }
-      if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
-        document.body.style.cursor = 'ne-resize';
-        dir[0] = 1;
-        dir[1] = 1;
-      }
-      if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
-        document.body.style.cursor = 'sw-resize';
-        dir[0] = 1;
-        dir[1] = 1;
-      }
-      if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
-        document.body.style.cursor = 'se-resize';
-        dir[0] = 1;
-        dir[1] = 1;
+      if (wp.x > bounds[0] - range && wp.x < bounds[2] + range && wp.y > bounds[3] - range && wp.y < bounds[1] + range) {
+        if (Math.abs(bounds[0] - wp.x) < range) {
+          document.body.style.cursor = 'e-resize';
+          dir[0] = 1;
+        }
+        if (Math.abs(bounds[2] - wp.x) < range) {
+          document.body.style.cursor = 'e-resize';
+          dir[0] = 1;
+        }
+        if (Math.abs(bounds[1] - wp.y) < range) {
+          document.body.style.cursor = 'n-resize';
+          dir[1] = 1;
+        }
+        if (Math.abs(bounds[3] - wp.y) < range) {
+          document.body.style.cursor = 'n-resize';
+          dir[1] = 1;
+        }
+        if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
+          document.body.style.cursor = 'nw-resize';
+          dir[0] = 1;
+          dir[1] = 1;
+        }
+        if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
+          document.body.style.cursor = 'ne-resize';
+          dir[0] = 1;
+          dir[1] = 1;
+        }
+        if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
+          document.body.style.cursor = 'sw-resize';
+          dir[0] = 1;
+          dir[1] = 1;
+        }
+        if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
+          document.body.style.cursor = 'se-resize';
+          dir[0] = 1;
+          dir[1] = 1;
+        }
       }
     }
     if (is_down) {
