@@ -149,3 +149,97 @@ textarea {
 input.poisk_us{
   height: 28px;
 }
+
+/* tree */
+.tree_div {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+ul.tree {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 5px;
+  user-select: none;
+  --tree_color: green;
+}
+ul.tree li {
+  padding: 2px 0 2px 12px;
+  position: relative;
+}
+ul.tree li a {
+  cursor: pointer;
+}
+ul.tree li a:hover {
+  opacity: 0.8;
+}
+.tree__btn {
+  width: 12px;
+  height: 12px;
+  line-height: 10px;
+  cursor: pointer;
+  position: absolute;
+  top: 4px;
+  left: -3px;
+  z-index: 2;
+  border-radius: 2px;
+  background-color: #eee;
+  color: var(--tree_color);
+}
+.tree__btn:hover{
+  opacity: 0.8;
+}
+.tree__btn.active .use_plus,
+.tree__btn:not(.active) .use_minus {display: none;}
+.tree__ico {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  position: relative;
+}
+.tree__ico::before,
+.tree__ico::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+}
+.tree__ico::before {
+  top: -3px;
+  left: -9px;
+  width: 7px;
+  height: 12px;
+  border-left: 1px dotted var(--tree_color);
+  border-bottom: 1px dotted var(--tree_color);
+}
+.tree__ico::after {
+  top: 10px;
+  left: -9px;
+  width: 0px;
+  height: 9px;
+  border-left: 1px dotted var(--tree_color);
+}
+.tree__btn + .tree__ico::before,
+.tree__btn + .tree__ico::after{
+  display: none;
+}
+/* .tree > li:first-child > .tree__btn + .tree__ico::before, */
+/* .tree > li:first-child > .tree__btn + .tree__ico::after, */
+ul.tree_sub > li:last-child > .tree__ico::after {
+  display: none;
+}
+ul.tree_sub:not(:last-child) > li:last-child > .tree__ico::after {
+  display: block;
+}
+li.li_line {
+  position: relative;
+}
+li:not(:last-child).li_line::before {
+  content: '';
+  position: absolute;
+  width: 0px;
+  top: 22px;
+  left: 2.5px;
+  height: calc(100% - 24px);
+  border-left: 1px dotted var(--tree_color);
+}
+
+.tree__btn:not(.active) ~ ul.tree_sub {
+  display: none;
+}

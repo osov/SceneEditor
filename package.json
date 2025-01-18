@@ -9,8 +9,8 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "bun-types": "^1.0.14",
     "@types/three": "latest",
+    "bun-types": "^1.0.14",
     "typescript": "^5.4.2",
     "vite": "^5.1.6"
   },

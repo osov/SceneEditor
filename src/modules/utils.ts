@@ -30,4 +30,8 @@ export function random_int(min: number, max: number) {
     return Math.floor(rand);
 }
 
+export function deepClone(obj: any) {
+    return JSON.parse(JSON.stringify(obj))
+  }
+
 

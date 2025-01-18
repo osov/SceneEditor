@@ -7,7 +7,12 @@ export function initButtons() {
             const menu_section = btn_menu.closest(".menu_section");
             menu_section.classList.toggle("active")
         }
-        
+
+        const tree__btn = event.target.closest(".tree__btn");
+        if (tree__btn) {
+            tree__btn.classList.toggle("active")
+        }
+
     });
 
 }
