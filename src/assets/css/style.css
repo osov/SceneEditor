@@ -16,6 +16,7 @@
   --menu_border: 1px solid #6d6d6d;
   --text_color: #fff; 
   --color_blue: #17c7f6; 
+  --color_green: green; 
   --transition: 0.3s linear; 
   --head_bg: #293538; 
   --bg_input: #2c393c;
@@ -149,6 +150,9 @@ textarea {
 input.poisk_us{
   height: 28px;
 }
+
+.color_green { color: var(--color_green); }
+.color_blue { color: var(--color_blue); }
 
 /* tree */
 .tree_div {
