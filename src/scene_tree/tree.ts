@@ -118,17 +118,21 @@ function getTreeHtml(e:any){
     let result = `<ul id="treeDemo" class="tree">`;
     if (list?.children.length) {
         result += `<li class="active">`;
-        result += `${getTreeBtnHtml()}
-                    ${getTreeIcoHtml(list.icon)}
-                    <a>${list.name}</a>`;
+        result += `<div class="tree__item">
+                        ${getTreeBtnHtml()}
+                        ${getTreeIcoHtml(list.icon)}
+                        <a>${list.name}</a>
+                    </div>`;
         result += getTreeSubHtml(list?.children);
         result += `</li>`;
 
     }
     else {
         result += `<li>
+                    <div class="tree__item">
                         ${getTreeIcoHtml(list.icon)}
                         <a>${list.name}</a>
+                    </div
                 </li>`;
     }
     result += `</ul>`;
@@ -151,17 +155,21 @@ function getTreeSubHtml(list:any){
 
 function getLiEmpty(e:any){
     return `<li>
-                ${getTreeIcoHtml(e.icon)}
-                <a>${e.name}</a>
+                <div class="tree__item">
+                    ${getTreeIcoHtml(e.icon)}
+                    <a>${e.name}</a>
+                </div>    
             </li>`;
 }
 
 function getLiHtml(e:any){
     let result = '';
     result = `<li class="li_line active">
-                ${getTreeBtnHtml()}
-                ${getTreeIcoHtml(e.icon)}
-                <a contenteditable="true">${e.name}</a>`;
+                <div class="tree__item">
+                    ${getTreeBtnHtml()}
+                    ${getTreeIcoHtml(e.icon)}
+                    <a contenteditable="true">${e.name}</a>
+                </div>`;
     if(e?.children.length) {
         result += getTreeSubHtml(e?.children);
     }

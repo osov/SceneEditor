@@ -33,6 +33,9 @@ body {
   color: #fff;
   position: relative;
   overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
 }
 
 canvas {
@@ -46,8 +49,8 @@ canvas {
 }
 
 .menu_section {
-  bottom: 0;
-  position: absolute;
+  /* bottom: 0; */
+  position: relative;
   height: 100%;
   background-color: var(--menu_bg);
   transform: translateY(calc(100% - 32px));
@@ -59,24 +62,27 @@ canvas {
 }
 .menu_left{
   width: auto;
-  left: 45px;
+  /* left: 45px; */
   border-right: var(--menu_border);
   min-width: 240px;
+  max-width: 440px;
 }
 .menu_right{
   width: 340px;
-  right: 0;
+  /* right: 0; */
   border-left: var(--menu_border);
   overflow-y: auto;
   overflow-x: hidden;
 }
 .menu_footer{
-  height: 300px;
+  max-height: 300px;
   width: calc(100% - 625px);
-  left: 285px;
+  width: auto;
+  flex-grow: 2;
+  /* left: 285px; */
 }
 .menu_min{
-  position: absolute;
+  position: relative;
   background-color: var(--menu_bg);
   width: 45px;
   height: 100%;
@@ -163,11 +169,26 @@ ul.tree {
   --tree_color: green;
 }
 ul.tree li {
-  padding: 2px 0 2px 12px;
+  padding: 2px;
   position: relative;
 }
+.tree__item{
+  position: relative;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  /* border: 1px solid green; */
+  padding: 2px 2px 2px 14px;
+}
 ul.tree li a {
+  font-size: 14px;
   cursor: pointer;
+  white-space: nowrap;
+  display: inline-block;
+  padding: 0px 0 0px;
+  min-width: 70px;
+  max-width: 280px;
+  overflow: hidden;
 }
 ul.tree li a:hover {
   opacity: 0.8;
@@ -188,17 +209,20 @@ ul.tree li a:hover {
 }
 .tree__btn .svg_icon{
   transform: rotate(90deg);
+  transition: transform var(--transition);
 }
-li.active > .tree__btn .svg_icon {
+li.active > div > .tree__btn .svg_icon {
   transform: rotate(180deg);
 }
-li.active > .tree__btn .use_trglF,
-li:not(.active) > .tree__btn .use_trgl {display: none;}
+li.active > div > .tree__btn .use_trglF,
+li:not(.active) > div > .tree__btn .use_trgl {display: none;}
 .tree__ico {
-  display: inline-block;
+  display: block;
   width: 12px;
   height: 12px;
   position: relative;
+  margin-right: 5px;
+  top: -3px;
 }
 /* .tree__ico::before,
 .tree__ico::after {
@@ -246,7 +270,7 @@ li:not(:last-child).li_line::before {
 
 
 ul.tree_sub {
-  padding-left: 3px;
+  padding-left: 10px;
   overflow: hidden;
   transition: height var(--transition);
 }
