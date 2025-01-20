@@ -117,7 +117,7 @@ function getTreeHtml(e:any){
     const list = Array.isArray(e) ? e[0] : e;
     let result = `<ul id="treeDemo" class="tree">`;
     if (list?.children.length) {
-        result += `<li>`;
+        result += `<li class="active">`;
         result += `${getTreeBtnHtml()}
                     ${getTreeIcoHtml(list.icon)}
                     <a>${list.name}</a>`;
@@ -158,7 +158,7 @@ function getLiEmpty(e:any){
 
 function getLiHtml(e:any){
     let result = '';
-    result = `<li class="li_line">
+    result = `<li class="li_line active">
                 ${getTreeBtnHtml()}
                 ${getTreeIcoHtml(e.icon)}
                 <a contenteditable="true">${e.name}</a>`;
@@ -170,14 +170,14 @@ function getLiHtml(e:any){
 }
 
 function getTreeBtnHtml(){
-    return `<span class="tree__btn active">
+    return `<span class="tree__btn">
                 <svg class="svg_icon">
-                    <use class="use_plus" href="/src/assets/img/sprite.svg#plus"></use>
-                    <use class="use_minus" href="/src/assets/img/sprite.svg#minus"></use>
+                    <use class="use_trglF" href="./img/sprite.svg#triangle_filled"></use>
+                    <use class="use_trgl" href="./img/sprite.svg#triangle"></use>
                 </svg>
             </span>`;
 }
 
 function getTreeIcoHtml(icon: string){
-    return `<span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#${icon}"></use></svg></span>`;
+    return `<span class="tree__ico"><svg class="svg_icon"><use href="./img/sprite.svg#${icon}"></use></svg></span>`;
 }

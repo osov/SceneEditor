@@ -1,163 +1,17 @@
 <section class="menu_left menu_section active">
 
-    <div class="menu_head flex aic jcsb">
-      <h3>Иерархия сцены</h3>
-      <a href="javascript:void(0)" class="btn_menu" data-menu="menu_left" title="Скрыть">
-        <svg class="svg_icon">
-          <use href="/src/assets/img/sprite.svg#circle_arrow_down"></use>
-        </svg>
-      </a>
-    </div>
-  
-    <div class="p10">
-        <input name="f_nick" type="text" class="poisk_us" placeholder="Поиск...">
-    </div>
+  <div class="menu_head flex aic jcsb">
+    <h3>Иерархия сцены</h3>
+    <a href="javascript:void(0)" class="btn_menu" data-menu="menu_left" title="Скрыть">
+      <svg class="svg_icon">
+        <use href="./img/sprite.svg#circle_arrow_down"></use>
+      </svg>
+    </a>
+  </div>
 
-    <div id="wr_tree" class="p10 tree_div"></div>
+  <input name="f_nick" type="text" class="poisk_us" placeholder="Поиск...">
 
-    <div class="p10 tree_div">
-      <ul id="treeDemo" class="tree">
-        <li>
+  <div id="wr_tree" class="tree_div"></div>
 
-          <span class="tree__btn active">
-            <svg class="svg_icon">
-              <use class="use_plus" href="/src/assets/img/sprite.svg#plus"></use>
-              <use class="use_minus" href="/src/assets/img/sprite.svg#minus"></use>
-            </svg>
-          </span>
-          <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-          <a>root 0</a>
-
-
-
-          <ul class="tree_sub">
-            <li>
-              <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-              <a>name 1</a>
-            </li>
-
-            <li>
-              <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-              <a>name 1</a>
-            </li>
-
-            <li class="li_line">
-              <span class="tree__btn active">
-                <svg class="svg_icon">
-                  <use class="use_plus" href="/src/assets/img/sprite.svg#plus"></use>
-                  <use class="use_minus" href="/src/assets/img/sprite.svg#minus"></use>
-                </svg>
-              </span>
-              <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-              <a contenteditable="true">name 2</a>
-
-              <ul class="tree_sub">
-                <li>
-                  <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                  <a contenteditable="true">name 22</a>
-                </li>
-              </ul>
-            </li>
-
-            <li>
-              <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-              <a>name 1</a>
-            </li>
-
-            <li>
-              <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-              <a>name 1</a>
-            </li>
-
-            <li class="li_line">
-              <span class="tree__btn active">
-                <svg class="svg_icon">
-                  <use class="use_plus" href="/src/assets/img/sprite.svg#plus"></use>
-                  <use class="use_minus" href="/src/assets/img/sprite.svg#minus"></use>
-                </svg>
-              </span>
-              <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-              <a contenteditable="true">name 2</a>
-
-              <ul class="tree_sub">
-                <li>
-                  <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                  <a contenteditable="true">name 22</a>
-                </li>
-                <li>
-                  <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                  <a contenteditable="true">name 22</a>
-                </li>
-
-                <li class="li_line">
-                  <span class="tree__btn active">
-                    <svg class="svg_icon">
-                      <use class="use_plus" href="/src/assets/img/sprite.svg#plus"></use>
-                      <use class="use_minus" href="/src/assets/img/sprite.svg#minus"></use>
-                    </svg>
-                  </span>
-                  <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                  <a contenteditable="true">name 3</a>
-                  <ul class="tree_sub">
-                    <li>
-                      <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                      <a contenteditable="true">name 33</a>
-                    </li>
-                    <li>
-                      <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                      <a contenteditable="true">name 33</a>
-                    </li>
-                    <li>
-                      <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                      <a contenteditable="true">name 33</a>
-                    </li>
-                  </ul>
-                </li>
-
-                <li>
-                  <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                  <a contenteditable="true">name 22</a>
-                </li>
-
-                <li class="li_line">
-                  <span class="tree__btn active">
-                    <svg class="svg_icon">
-                      <use class="use_plus" href="/src/assets/img/sprite.svg#plus"></use>
-                      <use class="use_minus" href="/src/assets/img/sprite.svg#minus"></use>
-                    </svg>
-                  </span>
-                  <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                  <a contenteditable="true">name 3</a>
-                  <ul class="tree_sub">
-                    <li>
-                      <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                      <a contenteditable="true">name 33</a>
-                    </li>
-                    <li>
-                      <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                      <a contenteditable="true">name 33</a>
-                    </li>
-                    <li>
-                      <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-                      <a contenteditable="true">name 33</a>
-                    </li>
-                  </ul>
-                </li>
-
-              </ul>
-            </li>
-
-            <li>
-              <span class="tree__ico"><svg class="svg_icon"><use href="/src/assets/img/sprite.svg#cube"></use></svg></span>
-              <a>name 1</a>
-            </li>
-
-          </ul>
-
-
-
-        </li>
-      </ul>
-    </div>
 
 </section>

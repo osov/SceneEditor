@@ -8,7 +8,7 @@ export async function run_debug_scene() {
   // sov width projection
   //Camera.set_width_prjection(-1, 1, 0, 100);
   const scene = RenderEngine.scene;
-  const tex = await new TextureLoader().loadAsync('2.png');
+  const tex = await new TextureLoader().loadAsync('./img/2.png');
   tex.magFilter = NearestFilter;
 
   const plane_1 = new Slice9Mesh( 64, 64);

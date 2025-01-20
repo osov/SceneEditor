@@ -36,14 +36,12 @@ body {
 }
 
 canvas {
-  height: 70%;
-  width: 60%;
+  height: 100%;
+  width: 100%;
   outline: none;
   position: absolute;
-  top: calc(0% + 20px);
-  left: 50%;
-  transform: translate(-50%, 0%);
-  border: 1px dashed red;
+  top: 0;
+  left: 0;
   z-index: 1;
 }
 
@@ -54,10 +52,10 @@ canvas {
   background-color: var(--menu_bg);
   transform: translateY(calc(100% - 32px));
   transition: transform var(--transition);
+  z-index: 2;
 }
 .menu_section.active {
   transform: translateY(0);
-	z-index: 1;
 }
 .menu_left{
   width: auto;
@@ -83,6 +81,7 @@ canvas {
   width: 45px;
   height: 100%;
   border-right: var(--menu_border);
+  z-index: 2;
 }
 .menu_min a {
   padding: 12px;
@@ -103,7 +102,6 @@ canvas {
 .menu_head {
   background-color: var(--head_bg);
   padding: 5px;
-  margin-bottom: 10px;
 }
 .menu_head h3{
   font-weight: 400;
@@ -148,7 +146,8 @@ textarea {
 }
 
 input.poisk_us{
-  height: 28px;
+  height: 30px;
+  padding: 0 10px;
 }
 
 .color_green { color: var(--color_green); }
@@ -159,8 +158,7 @@ input.poisk_us{
   background-color: rgba(0, 0, 0, 0.1);
 }
 ul.tree {
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 5px;
+  padding: 10px;
   user-select: none;
   --tree_color: green;
 }
@@ -183,22 +181,26 @@ ul.tree li a:hover {
   top: 4px;
   left: -3px;
   z-index: 2;
-  border-radius: 2px;
-  background-color: #eee;
-  color: var(--tree_color);
+  color: #999999d4;
 }
 .tree__btn:hover{
   opacity: 0.8;
 }
-.tree__btn.active .use_plus,
-.tree__btn:not(.active) .use_minus {display: none;}
+.tree__btn .svg_icon{
+  transform: rotate(90deg);
+}
+li.active > .tree__btn .svg_icon {
+  transform: rotate(180deg);
+}
+li.active > .tree__btn .use_trglF,
+li:not(.active) > .tree__btn .use_trgl {display: none;}
 .tree__ico {
   display: inline-block;
   width: 12px;
   height: 12px;
   position: relative;
 }
-.tree__ico::before,
+/* .tree__ico::before,
 .tree__ico::after {
   content: '';
   position: absolute;
@@ -223,8 +225,6 @@ ul.tree li a:hover {
 .tree__btn + .tree__ico::after{
   display: none;
 }
-/* .tree > li:first-child > .tree__btn + .tree__ico::before, */
-/* .tree > li:first-child > .tree__btn + .tree__ico::after, */
 ul.tree_sub > li:last-child > .tree__ico::after {
   display: none;
 }
@@ -242,8 +242,17 @@ li:not(:last-child).li_line::before {
   left: 2.5px;
   height: calc(100% - 24px);
   border-left: 1px dotted var(--tree_color);
-}
+} */
 
-.tree__btn:not(.active) ~ ul.tree_sub {
-  display: none;
+
+ul.tree_sub {
+  padding-left: 3px;
+  overflow: hidden;
+  transition: height var(--transition);
+}
+li:not(.active) > ul.tree_sub {
+  height: 0px;
+}
+li.active > ul.tree_sub {
+  height: auto;
 }
