@@ -1,5 +1,5 @@
-import { BufferGeometry, ClampToEdgeWrapping, Line, LineDashedMaterial, Mesh, MeshBasicMaterial, NearestFilter, PlaneGeometry, RepeatWrapping, ShaderMaterial, Texture, TextureLoader, Vector2, Vector3, } from 'three'
-import { Slice9 } from './render_engine/slice9';
+import { BufferGeometry,  Line, LineDashedMaterial, Mesh, MeshBasicMaterial, NearestFilter, PlaneGeometry, TextureLoader, Vector2, Vector3, } from 'three'
+import {  Slice9Mesh } from './render_engine/slice9';
 
 
 
@@ -7,32 +7,32 @@ export async function run_debug_scene() {
 
   // sov width projection
   //Camera.set_width_prjection(-1, 1, 0, 100);
-
   const scene = RenderEngine.scene;
-  const plane_1_geometry = new PlaneGeometry(32 * 2, 32 * 2)
-  const planeMaterial = new MeshBasicMaterial({ color: 'gray', })
-  const plane_1 = new Mesh(plane_1_geometry, planeMaterial)
-  plane_1.position.x = 540;
-  plane_1.position.y = 0;
-  plane_1.position.z = 4
-  scene.add(plane_1)
+  const tex = await new TextureLoader().loadAsync('2.png');
+  tex.magFilter = NearestFilter;
 
-  const plane_2_geometry = new PlaneGeometry(32 * 4, 32 * 4)
-  const planeMaterial_2 = new MeshBasicMaterial({ color: 'red', })
-  const plane_2 = new Mesh(plane_2_geometry, planeMaterial_2)
-  plane_2.position.x = 540 / 2;
-  plane_2.position.y = -200;
-  plane_2.position.z = 5
-  scene.add(plane_2)
+  const plane_1 = new Slice9Mesh( 64, 64);
+  plane_1.set_color('#f00')
+  plane_1.position.set(540, 0, 4);
+  scene.add(plane_1);
 
-  const plane_3_geometry = new PlaneGeometry(32, 32)
-  const planeMaterial_3 = new MeshBasicMaterial({ color: 'green', })
-  const plane_3 = new Mesh(plane_3_geometry, planeMaterial_3)
-  plane_3.position.x = 0;
-  plane_3.position.y = 0;
-  plane_3.position.z = 0.001
-  plane_2.add(plane_3)
+  const plane_2 = new Slice9Mesh( 128, 128);
+  plane_2.set_color('#0f0')
+  plane_2.position.set(540 / 2, -200, 5);
+  scene.add(plane_2);
 
+  const plane_3 = new Slice9Mesh( 32, 32);
+  plane_3.set_color('#00f')
+  plane_3.position.set(0, 0, 0.001);
+  scene.add(plane_3);
+
+  const plane_4 = new Slice9Mesh( 128, 32);
+  plane_4.scale.setScalar(2);
+  plane_4.position.set(800, -500, 0);
+  plane_4.set_slice(8, 8)
+  plane_4.set_color('#0f0')
+  plane_4.set_texture(tex);
+  scene.add(plane_4);
 
   var points = [];
   points.push(
@@ -50,15 +50,9 @@ export async function run_debug_scene() {
   line.computeLineDistances();
   scene.add(line)
 
-  const tex = await new TextureLoader().loadAsync('2.png');
-  tex.magFilter = NearestFilter;
-  const go = Slice9(tex, 128, 32);
-  go.mesh.scale.setScalar(2);
-  go.mesh.position.set(800, -500, 0);
-  scene.add(go.mesh);
-  go.set_slice(8, 8)
-  go.set_color('#0f0')
 
+
+  
   const raycaster = RenderEngine.raycaster;
   const camera = RenderEngine.camera;
 
@@ -69,21 +63,31 @@ export async function run_debug_scene() {
   let is_down = false;
   const dir = [0, 0];
 
-  window.addEventListener('mousedown', (e) => {
+  let selected_go = plane_4;
+  EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
     is_down = true;
     click_point.set(pointer.x, pointer.y)
   });
 
-  window.addEventListener('mouseup', (e) => {
+  EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
     is_down = false;
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObjects(scene.children);
+    if (intersects.length > 0 && intersects[0].object instanceof Slice9Mesh) {
+        ((intersects[0].object as Slice9Mesh).set_color( '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')));
+    }
   });
 
-  window.addEventListener('pointermove', (event) => {
+
+
+  EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
     prev_point.set(pointer.x, pointer.y);
-    pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-    pointer.y = - (event.clientY / window.innerHeight) * 2 + 1;
+    if (!selected_go)
+      return;
+    pointer.x = event.x;
+    pointer.y = event.y;
     const wp = Camera.screen_to_world(pointer.x, pointer.y);
-    const bounds = go.get_bounds();
+    const bounds = selected_go.get_bounds();
     const range = 5;
     if (!is_down) {
       document.body.style.cursor = 'default';
@@ -133,39 +137,29 @@ export async function run_debug_scene() {
 
       const center_x = (bounds[0] + bounds[2]) / 2;
       const center_y = (bounds[1] + bounds[3]) / 2;
-      const old_pos = go.mesh.position.clone();
-      const old_width = go.parameters.width;
-      const old_height = go.parameters.height;
-      let new_width = go.parameters.width + delta.x / go.mesh.scale.x;
-      let new_height = go.parameters.height - delta.y / go.mesh.scale.y;
+      const old_pos = selected_go.position.clone();
+      const old_width = selected_go.parameters.width;
+      const old_height = selected_go.parameters.height;
+      let new_width = selected_go.parameters.width + delta.x / selected_go.scale.x;
+      let new_height = selected_go.parameters.height - delta.y / selected_go.scale.y;
       let delta_width = new_width - old_width;
       let delta_height = new_height - old_height;
       if (wp.x < center_x)
-        new_width = go.parameters.width - delta.x / go.mesh.scale.x;;
+        new_width = selected_go.parameters.width - delta.x / selected_go.scale.x;;
       if (wp.y > center_y)
-        new_height = go.parameters.height + delta.y / go.mesh.scale.y;
+        new_height = selected_go.parameters.height + delta.y / selected_go.scale.y;
 
-      go.set_size(dir[0] > 0 ? new_width : old_width, dir[1] > 0 ? new_height : old_height);
-      go.mesh.position.set(old_pos.x + delta_width * dir[0], old_pos.y - delta_height * dir[1], old_pos.z);
+      selected_go.set_size(dir[0] > 0 ? new_width : old_width, dir[1] > 0 ? new_height : old_height);
+      selected_go.position.set(old_pos.x + delta_width * dir[0], old_pos.y - delta_height * dir[1], old_pos.z);
       if (dir[0] == 0 && dir[1] == 0) {
-        const old_pos = go.mesh.position.clone();
-        go.mesh.position.set(old_pos.x + delta.x, old_pos.y + delta.y, 0);
+        const old_pos = selected_go.position.clone();
+        selected_go.position.set(old_pos.x + delta.x, old_pos.y + delta.y, 0);
       }
     }
   });
 
 
-  window.addEventListener('click', (event) => {
-    raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObjects(scene.children);
-    if (intersects.length > 0) {
-      if ((intersects[0].object as Mesh).userData.type == 'slice9') {
-        //go.set_color('#' + Math.floor(Math.random() * 16777215).toString(16));
-      }
-      else
-        ((intersects[0].object as Mesh).material as MeshBasicMaterial).color.setRGB(Math.random(), Math.random(), Math.random());
-    }
-  });
+
 
 
 

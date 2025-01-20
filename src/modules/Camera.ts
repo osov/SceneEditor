@@ -3,7 +3,7 @@
 */
 
 import { Vector3 } from "three";
-import { get_window_size } from "../helpers/window_utils";
+import { get_window_size } from "../render_engine/helpers/window_utils";
 
 declare global {
     const Camera: ReturnType<typeof CameraModule>;

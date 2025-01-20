@@ -1,5 +1,5 @@
 import { AmbientLight, OrthographicCamera, Raycaster, Scene, Vector3, WebGLRenderer, } from 'three'
-import { resize_renderer_to_display_size } from '../helpers/window_utils'
+import { resize_renderer_to_display_size } from './helpers/window_utils'
 
 declare global {
     const RenderEngine: ReturnType<typeof RenderEngineModule>;
@@ -17,6 +17,21 @@ export function RenderEngineModule() {
     let ambientLight = new AmbientLight(0xffffff, 1);
     const camera = new OrthographicCamera(-1, 1, -1, 1, 0, 100);
     const raycaster = new Raycaster();
+    const mouse_pos = new Vector3();
+    canvas.addEventListener('pointermove', (event: any) => {
+        mouse_pos.x = (event.offsetX / canvas.clientWidth) * 2 - 1;
+        mouse_pos.y = - (event.offsetY / canvas.clientHeight) * 2 + 1;
+        EventBus.trigger('SYS_INPUT_POINTER_MOVE', { x: mouse_pos.x, y: mouse_pos.y }, false);
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+        EventBus.trigger('SYS_INPUT_POINTER_DOWN', { x: mouse_pos.x, y: mouse_pos.y }, false);
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+        EventBus.trigger('SYS_INPUT_POINTER_UP', { x: mouse_pos.x, y: mouse_pos.y }, false);
+    });
+
 
     function init() {
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
