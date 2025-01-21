@@ -32,15 +32,16 @@ export async function run_debug_scene() {
   plane_1.position.set(540, 0, 4);
   scene.add(plane_1);
 
-  const plane_2 = new Slice9Mesh(128, 128);
+  const plane_2 = new Slice9Mesh(16, 16);
   plane_2.set_color('#0f0')
-  plane_2.position.set(540 / 2, -200, 5);
-  scene.add(plane_2);
+  plane_2.position.set(540, -200, 5);
+  //scene.add(plane_2);
 
   const plane_3 = new Slice9Mesh(32, 32);
+  plane_3.scale.setScalar(3)
   plane_3.set_color('#00f')
-  plane_3.position.set(800, -200, 0.001);
-  scene.add(plane_3);
+  //plane_3.position.set(800, -200, 0.001);
+  // scene.add(plane_3);
 
   const plane_4 = new Slice9Mesh(128, 32);
   plane_4.scale.setScalar(2);
@@ -49,6 +50,12 @@ export async function run_debug_scene() {
   plane_4.set_color('#0f0')
   plane_4.set_texture(tex);
   scene.add(plane_4);
+
+  // debug childs
+  plane_3.position.set(10, 2, 0.1);
+  plane_4.add(plane_3);
+  plane_2.position.set(10, 3, 0.2)
+  plane_3.add(plane_2);
 
   var points = [];
   points.push(
@@ -152,23 +159,27 @@ export async function run_debug_scene() {
     }
     if (is_down) {
       const cp = Camera.screen_to_world(prev_point.x, prev_point.y);
-      const delta = wp.clone().sub(cp);
+      const ws = new Vector3();
+      selected_go.getWorldScale(ws);
+      const delta = wp.clone().sub(cp).divide(ws);
       const center_x = (bounds[0] + bounds[2]) / 2;
       const center_y = (bounds[1] + bounds[3]) / 2;
-      const old_pos = selected_go.position.clone();
+      const old_pos = new Vector3();
+      selected_go.getWorldPosition(old_pos);
       const old_width = selected_go.parameters.width;
       const old_height = selected_go.parameters.height;
-      let new_width = selected_go.parameters.width + delta.x / selected_go.scale.x;
-      let new_height = selected_go.parameters.height - delta.y / selected_go.scale.y;
+      let new_width = selected_go.parameters.width + delta.x;
+      let new_height = selected_go.parameters.height - delta.y;
       if (wp.x < center_x)
-        new_width = selected_go.parameters.width - delta.x / selected_go.scale.x;
+        new_width = selected_go.parameters.width - delta.x;
       if (wp.y > center_y)
-        new_height = selected_go.parameters.height + delta.y / selected_go.scale.y;
+        new_height = selected_go.parameters.height + delta.y;
       selected_go.set_size(dir[0] > 0 ? new_width : old_width, dir[1] > 0 ? new_height : old_height);
-      selected_go.position.set(old_pos.x + delta.x * dir[0] * 0.5, old_pos.y + delta.y * dir[1] * 0.5, old_pos.z);
+      const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * dir[0] * ws.x * 0.5, old_pos.y + delta.y * dir[1] * ws.y * 0.5, old_pos.z));
+      selected_go.position.copy(lp);
       if (dir[0] == 0 && dir[1] == 0) {
-        const old_pos = selected_go.position.clone();
-        selected_go.position.set(old_pos.x + delta.x, old_pos.y + delta.y, selected_go.position.z);
+         const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * ws.x , old_pos.y + delta.y  * ws.y , old_pos.z));
+         selected_go.position.copy(lp);
       }
       draw_debug_bb(selected_go.get_bounds());
     }
