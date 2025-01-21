@@ -7,9 +7,9 @@ export interface VoidMessage { }
 export type _SystemMessages = {
     SYS_ENGINE_READY:VoidMessage
     SYS_ON_RESIZED: { width: number, height: number },
-    SYS_INPUT_POINTER_MOVE: { x: number, y: number },
-    SYS_INPUT_POINTER_DOWN: { x: number, y: number },
-    SYS_INPUT_POINTER_UP: { x: number, y: number },
+    SYS_INPUT_POINTER_MOVE: { x: number, y: number, offset_x: number, offset_y: number, },
+    SYS_INPUT_POINTER_DOWN: { x: number, y: number, offset_x: number, offset_y: number, },
+    SYS_INPUT_POINTER_UP: { x: number, y: number, offset_x: number, offset_y: number, },
 };
 
 

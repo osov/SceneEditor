@@ -114,6 +114,7 @@ export function Slice9(material: ShaderMaterial, width = 1, height = 1, slice_wi
         geometry.attributes['position'].array[9] = w / 2;
         geometry.attributes['position'].array[10] = -h / 2;
         geometry.attributes['position'].needsUpdate = true;
+        geometry.computeBoundingSphere();
         parameters.width = w;
         parameters.height = h;
         update_parameters();
@@ -130,13 +131,13 @@ export function Slice9(material: ShaderMaterial, width = 1, height = 1, slice_wi
         material.uniforms['u_color'].value.set(new Color(hex_color));
     }
 
-    function get_bounds(wp: Vector3) {
+    function get_bounds(wp: Vector3, ws: Vector3) {
         // left top right bottom
         return [
-            wp.x - parameters.width,
-            wp.y + parameters.height,
-            wp.x + parameters.width,
-            wp.y - parameters.height
+            wp.x - parameters.width / 2 * ws.x,
+            wp.y + parameters.height / 2 * ws.y,
+            wp.x + parameters.width / 2 * ws.x,
+            wp.y - parameters.height / 2 * ws.y
         ];
     }
 
@@ -147,13 +148,10 @@ export function Slice9(material: ShaderMaterial, width = 1, height = 1, slice_wi
 export class Slice9Mesh extends Mesh {
     private template: ReturnType<typeof Slice9>;
     public parameters: IParameters;
-   // private material: ShaderMaterial;
-  //  private geometry: BufferGeometry;
 
     constructor(width = 1, height = 1, slice_width = 0, slice_height = 0) {
         super();
         (this as any).type = 'Slice9Mesh';
-        (this as any).isMesh = true;
         const material = new ShaderMaterial({
             uniforms: {
                 tex: { value: null },
@@ -190,8 +188,10 @@ export class Slice9Mesh extends Mesh {
 
     get_bounds() {
         const wp = new Vector3();
+        const ws = new Vector3();
         this.getWorldPosition(wp);
-        return this.template.get_bounds(wp);
+        this.getWorldScale(ws);
+        return this.template.get_bounds(wp, ws);
     }
 
 
