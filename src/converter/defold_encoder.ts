@@ -54,8 +54,69 @@ export interface IDefoldGui {
     material?: string,
 }
 
-export interface IDefoldGuiNode {
+export enum DefoldGuiNodeType {
+    TYPE_BOX = 0,
+    TYPE_TEXT,
+    TYPE_PIE,
+    TYPE_TEMPLATE,
+    TYPE_SPINE,
+    TYPE_PARTICLEFX
+}
 
+export enum DefoldXAnchor {
+    XANCHOR_NONE = 0,
+    XANCHOR_LEFT,
+    XANCHOR_RIGHT
+};
+
+export enum DefoldYAnchor {
+    YANCHOR_NONE = 0,
+    YANCHOR_TOP,
+    YANCHOR_BOTTOM
+};
+
+export enum DefoldClippingMode {
+    CLIPPING_MODE_NONE = 0,
+    CLIPPING_MODE_STENCIL,
+}
+
+export enum DefoldGuiNodeSizeMode {
+    SIZE_MODE_MANUAL = 0,
+    SIZE_MODE_AUTO,
+}
+
+export interface IDefoldGuiNode {
+    id?: string,
+    type?: DefoldGuiNodeType,
+    position?: Vector4,
+    rotation?: Vector4,
+    scale?: Vector4,
+    size?: Vector4,
+    color?: Vector4,
+    blend_mode?: DefoldBlendMode,
+    text?: string,
+    texture?: string,
+    font?: string,
+    xanchor?: DefoldXAnchor,
+    yanchor?: DefoldYAnchor,
+    pivot?: DefoldPivot,
+    outline?: Vector4,
+    shadow?: Vector4,
+    line_break?: boolean,
+    parent?: string,
+    layer?: string,
+    inherit_alpha?: boolean,
+    slice9?: Vector4,
+    clipping_mode?: DefoldClippingMode,
+    clipping_visible?: boolean,
+    clipping_inverted?: boolean,
+    alpha?: number,
+    outline_alpha?: number,
+    shadow_alpha?: number,
+    template?: string,
+    text_leading?: number,
+    text_tracking?: number,
+    size_mode?: DefoldGuiNodeSizeMode
 }
 
 export interface IDefoldAtlas {
