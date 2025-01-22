@@ -1,4 +1,4 @@
-import { AmbientLight, OrthographicCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer, } from 'three'
+import { AmbientLight, Mesh, Object3D, OrthographicCamera, Raycaster, Scene, Vector2, Vector3, WebGLRenderer, } from 'three'
 import { resize_renderer_to_display_size } from './helpers/window_utils'
 
 declare global {
@@ -22,15 +22,15 @@ export function RenderEngineModule() {
     canvas.addEventListener('pointermove', (event: any) => {
         mouse_pos.set(event.offsetX, event.offsetY);
         mouse_pos_normalized.set((event.offsetX / canvas.clientWidth) * 2 - 1, - (event.offsetY / canvas.clientHeight) * 2 + 1);
-        EventBus.trigger('SYS_INPUT_POINTER_MOVE', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x:mouse_pos.x, offset_y:mouse_pos.y }, false);
+        EventBus.trigger('SYS_INPUT_POINTER_MOVE', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y }, false);
     });
 
     canvas.addEventListener('mousedown', (e) => {
-        EventBus.trigger('SYS_INPUT_POINTER_DOWN', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x:mouse_pos.x, offset_y:mouse_pos.y }, false);
+        EventBus.trigger('SYS_INPUT_POINTER_DOWN', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y }, false);
     });
 
     canvas.addEventListener('mouseup', (e) => {
-        EventBus.trigger('SYS_INPUT_POINTER_UP', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x:mouse_pos.x, offset_y:mouse_pos.y }, false);
+        EventBus.trigger('SYS_INPUT_POINTER_UP', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y }, false);
     });
 
 
@@ -62,7 +62,16 @@ export function RenderEngineModule() {
     function raycast_scene(n_pos: Vector2) {
         raycaster.setFromCamera(n_pos, camera);
         return raycaster.intersectObjects(scene.children);
-      }
+    }
 
-    return { init, animate, get_render_size, raycast_scene, scene, camera, raycaster };
+    function is_intersected_mesh(n_pos: Vector2, mesh:Object3D) {
+        const list = raycast_scene(n_pos);
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].object === mesh)
+                return true;
+        }
+        return false;
+    }
+
+    return { init, animate, get_render_size, raycast_scene, is_intersected_mesh, scene, camera, raycaster };
 }

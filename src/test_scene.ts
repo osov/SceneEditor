@@ -1,31 +1,20 @@
 import { BufferGeometry, Line, LineDashedMaterial, Mesh, MeshBasicMaterial, NearestFilter, PlaneGeometry, SphereGeometry, TextureLoader, Vector2, Vector3, Vector4, } from 'three'
 import { Slice9Mesh } from './render_engine/slice9';
+import { SizeControl } from './controls/SizeControl';
+import { IBaseMeshDataAndThree } from './render_engine/types';
+import { SelectControl } from './controls/selectControl';
 
-const debug_poins: Mesh[] = [];
-
-function draw_debug_bb(bb: number[]) {
-  debug_poins[0].position.set(bb[0], bb[1], 10);
-  debug_poins[1].position.set(bb[2], bb[1], 10);
-  debug_poins[2].position.set(bb[2], bb[3], 10);
-  debug_poins[3].position.set(bb[0], bb[3], 10);
-}
-
-
-
+let select_control: ReturnType<typeof SelectControl>;
+let size_control: ReturnType<typeof SizeControl>;
 export async function run_debug_scene() {
   // sov width projection
   //Camera.set_width_prjection(-1, 1, 0, 100);
   const scene = RenderEngine.scene;
   const tex = await new TextureLoader().loadAsync('./img/2.png');
   tex.magFilter = NearestFilter;
+  select_control = SelectControl();
+  size_control = SizeControl();
 
-  for (let i = 0; i < 4; i++) {
-    const geometry = new SphereGeometry(8, 4, 2);
-    const material = new MeshBasicMaterial({ color: 0xffff00 });
-    const sphere = new Mesh(geometry, material);
-    scene.add(sphere)
-    debug_poins.push(sphere);
-  }
 
   const plane_1 = new Slice9Mesh(64, 64);
   plane_1.set_color('#f00')
@@ -73,126 +62,11 @@ export async function run_debug_scene() {
   line.computeLineDistances();
   scene.add(line)
 
-
-  const pointer = new Vector2();
-  const click_point = new Vector2();
-  const prev_point = new Vector2();
-  let is_down = false;
-  const dir = [0, 0];
-
-  let selected_go: Slice9Mesh | null = plane_4;
-  EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
-    is_down = true;
-    click_point.set(e.x, e.y)
+  EventBus.on('SYS_SELECTED_MESH', (mesh) => {
+      size_control.set_mesh(mesh.mesh);
   });
 
-  EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
-    is_down = false;
-    const len = click_point.clone().sub(pointer).length();
-    if (len > 0.001)
-      return;
-
-    const intersects = RenderEngine.raycast_scene(pointer);
-    if (intersects.length > 0 && intersects[0].object instanceof Slice9Mesh) {
-      selected_go = intersects[0].object;
-      draw_debug_bb(selected_go.get_bounds());
-      //((intersects[0].object as Slice9Mesh).set_color('#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')));
-    }
-    else {
-      selected_go = null;
-      draw_debug_bb([0, 0, 0, 0]);
-    }
-  });
-
-
-
-  EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
-    prev_point.set(pointer.x, pointer.y);
-    pointer.x = event.x;
-    pointer.y = event.y;
-    if (!selected_go)
-      return;
-    const wp = Camera.screen_to_world(pointer.x, pointer.y);
-    const bounds = selected_go.get_bounds();
-    const range = 5;
-    if (!is_down) {
-      document.body.style.cursor = 'default';
-      dir[0] = 0; dir[1] = 0;
-      if (wp.x > bounds[0] - range && wp.x < bounds[2] + range && wp.y > bounds[3] - range && wp.y < bounds[1] + range) {
-        if (Math.abs(bounds[0] - wp.x) < range) {
-          document.body.style.cursor = 'e-resize';
-          dir[0] = 1;
-        }
-        if (Math.abs(bounds[2] - wp.x) < range) {
-          document.body.style.cursor = 'e-resize';
-          dir[0] = 1;
-        }
-        if (Math.abs(bounds[1] - wp.y) < range) {
-          document.body.style.cursor = 'n-resize';
-          dir[1] = 1;
-        }
-        if (Math.abs(bounds[3] - wp.y) < range) {
-          document.body.style.cursor = 'n-resize';
-          dir[1] = 1;
-        }
-        if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
-          document.body.style.cursor = 'nw-resize';
-          dir[0] = 1;
-          dir[1] = 1;
-        }
-        if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
-          document.body.style.cursor = 'ne-resize';
-          dir[0] = 1;
-          dir[1] = 1;
-        }
-        if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
-          document.body.style.cursor = 'sw-resize';
-          dir[0] = 1;
-          dir[1] = 1;
-        }
-        if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
-          document.body.style.cursor = 'se-resize';
-          dir[0] = 1;
-          dir[1] = 1;
-        }
-      }
-    }
-    if (is_down) {
-      const cp = Camera.screen_to_world(prev_point.x, prev_point.y);
-      const ws = new Vector3();
-      selected_go.getWorldScale(ws);
-      const delta = wp.clone().sub(cp).divide(ws);
-      const center_x = (bounds[0] + bounds[2]) / 2;
-      const center_y = (bounds[1] + bounds[3]) / 2;
-      const old_pos = new Vector3();
-      selected_go.getWorldPosition(old_pos);
-      const old_width = selected_go.parameters.width;
-      const old_height = selected_go.parameters.height;
-      let new_width = selected_go.parameters.width + delta.x;
-      let new_height = selected_go.parameters.height - delta.y;
-      if (wp.x < center_x)
-        new_width = selected_go.parameters.width - delta.x;
-      if (wp.y > center_y)
-        new_height = selected_go.parameters.height + delta.y;
-      selected_go.set_size(dir[0] > 0 ? new_width : old_width, dir[1] > 0 ? new_height : old_height);
-      const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * dir[0] * ws.x * 0.5, old_pos.y + delta.y * dir[1] * ws.y * 0.5, old_pos.z));
-      selected_go.position.copy(lp);
-      if (dir[0] == 0 && dir[1] == 0) {
-         const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * ws.x , old_pos.y + delta.y  * ws.y , old_pos.z));
-         selected_go.position.copy(lp);
-      }
-      draw_debug_bb(selected_go.get_bounds());
-    }
-  });
-
-
-
-
-
-
-
-
-
-
-
+  EventBus.on('SYS_UNSELECTED_MESH', () => {
+      size_control.set_mesh(null);
+  })
 }
