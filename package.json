@@ -16,6 +16,7 @@
     "vite": "^5.1.6"
   },
   "dependencies": {
+    "camera-controls": "^2.9.0",
     "protobufjs": "^7.4.0",
     "three": "latest"
   }

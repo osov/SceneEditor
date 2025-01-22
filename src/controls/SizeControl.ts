@@ -1,8 +1,15 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2 } from "three";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
 
-export function SizeControl() {
+declare global {
+    const SizeControl: ReturnType<typeof SizeControlModule>;
+}
 
+export function register_size_control() {
+    (window as any).SizeControl = SizeControlModule();
+}
+
+function SizeControlModule() {
     const scene = RenderEngine.scene;
     const debug_poins: Mesh[] = [];
     const pointer = new Vector2();
@@ -20,12 +27,15 @@ export function SizeControl() {
             const geometry = new SphereGeometry(8, 4, 2);
             const material = new MeshBasicMaterial({ color: 0xffff00 });
             const sphere = new Mesh(geometry, material);
+            sphere.visible = false;
             scene.add(sphere)
             debug_poins.push(sphere);
         }
 
 
         EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
+            if (e.button != 0)
+                return;
             is_down = true;
             click_point.set(e.x, e.y)
             offset_move = 0;
@@ -33,6 +43,8 @@ export function SizeControl() {
         });
 
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
+            if (e.button != 0)
+                return;
             is_down = false;
         });
 
@@ -125,10 +137,16 @@ export function SizeControl() {
     }
 
     function draw_debug_bb(bb: number[]) {
-        debug_poins[0].position.set(bb[0], bb[1], 10);
-        debug_poins[1].position.set(bb[2], bb[1], 10);
-        debug_poins[2].position.set(bb[2], bb[3], 10);
-        debug_poins[3].position.set(bb[0], bb[3], 10);
+        const z = 49;
+        debug_poins[0].position.set(bb[0], bb[1], z);
+        debug_poins[1].position.set(bb[2], bb[1], z);
+        debug_poins[2].position.set(bb[2], bb[3], z);
+        debug_poins[3].position.set(bb[0], bb[3], z);
+        set_debug_visible(true);
+    }
+
+    function set_debug_visible(visible: boolean) {
+        debug_poins.forEach(p => p.visible = visible);
     }
 
     function set_mesh(mesh: IBaseMeshDataAndThree | null) {
@@ -137,7 +155,7 @@ export function SizeControl() {
             draw_debug_bb(selected_go.get_bounds());
         }
         else
-            draw_debug_bb([0, 0, 0, 0]);
+        set_debug_visible(false);
     }
 
     init();

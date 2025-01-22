@@ -151,7 +151,7 @@ function CameraModule() {
 
     function screen_to_world(x: number, y: number) {
         const camera = RenderEngine.camera;
-        return new Vector3( x, y, -1 ).unproject( camera );
+        return new Vector3(x, y, -1).unproject(camera);
     }
 
     function on_resize() {
@@ -159,10 +159,10 @@ function CameraModule() {
         // Базовая проекция, размер = размеру канваса
         if (!is_width_projection) {
             const { width, height } = RenderEngine.get_render_size();
-            left = 0;
-            right = width;
-            top = 0;
-            bottom = -height;
+            left = -width / 2;
+            right = width / 2;
+            top = height / 2;
+            bottom = -height / 2;
         }
         else {
             [left, right, top, bottom] = width_viewport();
@@ -177,5 +177,5 @@ function CameraModule() {
     }
 
     init();
-    return { set_width_prjection, get_zoom, set_zoom, set_auto_zoom, is_dynamic_orientation, set_dynamic_orientation,screen_to_world };
+    return { set_width_prjection, get_zoom, set_zoom, set_auto_zoom, is_dynamic_orientation, set_dynamic_orientation, screen_to_world };
 }

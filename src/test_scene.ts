@@ -1,22 +1,16 @@
-import { BufferGeometry, Line, LineDashedMaterial, Mesh, MeshBasicMaterial, NearestFilter, PlaneGeometry, SphereGeometry, TextureLoader, Vector2, Vector3, Vector4, } from 'three'
+import { BufferGeometry, Line, LineDashedMaterial,  NearestFilter,  TextureLoader,  Vector3,  } from 'three'
 import { Slice9Mesh } from './render_engine/slice9';
-import { SizeControl } from './controls/SizeControl';
-import { IBaseMeshDataAndThree } from './render_engine/types';
-import { SelectControl } from './controls/selectControl';
 
-let select_control: ReturnType<typeof SelectControl>;
-let size_control: ReturnType<typeof SizeControl>;
 export async function run_debug_scene() {
   // sov width projection
   //Camera.set_width_prjection(-1, 1, 0, 100);
   const scene = RenderEngine.scene;
   const tex = await new TextureLoader().loadAsync('./img/2.png');
   tex.magFilter = NearestFilter;
-  select_control = SelectControl();
-  size_control = SizeControl();
 
 
-  const plane_1 = new Slice9Mesh(64, 64);
+
+  const plane_1 = new Slice9Mesh(50, 50);
   plane_1.set_color('#f00')
   plane_1.position.set(540, 0, 4);
   scene.add(plane_1);
@@ -63,10 +57,12 @@ export async function run_debug_scene() {
   scene.add(line)
 
   EventBus.on('SYS_SELECTED_MESH', (mesh) => {
-      size_control.set_mesh(mesh.mesh);
+     // SizeControl.set_mesh(mesh.mesh);
+      TransformControl.set_mesh(mesh.mesh);
   });
 
   EventBus.on('SYS_UNSELECTED_MESH', () => {
-      size_control.set_mesh(null);
+    //  SizeControl.set_mesh(null);
+      TransformControl.set_mesh(null);
   })
 }
