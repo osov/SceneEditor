@@ -1,1 +1,66 @@
-{}
+{
+    "name": "main",
+    "list": [
+        {
+            "type": "lable",
+            "data": {
+                "text": "Hello World!",
+                "font": "default_font.ttf",
+                "line_break": true,
+                "outline": "#000000",
+                "shadow": "#000000"
+            }
+        },
+        {
+            "type": "sound",
+            "data": {
+                "name": "test.ogg",
+                "path": "./",
+                "loop": true,
+                "group": "master",
+                "gain": 1,
+                "pan": 1,
+                "speed": 1
+            }
+        },
+        {
+            "type": "sprite",
+            "data": {
+                "texture": "test.png",
+                "atlas": "test.atlas",
+                "slice_width": 0,
+                "slice_height": 0
+            }
+        },
+        {
+            "type": "gui",
+            "data": {
+                "enabled": true,
+                "visible": true,
+                "alpha": 1,
+                "pivot": [
+                    1,
+                    2
+                ]
+            }
+        },
+        {
+            "type": "gui_box",
+            "data": {
+                "texture": "test.png",
+                "atlas": "test.atlas",
+                "slice_width": 0,
+                "slice_height": 0,
+                "stencil": false
+            }
+        },
+        {
+            "type": "gui_text",
+            "data": {
+                "text": "Hello World!",
+                "font": "default_font.ttf",
+                "line_break": true
+            }
+        }
+    ]
+}
