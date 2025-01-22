@@ -25,7 +25,7 @@ export function initButtons() {
                 setTimeout(() => { treeSub.style.height = heightSub; }, 0);
                 li.classList.add('active');
             }
-            setTimeout(() => { treeSub.removeAttribute('style'); }, 310);
+            setTimeout(() => { treeSub.removeAttribute('style'); }, 160);
         }
         
     });
@@ -33,11 +33,11 @@ export function initButtons() {
     window.addEventListener('keyup', (event: any) => {
 
         const field = event.target.closest(".poisk_us");
-        const links =  document.querySelectorAll(`#wr_tree li a`);
-        links.forEach((a:any) => {
-            a.classList.remove("color_green")
-            if(field.value.trim().length > 0 && a.textContent.includes(field.value.trim()))
-                a.classList.add("color_green")
+        const spans =  document.querySelectorAll(`#wr_tree li .tree__item_name`);
+        spans.forEach((s:any) => {
+            s.classList.remove("color_green")
+            if(field?.value.trim()?.length > 0 && s.textContent.includes(field?.value.trim()))
+                s.classList.add("color_green")
         });
         
     });
