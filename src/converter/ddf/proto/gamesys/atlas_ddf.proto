@@ -1,0 +1,46 @@
+// Copyright 2020 The Defold Foundation
+// Licensed under the Defold License version 1.0 (the "License"); you may not use
+// this file except in compliance with the License.
+//
+// You may obtain a copy of the License, together with FAQs at
+// https://www.defold.com/license
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
+
+package dmGameSystemDDF;
+
+import "../ddf/ddf_extensions.proto";
+import "../ddf/ddf_extensions.proto";
+
+import "tile_ddf.proto";
+
+option java_package = "com.dynamo.gamesys.proto";
+option java_outer_classname = "AtlasProto";
+
+message AtlasImage
+{
+    required string image                           = 1 [(resource) = true];
+    optional SpriteTrimmingMode sprite_trim_mode    = 2 [default = SPRITE_TRIM_MODE_OFF];
+}
+
+message AtlasAnimation
+{
+    required string id              = 1;
+    repeated AtlasImage images      = 2;
+    optional Playback playback      = 3 [default = PLAYBACK_ONCE_FORWARD];
+    optional uint32 fps             = 4 [default = 30];
+    optional uint32 flip_horizontal = 5 [default = 0];
+    optional uint32 flip_vertical   = 6 [default = 0];
+}
+
+message Atlas
+{
+    repeated AtlasImage images          = 1;
+    repeated AtlasAnimation animations  = 2;
+    optional uint32 margin              = 3 [default = 0];
+    optional uint32 extrude_borders     = 4 [default = 0];
+    optional uint32 inner_padding       = 5 [default = 0];
+}
