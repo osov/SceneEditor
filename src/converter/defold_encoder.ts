@@ -1,58 +1,5 @@
-import * as protobuf from 'protobufjs';
+import { Type, Field, loadSync } from 'protobufjs';
 import { Vector3, Vector4 } from 'three';
-
-
-export interface IDefoldCollection {
-    name: string,
-
-    instances?: IDefoldGoFile[],
-    embedded_instances?: IDefoldEmbeddedGo[],
-    collection_instances?: IDefoldCollectionFile[],
-    scale_along_z?: number,
-    prope?: string
-}
-
-export interface IDefoldTransform {
-    id: string,
-
-    position?: Vector3,
-    rotation?: Vector3,
-    scale3?: Vector3
-}
-
-export interface IDefoldCollectionFile extends IDefoldTransform {
-    collection: string,
-}
-
-export interface IDefoldGo extends IDefoldTransform {
-    children: string,
-}
-
-export interface IDefoldEmbeddedGo extends IDefoldGo {
-    data: string,
-}
-
-export interface IDefoldGoFile extends IDefoldGo {
-    prototype: string,
-}
-
-export interface IDefoldComponent extends IDefoldTransform {
-    component: string,
-}
-
-export interface IDefoldEmbeddedComponent extends IDefoldTransform {
-    type: string,
-    data: string,
-}
-
-export interface IDefoldGui {
-    script: string,
-    nodes: IDefoldGuiNode[],
-
-    fonts?: IDefoldFont[],
-    textures?: IDefoldTexture[],
-    material?: string,
-}
 
 export enum DefoldGuiNodeType {
     TYPE_BOX = 0,
@@ -85,58 +32,6 @@ export enum DefoldGuiNodeSizeMode {
     SIZE_MODE_AUTO,
 }
 
-export interface IDefoldGuiNode {
-    id?: string,
-    type?: DefoldGuiNodeType,
-    position?: Vector4,
-    rotation?: Vector4,
-    scale?: Vector4,
-    size?: Vector4,
-    color?: Vector4,
-    blend_mode?: DefoldBlendMode,
-    text?: string,
-    texture?: string,
-    font?: string,
-    xanchor?: DefoldXAnchor,
-    yanchor?: DefoldYAnchor,
-    pivot?: DefoldPivot,
-    outline?: Vector4,
-    shadow?: Vector4,
-    line_break?: boolean,
-    parent?: string,
-    layer?: string,
-    inherit_alpha?: boolean,
-    slice9?: Vector4,
-    clipping_mode?: DefoldClippingMode,
-    clipping_visible?: boolean,
-    clipping_inverted?: boolean,
-    alpha?: number,
-    outline_alpha?: number,
-    shadow_alpha?: number,
-    template?: string,
-    text_leading?: number,
-    text_tracking?: number,
-    size_mode?: DefoldGuiNodeSizeMode
-}
-
-export interface IDefoldAtlas {
-    images: IDefoldAtlasImage[],
-}
-
-export interface IDefoldAtlasImage {
-    image: string
-}
-
-export interface IDefoldTexture {
-    name: string,
-    texture: string
-}
-
-export interface IDefoldFont {
-    name: string,
-    font: string
-}
-
 export enum DefoldBlendMode {
     BLEND_MODE_ALPHA = 0,
     BLEND_MODE_ADD,
@@ -157,40 +52,151 @@ export enum DefoldPivot {
     PIVOT_NW
 }
 
-export interface IDefoldLable {
-    text: string,
-    font: string,
-    size: Vector4,
-    scale: Vector4,
-    color: Vector4,
-    outline: Vector4,
-    shadow: Vector4,
-    leading: number,
-    tracking: number,
-    pivot: DefoldPivot,
-    blend_mode: DefoldBlendMode,
-    line_break: boolean,
-    material: string
+export interface IDefoldTransform {
+    id: string;
+
+    position?: Vector3;
+    rotation?: Vector3;
+    scale3?: Vector3;
+}
+
+export interface IDefoldCollection {
+    name: string;
+
+    instances?: IDefoldGoFile[];
+    embedded_instances?: IDefoldGo[];
+    collection_instances?: IDefoldCollectionFile[];
+    scale_along_z?: number;
+    prope?: string;
+}
+
+export interface IDefoldCollectionFile extends IDefoldTransform {
+    collection: string;
+}
+
+export interface IDefoldGo extends IDefoldTransform {
+    children?: string[];
+    data: string;
+}
+
+export interface IDefoldGoFile extends IDefoldTransform {
+    children?: string[];
+    prototype: string;
+}
+
+export interface IDefoldComponent extends IDefoldTransform {
+    component: string;
+}
+
+export interface IDefoldEmbeddedComponent extends IDefoldTransform {
+    type: string;
+    data: string;
+}
+
+export interface IDefoldSprite {
+    tile_set: string // but need - textures { sampler: string, texture: string }
+    default_animation: string,
+    material?: string,
+    blend_mode?: DefoldBlendMode
+}
+
+export interface IDefoldGui {
+    script: string;
+    nodes: IDefoldGuiNode[];
+
+    fonts?: IDefoldFont[];
+    textures?: IDefoldTexture[];
+    material?: string;
+}
+
+export interface IDefoldGuiNode {
+    id?: string;
+    enabled?: boolean,
+    visible?: boolean,
+    type?: DefoldGuiNodeType;
+    position?: Vector4;
+    rotation?: Vector4;
+    scale?: Vector4;
+    size?: Vector4;
+    color?: Vector4;
+    blend_mode?: DefoldBlendMode;
+    text?: string;
+    texture?: string;
+    font?: string;
+    xanchor?: DefoldXAnchor;
+    yanchor?: DefoldYAnchor;
+    pivot?: DefoldPivot;
+    outline?: Vector4;
+    shadow?: Vector4;
+    line_break?: boolean;
+    parent?: string;
+    layer?: string;
+    inherit_alpha?: boolean;
+    slice9?: Vector4;
+    clipping_mode?: DefoldClippingMode;
+    clipping_visible?: boolean;
+    clipping_inverted?: boolean;
+    alpha?: number;
+    outline_alpha?: number;
+    shadow_alpha?: number;
+    template?: string;
+    text_leading?: number;
+    text_tracking?: number;
+    size_mode?: DefoldGuiNodeSizeMode;
+}
+
+export interface IDefoldAtlas {
+    images: IDefoldAtlasImage[];
+}
+
+export interface IDefoldAtlasImage {
+    image: string;
+}
+
+export interface IDefoldTexture {
+    name: string;
+    texture: string;
+}
+
+export interface IDefoldFont {
+    name: string;
+    font: string;
+}
+
+export interface IDefoldLabel {
+    text: string;
+    font: string;
+    size: Vector4;
+    scale: Vector4;
+    color: Vector4;
+    outline: Vector4;
+    shadow: Vector4;
+    leading: number;
+    tracking: number;
+    pivot: DefoldPivot;
+    blend_mode: DefoldBlendMode;
+    line_break: boolean;
+    material: string;
 }
 
 export interface IDefoldSound {
-    sound: string,
+    sound: string;
 
-    looping?: number,
-    group?: string,
-    gain?: number,
-    pan?: number,
-    speed?: number,
-    loopcount?: number
+    looping?: number;
+    group?: string;
+    gain?: number;
+    pan?: number;
+    speed?: number;
+    loopcount?: number;
 }
 
 
-const typecache: Record<string, protobuf.Type> = {};
-const root = protobuf.loadSync("src/converter/ddf/proto/ddf.proto");
+const typecache: Record<string, Type> = {};
+const root = loadSync("src/converter/ddf/proto/ddf.proto");
 
-function findMessage(name: string, message: protobuf.Type, path: string): protobuf.Type | undefined {
+function findMessage(name: string, message: Type, path: string): Type | undefined {
     for (const m of message.nestedArray) {
-        if (m instanceof protobuf.Type) {
+        if (m instanceof Type) {
             if (`${path}.${m.name}` === name) {
                 return m;
             }
@@ -202,10 +208,10 @@ function findMessage(name: string, message: protobuf.Type, path: string): protob
     return undefined;
 }
 
-function getMessage(name: string): protobuf.Type | undefined {
+function getMessage(name: string): Type | undefined {
     if (typecache[name]) return typecache[name];
     for (const proto of root.nestedArray) {
-        if (proto instanceof protobuf.Type) {
+        if (proto instanceof Type) {
             const message = findMessage(name, proto, `.${proto.name}`);
             if (message) {
                 typecache[name] = message;
@@ -217,7 +223,7 @@ function getMessage(name: string): protobuf.Type | undefined {
     return undefined
 }
 
-function getField(k: string, message: protobuf.Type): protobuf.Field | undefined {
+function getField(k: string, message: Type): Field | undefined {
     for (const field of message.fieldsArray) {
         if (k === field.name) {
             return field;
@@ -232,7 +238,7 @@ function indent(s: string, n: number): string {
     return tab + s.replace(/\n/g, `\n${tab}`);
 }
 
-export function encode(t: Object, message: protobuf.Type): string {
+export function encode(t: Object, message: Type): string {
     let out = "";
 
     for (const [k, f] of Object.entries(t)) {
@@ -270,44 +276,46 @@ export function encode(t: Object, message: protobuf.Type): string {
     return out;
 }
 
-export function encodeCollection(t: IDefoldCollection) {
+export function encodeCollection(t: IDefoldCollection): string {
     return encode(t, root.lookupType("dmGameObjectDDF.CollectionDesc"));
 }
 
-export function encodeCollectionInstance(t: IDefoldCollectionFile) {
+export function encodeCollectionFile(t: IDefoldCollectionFile): string {
     return encode(t, root.lookupType("dmGameObjectDDF.CollectionInstanceDesc"));
 }
 
-export function encodeGo(t: IDefoldGoFile) {
-    return encode(t, root.lookupType("dmGameObjectDDF.InstanceDesc"));
-}
-
-export function encodeEmbeddedGo(t: IDefoldEmbeddedGo) {
+export function encodeGo(t: IDefoldGo): string {
     return encode(t, root.lookupType("dmGameObjectDDF.EmbeddedInstanceDesc"));
 }
 
-export function encodeGui(t: IDefoldGui) {
-    return encode(t, root.lookupType("dmGuiDDF.SceneDesc"));
+export function encodeGoFile(t: IDefoldGoFile): string {
+    return encode(t, root.lookupType("dmGameObjectDDF.InstanceDesc"));
 }
 
-export function encodeGuiNode(t: IDefoldGuiNode) {
-    return encode(t, root.lookupType("dmGuiDDF.NodeDesc"));
+export function encodeSprite(t: IDefoldSprite): string {
+    return encode(t, root.lookupType("SpriteDesc"))
 }
 
-export function encodeLabel(t: IDefoldLable) {
+export function encodeLabel(t: IDefoldLabel): string {
     return encode(t, root.lookupType("dmGameSystemDDF.LabelDesc"));
 }
 
-export function encodeFont(t: IDefoldFont) {
+export function encodeGui(t: IDefoldGui): string {
+    return encode(t, root.lookupType("dmGuiDDF.SceneDesc"));
+}
+
+export function encodeGuiNode(t: IDefoldGuiNode): string {
+    return encode(t, root.lookupType("dmGuiDDF.NodeDesc"));
+}
+
+export function encodeFont(t: IDefoldFont): string {
     return encode(t, root.lookupType("dmRenderDDF.FontDesc"));
 }
 
-export function encodeAtlas(t: IDefoldAtlas) {
+export function encodeAtlas(t: IDefoldAtlas): string {
     return encode(t, root.lookupType("dmGameSystemDDF.Atlas"));
 }
 
-export function encodeSound(t: IDefoldSound) {
+export function encodeSound(t: IDefoldSound): string {
     return encode(t, root.lookupType("dmSoundDDF.SoundDesc"));
 }
-
-// TODO: functions for combine encoding, for example go instances in collection and etc.
