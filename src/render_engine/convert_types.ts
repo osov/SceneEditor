@@ -1,15 +1,34 @@
 import { Vector3 } from "three";
 
-interface NodeData {
-    type: string;
-    data: any;
+
+export enum NodeType {
+    GO,
+    SPRITE,
+    LABEL,
+    SOUND,
+    SCRIPT,
+    FACTORY,
+    COLLECTION_PROXY,
+    COLLECTION_FACTORY,
+    COLLECTION,
+    GUI,
+    GUI_BOX,
+    GUI_TEXT
 }
 
 // для создания данных коллекции
-interface INodesList {
+export interface INodesList {
     list: NodeData[];
     name: string;
 }
+
+export interface NodeData {
+    type: NodeType;
+    data: NodeDataType;
+}
+
+export type NodeDataType = INodeEmpty | ISprite | ILabel | INodesList | IExtDependices | IGuiNode | IGuiBox | IGuiText;
+
 /*
     type - варианты - gui, gui_box, gui_text, sprite, label, go_empty(INodeEmpty), sound, [script, factory, collection_factory, collection_proxy], 
     data - один из интерфейсов перечисленных ниже
@@ -26,22 +45,7 @@ interface INodesList {
    
 */
 
-interface IExtDependices {
-    name: string;
-    path: string;
-}
-
-interface ISound {
-    name: string;
-    path: string;
-    loop: boolean;
-    group: string;
-    gain: number;
-    pan: number;
-    speed: number;
-}
-
-interface INodeEmpty {
+export interface INodeEmpty {
     id: number; // не для дефолда
     pid: number;  // не для дефолда
     name: string; // в дефолде это будет id
@@ -50,20 +54,20 @@ interface INodeEmpty {
     rotation: Vector3;
 }
 
-interface INodeBase extends INodeEmpty {
+export interface INodeBase extends INodeEmpty {
     width: number;
     height: number;
     color: string; // hex формат #RRGGBB
 }
 
-interface IGuiNode extends INodeBase {
+export interface IGuiNode extends INodeBase {
     enabled: boolean;
     visible: boolean;
     alpha: number; // 0..1
     pivot: number[]; // массив 2х чисел
 }
 
-interface IGuiBox extends IGuiNode {
+export interface IGuiBox extends IGuiNode {
     texture: string;
     atlas: string;
     slice_width: number;
@@ -71,7 +75,7 @@ interface IGuiBox extends IGuiNode {
     stencil: boolean;
 }
 
-interface IGuiText extends IGuiNode {
+export interface IGuiText extends IGuiNode {
     text: string;
     font: string;
     line_break: boolean;
@@ -82,7 +86,17 @@ interface IGuiText extends IGuiNode {
     shadow_alpha?: number; // 0..1
 }
 
-interface ISprite extends INodeBase {
+export interface ISound {
+    name: string;
+    path: string;
+    loop: boolean;
+    group: string;
+    gain: number;
+    pan: number;
+    speed: number;
+}
+
+export interface ISprite extends INodeBase {
     texture: string;
     atlas: string;
     slice_width: number;
@@ -91,7 +105,7 @@ interface ISprite extends INodeBase {
     // и менять материал на другой, но пока на текущем этапе тупо используем базовый
 }
 
-interface ILabel extends INodeBase {
+export interface ILabel extends INodeBase {
     text: string;
     font: string;
     line_break: boolean;
@@ -100,6 +114,12 @@ interface ILabel extends INodeBase {
     leading?: number;
     // материал должен быть label-df
 }
+
+export interface IExtDependices {
+    name: string;
+    path: string;
+}
+
 /*
 При конвертации данных:
 - если свойства не указаны(undefined|null) то ставим дефолтные значения
