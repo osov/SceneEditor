@@ -1,9 +1,12 @@
-import {  Object3D, Object3DEventMap, Vector2 } from "three";
+import {  Object3D, Vector2 } from "three";
+
+export enum IObjectTypes {
+    SLICE9_PLANE = 'slice9_plane',
+};
 
 export interface IBaseMeshData  {
-    type:string;
-    is_base_mesh: boolean;
-
+    type:IObjectTypes;
+    mesh_data:{id: number};
     set_size(w: number, h: number): void
     get_size(): Vector2
     get_bounds(): number[]

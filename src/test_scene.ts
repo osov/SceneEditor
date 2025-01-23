@@ -1,44 +1,42 @@
-import { BufferGeometry, Line, LineDashedMaterial,  NearestFilter,  TextureLoader,  Vector3,  } from 'three'
+import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, TextureLoader, Vector3, } from 'three'
 import { Slice9Mesh } from './render_engine/slice9';
+import { IObjectTypes } from './render_engine/types';
 
 export async function run_debug_scene() {
   // sov width projection
   //Camera.set_width_prjection(-1, 1, 0, 100);
   const scene = RenderEngine.scene;
+  (window as any).scene = RenderEngine.scene;
   const tex = await new TextureLoader().loadAsync('./img/2.png');
   tex.magFilter = NearestFilter;
 
 
 
-  const plane_1 = new Slice9Mesh(50, 50);
+  const plane_1 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 50, height: 50 });
   plane_1.set_color('#f00')
   plane_1.position.set(540, 0, 4);
-  scene.add(plane_1);
+  SceneManager.add(plane_1);
 
-  const plane_2 = new Slice9Mesh(16, 16);
+  const plane_2 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 16, height: 16 });
   plane_2.set_color('#0f0')
   plane_2.position.set(540, -200, 5);
-  //scene.add(plane_2);
+  SceneManager.add(plane_2);
 
-  const plane_3 = new Slice9Mesh(32, 32);
+  const plane_3 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 });
   plane_3.scale.setScalar(3)
   plane_3.set_color('#00f')
-  //plane_3.position.set(800, -200, 0.001);
-  // scene.add(plane_3);
+  plane_3.position.set(100, -200, 0.001);
+  SceneManager.add(plane_3);
 
-  const plane_4 = new Slice9Mesh(128, 32);
+  const plane_4 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 128, height: 32 }) as Slice9Mesh;
   plane_4.scale.setScalar(2);
-  plane_4.position.set(800, -500, 0);
+  plane_4.position.set(300, -500, 0);
   plane_4.set_slice(8, 8)
   plane_4.set_color('#0f0')
   plane_4.set_texture(tex);
-  scene.add(plane_4);
+  SceneManager.add(plane_4);
 
-  // debug childs
-  plane_3.position.set(10, 2, 0.1);
-  plane_4.add(plane_3);
-  plane_2.position.set(10, 3, 0.2)
-  plane_3.add(plane_2);
+
 
   var points = [];
   points.push(
@@ -56,13 +54,74 @@ export async function run_debug_scene() {
   line.computeLineDistances();
   scene.add(line)
 
+  let tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 10);
+  tmp.name = 'id10';
+  tmp.set_color('#f00');
+  tmp.position.set(0, 0, 0)
+  SceneManager.add(tmp);
+
+  let sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 11);
+  sub_tmp.name = 'id11';
+  sub_tmp.set_color('#ff0');
+  sub_tmp.position.set(0, -15, 0)
+  SceneManager.add(sub_tmp, 10);
+
+  sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 12);
+  sub_tmp.name = 'id12';
+  sub_tmp.set_color('#0ff');
+  sub_tmp.position.set(0, -30, 0)
+  SceneManager.add(sub_tmp, 10);
+
+  sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 13);
+  sub_tmp.name = 'id13';
+  sub_tmp.set_color('#0f0');
+  sub_tmp.position.set(0, -50, 0)
+  SceneManager.add(sub_tmp, 10);
+
+
+  tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 20);
+  tmp.name = 'id20';
+  tmp.set_color('#0f0');
+  tmp.position.set(50, 0, 0)
+  SceneManager.add(tmp);
+
+  sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 21);
+  sub_tmp.name = 'id21';
+  sub_tmp.set_color('#0a5');
+  sub_tmp.position.set(50, -15, 0)
+  SceneManager.add(sub_tmp, 20);
+
+  sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 22);
+  sub_tmp.name = 'id22';
+  sub_tmp.set_color('#00f');
+  sub_tmp.position.set(50, -30, 0)
+  SceneManager.add(sub_tmp, 20);
+
+  sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 23);
+  sub_tmp.name = 'id23';
+  sub_tmp.set_color('#f0f');
+  sub_tmp.position.set(50, -50, 0)
+  SceneManager.add(sub_tmp, 20);
+
+  tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 30);
+  tmp.name = 'id30';
+  tmp.set_color('#00f');
+  tmp.position.set(100, 0, 0)
+  SceneManager.add(tmp);
+
+
+  log('source:', SceneManager.debug_graph(scene));
+  SceneManager.move_mesh_id(21, 10, 13);
+  log('new:', SceneManager.debug_graph(scene));
+  log(SceneManager.make_graph());
+
   EventBus.on('SYS_SELECTED_MESH', (mesh) => {
-     // SizeControl.set_mesh(mesh.mesh);
-      TransformControl.set_mesh(mesh.mesh);
+    // SizeControl.set_mesh(mesh.mesh);
+    TransformControl.set_mesh(mesh.mesh);
   });
 
   EventBus.on('SYS_UNSELECTED_MESH', () => {
     //  SizeControl.set_mesh(null);
-      TransformControl.set_mesh(null);
+    TransformControl.set_mesh(null);
   })
 }

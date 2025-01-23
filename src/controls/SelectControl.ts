@@ -1,5 +1,6 @@
 import { Intersection, Object3D, Object3DEventMap, Vector2, Vector3 } from "three";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
+import { filter_list_base_mesh } from "../render_engine/helpers/utils";
 
 declare global {
     const SelectControl: ReturnType<typeof SelectControlModule>;
@@ -59,13 +60,11 @@ function SelectControlModule() {
     function set_selected(tmp: Intersection<Object3D<Object3DEventMap>>[]) {
         if (tmp.length == 0)
             return EventBus.trigger('SYS_UNSELECTED_MESH');
-        const list: IBaseMeshDataAndThree[] = [];
-        for (let i = 0; i < tmp.length; i++) {
-            const it = tmp[i];
-            if ((it.object as any).is_base_mesh) {
-                list.push(it.object as any as IBaseMeshDataAndThree);
-            }
-        }
+        let tmp_list = [];
+        for (let i = 0; i < tmp.length; i++) 
+                tmp_list.push(tmp[i].object);
+        const list = filter_list_base_mesh(tmp_list);
+        
         for (let i = 0; i < list.length; i++) {
             const it = list[i];
             // если еще ничего не выбрано то выбирается первый

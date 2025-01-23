@@ -1,5 +1,5 @@
-import { Texture, ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferGeometry, Object3D, Intersection, Raycaster, Sphere, Mesh } from "three";
-import { IBaseMeshData } from "./types";
+import { Texture, ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, Mesh } from "three";
+import { IBaseMeshData, IObjectTypes } from "./types";
 
 const slice_9_shader = {
     vertexShader: `
@@ -151,8 +151,8 @@ export function Slice9(material: ShaderMaterial, width = 1, height = 1, slice_wi
 
 
 export class Slice9Mesh extends Mesh  implements IBaseMeshData{
-    public type = 'Slice9Mesh';
-    public is_base_mesh = true;
+    public type = IObjectTypes.SLICE9_PLANE;
+    public mesh_data = { id: -1 };
     private template: ReturnType<typeof Slice9>;
 
     constructor(width = 1, height = 1, slice_width = 0, slice_height = 0) {
@@ -207,4 +207,4 @@ export class Slice9Mesh extends Mesh  implements IBaseMeshData{
     }
 
 
-}
+}   

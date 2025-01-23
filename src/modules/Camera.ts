@@ -61,6 +61,15 @@ function CameraModule() {
         _zoom = zoom;
     }
 
+    function screen_viewport() {
+        const { width, height } = RenderEngine.get_render_size();
+        const left = -width / 2;
+        const right = width / 2;
+        const top = height / 2;
+        const bottom = -height / 2;
+        return [left, right, top, bottom];
+    }
+
     function width_viewport() {
         const [dw, dh] = get_width_height();
 
@@ -149,24 +158,20 @@ function CameraModule() {
         // todo
     }
 
-    function screen_to_world(x: number, y: number) {
-        const camera = RenderEngine.camera;
+    function screen_to_world(x: number, y: number, is_gui = false) {
+        const camera = is_gui ? RenderEngine.camera_gui : RenderEngine.camera;
         return new Vector3(x, y, -1).unproject(camera);
     }
 
     function on_resize() {
         let [left, right, top, bottom] = [0, 0, 0, 0];
         // Базовая проекция, размер = размеру канваса
-        if (!is_width_projection) {
-            const { width, height } = RenderEngine.get_render_size();
-            left = -width / 2;
-            right = width / 2;
-            top = height / 2;
-            bottom = -height / 2;
-        }
-        else {
+        if (!is_width_projection)
+            [left, right, top, bottom] = screen_viewport();
+
+        else
             [left, right, top, bottom] = width_viewport();
-        }
+
 
         const camera = RenderEngine.camera;
         camera.left = left;
@@ -174,6 +179,14 @@ function CameraModule() {
         camera.top = top;
         camera.bottom = bottom;
         camera.updateProjectionMatrix();
+
+        [left, right, top, bottom] = screen_viewport();
+        const camera_gui = RenderEngine.camera_gui;
+        camera_gui.left = left;
+        camera_gui.right = right;
+        camera_gui.top = top;
+        camera_gui.bottom = bottom;
+        camera_gui.updateProjectionMatrix();
     }
 
     init();

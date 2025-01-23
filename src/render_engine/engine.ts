@@ -11,19 +11,23 @@ export function register_engine() {
 
 
 export function RenderEngineModule() {
-    let canvas = document.querySelector(`canvas#scene`)!;
-    let renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true })
-    let scene = new Scene();
+    const canvas = document.querySelector(`canvas#scene`)!;
+    const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true })
+    const scene = new Scene();
+    const scene_gui = new Scene();
     const clock = new Clock();
     const camera = new OrthographicCamera(-1, 1, -1, 1, 0, 100);
+    const camera_gui = new OrthographicCamera(-1, 1, -1, 1, 0, 100);
     const raycaster = new Raycaster();
     const mouse_pos = new Vector2();
     const mouse_pos_normalized = new Vector2();
-
+    let is_active_gui_camera = false;
 
     function init() {
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+        renderer.autoClear = false
         camera.position.set(0, 0, 50)
+        camera_gui.position.set(0, 0, 50)
 
         canvas.addEventListener('pointermove', (event: any) => {
             mouse_pos.set(event.offsetX, event.offsetY);
@@ -46,7 +50,10 @@ export function RenderEngineModule() {
         if (resize_renderer_to_display_size(renderer))
             on_resize();
         EventBus.trigger('SYS_ON_UPDATE', { dt: delta }, false);
+        renderer.clear();
         renderer.render(scene, camera);
+        renderer.clearDepth();
+        renderer.render(scene_gui, is_active_gui_camera ? camera_gui : camera); 
     }
 
     function on_resize() {
@@ -73,5 +80,9 @@ export function RenderEngineModule() {
         return false;
     }
 
-    return { init, animate, get_render_size, raycast_scene, is_intersected_mesh, scene, camera, raycaster, renderer };
+    function set_active_gui_camera(is_active: boolean) {
+        is_active_gui_camera = is_active;
+    }
+
+    return { init, animate, get_render_size, raycast_scene, is_intersected_mesh, set_active_gui_camera, scene, scene_gui, camera, camera_gui, raycaster, renderer };
 }
