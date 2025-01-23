@@ -104,6 +104,7 @@ message NodeDesc
         PIEBOUNDS_ELLIPSE   = 1 [(displayName) = "Ellipse"];
     };
 
+    
     optional dmMath.Vector4 position = 1;
     optional dmMath.Vector4 rotation = 2;
     optional dmMath.Vector4 scale    = 3;
@@ -159,6 +160,9 @@ message NodeDesc
 
     // ParticleFX specific options
     optional string particlefx              = 43;
+
+    optional bool enabled = 44 [default = true];
+    optional bool visible = 45 [default = true];
 }
 
 message SceneDesc
