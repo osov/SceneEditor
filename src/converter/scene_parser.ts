@@ -11,16 +11,9 @@ import {
 } from "../render_engine/convert_types";
 
 import {
-    encodeAtlas,
     encodeCollection,
-    encodeCollectionFile,
-    encodeFont,
-    encodeGoFile,
     encodeGui,
-    IDefoldAtlas,
     IDefoldGo,
-    IDefoldFont,
-    IDefoldGoFile,
     IDefoldGui,
     IDefoldGuiNode,
     IDefoldLabel,
@@ -28,7 +21,9 @@ import {
     IDefoldCollection,
     DefoldGuiNodeType,
     DefoldClippingMode,
-    DefoldPivot
+    DefoldPivot,
+    IDefoldCollectionFile,
+    encodeGo
 } from "./defold_encoder";
 import { hexToRGB } from "../modules/utils";
 
@@ -57,19 +52,19 @@ export function parseScene(data: INodesList): DefoldFileData[] {
         data: generateCollection(data)
     });
 
-    // // GENERATING UI
-    // result.push({
-    //     name: "ui",
-    //     type: DefoldFileType.GUI,
-    //     data: generateGui(data)
-    // });
+    // GENERATING UI
+    result.push({
+        name: "ui",
+        type: DefoldFileType.GUI,
+        data: generateGui(data)
+    });
 
-    // // GENERATING OTHER TYPES
-    // // TODO: deeper analyze of list
+    // GENERATING OTHER TYPES
+    // TODO: deeper analyze of list
     // result.push({
-    //     name: "",
+    //     name: (node.data as INodeEmpty).name,
     //     type: DefoldFileType.GO,
-    //     data: generateGoFile({} as INodeEmpty)
+    //     data: generateGoFile(node.data as INodeEmpty)
     // });
 
     // result.push({
@@ -91,14 +86,19 @@ export function parseScene(data: INodesList): DefoldFileData[] {
 function generateCollection(data: INodesList): string {
     const collection = {} as IDefoldCollection;
     collection.name = data.name;
-    collection.embedded_instances = []
+    collection.embedded_instances = [];
+    collection.collection_instances = [];
 
     for (const node of data.list) {
         switch (node.type) {
+            case NodeType.COLLECTION:
+                const collection_instance = castNodeList2DefoldCollection(node.data as INodesList);
+                collection.collection_instances.push(collection_instance);
+                break;
             case NodeType.GO:
                 // TODO: search children of this go by pid and grab name
-                const go = castNodeEmpty2DefoldGo(node.data as INodeEmpty);
-                collection.embedded_instances.push(go);
+                const go_instance = castNodeEmpty2DefoldGo(node.data as INodeEmpty); // pass children as second argument
+                collection.embedded_instances.push(go_instance);
                 break;
             case NodeType.SPRITE:
                 break;
@@ -114,22 +114,14 @@ function generateCollection(data: INodesList): string {
     return encodeCollection(collection);
 }
 
-function generateCollectionFile(data: INodesList, path: string): string {
-    return encodeCollectionFile({
-        id: data.name,
-        collection: path
-
-        // ISSUE: we don't want position, rotation and scaling on that collection ?
-    });
-}
-
 function generateGoFile(data: INodeEmpty): string {
-    // TODO: convert into Defold type
-    return encodeGoFile({} as IDefoldGoFile);
+    return encodeGo(castNodeEmpty2DefoldGo(data));
 }
 
 function generateGui(data: INodesList): string {
     const gui = {} as IDefoldGui;
+    gui.script = "";
+    gui.nodes = [];
 
     for (const node of data.list) {
         switch (node.type) {
@@ -152,6 +144,13 @@ function castNodeEmpty2DefoldGo(data: INodeEmpty, children?: string[]): IDefoldG
     };
 }
 
+function castNodeList2DefoldCollection(data: INodesList): IDefoldCollectionFile {
+    return {
+        id: data.name,
+        collection: data.name + ".collection"
+    }
+}
+
 function castSprite2DefoldSprite(data: ISprite): IDefoldSprite {
     return {} as IDefoldSprite;
 }
@@ -170,7 +169,8 @@ function castGuiBox2DefoldGuiNode(data: IGuiBox): IDefoldGuiNode {
         size: new Vector4(data.width, data.height),
         enabled: data.enabled,
         visible: data.visible,
-        texture: data.atlas.split(".atlas")[0] + data.texture,
+        // ISSUE: where default animation ?
+        texture: data.atlas.split(".atlas")[0] + `/${data.texture}`,
         clipping_mode: castStencil(data.stencil),
         slice9: new Vector4(data.slice_width, data.slice_height, data.slice_width, data.slice_height),
         alpha: data.alpha,
