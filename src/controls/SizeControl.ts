@@ -17,8 +17,9 @@ function SizeControlModule() {
     const prev_point = new Vector2();
     let click_pos = new Vector3();
     let offset_move = 0;
-    let selected_go: IBaseMeshDataAndThree | null = null;
+    let selected_list: IBaseMeshDataAndThree[] = [];
     let is_down = false;
+    let is_active = false;
     const dir = [0, 0];
     const range = 5;
 
@@ -34,6 +35,7 @@ function SizeControlModule() {
 
 
         EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
+            if (!is_active) return;
             if (e.button != 0)
                 return;
             is_down = true;
@@ -43,20 +45,21 @@ function SizeControlModule() {
         });
 
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
+            if (!is_active) return;
             if (e.button != 0)
                 return;
             is_down = false;
         });
 
         EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
+            if (!is_active) return;
             prev_point.set(pointer.x, pointer.y);
             pointer.x = event.x;
             pointer.y = event.y;
-            if (!selected_go)
+            if (selected_list.length == 0)
                 return;
             const wp = Camera.screen_to_world(pointer.x, pointer.y);
-            const bounds = selected_go.get_bounds();
-
+            const bounds = get_bounds_from_list();
             if (!is_down) {
                 document.body.style.cursor = 'default';
                 dir[0] = 0; dir[1] = 0;
@@ -100,40 +103,76 @@ function SizeControlModule() {
                 }
             }
             if (is_down) {
-                offset_move =click_pos.clone().sub(wp).length();
+                offset_move = click_pos.clone().sub(wp).length();
                 const cp = Camera.screen_to_world(prev_point.x, prev_point.y);
-                const ws = new Vector3();
-                selected_go.getWorldScale(ws);
-                const delta = wp.clone().sub(cp).divide(ws);
-                const old_pos = new Vector3();
-                selected_go.getWorldPosition(old_pos);
-                if (dir[0] != 0 || dir[1] != 0) {
-                    const old_size = selected_go.get_size();
-                    const center_x = (bounds[0] + bounds[2]) / 2;
-                    const center_y = (bounds[1] + bounds[3]) / 2;
+                for (let i = 0; i < selected_list.length; i++) {
+                    const selected_go = selected_list[i];
+                    const ws = new Vector3();
+                    selected_go.getWorldScale(ws);
+                    const delta = wp.clone().sub(cp).divide(ws);
+                    const old_pos = new Vector3();
+                    selected_go.getWorldPosition(old_pos);
+                    if (dir[0] != 0 || dir[1] != 0) {
+                        const old_size = selected_go.get_size();
+                        const center_x = (bounds[0] + bounds[2]) / 2;
+                        const center_y = (bounds[1] + bounds[3]) / 2;
 
-                    const new_size = new Vector2(old_size.x + delta.x, old_size.y - delta.y);
-                    if (wp.x < center_x)
-                        new_size.x = old_size.x - delta.x;
-                    if (wp.y > center_y)
-                        new_size.y = old_size.y + delta.y;
-                    selected_go.set_size(dir[0] > 0 ? new_size.x : old_size.x, dir[1] > 0 ? new_size.y : old_size.y);
-                    const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * dir[0] * ws.x * 0.5, old_pos.y + delta.y * dir[1] * ws.y * 0.5, old_pos.z));
-                    selected_go.position.copy(lp);
+                        const new_size = new Vector2(old_size.x + delta.x, old_size.y - delta.y);
+                        if (wp.x < center_x)
+                            new_size.x = old_size.x - delta.x;
+                        if (wp.y > center_y)
+                            new_size.y = old_size.y + delta.y;
+                        selected_go.set_size(dir[0] > 0 ? new_size.x : old_size.x, dir[1] > 0 ? new_size.y : old_size.y);
+                        const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * dir[0] * ws.x * 0.5, old_pos.y + delta.y * dir[1] * ws.y * 0.5, old_pos.z));
+                        selected_go.position.copy(lp);
+                    }
                 }
-                else {
-                    if (offset_move < 10){
-                        if (!RenderEngine.is_intersected_mesh(pointer, selected_go)){
+                if (dir[0] == 0 && dir[1] == 0) {
+
+                    // если маленькое смещение и при этом не выделен никакой меш
+                    if (offset_move < 10) {
+                        let is_select = false;
+                        for (let i = 0; i < selected_list.length; i++) {
+                            const selected_go = selected_list[i];
+                            if (RenderEngine.is_intersected_mesh(pointer, selected_go)) {
+                                is_select = true;
+                                break;
+                            }
+                        }
+                        if (!is_select) {
                             EventBus.trigger('SYS_UNSELECTED_MESH');
                             return;
                         }
                     }
-                    const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * ws.x, old_pos.y + delta.y * ws.y, old_pos.z));
-                    selected_go.position.copy(lp);
+                    for (let i = 0; i < selected_list.length; i++) {
+                        const selected_go = selected_list[i];
+                        const old_pos = new Vector3();
+                        selected_go.getWorldPosition(old_pos);
+                        const ws = new Vector3();
+                        selected_go.getWorldScale(ws);
+                        const delta = wp.clone().sub(cp).divide(ws);
+                        const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * ws.x, old_pos.y + delta.y * ws.y, old_pos.z));
+                        selected_go.position.copy(lp);
+                    }
                 }
-                draw_debug_bb(selected_go.get_bounds());
+                draw_debug_bb(bounds);
             }
         });
+    }
+
+    function get_bounds_from_list() {
+        const list = selected_list;
+        if (list.length == 0)
+            return [0, 0, 0, 0];
+        const bb = list[0].get_bounds();
+        for (let i = 1; i < list.length; i++) {
+            const b = list[i].get_bounds();
+            bb[0] = Math.min(bb[0], b[0]);
+            bb[1] = Math.max(bb[1], b[1]);
+            bb[2] = Math.max(bb[2], b[2]);
+            bb[3] = Math.min(bb[3], b[3]);
+        }
+        return bb;
     }
 
     function draw_debug_bb(bb: number[]) {
@@ -149,15 +188,26 @@ function SizeControlModule() {
         debug_poins.forEach(p => p.visible = visible);
     }
 
-    function set_mesh(mesh: IBaseMeshDataAndThree | null) {
-        selected_go = mesh;
-        if (selected_go) {
-            draw_debug_bb(selected_go.get_bounds());
-        }
-        else
+    function detach() {
+        selected_list = [];
         set_debug_visible(false);
+        document.body.style.cursor = 'default';
+    }
+
+    function set_selected_list(list: IBaseMeshDataAndThree[]) {
+        if (!is_active) return;
+        selected_list = list;
+        draw_debug_bb(get_bounds_from_list());
+        if (list.length == 0)
+            return;
+    }
+
+    function set_active(val: boolean) {
+        is_active = val;
+        if (!val)
+            set_debug_visible(false);
     }
 
     init();
-    return { set_mesh };
+    return { set_selected_list, detach, set_active };
 }

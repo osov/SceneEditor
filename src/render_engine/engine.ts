@@ -52,8 +52,10 @@ export function RenderEngineModule() {
         EventBus.trigger('SYS_ON_UPDATE', { dt: delta }, false);
         renderer.clear();
         renderer.render(scene, camera);
-        renderer.clearDepth();
-        renderer.render(scene_gui, is_active_gui_camera ? camera_gui : camera); 
+        if (is_active_gui_camera) {
+            renderer.clearDepth();
+            renderer.render(scene_gui, camera_gui);
+        }
     }
 
     function on_resize() {

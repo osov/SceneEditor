@@ -9,6 +9,7 @@ import { register_camera_control } from './controls/CameraContol';
 import { register_size_control } from './controls/SizeControl';
 import { register_transform_control } from './controls/TransformControl';
 import { register_scene_manager } from './render_engine/scene_manager';
+import { register_control_manager } from './controls/ControlManager';
 
 register_manager();
 register_engine();
@@ -20,6 +21,7 @@ register_camera_control();
 register_select_control();
 register_size_control();
 register_transform_control();
+register_control_manager();
 run_debug_scene();
 
 initButtons();

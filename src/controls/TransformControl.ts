@@ -1,5 +1,6 @@
 import { TransformControls, TransformControlsMode } from 'three/examples/jsm/controls/TransformControls.js';
 import { IBaseMeshDataAndThree } from '../render_engine/types';
+import { Euler, Object3D, Vector3 } from 'three';
 
 declare global {
     const TransformControl: ReturnType<typeof TransformControlModule>;
@@ -9,22 +10,243 @@ export function register_transform_control() {
     (window as any).TransformControl = TransformControlModule();
 }
 
+type NewPositionEventData = {
+    object: Object3D;
+    oldPosition: Vector3;
+    newPosition: Vector3;
+};
+
+type NewScaleEventData = {
+    object: Object3D;
+    oldScale: Vector3;
+    newScale: Vector3;
+};
+
+export type NewRotationEventData = {
+    object: Object3D;
+    oldRotation: Euler;
+    newRotation: Euler;
+};
+
 function TransformControlModule() {
+    const scene = RenderEngine.scene;
+    const _position = new Vector3();
+    const _rotation = new Euler();
+    const _scale = new Vector3();
+    const _sum = new Vector3();
+    const _averagePoint = new Vector3();
+    let _oldPositions: Vector3[] = [];
+    let _oldScales: Vector3[] = [];
+    let _oldRotations: Euler[] = [];
+
+    let selectedObjects: IBaseMeshDataAndThree[] = [];
+    const proxy = new Object3D();
+    scene.add(proxy);
     const control = new TransformControls(RenderEngine.camera, RenderEngine.renderer.domElement);
     const gizmo = control.getHelper();
     control.size = 0.5;
-    RenderEngine.scene.add(gizmo);
+    scene.add(gizmo);
     set_mode('translate');
+
     control.addEventListener('dragging-changed', (e) => {
-        //log('dragging-changed', e.value);
+        _on_dragging_changed(e.value as boolean);
+    });
+
+    control.addEventListener('objectChange', (e) => {
+        switch (control.getMode()) {
+            case 'translate':
+                _position.copy(proxy.position);
+                for (let i = 0; i < selectedObjects.length; i++) {
+                    const element = selectedObjects[i] as any;
+                    element.position.copy(element._position).add(_position);
+                }
+                break;
+            case 'rotate':
+                _rotation.copy(proxy.rotation);
+                for (let i = 0; i < selectedObjects.length; i++) {
+                    const element = selectedObjects[i] as any;
+                    element.rotation.copy(_rotation);
+                }
+                break;
+            case 'scale':
+                const dt_scale = proxy.scale.clone().sub(_scale);
+                _scale.copy(proxy.scale);
+                for (let i = 0; i < selectedObjects.length; i++) {
+                    const element = selectedObjects[i] as any;
+                    element.scale.add(dt_scale);
+                }
+                break;
+            default:
+                break;
+        }
     });
 
 
-    function set_mesh(mesh: IBaseMeshDataAndThree | null) {
-        if (mesh)
-            control.attach(mesh);
+    function _on_dragging_changed(storeInitialState: boolean) {
+        if (storeInitialState) {
+            _oldPositions = [];
+            _oldScales = [];
+            _oldRotations = [];
+
+            selectedObjects.forEach((object) => {
+                switch (control.getMode()) {
+                    case 'translate':
+                        const oldPosition = object.position.clone();
+                        _oldPositions.push(oldPosition);
+                        break;
+                    case 'rotate':
+                        const oldRotation = object.rotation.clone();
+                        _oldRotations.push(oldRotation);
+                        break;
+                    case 'scale':
+                        const oldScale = object.scale.clone();
+                        _oldScales.push(oldScale);
+                        break;
+                }
+            });
+        } else {
+            const newPositions: NewPositionEventData[] = [];
+            const newRotations: NewRotationEventData[] = [];
+            const newScales: NewScaleEventData[] = [];
+
+            switch (control.getMode()) {
+                case 'translate':
+                    for (let i = 0; i < selectedObjects.length; i++) {
+                        const object = selectedObjects[i];
+
+                        const oldPosition = _oldPositions[i].clone();
+                        const newPosition = object.position.clone();
+
+                        newPositions.push({
+                            object,
+                            oldPosition,
+                            newPosition,
+                        });
+                    }
+                    break;
+                case 'rotate':
+                    for (let i = 0; i < selectedObjects.length; i++) {
+                        const object = selectedObjects[i];
+
+                        const oldRotation = _oldRotations[i].clone();
+                        const newRotation = object.rotation.clone();
+
+                        newRotations.push({
+                            object,
+                            oldRotation,
+                            newRotation,
+                        });
+                    }
+                    break;
+                case 'scale':
+                    for (let i = 0; i < selectedObjects.length; i++) {
+                        const object = selectedObjects[i];
+
+                        const oldScale = _oldScales[i].clone();
+                        const newScale = object.scale.clone();
+
+                        newScales.push({
+                            object,
+                            oldScale,
+                            newScale,
+                        });
+                    }
+                    break;
+            }
+        }
+    }
+
+    function is_selected(mesh: IBaseMeshDataAndThree) {
+        for (let i = 0; i < selectedObjects.length; i++) {
+            const m = selectedObjects[i];
+            if (m.mesh_data.id == mesh.mesh_data.id) return true;
+        }
+        return false;
+    }
+
+    function set_mesh(mesh: IBaseMeshDataAndThree) {
+        control.attach(mesh);
+    }
+
+    function detach() {
+        control.detach();
+        selectedObjects = [];
+        detach_object_to_transform_control();
+    }
+
+    function select_mesh(mesh: IBaseMeshDataAndThree) {
+        if (is_selected(mesh)) return;
+        if (selectedObjects.length == 0) {
+            proxy.position.copy(mesh.position);
+            proxy.rotation.copy(mesh.rotation);
+            proxy.scale.copy(mesh.scale);
+            _scale.copy(mesh.scale);
+        }
+        (mesh as any)._position = mesh.position.clone();
+        selectedObjects.push(mesh);
+        attach_object_to_transform_control();
+    }
+
+    function deselect_mesh(mesh: IBaseMeshDataAndThree) {
+        for (let i = 0; i < selectedObjects.length; i++) {
+            const element = selectedObjects[i];
+            if (element.uuid !== mesh.uuid) continue;
+            (element as any)._position = undefined;
+            selectedObjects[i] = selectedObjects[selectedObjects.length - 1];
+            selectedObjects.pop();
+            break;
+        }
+        detach_object_to_transform_control();
+    }
+
+    function set_selected_list(list: IBaseMeshDataAndThree[]) {
+        if (!control.enabled)
+            return;
+        detach();
+        for (let i = 0; i < list.length; i++)
+            select_mesh(list[i]);
+    }
+
+    function attach_object_to_transform_control() {
+        if (selectedObjects.length === 0) return;
+        control.detach();
+        handle_transform_control_center();
+        control.attach(proxy);
+    }
+
+
+    function detach_object_to_transform_control() {
+        control.detach();
+        if (selectedObjects.length === 0) return;
+        handle_transform_control_center();
+        control.attach(proxy);
+
+    }
+
+    function handle_transform_control_center() {
+        _sum.set(0, 0, 0);
+
+        for (let i = 0; i < selectedObjects.length; i++) {
+            const object = selectedObjects[i];
+            object.getWorldPosition(_position);
+            _sum.add(_position);
+        }
+        _averagePoint.copy(_sum.divideScalar(selectedObjects.length));
+
+        for (let i = 0; i < selectedObjects.length; i++) {
+            const object = selectedObjects[i] as any;
+            object._position = object.position.clone().sub(_averagePoint);
+        }
+        proxy.position.copy(_averagePoint);
+    }
+
+    function set_active(val: boolean) {
+        control.enabled = val;
+        if (val)
+            attach_object_to_transform_control();
         else
-            control.detach();
+            detach();
+        control.getHelper().visible = val;
     }
 
     function set_mode(mode: TransformControlsMode) {
@@ -47,5 +269,5 @@ function TransformControlModule() {
 
     }
 
-    return { set_mesh, set_mode };
+    return { set_active, set_selected_list, detach, set_mode };
 }

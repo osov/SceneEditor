@@ -110,18 +110,10 @@ export async function run_debug_scene() {
   SceneManager.add(tmp);
 
 
-  log('source:', SceneManager.debug_graph(scene));
-  SceneManager.move_mesh_id(21, 10, 13);
-  log('new:', SceneManager.debug_graph(scene));
-  log(SceneManager.make_graph());
+ //log('source:', SceneManager.debug_graph(scene));
+ //SceneManager.move_mesh_id(21, 10, 13);
+ //log('new:', SceneManager.debug_graph(scene));
+ //log(SceneManager.make_graph());
 
-  EventBus.on('SYS_SELECTED_MESH', (mesh) => {
-    // SizeControl.set_mesh(mesh.mesh);
-    TransformControl.set_mesh(mesh.mesh);
-  });
 
-  EventBus.on('SYS_UNSELECTED_MESH', () => {
-    //  SizeControl.set_mesh(null);
-    TransformControl.set_mesh(null);
-  })
 }

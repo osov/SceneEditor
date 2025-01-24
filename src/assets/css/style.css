@@ -98,6 +98,9 @@ canvas {
 .menu_min a:hover {
   background-color: #3a7fbd;
 }
+.menu_min a.active {
+  background-color: #3a7fbd;
+}
 
 .svg_icon {
   display: inline-block;
