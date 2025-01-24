@@ -1,5 +1,7 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2 } from "three";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
+import { Slice9Mesh } from "../render_engine/slice9";
+import { PositionEventData, SizeEventData } from "./types";
 
 declare global {
     const SizeControl: ReturnType<typeof SizeControlModule>;
@@ -20,6 +22,10 @@ function SizeControlModule() {
     let selected_list: IBaseMeshDataAndThree[] = [];
     let is_down = false;
     let is_active = false;
+    let old_size: SizeEventData[] = [];
+    let old_pos: PositionEventData[] = [];
+    let is_changed_size = false;
+    let is_changed_pos = false;
     const dir = [0, 0];
     const range = 5;
 
@@ -42,6 +48,19 @@ function SizeControlModule() {
             click_point.set(e.x, e.y)
             offset_move = 0;
             click_pos = Camera.screen_to_world(click_point.x, click_point.y);
+            // save
+            old_pos = [];
+            is_changed_pos = false;
+            for (let i = 0; i < selected_list.length; i++) {
+                const m = selected_list[i];
+                old_pos.push({ id_mesh: m.mesh_data.id, position: m.position.clone() });
+            }
+            old_size = [];
+            is_changed_size = false;
+            for (let i = 0; i < selected_list.length; i++) {
+                const m = selected_list[i];
+                old_size.push( { id_mesh: m.mesh_data.id, size: (m as Slice9Mesh).get_size(), position: m.position.clone() });
+            }
         });
 
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
@@ -49,6 +68,11 @@ function SizeControlModule() {
             if (e.button != 0)
                 return;
             is_down = false;
+            if (is_changed_pos)
+                HistoryControl.add('MESH_TRANSLATE', old_pos);
+            if (is_changed_size)
+                HistoryControl.add('MESH_SIZE', old_size);
+            
         });
 
         EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
@@ -125,10 +149,10 @@ function SizeControlModule() {
                         selected_go.set_size(dir[0] > 0 ? new_size.x : old_size.x, dir[1] > 0 ? new_size.y : old_size.y);
                         const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * dir[0] * ws.x * 0.5, old_pos.y + delta.y * dir[1] * ws.y * 0.5, old_pos.z));
                         selected_go.position.copy(lp);
+                        is_changed_size = true;
                     }
                 }
                 if (dir[0] == 0 && dir[1] == 0) {
-
                     // если маленькое смещение и при этом не выделен никакой меш
                     if (offset_move < 10) {
                         let is_select = false;
@@ -153,6 +177,7 @@ function SizeControlModule() {
                         const delta = wp.clone().sub(cp).divide(ws);
                         const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * ws.x, old_pos.y + delta.y * ws.y, old_pos.z));
                         selected_go.position.copy(lp);
+                        is_changed_pos = true;
                     }
                 }
                 draw_debug_bb(bounds);

@@ -1,6 +1,7 @@
 import { TransformControls, TransformControlsMode } from 'three/examples/jsm/controls/TransformControls.js';
 import { IBaseMeshDataAndThree } from '../render_engine/types';
 import { Euler, Object3D, Vector3 } from 'three';
+import { PositionEventData, RotationEventData, ScaleEventData } from './types';
 
 declare global {
     const TransformControl: ReturnType<typeof TransformControlModule>;
@@ -10,23 +11,6 @@ export function register_transform_control() {
     (window as any).TransformControl = TransformControlModule();
 }
 
-type NewPositionEventData = {
-    object: Object3D;
-    oldPosition: Vector3;
-    newPosition: Vector3;
-};
-
-type NewScaleEventData = {
-    object: Object3D;
-    oldScale: Vector3;
-    newScale: Vector3;
-};
-
-export type NewRotationEventData = {
-    object: Object3D;
-    oldRotation: Euler;
-    newRotation: Euler;
-};
 
 function TransformControlModule() {
     const scene = RenderEngine.scene;
@@ -87,71 +71,47 @@ function TransformControlModule() {
             _oldPositions = [];
             _oldScales = [];
             _oldRotations = [];
-
             selectedObjects.forEach((object) => {
-                switch (control.getMode()) {
-                    case 'translate':
-                        const oldPosition = object.position.clone();
-                        _oldPositions.push(oldPosition);
-                        break;
-                    case 'rotate':
-                        const oldRotation = object.rotation.clone();
-                        _oldRotations.push(oldRotation);
-                        break;
-                    case 'scale':
-                        const oldScale = object.scale.clone();
-                        _oldScales.push(oldScale);
-                        break;
+                if (control.getMode() == 'translate') {
+                    const oldPosition = object.position.clone();
+                    _oldPositions.push(oldPosition);
+                }
+                else if (control.getMode() == 'rotate') {
+                    const oldRotation = object.rotation.clone();
+                    _oldRotations.push(oldRotation);
+                }
+                else if (control.getMode() == 'scale') {
+                    const oldScale = object.scale.clone();
+                    _oldScales.push(oldScale);
                 }
             });
         } else {
-            const newPositions: NewPositionEventData[] = [];
-            const newRotations: NewRotationEventData[] = [];
-            const newScales: NewScaleEventData[] = [];
-
-            switch (control.getMode()) {
-                case 'translate':
-                    for (let i = 0; i < selectedObjects.length; i++) {
-                        const object = selectedObjects[i];
-
-                        const oldPosition = _oldPositions[i].clone();
-                        const newPosition = object.position.clone();
-
-                        newPositions.push({
-                            object,
-                            oldPosition,
-                            newPosition,
-                        });
-                    }
-                    break;
-                case 'rotate':
-                    for (let i = 0; i < selectedObjects.length; i++) {
-                        const object = selectedObjects[i];
-
-                        const oldRotation = _oldRotations[i].clone();
-                        const newRotation = object.rotation.clone();
-
-                        newRotations.push({
-                            object,
-                            oldRotation,
-                            newRotation,
-                        });
-                    }
-                    break;
-                case 'scale':
-                    for (let i = 0; i < selectedObjects.length; i++) {
-                        const object = selectedObjects[i];
-
-                        const oldScale = _oldScales[i].clone();
-                        const newScale = object.scale.clone();
-
-                        newScales.push({
-                            object,
-                            oldScale,
-                            newScale,
-                        });
-                    }
-                    break;
+            if (control.getMode() == 'translate') {
+                const pos_data: PositionEventData[] = [];
+                for (let i = 0; i < selectedObjects.length; i++) {
+                    const object = selectedObjects[i];
+                    const position = _oldPositions[i].clone();
+                    pos_data.push({ id_mesh: object.mesh_data.id, position, });
+                }
+                HistoryControl.add('MESH_TRANSLATE', pos_data);
+            }
+            else if (control.getMode() == 'rotate') {
+                const rot_data: RotationEventData[] = [];
+                for (let i = 0; i < selectedObjects.length; i++) {
+                    const object = selectedObjects[i];
+                    const rotation = _oldRotations[i].clone();
+                    rot_data.push({ id_mesh: object.mesh_data.id, rotation, });
+                }
+                HistoryControl.add('MESH_ROTATE', rot_data);
+            }
+            else if (control.getMode() == 'scale') {
+                const scale_data: ScaleEventData[] = [];
+                for (let i = 0; i < selectedObjects.length; i++) {
+                    const object = selectedObjects[i];
+                    const scale = _oldScales[i].clone();
+                    scale_data.push({ id_mesh: object.mesh_data.id, scale, });
+                }
+                HistoryControl.add('MESH_SCALE', scale_data);
             }
         }
     }
