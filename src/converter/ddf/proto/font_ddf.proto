@@ -1,0 +1,102 @@
+// Copyright 2020 The Defold Foundation
+// Licensed under the Defold License version 1.0 (the "License"); you may not use
+// this file except in compliance with the License.
+//
+// You may obtain a copy of the License, together with FAQs at
+// https://www.defold.com/license
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
+
+package dmRenderDDF;
+
+import "ddf/ddf_extensions.proto";
+import "ddf/ddf_extensions.proto";
+
+option java_package = "com.dynamo.render.proto";
+option java_outer_classname = "Font";
+
+enum FontTextureFormat
+{
+    TYPE_BITMAP          = 0 [(displayName) = "Bitmap"];
+    TYPE_DISTANCE_FIELD  = 1 [(displayName) = "Distance Field"];
+}
+
+enum FontRenderMode
+{
+    MODE_SINGLE_LAYER = 0 [(displayName) = "Single Layer"];
+    MODE_MULTI_LAYER  = 1 [(displayName) = "Multi Layer"];
+}
+
+message FontDesc
+{
+    required string font = 1 [(resource)=true];
+    required string material = 2 [(resource)=true];
+    required uint32 size = 3;
+    optional uint32 antialias = 4 [default = 1];
+    optional float alpha = 5 [default = 1.0];
+    optional float outline_alpha = 6 [default = 0.0];
+    optional float outline_width = 7 [default = 0.0];
+    optional float shadow_alpha = 8 [default = 0.0];
+    optional uint32 shadow_blur = 9 [default = 0];
+    optional float shadow_x = 10 [default = 0.0];
+    optional float shadow_y = 11 [default = 0.0];
+    optional string extra_characters = 12 [default = ""];
+    optional FontTextureFormat output_format = 13 [default = TYPE_BITMAP];
+
+    optional bool all_chars = 14 [default = false];
+    optional uint32 cache_width = 15 [default = 0];
+    optional uint32 cache_height = 16 [default = 0];
+    optional FontRenderMode render_mode = 17 [default = MODE_SINGLE_LAYER];
+}
+
+message FontMap
+{
+    message Glyph
+    {
+        required uint32 character = 1;
+        optional uint32 width = 2 [default = 0];
+        optional float advance = 3 [default = 0.0];
+        optional float left_bearing = 4 [default = 0.0];
+        optional uint32 ascent = 5 [default = 0];
+        optional uint32 descent = 6 [default = 0];
+        optional int32 x = 7 [default = 0];
+        optional int32 y = 8 [default = 0];
+
+        optional uint64 glyph_data_offset = 9;
+        optional uint64 glyph_data_size = 10;
+    }
+
+    repeated Glyph glyphs = 1;
+    required string material = 2 [(resource)=true];
+
+    optional float shadow_x = 6;
+    optional float shadow_y = 7;
+    required float max_ascent = 8;
+    required float max_descent = 9;
+    optional FontTextureFormat image_format = 10 [default = TYPE_BITMAP];
+    optional float sdf_spread = 11 [default = 1];
+    optional float sdf_offset = 12 [default = 0];
+    optional float sdf_outline = 13 [default = 0];
+    optional float sdf_shadow = 14 [default = 0];
+
+    optional uint32 cache_width = 15 [default = 0];
+    optional uint32 cache_height = 16 [default = 0];
+    optional uint64 glyph_padding = 17;
+
+    optional uint32 cache_cell_width = 18;
+    optional uint32 cache_cell_height = 19;
+
+    optional uint32 glyph_channels = 20;
+
+    optional bytes glyph_data = 21; // glyph data may be compressed
+
+    optional float alpha = 22 [default = 1.0];
+    optional float outline_alpha = 23 [default = 1.0];
+    optional float shadow_alpha = 24 [default = 1.0];
+
+    optional uint32 cache_cell_max_ascent = 25;
+    optional uint32 layer_mask = 26 [default = 1];
+}

@@ -1,4 +1,5 @@
-import { Texture, ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferGeometry, Object3D, Intersection, Raycaster, Sphere, Mesh } from "three";
+import { Texture, ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, Mesh } from "three";
+import { IBaseMeshData, IObjectTypes } from "./types";
 
 const slice_9_shader = {
     vertexShader: `
@@ -141,17 +142,21 @@ export function Slice9(material: ShaderMaterial, width = 1, height = 1, slice_wi
         ];
     }
 
-    return { set_size, set_slice, set_color, set_texture, get_bounds, geometry, parameters };
+    function serialize(){
+
+    }
+
+    return { set_size, set_slice, set_color, set_texture, get_bounds, serialize, geometry, parameters };
 }
 
 
-export class Slice9Mesh extends Mesh {
+export class Slice9Mesh extends Mesh  implements IBaseMeshData{
+    public type = IObjectTypes.SLICE9_PLANE;
+    public mesh_data = { id: -1 };
     private template: ReturnType<typeof Slice9>;
-    public parameters: IParameters;
 
     constructor(width = 1, height = 1, slice_width = 0, slice_height = 0) {
         super();
-        (this as any).type = 'Slice9Mesh';
         const material = new ShaderMaterial({
             uniforms: {
                 tex: { value: null },
@@ -165,21 +170,24 @@ export class Slice9Mesh extends Mesh {
 
         });
         this.template = Slice9(material, width, height, slice_width, slice_height);
-        this.parameters = this.template.parameters;
         this.material = material;
         this.geometry = this.template.geometry;
     }
 
-    set_slice(width: number, height: number) {
-        this.template.set_slice(width, height);
+    set_size(w: number, h: number) {
+        this.template.set_size(w, h);
+    }
+
+    get_size(){
+        return new Vector2(this.template.parameters.width, this.template.parameters.height);
     }
 
     set_color(hex_color: string) {
         this.template.set_color(hex_color);
     }
 
-    set_size(w: number, h: number) {
-        this.template.set_size(w, h);
+    set_slice(width: number, height: number) {
+        this.template.set_slice(width, height);
     }
 
     set_texture(texture: Texture | null) {
@@ -194,5 +202,9 @@ export class Slice9Mesh extends Mesh {
         return this.template.get_bounds(wp, ws);
     }
 
+    serialize(){
+        return this.template.serialize();
+    }
 
-}
+
+}   

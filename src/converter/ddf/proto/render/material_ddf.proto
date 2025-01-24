@@ -1,0 +1,90 @@
+// Copyright 2020 The Defold Foundation
+// Licensed under the Defold License version 1.0 (the "License"); you may not use
+// this file except in compliance with the License.
+//
+// You may obtain a copy of the License, together with FAQs at
+// https://www.defold.com/license
+//
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
+
+package dmRenderDDF;
+
+import "../ddf/ddf_extensions.proto";
+import "../ddf/ddf_extensions.proto";
+
+option java_package = "com.dynamo.render.proto";
+option java_outer_classname = "Material";
+
+message MaterialDesc
+{
+    enum ConstantType
+    {
+        CONSTANT_TYPE_USER = 0;
+        CONSTANT_TYPE_VIEWPROJ = 1;
+        CONSTANT_TYPE_WORLD = 2;
+        CONSTANT_TYPE_TEXTURE = 3;
+        CONSTANT_TYPE_VIEW = 4;
+        CONSTANT_TYPE_PROJECTION = 5;
+        CONSTANT_TYPE_NORMAL = 6;
+        CONSTANT_TYPE_WORLDVIEW = 7;
+        CONSTANT_TYPE_WORLDVIEWPROJ = 8;
+    }
+
+    message Constant
+    {
+        required string name = 1;
+        required ConstantType type = 2;
+        optional dmMath.Vector4 value = 3;
+    }
+
+    enum VertexSpace
+    {
+        VERTEX_SPACE_WORLD        = 0;
+        VERTEX_SPACE_LOCAL        = 1;
+    }
+
+    enum WrapMode
+    {
+        WRAP_MODE_REPEAT          = 0;
+        WRAP_MODE_MIRRORED_REPEAT = 1;
+        WRAP_MODE_CLAMP_TO_EDGE   = 2;
+    }
+
+    enum FilterModeMin
+    {
+        FILTER_MODE_MIN_NEAREST = 0;
+        FILTER_MODE_MIN_LINEAR  = 1;
+        FILTER_MODE_MIN_NEAREST_MIPMAP_NEAREST = 2;
+        FILTER_MODE_MIN_NEAREST_MIPMAP_LINEAR  = 3;
+        FILTER_MODE_MIN_LINEAR_MIPMAP_NEAREST  = 4;
+        FILTER_MODE_MIN_LINEAR_MIPMAP_LINEAR   = 5;
+    }
+
+    enum FilterModeMag
+    {
+        FILTER_MODE_MAG_NEAREST = 0;
+        FILTER_MODE_MAG_LINEAR  = 1;
+    }
+
+    message Sampler
+    {
+        required string name           = 1; // uniform name
+        required WrapMode wrap_u       = 2;
+        required WrapMode wrap_v       = 3;
+        required FilterModeMin filter_min = 4;
+        required FilterModeMag filter_mag = 5;
+    }
+
+    required string name = 1;
+    repeated string tags = 2;
+    required string vertex_program = 3 [(resource)=true];
+    required string fragment_program = 4 [(resource)=true];
+    optional VertexSpace vertex_space = 5;
+    repeated Constant vertex_constants = 6;
+    repeated Constant fragment_constants = 7;
+    repeated string textures = 8;
+    repeated Sampler samplers = 9;
+}

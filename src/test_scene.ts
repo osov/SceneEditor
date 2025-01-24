@@ -1,61 +1,42 @@
-import { BufferGeometry, Line, LineDashedMaterial, Mesh, MeshBasicMaterial, NearestFilter, PlaneGeometry, SphereGeometry, TextureLoader, Vector2, Vector3, Vector4, } from 'three'
+import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, TextureLoader, Vector3, } from 'three'
 import { Slice9Mesh } from './render_engine/slice9';
-
-const debug_poins: Mesh[] = [];
-
-function draw_debug_bb(bb: number[]) {
-  debug_poins[0].position.set(bb[0], bb[1], 10);
-  debug_poins[1].position.set(bb[2], bb[1], 10);
-  debug_poins[2].position.set(bb[2], bb[3], 10);
-  debug_poins[3].position.set(bb[0], bb[3], 10);
-}
-
-
+import { IObjectTypes } from './render_engine/types';
 
 export async function run_debug_scene() {
   // sov width projection
   //Camera.set_width_prjection(-1, 1, 0, 100);
   const scene = RenderEngine.scene;
+  (window as any).scene = RenderEngine.scene;
   const tex = await new TextureLoader().loadAsync('./img/2.png');
   tex.magFilter = NearestFilter;
 
-  for (let i = 0; i < 4; i++) {
-    const geometry = new SphereGeometry(8, 4, 2);
-    const material = new MeshBasicMaterial({ color: 0xffff00 });
-    const sphere = new Mesh(geometry, material);
-    scene.add(sphere)
-    debug_poins.push(sphere);
-  }
 
-  const plane_1 = new Slice9Mesh(64, 64);
+
+  const plane_1 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 50, height: 50 });
   plane_1.set_color('#f00')
   plane_1.position.set(540, 0, 4);
-  scene.add(plane_1);
+  SceneManager.add(plane_1);
 
-  const plane_2 = new Slice9Mesh(16, 16);
+  const plane_2 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 16, height: 16 });
   plane_2.set_color('#0f0')
   plane_2.position.set(540, -200, 5);
-  //scene.add(plane_2);
+  SceneManager.add(plane_2);
 
-  const plane_3 = new Slice9Mesh(32, 32);
+  const plane_3 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 });
   plane_3.scale.setScalar(3)
   plane_3.set_color('#00f')
-  //plane_3.position.set(800, -200, 0.001);
-  // scene.add(plane_3);
+  plane_3.position.set(100, -200, 0.001);
+  SceneManager.add(plane_3);
 
-  const plane_4 = new Slice9Mesh(128, 32);
+  const plane_4 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 128, height: 32 }) as Slice9Mesh;
   plane_4.scale.setScalar(2);
-  plane_4.position.set(800, -500, 0);
+  plane_4.position.set(300, -500, 0);
   plane_4.set_slice(8, 8)
   plane_4.set_color('#0f0')
   plane_4.set_texture(tex);
-  scene.add(plane_4);
+  SceneManager.add(plane_4);
 
-  // debug childs
-  plane_3.position.set(10, 2, 0.1);
-  plane_4.add(plane_3);
-  plane_2.position.set(10, 3, 0.2)
-  plane_3.add(plane_2);
+
 
   var points = [];
   points.push(
@@ -73,126 +54,66 @@ export async function run_debug_scene() {
   line.computeLineDistances();
   scene.add(line)
 
+  let tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 10);
+  tmp.name = 'id10';
+  tmp.set_color('#f00');
+  tmp.position.set(0, 0, 0)
+  SceneManager.add(tmp);
 
-  const pointer = new Vector2();
-  const click_point = new Vector2();
-  const prev_point = new Vector2();
-  let is_down = false;
-  const dir = [0, 0];
+  let sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 11);
+  sub_tmp.name = 'id11';
+  sub_tmp.set_color('#ff0');
+  sub_tmp.position.set(0, -15, 0)
+  SceneManager.add(sub_tmp, 10);
 
-  let selected_go: Slice9Mesh | null = plane_4;
-  EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
-    is_down = true;
-    click_point.set(e.x, e.y)
-  });
+  sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 12);
+  sub_tmp.name = 'id12';
+  sub_tmp.set_color('#0ff');
+  sub_tmp.position.set(0, -30, 0)
+  SceneManager.add(sub_tmp, 10);
 
-  EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
-    is_down = false;
-    const len = click_point.clone().sub(pointer).length();
-    if (len > 0.001)
-      return;
-
-    const intersects = RenderEngine.raycast_scene(pointer);
-    if (intersects.length > 0 && intersects[0].object instanceof Slice9Mesh) {
-      selected_go = intersects[0].object;
-      draw_debug_bb(selected_go.get_bounds());
-      //((intersects[0].object as Slice9Mesh).set_color('#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')));
-    }
-    else {
-      selected_go = null;
-      draw_debug_bb([0, 0, 0, 0]);
-    }
-  });
+  sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 13);
+  sub_tmp.name = 'id13';
+  sub_tmp.set_color('#0f0');
+  sub_tmp.position.set(0, -50, 0)
+  SceneManager.add(sub_tmp, 10);
 
 
+  tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 20);
+  tmp.name = 'id20';
+  tmp.set_color('#0f0');
+  tmp.position.set(50, 0, 0)
+  SceneManager.add(tmp);
 
-  EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
-    prev_point.set(pointer.x, pointer.y);
-    pointer.x = event.x;
-    pointer.y = event.y;
-    if (!selected_go)
-      return;
-    const wp = Camera.screen_to_world(pointer.x, pointer.y);
-    const bounds = selected_go.get_bounds();
-    const range = 5;
-    if (!is_down) {
-      document.body.style.cursor = 'default';
-      dir[0] = 0; dir[1] = 0;
-      if (wp.x > bounds[0] - range && wp.x < bounds[2] + range && wp.y > bounds[3] - range && wp.y < bounds[1] + range) {
-        if (Math.abs(bounds[0] - wp.x) < range) {
-          document.body.style.cursor = 'e-resize';
-          dir[0] = 1;
-        }
-        if (Math.abs(bounds[2] - wp.x) < range) {
-          document.body.style.cursor = 'e-resize';
-          dir[0] = 1;
-        }
-        if (Math.abs(bounds[1] - wp.y) < range) {
-          document.body.style.cursor = 'n-resize';
-          dir[1] = 1;
-        }
-        if (Math.abs(bounds[3] - wp.y) < range) {
-          document.body.style.cursor = 'n-resize';
-          dir[1] = 1;
-        }
-        if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
-          document.body.style.cursor = 'nw-resize';
-          dir[0] = 1;
-          dir[1] = 1;
-        }
-        if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
-          document.body.style.cursor = 'ne-resize';
-          dir[0] = 1;
-          dir[1] = 1;
-        }
-        if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
-          document.body.style.cursor = 'sw-resize';
-          dir[0] = 1;
-          dir[1] = 1;
-        }
-        if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
-          document.body.style.cursor = 'se-resize';
-          dir[0] = 1;
-          dir[1] = 1;
-        }
-      }
-    }
-    if (is_down) {
-      const cp = Camera.screen_to_world(prev_point.x, prev_point.y);
-      const ws = new Vector3();
-      selected_go.getWorldScale(ws);
-      const delta = wp.clone().sub(cp).divide(ws);
-      const center_x = (bounds[0] + bounds[2]) / 2;
-      const center_y = (bounds[1] + bounds[3]) / 2;
-      const old_pos = new Vector3();
-      selected_go.getWorldPosition(old_pos);
-      const old_width = selected_go.parameters.width;
-      const old_height = selected_go.parameters.height;
-      let new_width = selected_go.parameters.width + delta.x;
-      let new_height = selected_go.parameters.height - delta.y;
-      if (wp.x < center_x)
-        new_width = selected_go.parameters.width - delta.x;
-      if (wp.y > center_y)
-        new_height = selected_go.parameters.height + delta.y;
-      selected_go.set_size(dir[0] > 0 ? new_width : old_width, dir[1] > 0 ? new_height : old_height);
-      const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * dir[0] * ws.x * 0.5, old_pos.y + delta.y * dir[1] * ws.y * 0.5, old_pos.z));
-      selected_go.position.copy(lp);
-      if (dir[0] == 0 && dir[1] == 0) {
-         const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * ws.x , old_pos.y + delta.y  * ws.y , old_pos.z));
-         selected_go.position.copy(lp);
-      }
-      draw_debug_bb(selected_go.get_bounds());
-    }
-  });
+  sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 21);
+  sub_tmp.name = 'id21';
+  sub_tmp.set_color('#0a5');
+  sub_tmp.position.set(50, -15, 0)
+  SceneManager.add(sub_tmp, 20);
+
+  sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 22);
+  sub_tmp.name = 'id22';
+  sub_tmp.set_color('#00f');
+  sub_tmp.position.set(50, -30, 0)
+  SceneManager.add(sub_tmp, 20);
+
+  sub_tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 23);
+  sub_tmp.name = 'id23';
+  sub_tmp.set_color('#f0f');
+  sub_tmp.position.set(50, -50, 0)
+  SceneManager.add(sub_tmp, 20);
+
+  tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 }, 30);
+  tmp.name = 'id30';
+  tmp.set_color('#00f');
+  tmp.position.set(100, 0, 0)
+  SceneManager.add(tmp);
 
 
-
-
-
-
-
-
-
+ //log('source:', SceneManager.debug_graph(scene));
+ //SceneManager.move_mesh_id(21, 10, 13);
+ //log('new:', SceneManager.debug_graph(scene));
+ //log(SceneManager.make_graph());
 
 
 }

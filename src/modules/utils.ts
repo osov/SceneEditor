@@ -1,3 +1,5 @@
+import { Vector3 } from "three";
+
 export function get_hms() {
     var now = new Date();
     var hh: number | string = now.getHours();
@@ -32,6 +34,17 @@ export function random_int(min: number, max: number) {
 
 export function deepClone(obj: any) {
     return JSON.parse(JSON.stringify(obj))
-  }
+}
 
+export function hexToRGB(hex: string): Vector3 {
+    hex = hex.replace("#", "");
 
+    let r, g, b;
+    if (hex.length === 6) {
+        r = parseInt(hex.slice(0, 2), 16) / 255;
+        g = parseInt(hex.slice(2, 4), 16) / 255;
+        b = parseInt(hex.slice(4, 6), 16) / 255;
+    } else console.error("Неправильный формат шестнадцатеричного цвета");
+
+    return new Vector3(r, g, b);
+}

@@ -11,10 +11,13 @@
   "devDependencies": {
     "@types/three": "latest",
     "bun-types": "^1.0.14",
+    "tsx": "^4.19.2",
     "typescript": "^5.4.2",
     "vite": "^5.1.6"
   },
   "dependencies": {
+    "camera-controls": "^2.9.0",
+    "protobufjs": "^7.4.0",
     "three": "latest"
   }
 }
