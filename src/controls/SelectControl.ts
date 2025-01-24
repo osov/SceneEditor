@@ -20,12 +20,12 @@ function SelectControlModule() {
     let is_control = false;
     function init() {
 
-        window.addEventListener('keydown', (e) => {
+        RenderEngine.renderer.domElement.addEventListener('keydown', (e) => {
             is_control = e.ctrlKey;
         });
 
 
-        window.addEventListener('keyup', (e) => {
+        RenderEngine.renderer.domElement.addEventListener('keyup', (e) => {
             is_control = e.ctrlKey;
         });
 

@@ -25,7 +25,7 @@ interface HistoryDataItem<T extends HistoryDataKeys> {
 function HistoryControlModule() {
     const context_data: { [k: string]: HistoryDataItem<HistoryDataKeys>[] } = {};
     function init() {
-        window.addEventListener('keyup', (e) => {
+        RenderEngine.renderer.domElement.addEventListener('keyup', (e) => {
             if (e.ctrlKey && e.key == 'z')
                 undo();
         });
