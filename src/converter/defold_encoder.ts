@@ -1,4 +1,4 @@
-import { Type, Field, loadSync } from 'protobufjs';
+import { Type, Field, Root, Namespace } from 'protobufjs';
 import { Vector3, Vector4 } from 'three';
 
 export enum DefoldGuiNodeType {
@@ -192,15 +192,19 @@ export interface IDefoldSound {
 
 
 const typecache: Record<string, Type> = {};
-const root = loadSync("src/converter/ddf/proto/ddf.proto");
+const protos = new Root();
+const root = protos.loadSync("src/converter/ddf/proto/ddf.proto", { keepCase: true });
 
-function findMessage(name: string, message: Type, path: string): Type | undefined {
+function findMessage(name: string, message: Namespace, path: string): Type | undefined {
     for (const m of message.nestedArray) {
         if (m instanceof Type) {
-            if (`${path}.${m.name}` === name) {
+            if (m.fullName === `${path}.${name}` || m.fullName === `.${name}`) {
                 return m;
             }
-            const nested = findMessage(name, message, `${path}.${message.name}`);
+        }
+
+        if (m instanceof Namespace) {
+            const nested = findMessage(name, m as Namespace, `${path}.${m.name}`);
             if (nested) return nested;
         }
     }
@@ -211,8 +215,8 @@ function findMessage(name: string, message: Type, path: string): Type | undefine
 function getMessage(name: string): Type | undefined {
     if (typecache[name]) return typecache[name];
     for (const proto of root.nestedArray) {
-        if (proto instanceof Type) {
-            const message = findMessage(name, proto, `.${proto.name}`);
+        if (proto instanceof Namespace) {
+            const message = findMessage(name, proto, `${proto.fullName}`);
             if (message) {
                 typecache[name] = message;
                 return message;
@@ -241,33 +245,32 @@ function indent(s: string, n: number): string {
 export function encode(t: Object, message: Type): string {
     let out = "";
 
-    for (const [k, f] of Object.entries(t)) {
-        const proto_field = getField(k, message);
+    for (const [name, field] of Object.entries(t)) {
+        const proto_field = getField(name, message);
         if (!proto_field) continue;
 
-        const fields = (proto_field.repeated) ? f : [f];
-        for (const field of fields) {
-            const field_type = typeof field;
+        const elements = (proto_field.repeated) ? (field != undefined) ? field : [] : [field];
+        for (const element of elements) {
+            const field_type = typeof element;
             switch (field_type) {
+                // TODO: check enums, probably doesn't work for js
                 case "string":
-                    if (proto_field.type === "string") out += `${k}: "${field}"\n`; // String
-                    else out += `${k}: ${field}\n`; // Enum
+                    if (proto_field.type === "string") out += `${name}: "${element}"\n`; // String
+                    else out += `${name}: ${element}\n`; // Enum
                     break;
                 case "number":
                     const not_int = ["double", "float"];
-                    if (not_int.includes(proto_field.type)) out += `${k}: ${field}\n`; // Decimal
-                    else out += `${k}: ${Math.trunc(field)}\n`; // Integer
+                    if (not_int.includes(proto_field.type)) out += `${name}: ${element}\n`; // Decimal
+                    else out += `${name}: ${Math.trunc(element)}\n`; // Integer
                     break;
                 case "boolean":
-                    out += `${k}: ${field ? "true" : "false"}\n`;
+                    out += `${name}: ${element ? "true" : "false"}\n`;
                     break;
                 case "object":
-                    if (!proto_field.message)
-                        break;
-                    const nestedMessage = getMessage(proto_field.message.name);
+                    const nestedMessage = getMessage(proto_field.type);
                     if (!nestedMessage)
                         break;
-                    out += `${k} {\n${indent(encode(field, nestedMessage), 1)}\n}\n`;
+                    out += `${name} {\n${indent(encode(element, nestedMessage), 1)}\n}\n`;
                     break;
             }
         }

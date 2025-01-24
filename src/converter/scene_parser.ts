@@ -57,28 +57,32 @@ export function parseScene(data: INodesList): DefoldFileData[] {
         data: generateCollection(data)
     });
 
-    // GENERATING UI
-    result.push(generateGui(data));
+    // // GENERATING UI
+    // result.push({
+    //     name: "ui",
+    //     type: DefoldFileType.GUI,
+    //     data: generateGui(data)
+    // });
 
-    // GENERATING OTHER TYPES
-    // TODO: deeper analyze of list
-    result.push({
-        name: "",
-        type: DefoldFileType.GO,
-        data: generateGoFile({} as INodeEmpty)
-    });
+    // // GENERATING OTHER TYPES
+    // // TODO: deeper analyze of list
+    // result.push({
+    //     name: "",
+    //     type: DefoldFileType.GO,
+    //     data: generateGoFile({} as INodeEmpty)
+    // });
 
-    result.push({
-        name: "",
-        type: DefoldFileType.ATLAS,
-        data: encodeAtlas({} as IDefoldAtlas)
-    });
+    // result.push({
+    //     name: "",
+    //     type: DefoldFileType.ATLAS,
+    //     data: encodeAtlas({} as IDefoldAtlas)
+    // });
 
-    result.push({
-        name: "",
-        type: DefoldFileType.FONT,
-        data: encodeFont({} as IDefoldFont)
-    });
+    // result.push({
+    //     name: "",
+    //     type: DefoldFileType.FONT,
+    //     data: encodeFont({} as IDefoldFont)
+    // });
 
     return result;
 }
@@ -124,7 +128,7 @@ function generateGoFile(data: INodeEmpty): string {
     return encodeGoFile({} as IDefoldGoFile);
 }
 
-function generateGui(data: INodesList): DefoldFileData {
+function generateGui(data: INodesList): string {
     const gui = {} as IDefoldGui;
 
     for (const node of data.list) {
@@ -134,11 +138,7 @@ function generateGui(data: INodesList): DefoldFileData {
         }
     }
 
-    return {
-        name: "ui",
-        type: DefoldFileType.GUI,
-        data: encodeGui(gui)
-    };
+    return encodeGui(gui);
 }
 
 function castNodeEmpty2DefoldGo(data: INodeEmpty, children?: string[]): IDefoldGo {
