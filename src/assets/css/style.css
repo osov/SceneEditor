@@ -199,8 +199,8 @@ ul.tree_sub {
   padding-left: 10px;
   overflow: hidden;
   transition: height var(--transition_150);
-  /* border-top: 3px solid gray; */
-  /* border-top: 3px solid transparent; */
+  border-top: 3px solid gray;
+  border-top: 3px solid transparent;
 }
 li:not(.active) > ul.tree_sub {
   height: 0px;
@@ -208,10 +208,12 @@ li:not(.active) > ul.tree_sub {
 li.active > ul.tree_sub {
   height: auto;
 }
-ul.tree li.droppable {
-  /* background: #cccccc81; */
-  /* border-bottom-color: #cccccc81; */
+a.droppable[data-no_drop="true"] {
+  cursor: not-allowed;
 }
+/* li.droppable:has(> a[data-no_drag="true"]) {
+  cursor: not-allowed;
+} */
 a.tree__item.droppable {
   color: red;
 }

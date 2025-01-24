@@ -5,6 +5,7 @@ interface Item {
     pid: number; // parent id родителя или 0 если это верх иерархии
     name: string;
     visible: boolean; // визуально отображаем чуть затемненным(что отключено)
+    selected?:boolean; // выделен ли
     icon: string; // значок
     no_drag?: boolean; // нельзя брать тащить
     no_drop?: boolean; // нельзя положить внутрь
@@ -130,7 +131,7 @@ export function renderTree() {
     const html = getTreeHtml(renderList);
     const divTree:any = document.querySelector('#wr_tree');
     divTree.innerHTML = html;
-    
+    // updateDaD();
 }
 
 function buildTree(list: any) {
@@ -234,8 +235,7 @@ function updateTreeList(type?:string):void{
 
 // поместить после айдишного
 function updatePid(list:Item[], drag:any, drop:any, li?:boolean): void {
-    // const lastItemId = li ? drop.id : findLastIdItemByPid(drop.id) || drop.id;
-    const lastItemId = findLastIdItemByPid(drop.id) || drop.id;
+    const bid = li ? drop?.id : findLastIdItemByPid(drop?.id) || drop?.id;
     let leftList:any = [];
     let rightList:any = [];
     let dragItem = {};
@@ -243,7 +243,7 @@ function updatePid(list:Item[], drag:any, drop:any, li?:boolean): void {
 
     list.forEach((e:Item) => {
 
-        if (e.id === drag.id) dragItem = {...e, pid: li ? drop.pid : drop.id}; // li or a 
+        if (e.id === drag?.id) dragItem = {...e, pid: li ? drop?.pid : drop?.id}; // li or a 
         else {
             if (mySwitch) {
                 leftList.push(e);
@@ -253,11 +253,13 @@ function updatePid(list:Item[], drag:any, drop:any, li?:boolean): void {
             }
         }
 
-        if (e.id === lastItemId) { mySwitch = 0; }
+        if (e.id === bid) { mySwitch = 0; }
        
     });
 
     treeList = [...leftList, dragItem, ...rightList];
+    console.log(treeList);
+    
 }
 
 // Функция для поиска последнего элемента по pid
@@ -267,7 +269,7 @@ function findLastIdItemByPid(pid: number): number | undefined {
             return treeList[i].id;
         }
     }
-    return ;
+    return undefined;
 }
 
 // получить дочерние 1-уровня
@@ -296,7 +298,12 @@ let itemDrag:any = {};
 let itemDrop:any = {};
 let isDrop:boolean = false;
 
+// var movement = false;
+// var mousedown = false;
+
 function onMouseDown(event:any) {
+    // mousedown = true;
+    // movement = false;
     // event.preventDefault();
     if(event.button === 0){
 
@@ -331,6 +338,9 @@ function onMouseDown(event:any) {
 }
 
 function onMouseMove(event:any) {
+    // event.preventDefault();
+    // event.stopPropagation();
+
     if(event.button === 0){
         
         // if (event.target.closest('.card.pos')) {  // с таким вариантом, курсор при быстром движении уходит за пределы карты 
@@ -353,11 +363,13 @@ function onMouseMove(event:any) {
 
 function onMouseUp(event:any) {
     // event.preventDefault();
+    // mousedown = false;
+    // setTimeout(()=>movement = false, 10);
+
     if(event.button === 0){
 
         // блок цели
         if (event.target.closest('.tree__item') && currentDroppable) {
-            console.log('tree__item');
             if(isDrop && itemDrop?.no_drop === false){
                 updateTreeList("a");
                 renderTree();
@@ -366,8 +378,7 @@ function onMouseUp(event:any) {
             }
         }
         else if (event.target.closest('.tree li') && currentDroppable) {
-            console.log('tree li');
-            if(isDrop && itemDrop?.no_drop === false){
+            if(isDrop){
                 updateTreeList("li");
                 renderTree();
                 console.log("done li");
@@ -376,14 +387,13 @@ function onMouseUp(event:any) {
         }
         
         // clear
-        ddVisible = false;
+        // ddVisible = false;
         boxDD.classList.remove('pos')
         boxDD.removeAttribute('style')
         currentDroppable?.classList.remove('droppable')
         treeItem = null;
         itemDrag = null;
         itemDrop = null;
-
         console.log('clear');
 
     }
@@ -425,6 +435,38 @@ function isNext(dragI:Item, dropI:Item) : boolean {
     return false;
 }
 
+function isParentNoDrop(list: Item[], drag: Item, drop: Item): boolean {
+
+    // внутри родителя можно перемещать...
+    if(drag.pid === drop.pid){
+        return false;
+    } 
+    else {
+        // если разные родители
+        const parent = list.find(item => item.id === drop.pid);
+        if(parent && parent?.no_drop === true) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function isChild(list: Item[], parentId: number, currentPid: number): boolean {
+
+    let step =  currentPid;   
+
+    while(step > -1) {
+        const parent = list.find(item => item.id === step);
+        if (!parent) return false; 
+
+        if(parent.id === parentId) return true;
+        step = parent.pid
+    }
+
+    return false;
+}
+
 function toogleCurrentBox(droppableBelow:any, typeGoal:string) {
     // если элемент есть, сравниваем с текущим
     
@@ -437,24 +479,38 @@ function toogleCurrentBox(droppableBelow:any, typeGoal:string) {
 
         if (currentDroppable) {
             if(typeGoal == "li") {
+
+                // если дерево скрыто - 
+                if(currentDroppable.classList.contains('li_line')) {
+                    currentDroppable.classList.add('active');
+                }
+                
                 // статус и li.droppable для добавления рядом
                 const cdItem = currentDroppable.querySelector(".tree__item");
                 itemDrop = getItemObj(cdItem);
 
-                if(cdItem === treeItem || isNext(itemDrag, itemDrop)) { 
+                if(
+                    cdItem === treeItem || 
+                    isNext(itemDrag, itemDrop) || 
+                    itemDrop?.pid < 0
+                ) { 
                     boxDD.classList.remove('pos');
                     isDrop = false; 
                 }
                 else {
-                    if(ddVisible)
+                    if(ddVisible){}
                         boxDD.classList.add('pos');
 
-                    // у root родителя нет 
+                    // если не  root 
                     if(itemDrop.pid >= 0) {
                         currentDroppable.classList.add('droppable');
                     }
 
-                    if(itemDrop?.no_drop === true) {
+                    if(
+                        // itemDrop?.no_drop === true || 
+                        isChild(treeList, itemDrag.id, itemDrop.pid) || 
+                        isParentNoDrop(treeList, itemDrag, itemDrop)
+                    ) {
                         boxDD.classList.remove('active');
                         isDrop = false;
                     }
@@ -463,30 +519,13 @@ function toogleCurrentBox(droppableBelow:any, typeGoal:string) {
                         isDrop = true;
                     }
 
-                    // если соседние -> статус active
-                    if(itemDrag.pid === itemDrop.pid) {
-                        boxDD.classList.add('active');
-                        isDrop = true;
-                    }
-                    // если разные родители
-                    else {
-                        const parentDrop = treeList.find(item => item.id === itemDrop.pid);
-                        if(parentDrop && parentDrop?.no_drop === true) {
-                            boxDD.classList.remove('active');
-                            isDrop = false;
-                        }
-                        else {
-                            boxDD.classList.add('active');
-                            isDrop = true;
-                        }
-                    }
-
                 }
             }
             else {
                 // a.tree__item.droppable  и  статус для добавления внутрь
                 if(currentDroppable === treeItem || itemDrag?.no_drag === true) { 
                     boxDD.classList.remove('pos'); 
+                    isDrop = false; 
                 }
                 else {
                     if(ddVisible)
@@ -494,7 +533,7 @@ function toogleCurrentBox(droppableBelow:any, typeGoal:string) {
 
                     currentDroppable.classList.add('droppable');
                     itemDrop = getItemObj(currentDroppable);
-                    if(itemDrop?.no_drop === true && itemDrag) {
+                    if(itemDrop?.no_drop === true && itemDrag || isChild(treeList, itemDrag.id, itemDrop.pid)) {
                         boxDD.classList.remove('active');
                         isDrop = false;
                     }
@@ -524,8 +563,57 @@ function getItemObj(html:any) {
     }
 }
 
-// ********************** 0137 ***************************
+// // ********************** 0137 ***************************
 document.addEventListener('mousedown', onMouseDown, false)
 document.addEventListener('mousemove', onMouseMove, false)
 document.addEventListener('mouseup', onMouseUp, false)
+// // ********************** 0137 ***************************
+
+function updateDaD(): void {
+    // const menuItems: NodeListOf<HTMLElement> = document.querySelectorAll('ul.tree li, ul.tree li a');
+    // let draggedItem: HTMLElement | null = null;
+
+    // menuItems.forEach(item => {
+    //     item.addEventListener('mousedown', onMouseDown, false)
+    //     item.addEventListener('mousemove', onMouseMove, false)
+    //     item.addEventListener('mouseup', onMouseUp, false)
+    // });
+    // ********************** 0137 ***************************
+// document.addEventListener('mousedown', onMouseDown, false)
+// document.addEventListener('mousemove', onMouseMove, false)
+// document.addEventListener('mouseup', onMouseUp, false)
 // ********************** 0137 ***************************
+
+
+    // const btns: NodeListOf<HTMLElement> = document.querySelectorAll('ul.tree .tree__btn');
+    // btns.forEach(btn => {
+    //     // slideUp/slideDown for tree
+    //     btn.addEventListener('click', (event: Event) => {
+    //         event.preventDefault();
+    //         event.stopPropagation();
+    //         console.log("click::1");
+
+    //         const tree__btn = (event.target as HTMLElement).closest(".tree__btn");
+    //         if (tree__btn) {
+    //             console.log("click::::tree__btn");
+                
+    //             const li = (tree__btn as HTMLElement).closest("li");
+    //             const treeSub = li.querySelector(".tree_sub") as HTMLElement;
+    //             treeSub.style.height = 'auto';
+    //             const heightSub = treeSub.clientHeight + 'px';
+    //             treeSub.style.height = heightSub;
+    //             if (li.classList.contains('active')) {
+    //                 setTimeout(() => { treeSub.style.height = '0px'; }, 0);
+    //                 li.classList.remove('active');
+    //             } else {
+    //                 treeSub.style.height = '0px';
+    //                 setTimeout(() => { treeSub.style.height = heightSub; }, 0);
+    //                 li.classList.add('active');
+    //             }
+    //             setTimeout(() => { treeSub.removeAttribute('style'); }, 160);
+    //         }
+    //     });
+    // });
+
+}
+
