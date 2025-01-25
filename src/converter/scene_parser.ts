@@ -2,6 +2,7 @@ import { Vector4 } from "three";
 
 import {
     IGuiBox,
+    IGuiNode,
     IGuiText,
     ILabel,
     INodeEmpty,
@@ -47,37 +48,46 @@ export function parseScene(data: INodesList): DefoldFileData[] {
 
     // GENERATING MAIN COLLECTION
     result.push({
-        name: "main",
+        name: data.name,
         type: DefoldFileType.COLLECTION,
         data: generateCollection(data)
     });
 
-    // GENERATING UI
-    result.push({
-        name: "ui",
-        type: DefoldFileType.GUI,
-        data: generateGui(data)
-    });
+    // GENERATING OTHER INCLUDING FILE TYPES
+    for (const node of data.list) {
+        switch (node.type) {
+            case NodeType.COLLECTION:
+                const node_list = (node.data as INodesList);
+                result.push({
+                    name: node_list.name,
+                    type: DefoldFileType.COLLECTION,
+                    data: generateCollection(node_list)
+                })
+                break;
+            case NodeType.GUI:
+                const gui = (node.data as IGuiNode);
+                result.push({
+                    name: gui.name,
+                    type: DefoldFileType.GUI,
+                    data: generateGui(data)
+                });
+                break;
+            // result.push({
+            //     name: "",
+            //     type: DefoldFileType.ATLAS,
+            //     data: encodeAtlas({} as IDefoldAtlas)
+            // });
 
-    // GENERATING OTHER TYPES
-    // TODO: deeper analyze of list
-    // result.push({
-    //     name: (node.data as INodeEmpty).name,
-    //     type: DefoldFileType.GO,
-    //     data: generateGoFile(node.data as INodeEmpty)
-    // });
+            // result.push({
+            //     name: "",
+            //     type: DefoldFileType.FONT,
+            //     data: encodeFont({} as IDefoldFont)
+            // });
 
-    // result.push({
-    //     name: "",
-    //     type: DefoldFileType.ATLAS,
-    //     data: encodeAtlas({} as IDefoldAtlas)
-    // });
+        }
+    }
 
-    // result.push({
-    //     name: "",
-    //     type: DefoldFileType.FONT,
-    //     data: encodeFont({} as IDefoldFont)
-    // });
+
 
     return result;
 }
@@ -125,6 +135,9 @@ function generateGui(data: INodesList): string {
 
     for (const node of data.list) {
         switch (node.type) {
+            case NodeType.GUI:
+
+                break;
             case NodeType.GUI_BOX: gui.nodes.push(castGuiBox2DefoldGuiNode(node.data as IGuiBox)); break;
             case NodeType.GUI_TEXT: gui.nodes.push(castGuiText2DefoldGuiNode(node.data as IGuiText)); break;
         }
