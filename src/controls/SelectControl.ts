@@ -1,6 +1,8 @@
-import { Intersection, Object3D, Object3DEventMap, Vector2, Vector3 } from "three";
+import { Intersection, Object3D, Object3DEventMap, Vector2 } from "three";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
 import { filter_list_base_mesh } from "../render_engine/helpers/utils";
+
+// todo select https://threejs.org/examples/?q=box#misc_boxselection
 
 declare global {
     const SelectControl: ReturnType<typeof SelectControlModule>;
@@ -17,17 +19,7 @@ function SelectControlModule() {
     let selected: IBaseMeshDataAndThree | null = null;
     let selected_list: IBaseMeshDataAndThree[] = [];
     let is_down = false;
-    let is_control = false;
     function init() {
-
-        RenderEngine.renderer.domElement.addEventListener('keydown', (e) => {
-            is_control = e.ctrlKey;
-        });
-
-
-        RenderEngine.renderer.domElement.addEventListener('keyup', (e) => {
-            is_control = e.ctrlKey;
-        });
 
         EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
             if (e.button != 0)
@@ -61,7 +53,7 @@ function SelectControlModule() {
 
         EventBus.on('SYS_SELECTED_MESH', (e) => {
             (window as any).selected = e.mesh;
-            if (is_control) {
+            if (Input.is_control()) {
                 if (!is_selected(e.mesh))
                     selected_list.push(e.mesh);
                 else {
@@ -75,9 +67,9 @@ function SelectControlModule() {
             EventBus.trigger('SYS_SELECTED_MESH_LIST', { list: selected_list });
         });
 
-        EventBus.on('SYS_UNSELECTED_MESH', () => {
+        EventBus.on('SYS_UNSELECTED_MESH_LIST', () => {
             selected = null;
-            if (!is_control)
+            if (!Input.is_control())
                 selected_list = [];
         });
     }
@@ -94,8 +86,8 @@ function SelectControlModule() {
 
     function set_selected(tmp: Intersection<Object3D<Object3DEventMap>>[]) {
         if (tmp.length == 0) {
-            if (!is_control)
-                EventBus.trigger('SYS_UNSELECTED_MESH');
+            if (!Input.is_control())
+                EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
             return;
         }
         let tmp_list = [];
@@ -103,8 +95,8 @@ function SelectControlModule() {
             tmp_list.push(tmp[i].object);
         const list = filter_list_base_mesh(tmp_list);
         if (list.length == 0) {
-            if (!is_control)
-                EventBus.trigger('SYS_UNSELECTED_MESH');
+            if (!Input.is_control())
+                EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
             return;
         }
         for (let i = 0; i < list.length; i++) {

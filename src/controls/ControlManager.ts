@@ -17,11 +17,7 @@ function ControlManagerModule() {
             SizeControl.set_selected_list(e.list);
         });
 
-        EventBus.on('SYS_SELECTED_MESH', (e) => {
-           // SizeControl.set_mesh(e.mesh);
-        });
-
-        EventBus.on('SYS_UNSELECTED_MESH', () => {
+        EventBus.on('SYS_UNSELECTED_MESH_LIST', () => {
             TransformControl.detach();
             SizeControl.detach();
         });

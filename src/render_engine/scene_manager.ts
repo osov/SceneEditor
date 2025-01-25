@@ -14,7 +14,7 @@ export function register_scene_manager() {
 
 export function SceneManagerModule() {
     const scene = RenderEngine.scene;
-    const scene_gui = RenderEngine.scene_gui;
+    //const scene_gui = RenderEngine.scene_gui;
     
     // todo Increment ID
     // при создании сцены может назначиться список ид последовательный, которые позже мы захотим использовать(например при откате ходов), 

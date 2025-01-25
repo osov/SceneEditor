@@ -1,0 +1,53 @@
+import { Vector2 } from "three";
+
+declare global {
+    const Input: ReturnType<typeof InputModule>;
+}
+
+export function register_input() {
+    (window as any).Input = InputModule();
+}
+
+function InputModule() {
+    let keys_state: { [key: string]: boolean } = {};
+    let _is_control = false;
+    const mouse_pos = new Vector2();
+    const mouse_pos_normalized = new Vector2();
+
+    function bind_events() {
+        const canvas = RenderEngine.renderer.domElement;
+
+        canvas.addEventListener('keydown', (e) => {
+            _is_control = e.ctrlKey;
+            keys_state[e.key] = true;
+        });
+
+        canvas.addEventListener('keyup', (e) => {
+            _is_control = e.ctrlKey;
+            keys_state[e.key] = false;
+            if (e.ctrlKey && e.key == 'z')
+                EventBus.trigger('SYS_INPUT_UNDO');
+        });
+
+        canvas.addEventListener('pointermove', (event: any) => {
+            mouse_pos.set(event.offsetX, event.offsetY);
+            mouse_pos_normalized.set((event.offsetX / canvas.clientWidth) * 2 - 1, - (event.offsetY / canvas.clientHeight) * 2 + 1);
+            EventBus.trigger('SYS_INPUT_POINTER_MOVE', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y }, false);
+        });
+
+        canvas.addEventListener('mousedown', (e: any) => {
+            EventBus.trigger('SYS_INPUT_POINTER_DOWN', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, button: e.button }, false);
+        });
+
+        canvas.addEventListener('mouseup', (e: any) => {
+            EventBus.trigger('SYS_INPUT_POINTER_UP', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, button: e.button }, false);
+        });
+    }
+
+    function is_control(){
+        return _is_control;
+    }
+
+    return { bind_events, is_control, keys_state };
+
+}

@@ -4,6 +4,7 @@ import { register_log } from "./Log";
 import { register_event_bus } from "./EventBus";
 import { _ID_MESSAGES, _SystemMessages } from "./modules_const";
 import { register_camera } from "./Camera";
+import { register_input } from "./InputManager";
 
 /*
     Основной модуль для подгрузки остальных, доступен по объекту Manager
@@ -30,6 +31,7 @@ function ManagerModule() {
         register_system();
         register_log();
         register_event_bus();
+        register_input();
         register_camera();
     }
     return { init };

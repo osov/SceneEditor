@@ -59,7 +59,7 @@ function SizeControlModule() {
             is_changed_size = false;
             for (let i = 0; i < selected_list.length; i++) {
                 const m = selected_list[i];
-                old_size.push( { id_mesh: m.mesh_data.id, size: (m as Slice9Mesh).get_size(), position: m.position.clone() });
+                old_size.push({ id_mesh: m.mesh_data.id, size: (m as Slice9Mesh).get_size(), position: m.position.clone() });
             }
         });
 
@@ -72,7 +72,7 @@ function SizeControlModule() {
                 HistoryControl.add('MESH_TRANSLATE', old_pos);
             if (is_changed_size)
                 HistoryControl.add('MESH_SIZE', old_size);
-            
+
         });
 
         EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
@@ -164,7 +164,8 @@ function SizeControlModule() {
                             }
                         }
                         if (!is_select) {
-                            EventBus.trigger('SYS_UNSELECTED_MESH');
+                            if (!Input.is_control())
+                                EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
                             return;
                         }
                     }

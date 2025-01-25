@@ -17,6 +17,7 @@ register_engine();
 RenderEngine.init();
 RenderEngine.animate();
 
+Input.bind_events();
 register_scene_manager();
 register_camera_control();
 register_select_control();

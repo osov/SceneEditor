@@ -12,9 +12,10 @@ export type _SystemMessages = {
     SYS_INPUT_POINTER_MOVE: { x: number, y: number, offset_x: number, offset_y: number, },
     SYS_INPUT_POINTER_DOWN: { x: number, y: number, offset_x: number, offset_y: number, button: number },
     SYS_INPUT_POINTER_UP: { x: number, y: number, offset_x: number, offset_y: number, button: number },
+    SYS_INPUT_UNDO:{}
     SYS_SELECTED_MESH:{mesh:IBaseMeshDataAndThree}
     SYS_SELECTED_MESH_LIST:{list:IBaseMeshDataAndThree[]}
-    SYS_UNSELECTED_MESH:{}
+    SYS_UNSELECTED_MESH_LIST:{}
     SYS_ON_UPDATE: { dt: number },
 };
 

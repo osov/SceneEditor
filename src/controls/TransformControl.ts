@@ -36,7 +36,7 @@ function TransformControlModule() {
         _on_dragging_changed(e.value as boolean);
     });
 
-    control.addEventListener('objectChange', (e) => {
+    control.addEventListener('objectChange', () => {
         switch (control.getMode()) {
             case 'translate':
                 _position.copy(proxy.position);
@@ -124,10 +124,6 @@ function TransformControlModule() {
         return false;
     }
 
-    function set_mesh(mesh: IBaseMeshDataAndThree) {
-        control.attach(mesh);
-    }
-
     function detach() {
         control.detach();
         selectedObjects = [];
@@ -145,18 +141,6 @@ function TransformControlModule() {
         (mesh as any)._position = mesh.position.clone();
         selectedObjects.push(mesh);
         attach_object_to_transform_control();
-    }
-
-    function deselect_mesh(mesh: IBaseMeshDataAndThree) {
-        for (let i = 0; i < selectedObjects.length; i++) {
-            const element = selectedObjects[i];
-            if (element.uuid !== mesh.uuid) continue;
-            (element as any)._position = undefined;
-            selectedObjects[i] = selectedObjects[selectedObjects.length - 1];
-            selectedObjects.pop();
-            break;
-        }
-        detach_object_to_transform_control();
     }
 
     function set_selected_list(list: IBaseMeshDataAndThree[]) {
