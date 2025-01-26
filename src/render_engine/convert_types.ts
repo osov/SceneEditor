@@ -27,7 +27,7 @@ export interface NodeData {
     data: NodeDataType;
 }
 
-export type NodeDataType = INodeEmpty | ISprite | ILabel | INodesList | IExtDependices | IGuiNode | IGuiBox | IGuiText;
+export type NodeDataType = INodesList | INodeEmpty | ISprite | ILabel | ISound | IGui | IGuiNode | IGuiBox | IGuiText | IExtDependencies;
 
 /*
     type - варианты - gui, gui_box, gui_text, sprite, label, go_empty(INodeEmpty), sound, [script, factory, collection_factory, collection_proxy], 
@@ -58,6 +58,12 @@ export interface INodeBase extends INodeEmpty {
     width: number;
     height: number;
     color: string; // hex формат #RRGGBB
+}
+
+export interface IGui {
+    id: number;
+    pid: number;
+    name: string;
 }
 
 export interface IGuiNode extends INodeBase {
@@ -115,7 +121,7 @@ export interface ILabel extends INodeBase {
     // материал должен быть label-df
 }
 
-export interface IExtDependices {
+export interface IExtDependencies {
     name: string;
     path: string;
 }

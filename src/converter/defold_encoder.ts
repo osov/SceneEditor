@@ -94,7 +94,10 @@ export interface IDefoldEmbeddedComponent extends IDefoldTransform {
 }
 
 export interface IDefoldSprite {
-    tile_set: string // but need - textures { sampler: string, texture: string }
+    textures: {
+        sampler: string,
+        texture: string
+    }
     default_animation: string,
     material?: string,
     blend_mode?: DefoldBlendMode
@@ -253,7 +256,6 @@ export function encode(t: Object, message: Type): string {
         for (const element of elements) {
             const field_type = typeof element;
             switch (field_type) {
-                // TODO: check enums, probably doesn't work for js
                 case "string":
                     if (proto_field.type === "string") out += `${name}: "${element}"\n`; // String
                     else out += `${name}: ${element}\n`; // Enum

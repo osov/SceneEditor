@@ -1,13 +1,16 @@
-import { Vector4 } from "three";
+import { Vector3, Vector4 } from "three";
 
 import {
+    IExtDependencies,
     IGuiBox,
     IGuiNode,
     IGuiText,
     ILabel,
     INodeEmpty,
     INodesList,
+    ISound,
     ISprite,
+    NodeData,
     NodeType
 } from "../render_engine/convert_types";
 
@@ -17,14 +20,11 @@ import {
     IDefoldGo,
     IDefoldGui,
     IDefoldGuiNode,
-    IDefoldLabel,
-    IDefoldSprite,
     IDefoldCollection,
     DefoldGuiNodeType,
     DefoldClippingMode,
     DefoldPivot,
-    IDefoldCollectionFile,
-    encodeGo
+    IDefoldCollectionFile
 } from "./defold_encoder";
 import { hexToRGB } from "../modules/utils";
 
@@ -46,14 +46,14 @@ export interface DefoldFileData {
 export function parseScene(data: INodesList): DefoldFileData[] {
     const result = [] as DefoldFileData[];
 
-    // GENERATING MAIN COLLECTION
+    // main коллекция
     result.push({
         name: data.name,
         type: DefoldFileType.COLLECTION,
         data: generateCollection(data)
     });
 
-    // GENERATING OTHER INCLUDING FILE TYPES
+    // ищем встроенные/вложенные коллекции и gui
     for (const node of data.list) {
         switch (node.type) {
             case NodeType.COLLECTION:
@@ -72,24 +72,14 @@ export function parseScene(data: INodesList): DefoldFileData[] {
                     data: generateGui(data)
                 });
                 break;
-            // result.push({
-            //     name: "",
-            //     type: DefoldFileType.ATLAS,
-            //     data: encodeAtlas({} as IDefoldAtlas)
-            // });
-
-            // result.push({
-            //     name: "",
-            //     type: DefoldFileType.FONT,
-            //     data: encodeFont({} as IDefoldFont)
-            // });
-
         }
     }
 
-
-
     return result;
+}
+
+export function parsePrefab(data: INodeEmpty | ISprite | ILabel): DefoldFileData {
+    return {} as DefoldFileData;
 }
 
 
@@ -106,17 +96,35 @@ function generateCollection(data: INodesList): string {
                 collection.collection_instances.push(collection_instance);
                 break;
             case NodeType.GO:
-                // TODO: search children of this go by pid and grab name
-                const go_instance = castNodeEmpty2DefoldGo(node.data as INodeEmpty); // pass children as second argument
+                const go_id = (node.data as INodeEmpty).id;
+                const go_instance = castNodeEmpty2DefoldGo(node.data as INodeEmpty, getChildrens(go_id, data));
                 collection.embedded_instances.push(go_instance);
                 break;
             case NodeType.SPRITE:
-                break;
-            case NodeType.SOUND:
+                const sprite_id = (node.data as ISprite).id;
+                const sprite_instance = castSprite2DefoldGoSprite(node.data as ISprite, getChildrens(sprite_id, data));
+                collection.embedded_instances.push(sprite_instance);
                 break;
             case NodeType.LABEL:
+                const lable_id = (node.data as ISprite).id;
+                const lable_instance = castLabel2DefoldGoLabel(node.data as ILabel, getChildrens(lable_id, data));
+                collection.embedded_instances.push(lable_instance);
+                break;
+            case NodeType.SOUND:
+                const sound_instance = castSound2DefoldGoSound(node.data as ISound);
+                collection.embedded_instances.push(sound_instance);
                 break;
             case NodeType.COLLECTION_PROXY:
+                const collection_proxy_instance = castIExtDependence2DefoldGoCollectionProxy(node.data as IExtDependencies);
+                collection.embedded_instances.push(collection_proxy_instance);
+                break;
+            case NodeType.COLLECTION_FACTORY:
+                const collection_factory_instance = castIExtDependence2DefoldGoCollectionFactory(node.data as IExtDependencies);
+                collection.embedded_instances.push(collection_factory_instance);
+                break;
+            case NodeType.FACTORY:
+                const factory_instance = castIExtDependence2DefoldGoFactory(node.data as IExtDependencies);
+                collection.embedded_instances.push(factory_instance);
                 break;
         }
     }
@@ -124,8 +132,14 @@ function generateCollection(data: INodesList): string {
     return encodeCollection(collection);
 }
 
-function generateGoFile(data: INodeEmpty): string {
-    return encodeGo(castNodeEmpty2DefoldGo(data));
+function getChildrens(id: number, data: INodesList): string[] {
+    return data.list.filter((node: NodeData) => {
+        const is_go = node.type == NodeType.GO;
+        const is_parent = (node.data as INodeEmpty).pid == id;
+        return is_go && is_parent;
+    }).map((node: NodeData) => {
+        return (node.data as INodeEmpty).name;
+    });
 }
 
 function generateGui(data: INodesList): string {
@@ -157,19 +171,73 @@ function castNodeEmpty2DefoldGo(data: INodeEmpty, children?: string[]): IDefoldG
     };
 }
 
+function castSprite2DefoldGoSprite(data: ISprite, children?: string[]): IDefoldGo {
+    return {
+        id: data.name,
+        position: data.position,
+        rotation: data.rotation,
+        scale3: data.scale,
+        children,
+        data: "" // TODO: embed sprite
+    };
+}
+
+function castLabel2DefoldGoLabel(data: ILabel, children?: string[]): IDefoldGo {
+    return {
+        id: data.name,
+        position: data.position,
+        rotation: data.rotation,
+        scale3: data.scale,
+        children,
+        data: "" // TODO: embed label
+    };
+}
+
+function castSound2DefoldGoSound(data: ISound): IDefoldGo {
+    return {
+        id: data.name,
+        position: new Vector3(0, 0, 0),
+        rotation: new Vector3(0, 0, 0),
+        scale3: new Vector3(1, 1, 1),
+        data: "" // TODO: embed sound
+    };
+}
+
+function castIExtDependence2DefoldGoCollectionProxy(data: IExtDependencies): IDefoldGo {
+    return {
+        id: data.name,
+        position: new Vector3(0, 0, 0),
+        rotation: new Vector3(0, 0, 0),
+        scale3: new Vector3(1, 1, 1),
+        data: "" // TODO: embed collection proxy
+    };
+}
+
+function castIExtDependence2DefoldGoCollectionFactory(data: IExtDependencies): IDefoldGo {
+    return {
+        id: data.name,
+        position: new Vector3(0, 0, 0),
+        rotation: new Vector3(0, 0, 0),
+        scale3: new Vector3(1, 1, 1),
+        data: "" // TODO: embed collection factory
+    };
+}
+
+function castIExtDependence2DefoldGoFactory(data: IExtDependencies): IDefoldGo {
+    return {
+        id: data.name,
+        position: new Vector3(0, 0, 0),
+        rotation: new Vector3(0, 0, 0),
+        scale3: new Vector3(1, 1, 1),
+        data: "" // TODO: embed factory
+    };
+}
+
 function castNodeList2DefoldCollection(data: INodesList): IDefoldCollectionFile {
     return {
         id: data.name,
         collection: data.name + ".collection"
     }
-}
-
-function castSprite2DefoldSprite(data: ISprite): IDefoldSprite {
-    return {} as IDefoldSprite;
-}
-
-function castLable2DefoldLable(data: ILabel): IDefoldLabel {
-    return {} as IDefoldLabel;
 }
 
 function castGuiBox2DefoldGuiNode(data: IGuiBox): IDefoldGuiNode {

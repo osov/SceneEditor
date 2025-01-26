@@ -29,7 +29,12 @@ message SpriteDesc
         BLEND_MODE_SCREEN    = 4 [(displayName) = "Screen"];
     }
 
-    required string tile_set            = 1 [(resource)=true];
+    message TextureDesc {
+        required string sampler = 1;
+        required string texture = 2; [(resource)=true];
+    }
+
+    required TextureDesc textures       = 1;
     required string default_animation   = 2;
     optional string material            = 3 [(resource)=true, default="/builtins/materials/sprite.material"];
     optional BlendMode blend_mode       = 4 [default = BLEND_MODE_ALPHA];
