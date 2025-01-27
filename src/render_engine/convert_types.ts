@@ -115,15 +115,37 @@ export interface ILabel extends INodeBase {
     text: string;
     font: string;
     line_break: boolean;
-    outline?: string; // hex формат #RRGGBB
-    shadow?: string; // hex формат #RRGGBB
-    leading?: number;
+    outline: string; // hex формат #RRGGBB
+    shadow: string; // hex формат #RRGGBB
+    leading: number;
     // материал должен быть label-df
+}
+
+export enum PrefabComponentType {
+    SPRITE,
+    LABEL
+}
+
+export type PrefabDataType = ISprite | ILabel;
+
+export interface IPrefabData {
+    type: PrefabComponentType;
+    data: PrefabDataType;
+}
+
+export interface IPrefab {
+    name: string;
+    data: IPrefabData[];
 }
 
 export interface IExtDependencies {
     name: string;
     path: string;
+}
+
+export interface IAtlas {
+    name: string,
+    images: string[]
 }
 
 /*

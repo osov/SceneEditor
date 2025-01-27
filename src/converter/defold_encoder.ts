@@ -84,6 +84,11 @@ export interface IDefoldGoFile extends IDefoldTransform {
     prototype: string;
 }
 
+export interface IDefoldPrototype {
+    components?: IDefoldComponent[],
+    embedded_components?: IDefoldEmbeddedComponent[]
+}
+
 export interface IDefoldComponent extends IDefoldTransform {
     component: string;
 }
@@ -95,12 +100,12 @@ export interface IDefoldEmbeddedComponent extends IDefoldTransform {
 
 export interface IDefoldSprite {
     textures: {
-        sampler: string,
-        texture: string
-    }
-    default_animation: string,
-    material?: string,
-    blend_mode?: DefoldBlendMode
+        sampler: string;
+        texture: string;
+    };
+    default_animation: string;
+    material?: string;
+    blend_mode?: DefoldBlendMode;
 }
 
 export interface IDefoldGui {
@@ -162,8 +167,8 @@ export interface IDefoldTexture {
 }
 
 export interface IDefoldFont {
-    name: string;
     font: string;
+    material: string;
 }
 
 export interface IDefoldLabel {
@@ -191,6 +196,17 @@ export interface IDefoldSound {
     pan?: number;
     speed?: number;
     loopcount?: number;
+}
+
+export interface IDefoldCollectionProxy {
+    collection: string;
+    exclude?: boolean;
+}
+
+// use for Collection and Go
+export interface IDefoldFactory {
+    prototype: string;
+    load_dynamically?: boolean;
 }
 
 
@@ -285,16 +301,8 @@ export function encodeCollection(t: IDefoldCollection): string {
     return encode(t, root.lookupType("dmGameObjectDDF.CollectionDesc"));
 }
 
-export function encodeCollectionFile(t: IDefoldCollectionFile): string {
-    return encode(t, root.lookupType("dmGameObjectDDF.CollectionInstanceDesc"));
-}
-
-export function encodeGo(t: IDefoldGo): string {
-    return encode(t, root.lookupType("dmGameObjectDDF.EmbeddedInstanceDesc"));
-}
-
-export function encodeGoFile(t: IDefoldGoFile): string {
-    return encode(t, root.lookupType("dmGameObjectDDF.InstanceDesc"));
+export function encodePrototype(t: IDefoldPrototype): string {
+    return encode(t, root.lookupType("dmGameObjectDDF.PrototypeDesc"));
 }
 
 export function encodeSprite(t: IDefoldSprite): string {
@@ -309,10 +317,6 @@ export function encodeGui(t: IDefoldGui): string {
     return encode(t, root.lookupType("dmGuiDDF.SceneDesc"));
 }
 
-export function encodeGuiNode(t: IDefoldGuiNode): string {
-    return encode(t, root.lookupType("dmGuiDDF.NodeDesc"));
-}
-
 export function encodeFont(t: IDefoldFont): string {
     return encode(t, root.lookupType("dmRenderDDF.FontDesc"));
 }
@@ -323,4 +327,16 @@ export function encodeAtlas(t: IDefoldAtlas): string {
 
 export function encodeSound(t: IDefoldSound): string {
     return encode(t, root.lookupType("dmSoundDDF.SoundDesc"));
+}
+
+export function encodeCollectionFactory(t: IDefoldFactory): string {
+    return encode(t, root.lookupType("dmGameSystemDDF.CollectionFactoryDesc"));
+};
+
+export function encodeCollectionProxy(t: IDefoldCollectionProxy): string {
+    return encode(t, root.lookupType("dmGameSystemDDF.CollectionProxyDesc"));
+}
+
+export function encodeFactory(t: IDefoldFactory): string {
+    return encode(t, root.lookupType("dmGameSystemDDF.FactoryDesc"));
 }

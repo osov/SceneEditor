@@ -1,6 +1,6 @@
 import { Vector3 } from "three";
-import { NodeType } from "../render_engine/convert_types";
-import { parsePrefab, parseScene } from "./scene_parser";
+import { NodeType, PrefabComponentType } from "../render_engine/convert_types";
+import { parseAtlas, parseFont, parsePrefab, parseScene } from "./scene_parser";
 
 const result = parseScene({
     name: "main",
@@ -24,7 +24,6 @@ const result = parseScene({
                     {
                         type: NodeType.GO,
                         data: {
-                            // ISSUE: ids inside new collection begin from zero ?
                             id: 0,
                             pid: 0,
                             name: "test_go_inside_test_collection",
@@ -65,6 +64,7 @@ const result = parseScene({
                 scale: new Vector3(1, 1, 1),
                 width: 100,
                 height: 100,
+                color: "#FFFFFF",
                 text: "hello world",
                 font: "test.ttf",
                 line_break: true,
@@ -175,7 +175,6 @@ const result = parseScene({
                 scale: new Vector3(1, 1, 1)
             }
         },
-        // ISSUE: как это будет работать ?
         {
             type: NodeType.FACTORY,
             data: {
@@ -186,6 +185,58 @@ const result = parseScene({
     ]
 });
 
-// result.push(parse_prefab({}));
+result.push(parsePrefab({
+    name: "test_prefab",
+    data: [
+        {
+            type: PrefabComponentType.SPRITE,
+            data: {
+                id: 0,
+                pid: 0,
+                name: "test_prefab_sprite",
+                position: new Vector3(0, 0, 0),
+                rotation: new Vector3(0, 0, 0),
+                scale: new Vector3(1, 1, 1),
+                width: 100,
+                height: 100,
+                color: "#FFFFFF",
+                texture: "test",
+                atlas: "test.atlas",
+                slice_width: 0,
+                slice_height: 0
+            }
+        },
+        {
+            type: PrefabComponentType.LABEL,
+            data: {
+                id: 0,
+                pid: 0,
+                name: "test_prefab_lable",
+                position: new Vector3(0, 0, 0),
+                rotation: new Vector3(0, 0, 0),
+                scale: new Vector3(1, 1, 1),
+                width: 100,
+                height: 100,
+                color: "#FFFFFF",
+                text: "hello world",
+                font: "test.ttf",
+                line_break: true,
+                outline: "#000000",
+                shadow: "#000000",
+                leading: 0.1
+            }
+
+        }
+    ]
+}));
+
+result.push(parseAtlas({
+    name: "test",
+    images: [
+        "./test.png"
+    ]
+}));
+
+result.push(parseFont("test.ttf"));
 
 console.log(result);

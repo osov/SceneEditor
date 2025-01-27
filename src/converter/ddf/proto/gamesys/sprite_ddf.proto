@@ -31,7 +31,7 @@ message SpriteDesc
 
     message TextureDesc {
         required string sampler = 1;
-        required string texture = 2; [(resource)=true];
+        required string texture = 2 [(resource)=true];
     }
 
     required TextureDesc textures       = 1;
