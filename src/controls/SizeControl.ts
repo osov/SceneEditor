@@ -13,6 +13,7 @@ export function register_size_control() {
 
 function SizeControlModule() {
     const scene = RenderEngine.scene;
+    let debug_center: Mesh;
     const debug_poins: Mesh[] = [];
     const pointer = new Vector2();
     const click_point = new Vector2();
@@ -30,14 +31,18 @@ function SizeControlModule() {
     const range = 5;
 
     function init() {
+        const geometry = new SphereGeometry(8, 4, 2);
+        const material = new MeshBasicMaterial({ color: 0xffff00 });
         for (let i = 0; i < 4; i++) {
-            const geometry = new SphereGeometry(8, 4, 2);
-            const material = new MeshBasicMaterial({ color: 0xffff00 });
             const sphere = new Mesh(geometry, material);
             sphere.visible = false;
             scene.add(sphere)
             debug_poins.push(sphere);
         }
+        debug_center = new Mesh(geometry, new MeshBasicMaterial({ color: 0xff0000 }));
+        debug_center.visible = false;
+        debug_center.scale.setScalar(0.5)
+        scene.add(debug_center);
 
 
         EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
@@ -59,7 +64,7 @@ function SizeControlModule() {
             is_changed_size = false;
             for (let i = 0; i < selected_list.length; i++) {
                 const m = selected_list[i];
-                old_size.push({ id_mesh: m.mesh_data.id, size: (m as Slice9Mesh).get_size(), position: m.position.clone() });
+                old_size.push({ id_mesh: m.mesh_data.id, size: m.get_size(), position: m.position.clone() });
             }
         });
 
@@ -132,6 +137,7 @@ function SizeControlModule() {
                 for (let i = 0; i < selected_list.length; i++) {
                     const selected_go = selected_list[i];
                     const ws = new Vector3();
+                  //  ws.copy(selected_go.scale);
                     selected_go.getWorldScale(ws);
                     const delta = wp.clone().sub(cp).divide(ws);
                     const old_pos = new Vector3();
@@ -141,14 +147,31 @@ function SizeControlModule() {
                         const center_x = (bounds[0] + bounds[2]) / 2;
                         const center_y = (bounds[1] + bounds[3]) / 2;
 
-                        const new_size = new Vector2(old_size.x + delta.x, old_size.y - delta.y);
-                        if (wp.x < center_x)
-                            new_size.x = old_size.x - delta.x;
-                        if (wp.y > center_y)
-                            new_size.y = old_size.y + delta.y;
-                        selected_go.set_size(dir[0] > 0 ? new_size.x : old_size.x, dir[1] > 0 ? new_size.y : old_size.y);
-                        const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * dir[0] * ws.x * 0.5, old_pos.y + delta.y * dir[1] * ws.y * 0.5, old_pos.z));
-                        selected_go.position.copy(lp);
+                        const diff_size = new Vector2(0, 0);
+                        const diff_pos = new Vector2(0, 0);
+                        const pivot = selected_go.get_pivot();
+                        const ax = pivot.x;
+                        const ay = pivot.y;
+                        if (dir[0] > 0) {
+                            diff_pos.x = delta.x * ws.x * ax;
+                            diff_size.x = delta.x;
+                            if (wp.x < center_x) {
+                                diff_size.x = - delta.x;
+                                diff_pos.x = delta.x * ws.x * (1 - ax);
+                            }
+                        }
+                        if (dir[1] > 0) {
+                            diff_pos.y = delta.y * ws.y * (1 - ay);
+                            diff_size.y = -delta.y;
+                            if (wp.y > center_y) {
+                                diff_size.y = delta.y;
+                                diff_pos.y = delta.y * ws.y * ay;
+                            }
+                        }
+                        selected_go.set_size(old_size.x + diff_size.x, old_size.y + diff_size.y);
+                        const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + diff_pos.x, old_pos.y + diff_pos.y, 0));
+                        selected_go.position.x = lp.x;
+                        selected_go.position.y = lp.y;
                         is_changed_size = true;
                     }
                 }
@@ -207,11 +230,20 @@ function SizeControlModule() {
         debug_poins[1].position.set(bb[2], bb[1], z);
         debug_poins[2].position.set(bb[2], bb[3], z);
         debug_poins[3].position.set(bb[0], bb[3], z);
+        if (selected_list.length == 1) {
+            const wp = new Vector3();
+            selected_list[0].getWorldPosition(wp);
+            debug_center.position.x = wp.x;
+            debug_center.position.y = wp.y;
+        }
         set_debug_visible(true);
+        if (selected_list.length != 1)
+            debug_center.visible = false;
     }
 
     function set_debug_visible(visible: boolean) {
         debug_poins.forEach(p => p.visible = visible);
+        debug_center.visible = visible;
     }
 
     function detach() {

@@ -18,6 +18,7 @@
   "dependencies": {
     "camera-controls": "^2.9.0",
     "protobufjs": "^7.4.0",
-    "three": "latest"
+    "three": "latest",
+    "troika-three-text": "^0.52.3"
   }
 }
