@@ -166,47 +166,99 @@ input.poisk_us{
 
 /* tree */
 .tree_div {
-  background-color: rgba(0, 0, 0, 0.1);
+  /* background-color: rgba(0, 0, 0, 0.1); */
+  padding: 10px;
 }
 ul.tree {
-  padding: 10px;
   user-select: none;
   --tree_color: green;
+  --tree_width: 200px;
 }
 ul.tree li {
-  line-height: 20px;
-  min-height: 25px;
+  /* line-height: 20px; */
+  /* min-height: 35px; */
   position: relative;
   /* border-top: 1px solid transparent; */
   /* border-bottom: 1px solid transparent; */
-  /* background-color: #2e7383; */
+  padding: 0;
+  margin: 0;
 }
-a.tree__item{
-  position: static;
-  display: inline-flex;
+ul.tree li.top{
+  border-top-color: green;
+}
+ul.tree li.bottom{
+  border-bottom-color: green;
+}
+ul.tree li.bg{
+  background-color: #2e7383;
+}
+a.tree__item {
+  --tree__itemHeight: 25px;
+  position: relative;
+  display: flex;
   justify-content: flex-start;
   align-items: center;
   /* border: 1px solid black; */
-  padding: 1px 2px;
-  border-radius: 2px;
-  margin-left: 16px;
-  line-height: 1;
-  font-size: 14px;
-  cursor: pointer;
-  width: auto;
+  padding: 0 8px 0 5px;
+  margin-left: 17px;
+  height: var(--tree__itemHeight, 25px);
+  line-height: calc(var(--tree__itemHeight) - 2px);
+  font-size: 15px;
+  cursor: default;
+  /* width: auto; */
+  flex-grow: 2;
+  z-index: 2;
 }
 a.tree__item:hover{
   opacity: 0.7;
 }
-ul.tree_sub {
-  padding-left: 10px;
+.tree__item_bg{
+  position: absolute;
+  min-width: 100%;
+  height: 25px;
+  top: 0;
+  right: 0;
+  opacity: 1;
+  width: var(--tree_width, 200px);
+  z-index: 1;
+}
+a.tree__item:hover .tree__item_bg,
+.tree__item_bg:hover {
+  background-color: #313a3d;
+}
+.li_line:not(.active) ul .tree__item_bg {
+  opacity: 0;
+  width: 0px;
+  transition: opacity var(--transition_150), width var(--transition_300);
+}
+.tree__ico {
+  display: block;
+  width: 12px;
+  height: 12px;
+  line-height: 12px;
+  position: relative;
+  z-index: 2;
+  margin-right: 5px;
+  top: 0px;
+}
+.tree__item_name {
+  position: relative;
+  white-space: nowrap;
+  min-width: 28px;
+  max-width: 280px;
   overflow: hidden;
+  z-index: 2;
+  cursor: pointer;
+}
+ul.tree_sub {
+  padding-left: 20px;
   transition: height var(--transition_150);
-  border-top: 3px solid gray;
-  border-top: 3px solid transparent;
+  /* border-top: 3px solid gray; */
+  /* border-top: 3px solid transparent; */
 }
 li:not(.active) > ul.tree_sub {
   height: 0px;
+  overflow: hidden;
 }
 li.active > ul.tree_sub {
   height: auto;
@@ -223,24 +275,19 @@ a.tree__item.droppable {
 li.droppable > .tree__item {
   text-decoration: underline;
 }
-.tree__item_name {
-  white-space: nowrap;
-  min-width: 28px;
-  max-width: 280px;
-  overflow: hidden;
-}
 .tree__btn {
   width: 12px;
   height: 12px;
   cursor: pointer;
   position: absolute;
-  top: 0px;
-  left: 0px;
-  z-index: 2;
+  top: 4px;
+  left: 4px;
+  z-index: 3;
   color: #999999d4;
 }
 .tree__btn:hover{
   opacity: 0.8;
+  color: yellow;
 }
 .tree__btn .svg_icon{
   transform: rotate(90deg);
@@ -252,14 +299,7 @@ li.active > .tree__btn .svg_icon {
 li.active > .tree__btn .use_trglF,
 li:not(.active) > .tree__btn .use_trgl {display: none;}
 
-.tree__ico {
-  display: block;
-  width: 12px;
-  height: 12px;
-  position: relative;
-  margin-right: 5px;
-  top: 0px;
-}
+
 
 .drag_and_drop{
   display: flex;

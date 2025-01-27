@@ -89,7 +89,7 @@ let treeList: Item[] = [
     {
         id: 7,
         pid: 41,
-        name: "name 7 7777name7777",
+        name: "name 7 name7777",
         visible: true,
         icon: "cube",
         no_drag: false,
@@ -131,6 +131,9 @@ export function renderTree() {
     const html = getTreeHtml(renderList);
     const divTree:any = document.querySelector('#wr_tree');
     divTree.innerHTML = html;
+    const tree:any = divTree.querySelector('.tree');
+    tree.style.setProperty('--tree_width', tree?.clientWidth + 'px');
+    console.log({tree});
     // updateDaD();
 }
 
@@ -189,7 +192,7 @@ function getTreeSubHtml(list:any){
         }
         else {
             result += `<li>
-                            ${getTreeItemHtml(item)}    
+                            ${getTreeItemHtml(item)}
                         </li>`;
         }
     });
@@ -208,6 +211,7 @@ function getTreeBtnHtml(){
 
 function getTreeItemHtml(item:any){
     return `<a class="tree__item" data-id="${item.id}" data-pid="${item.pid}" data-index="${item.index}" data-icon="${item.icon}" data-no_drop="${item.no_drop}" data-no_drag="${item.no_drag}">
+                <span class="tree__item_bg"></span>
                 ${getTreeIcoHtml(item.icon)}
                 <span class="tree__item_name" >${item.name}</span>
             </a>`;
@@ -298,12 +302,12 @@ let itemDrag:any = {};
 let itemDrop:any = {};
 let isDrop:boolean = false;
 
-// var movement = false;
-// var mousedown = false;
+let hoverStart: number;
+let hoverEnd: number | null;
+let hoverTimer: NodeJS.Timeout;
+
 
 function onMouseDown(event:any) {
-    // mousedown = true;
-    // movement = false;
     // event.preventDefault();
     if(event.button === 0){
 
@@ -352,10 +356,10 @@ function onMouseMove(event:any) {
 
             // переключаем блок цели
             if (goalBox.closest('.tree__item')) {
-                toogleCurrentBox(goalBox.closest('.tree__item'), "a")
+                toggleCurrentBox(event, goalBox.closest('.tree__item'), "a")
             }
             else if (goalBox.closest('.tree li')) {
-                toogleCurrentBox(goalBox.closest('.tree li'), "li")
+                toggleCurrentBox(event, goalBox.closest('.tree li'), "li")
             }
         }
     }
@@ -367,12 +371,14 @@ function onMouseUp(event:any) {
     // setTimeout(()=>movement = false, 10);
 
     if(event.button === 0){
+        removeClassWithDelay(currentDroppable, 1500); // 
 
         // блок цели
         if (event.target.closest('.tree__item') && currentDroppable) {
             if(isDrop && itemDrop?.no_drop === false){
                 updateTreeList("a");
                 renderTree();
+                // myClear();
                 console.log("done a");
                 
             }
@@ -381,12 +387,19 @@ function onMouseUp(event:any) {
             if(isDrop){
                 updateTreeList("li");
                 renderTree();
+                // myClear();
                 console.log("done li");
                 
             }
         }
         
-        // clear
+        myClear();
+
+    }
+}
+
+function myClear():void {
+                        // clear
         // ddVisible = false;
         boxDD.classList.remove('pos')
         boxDD.removeAttribute('style')
@@ -394,17 +407,57 @@ function onMouseUp(event:any) {
         treeItem = null;
         itemDrag = null;
         itemDrop = null;
+        isDrop = false;
         console.log('clear');
+        const items = document.querySelectorAll('.tree li');
+        items.forEach(i => i.classList.remove('top', 'bg', 'bottom'));
+}
 
+function switchClassItem(elem:any, pageY:number, pageX:number): void {
+    if(!elem) return;
+    const item = elem.closest('.tree li') as HTMLLIElement | null;
+    if(!item) return;
+
+    const itemTop = item.getBoundingClientRect().top;
+    const mouseY = pageY;
+    const mouseX = pageX;
+
+    const items = document.querySelectorAll('.tree li') as NodeListOf<HTMLLIElement>;
+    items.forEach(i => { i.classList.remove('top', 'bg', 'bottom'); });
+
+    const itemLeft: number = +item.getBoundingClientRect().left;
+    const itemRight: number = +item.getBoundingClientRect().left + +item.clientWidth;
+
+    if(
+        mouseY > itemTop && 
+        mouseX > itemLeft && 
+        mouseX < itemRight
+    ) {
+        // вычисляем по высоте
+        if(mouseY < itemTop + item.clientHeight * 0.2) {
+            item.classList.add('top');
+        }
+        else if(mouseY < itemTop + item.clientHeight * 0.8) {
+            item.classList.add('bg');
+        }
+        else if(mouseY < itemTop + item.clientHeight) {
+            item.classList.add('bottom');
+        }
+        else {
+            item.classList.remove('top', 'bg', 'bottom');
+        }
     }
+    else {
+        item.classList.remove('top', 'bg', 'bottom');
+    }
+    
 }
 
 function moveAt(pageX:number, pageY:number) {
-    // if(pageX !== startPageX || pageY !== startPageY) {
-    //     boxDD.classList.add('viz')
-    // }
         boxDD.style.left = pageX - 22 + 'px'
         boxDD.style.top = pageY + 'px'
+        boxDD.querySelector(".tree__item_name").innerText = `${pageY} : ${pageX} __ ${itemDrag.name}`;
+        switchClassItem(currentDroppable, pageY, pageX);
 }
 
 function getGoal(event:any) {
@@ -467,7 +520,7 @@ function isChild(list: Item[], parentId: number, currentPid: number): boolean {
     return false;
 }
 
-function toogleCurrentBox(droppableBelow:any, typeGoal:string) {
+function toggleCurrentBox(event:any, droppableBelow:any, typeGoal:string) {
     // если элемент есть, сравниваем с текущим
     
     if (currentDroppable != droppableBelow) {
@@ -482,7 +535,12 @@ function toogleCurrentBox(droppableBelow:any, typeGoal:string) {
 
                 // если дерево скрыто - 
                 if(currentDroppable.classList.contains('li_line')) {
-                    currentDroppable.classList.add('active');
+                    // currentDroppable.classList.add('active');
+                    addClassWithDelay(currentDroppable, 1500);
+                
+                    currentDroppable.addEventListener('mouseout', () => {
+                        removeClassWithDelay(currentDroppable, 1500);
+                    });
                 }
                 
                 // статус и li.droppable для добавления рядом
@@ -561,6 +619,36 @@ function getItemObj(html:any) {
         no_drag: html.getAttribute("data-no_drag") === "true" ? true : false,
         no_drop: html.getAttribute("data-no_drop") === "true" ? true : false,
     }
+}
+
+function addClassWithDelay(elem: HTMLElement, delay: number) {
+    
+    if (elem.classList.contains('active')) return;
+
+    hoverStart = Date.now();
+    hoverEnd = null;
+    
+    hoverTimer = setTimeout(() => {
+        if (hoverEnd === null) {
+            elem.classList.add('active');
+        }
+    }, delay);
+}
+
+function removeClassWithDelay(elem: HTMLElement, delay: number) {
+    // const elem = event.target as HTMLElement;
+    // console.log('elem', elem);
+    if (elem?.classList.contains('active')) return;
+    if (elem === null) return;
+
+
+    hoverEnd = Date.now();
+    const hoverTime: number = hoverEnd - hoverStart;
+    clearTimeout(hoverTimer);
+    if (hoverTime < delay) {
+        elem.classList.remove('active');
+    }
+
 }
 
 // // ********************** 0137 ***************************

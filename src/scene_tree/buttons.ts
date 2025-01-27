@@ -10,7 +10,7 @@ export function initButtons() {
         
         // slideUp/slideDown for tree
         const tree__btn = event.target.closest(".tree__btn");
-        if (tree__btn) {
+        if (tree__btn) {            
             const li = tree__btn.closest("li");
             const treeSub = li.querySelector(".tree_sub");
             treeSub.style.height = 'auto';
