@@ -29,6 +29,15 @@ export function convert_width_height_to_pivot_bb(w: number, h: number, ax = 0.5,
 export function set_pivot_with_sync_pos(mesh: IBaseMeshDataAndThree, width: number, height: number, old_pivot_x: number, old_pivot_y: number, new_pivot_x: number, new_pivot_y: number,) {
     const scale = mesh.scale;
     const op = convert_width_height_to_pivot_bb(width * scale.x, height * scale.y, old_pivot_x, old_pivot_y);
+    const old_positions = [];
+    for (let i = 0; i < mesh.children.length; i++) {
+        const m = mesh.children[i];
+        if (is_base_mesh(m)) {
+            const v = new Vector3();
+            m.getWorldPosition(v);
+            old_positions.push(v);
+        }
+    }
     const wp = new Vector3();
     mesh.getWorldPosition(wp);
     mesh.set_pivot(new_pivot_x, new_pivot_y);
@@ -39,8 +48,8 @@ export function set_pivot_with_sync_pos(mesh: IBaseMeshDataAndThree, width: numb
     for (let i = 0; i < mesh.children.length; i++) {
         const m = mesh.children[i];
         if (is_base_mesh(m)) {
-            // todo base mesh sync pos
+            const l = m.parent!.worldToLocal(old_positions[i]);
+            m.position.copy(l);
         }
-        
     }
 }
