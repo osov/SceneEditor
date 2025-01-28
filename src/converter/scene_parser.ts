@@ -3,6 +3,7 @@ import { Vector3, Vector4 } from "three";
 import {
     IAtlas,
     IExtDependencies,
+    IFont,
     IGuiBox,
     IGuiNode,
     IGuiText,
@@ -114,13 +115,14 @@ export function parseAtlas(data: IAtlas): DefoldFileData {
     };
 }
 
-export function parseFont(font: string): DefoldFileData {
+export function parseFont(data: IFont): DefoldFileData {
     return {
-        name: font.split(".")[0],
+        name: data.font.split(".")[0],
         type: DefoldFileType.FONT,
         data: encodeFont({
-            font,
-            material: "/builtins/fonts/font.material"
+            font: data.font,
+            material: "/builtins/fonts/font.material",
+            size: data.size
         })
     };
 }
@@ -334,7 +336,7 @@ function castGuiText2DefoldGuiNode(data: IGuiText): IDefoldGuiNode {
         id: data.name,
         type: DefoldGuiNodeType.TYPE_TEXT,
         text: data.text,
-        font: data.font,
+        font: data.font.split(".")[0] + ".font",
         line_break: data.line_break,
         text_leading: data.leading,
         outline: data.outline ? castColor(data.outline, data.outline_alpha ? data.outline_alpha : 1) : undefined,

@@ -147,6 +147,10 @@ export interface IAtlas {
     name: string;
     images: string[];
 }
+
+export interface IFont {
+    font: string;
+    size: number;
 }
 
 /*

@@ -169,6 +169,7 @@ export interface IDefoldTexture {
 export interface IDefoldFont {
     font: string;
     material: string;
+    size: number;
 }
 
 export interface IDefoldLabel {
