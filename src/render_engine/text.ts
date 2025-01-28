@@ -9,10 +9,13 @@ interface IParameters {
     pivot_x: number;
     pivot_y: number;
     color: string;
+    font: string;
 }
 
 interface SerializeData {
-
+    text: string
+    font: string
+    font_size: number
 }
 
 
@@ -24,24 +27,26 @@ export class TextMesh extends Text implements IBaseMesh {
         height: 1,
         pivot_x: 0.5,
         pivot_y: 0.5,
-        color: '#fff'
+        color: '#fff',
+        font: '',
     };
 
     constructor(text = '', width = 1, height = 1) {
         super();
-        this.text = text;
         this.textAlign = 'center';
         this.anchorX = '50%';
         this.anchorY = '50%';
-        // this.letterSpacing = 0.013; // 0.013+ есть границы размеров текста maxWidth при которых defold и threeJs расходятся переносы
-        this.set_size(width, height);
+        this.letterSpacing = 0.013; // 0.013+ есть границы размеров текста maxWidth при которых defold и threeJs расходятся переносы
+        this.set_size(width, height, false);
+        this.set_text(text);
     }
 
-    set_size(w: number, h: number) {
+    set_size(w: number, h: number, is_sync = true) {
         this.parameters.width = w;
         this.parameters.height = h;
         this.maxWidth = w;
-        this.sync();
+        if (is_sync)
+            this.sync();
     }
 
     get_size() {
@@ -51,21 +56,22 @@ export class TextMesh extends Text implements IBaseMesh {
     }
 
     set_color(hex_color: string) {
+        this.parameters.color = hex_color;
         this.color = hex_color;
     }
 
     _get_bounds() {
-        if (this.textRenderInfo.blockBounds) {
-            const br = this.textRenderInfo.blockBounds;
-            const bb = convert_width_height_to_pivot_bb(this.parameters.width, this.parameters.height, this.parameters.pivot_x, this.parameters.pivot_y);
-            return [
-                Math.min(br[0], bb[0].x),
-                Math.max(br[3], bb[1].y),
-                Math.max(br[2], bb[2].x),
-                Math.min(br[1], bb[3].y)
-            ];
+        let br = [0, 0, 0, 0];
+        if (this.textRenderInfo && this.textRenderInfo.blockBounds) {
+            br = this.textRenderInfo.blockBounds;
         }
-        return [0, 0, 0, 0]
+        const bb = convert_width_height_to_pivot_bb(this.parameters.width, this.parameters.height, this.parameters.pivot_x, this.parameters.pivot_y);
+        return [
+            Math.min(br[0], bb[0].x),
+            Math.max(br[3], bb[1].y),
+            Math.max(br[2], bb[2].x),
+            Math.min(br[1], bb[3].y)
+        ];
     }
 
     get_bounds() {
@@ -90,8 +96,8 @@ export class TextMesh extends Text implements IBaseMesh {
         return new Vector2(this.parameters.pivot_x, this.parameters.pivot_y);
     }
 
-    set_pivot(x: number, y: number, is_sync = false) {
-        if (is_sync){
+    set_pivot(x: number, y: number, is_sync_pos = false, is_sync = false) {
+        if (is_sync_pos) {
             const size = this.get_size();
             set_pivot_with_sync_pos(this, size.x, size.y, this.parameters.pivot_x, this.parameters.pivot_y, x, y);
         }
@@ -99,14 +105,36 @@ export class TextMesh extends Text implements IBaseMesh {
         this.anchorY = `${(1 - y) * 100}%`;
         this.parameters.pivot_x = x;
         this.parameters.pivot_y = y;
-        this.sync();
+        if (x == 0)
+            this.textAlign = 'left';
+        if (x == 1)
+            this.textAlign = 'right';
+        if (x == 0.5)
+            this.textAlign = 'center';
+        if (is_sync)
+            this.sync();
+    }
+
+    set_text(text: string, is_sync = true) {
+        this.text = text;
+        if (is_sync)
+            this.sync();
+    }
+
+    set_font(name: string, is_sync = true) {
+        this.font = ResourceManager.get_font(name);
+        this.parameters.font = name;
+        if (is_sync)
+            this.sync();
     }
 
     serialize(): SerializeData {
-        return {};
+        return { text: this.text, font: this.parameters.font, font_size: this.fontSize };
     }
 
     deserialize(data: SerializeData) {
-
+        this.fontSize = data.font_size;
+        this.set_font(data.font, false);
+        this.set_text(data.text);
     }
 }

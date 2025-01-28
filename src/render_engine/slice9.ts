@@ -1,4 +1,4 @@
-import { Texture, ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, Mesh } from "three";
+import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, Mesh } from "three";
 import { IBaseMesh, IObjectTypes } from "./types";
 import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "./helpers/utils";
 
@@ -67,11 +67,13 @@ interface IParameters {
     clip_width: number;
     clip_height: number;
     texture: string;
+    atlas: string
 }
 
 interface SerializeData {
     slice_width: number;
     slice_height: number;
+    atlas: string;
     texture: string
 }
 
@@ -87,6 +89,7 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         clip_width: 1,
         clip_height: 1,
         texture: '',
+        atlas:''
 
     }
 
@@ -97,8 +100,10 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         material.uniforms['u_border'].value.set(parameters.slice_width / parameters.clip_width, parameters.slice_height / parameters.clip_height);
     }
 
-    function set_texture(texture: Texture | null) {
-        parameters.texture = texture ? texture.name : '';
+    function set_texture(name: string, atlas = '') {
+        parameters.texture =  name;
+        parameters.atlas = atlas;
+        let texture = name == '' ? null : ResourceManager.get_texture(name, atlas);
         material.uniforms['tex'].value = texture;
         if (texture) {
             parameters.clip_width = texture.image.width;
@@ -169,14 +174,14 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         return {
             slice_width: parameters.slice_width,
             slice_height: parameters.slice_height,
-            texture: parameters.texture
+            texture: parameters.texture,
+            atlas: parameters.atlas
         };
     }
 
     function deserialize(data: SerializeData) {
+        set_texture(data.texture, data.atlas);
         set_slice(data.slice_width, data.slice_height);
-        // todo
-        //set_texture(data.texture ? new TextureLoader().load(data.texture) : null);
     }
 
     return { set_size, set_slice, set_color, set_texture, get_bounds, set_pivot, serialize, deserialize, geometry, parameters };
@@ -224,8 +229,8 @@ export class Slice9Mesh extends Mesh implements IBaseMesh {
         this.template.set_slice(width, height);
     }
 
-    set_texture(texture: Texture | null) {
-        this.template.set_texture(texture);
+    set_texture(name: string, atlas = '') {
+        this.template.set_texture(name, atlas);
     }
 
     get_bounds() {
@@ -247,6 +252,7 @@ export class Slice9Mesh extends Mesh implements IBaseMesh {
         }
         else
             this.template.set_pivot(x, y);
+        this.template.set_size(this.get_size().x, this.get_size().y);
     }
 
     get_pivot() {

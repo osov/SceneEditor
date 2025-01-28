@@ -12,6 +12,7 @@ import { register_scene_manager } from './render_engine/scene_manager';
 import { register_control_manager } from './controls/ControlManager';
 import { register_history_control } from './controls/HistoryControl';
 import { register_resource_manager } from './render_engine/resource_manager';
+import { register_view_control } from './controls/ViewControl';
 
 register_manager();
 register_engine();
@@ -21,12 +22,15 @@ RenderEngine.animate();
 Input.bind_events();
 register_resource_manager();
 register_scene_manager();
+
 register_camera_control();
 register_select_control();
 register_size_control();
 register_transform_control();
+register_view_control();
 register_control_manager();
 register_history_control();
+
 run_debug_scene();
 
 initButtons();

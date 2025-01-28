@@ -4,15 +4,15 @@ import { Euler, Object3D, Vector3 } from 'three';
 import { PositionEventData, RotationEventData, ScaleEventData } from './types';
 
 declare global {
-    const TransformControl: ReturnType<typeof TransformControlModule>;
+    const TransformControl: ReturnType<typeof TransformControlCreate>;
 }
 
 export function register_transform_control() {
-    (window as any).TransformControl = TransformControlModule();
+    (window as any).TransformControl = TransformControlCreate();
 }
 
 
-function TransformControlModule() {
+function TransformControlCreate() {
     const scene = RenderEngine.scene;
     const _position = new Vector3();
     const _rotation = new Euler();

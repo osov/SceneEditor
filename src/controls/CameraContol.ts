@@ -3,14 +3,14 @@ import CameraControls from 'camera-controls';
 import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster, GridHelper, } from 'three';
 
 declare global {
-    const CameraControl: ReturnType<typeof CameraControlModule>;
+    const CameraControl: ReturnType<typeof CameraControlCreate>;
 }
 
 export function register_camera_control() {
-    (window as any).CameraControl = CameraControlModule();
+    (window as any).CameraControl = CameraControlCreate();
 }
 
-function CameraControlModule() {
+function CameraControlCreate() {
     const subsetOfTHREE = {
         Vector2: Vector2,
         Vector3: Vector3,

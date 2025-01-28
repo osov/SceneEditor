@@ -1,4 +1,4 @@
-import { BufferGeometry, Line, LineDashedMaterial, NearestFilter,  Vector3, } from 'three'
+import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, Vector3, } from 'three'
 import { Slice9Mesh } from './render_engine/slice9';
 import { IObjectTypes } from './render_engine/types';
 import { TextMesh } from './render_engine/text';
@@ -34,7 +34,7 @@ export async function run_debug_scene() {
   plane_4.position.set(300, -500, 0);
   plane_4.set_slice(8, 8)
   plane_4.set_color('#0f0')
-  plane_4.set_texture(tex);
+  plane_4.set_texture('2');
   SceneManager.add(plane_4);
 
 
@@ -113,9 +113,9 @@ export async function run_debug_scene() {
 
   const t = SceneManager.create(IObjectTypes.TEXT, { text: 'Образец текста раз два три', width: 250, height: 50 });
   t.set_color('#0f0');
+  t.set_font('ShantellSans-Light11');
   t.fontSize = 32;
-  t.font = 'ShantellSans-Light11.ttf'
-  t.position.set(300,-300,0.3)
+  t.position.set(300, -300, 0.3)
   SceneManager.add(t);
 
 
@@ -123,16 +123,16 @@ export async function run_debug_scene() {
   tmp.position.set(300, -305, 0.2)
   SceneManager.add(tmp);
 
-  CameraControl.set_position(300,-350);
+  CameraControl.set_position(300, -350);
   CameraControl.set_zoom(1.);
 
-  plane_3.set_size(50,50);
+  plane_3.set_size(50, 50);
   SceneManager.move_mesh_id(plane_3.mesh_data.id, plane_4.mesh_data.id, 0);
 
- //log('source:', SceneManager.debug_graph(scene));
- //SceneManager.move_mesh_id(21, 10, 13);
- //log('new:', SceneManager.debug_graph(scene));
- //log(SceneManager.make_graph());
+  //log('source:', SceneManager.debug_graph(scene));
+  //SceneManager.move_mesh_id(21, 10, 13);
+  //log('new:', SceneManager.debug_graph(scene));
+  //log(SceneManager.make_graph());
 
 
 }

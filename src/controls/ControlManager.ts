@@ -1,10 +1,14 @@
+declare global {
+    const ControlManager: ReturnType<typeof ControlManagerCreate>;
+}
+
 export function register_control_manager() {
-    (window as any).ControlManager = ControlManagerModule();
+    (window as any).ControlManager = ControlManagerCreate();
 }
 
 type ButtonsList = 'translate_transform_btn' | 'scale_transform_btn' | 'rotate_transform_btn' | 'size_transform_btn';
 
-function ControlManagerModule() {
+function ControlManagerCreate() {
     let active_control = '';
     function init() {
         bind_btn('translate_transform_btn', () => set_active_control('translate_transform_btn'));

@@ -1,17 +1,16 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2 } from "three";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
-import { Slice9Mesh } from "../render_engine/slice9";
 import { PositionEventData, SizeEventData } from "./types";
 
 declare global {
-    const SizeControl: ReturnType<typeof SizeControlModule>;
+    const SizeControl: ReturnType<typeof SizeControlCreate>;
 }
 
 export function register_size_control() {
-    (window as any).SizeControl = SizeControlModule();
+    (window as any).SizeControl = SizeControlCreate();
 }
 
-function SizeControlModule() {
+function SizeControlCreate() {
     const scene = RenderEngine.scene;
     let debug_center: Mesh;
     const debug_poins: Mesh[] = [];
@@ -137,7 +136,6 @@ function SizeControlModule() {
                 for (let i = 0; i < selected_list.length; i++) {
                     const selected_go = selected_list[i];
                     const ws = new Vector3();
-                  //  ws.copy(selected_go.scale);
                     selected_go.getWorldScale(ws);
                     const delta = wp.clone().sub(cp).divide(ws);
                     const old_pos = new Vector3();

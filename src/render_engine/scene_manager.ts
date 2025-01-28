@@ -1,4 +1,4 @@
-import { Object3D, Vector3 } from "three";
+import { Object3D, Quaternion, Vector3 } from "three";
 import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
 import { Slice9Mesh } from "./slice9";
 import { IBaseMeshData, IBaseMeshDataAndThree, IObjectTypes } from "./types";
@@ -13,9 +13,9 @@ export function register_scene_manager() {
 }
 
 type IMeshTypes = {
-    [IObjectTypes.SLICE9_PLANE] : Slice9Mesh,
-    [IObjectTypes.TEXT] : TextMesh
-} 
+    [IObjectTypes.SLICE9_PLANE]: Slice9Mesh,
+    [IObjectTypes.TEXT]: TextMesh
+}
 
 export function SceneManagerModule() {
     const scene = RenderEngine.scene;
@@ -30,7 +30,7 @@ export function SceneManagerModule() {
         }
     }
 
-    function create<T extends IObjectTypes>(type: T, params: any, id = -1):IMeshTypes[T] {
+    function create<T extends IObjectTypes>(type: T, params: any, id = -1): IMeshTypes[T] {
         let mesh: IBaseMeshDataAndThree;
         if (type == IObjectTypes.SLICE9_PLANE) {
             mesh = new Slice9Mesh(params.width || 1, params.height || 1, params.slice_width || 0, params.slice_height || 0);
@@ -59,36 +59,25 @@ export function SceneManagerModule() {
         return mesh as IMeshTypes[T];
     }
 
-
-    function deserialize_mesh(data: IBaseMeshData) {
-        const mesh = create(data.type, data.other_data, data.id);
-        if (data.position)
-            mesh.position.set(data.position[0], data.position[1], data.position[2]);
-        if (data.rotation)
-            mesh.rotation.set(data.rotation[0], data.rotation[1], data.rotation[2]);
-        if (data.scale)
-            mesh.scale.set(data.scale[0], data.scale[1], data.scale[2]);
-        mesh.visible = data.visible;
-        mesh.set_size(data.size[0], data.size[1]);
-        mesh.set_color(data.color);
-        mesh.deserialize(data.other_data);
-        if (data.children) {
-            for (let i = 0; i < data.children.length; i++)
-                mesh.add(deserialize_mesh(data.children[i]));
-        }
-        return mesh;
-    }
-
     function serialize_mesh(m: IBaseMeshDataAndThree) {
+        const wp = new Vector3();
+        const ws = new Vector3();
+        const wr = new Quaternion();
+        m.getWorldPosition(wp);
+        m.getWorldScale(ws);
+        m.getWorldQuaternion(wr);
+        const pid = m.parent ? (is_base_mesh(m.parent) ? (m.parent as IBaseMeshDataAndThree).mesh_data.id : -1) : -1;
         const data: IBaseMeshData = {
             id: m.mesh_data.id,
+            pid,
             type: m.type,
             visible: m.visible,
-            position: m.position.toArray(),
-            rotation: m.rotation.toArray(),
-            scale: m.scale.toArray(),
+            position: wp.toArray(),
+            rotation: wr.toArray(),
+            scale: ws.toArray(),
             size: m.get_size().toArray(),
             color: m.get_color(),
+            pivot:m.get_pivot(),
             other_data: m.serialize(),
         };
         if (m.children.length > 0) {
@@ -99,6 +88,37 @@ export function SceneManagerModule() {
         }
         return data;
     }
+
+    function deserialize_mesh(data: IBaseMeshData, with_id = false, parent?: Object3D) {
+        const mesh = create(data.type, data.other_data, with_id ? data.id : -1);
+        if (parent) {
+            const lp = parent.worldToLocal(new Vector3(data.position[0], data.position[1], data.position[2]));
+            mesh.position.copy(lp);
+            const ws = new Vector3();
+            parent.getWorldScale(ws);
+            mesh.scale.set(data.scale[0] / ws.x, data.scale[1] / ws.y, data.scale[2] / ws.z);
+        }
+        else {
+            if (data.position)
+                mesh.position.set(data.position[0], data.position[1], data.position[2]);
+            if (data.rotation)
+                mesh.quaternion.set(data.rotation[0], data.rotation[1], data.rotation[2], data.rotation[3]);
+            if (data.scale)
+                mesh.scale.set(data.scale[0], data.scale[1], data.scale[2]);
+        }
+        mesh.visible = data.visible;
+        mesh.set_pivot(data.pivot.x, data.pivot.y, false);
+        mesh.set_size(data.size[0], data.size[1]);
+        mesh.set_color(data.color);
+        mesh.deserialize(data.other_data);
+        if (data.children) {
+            for (let i = 0; i < data.children.length; i++)
+                mesh.add(deserialize_mesh(data.children[i], with_id, mesh));
+        }
+        return mesh;
+    }
+
+
     function get_mesh_list(mesh: Object3D) {
         const tmp: Object3D[] = [];
         mesh.traverse((child) => tmp.push(child));

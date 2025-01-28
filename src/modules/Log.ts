@@ -17,9 +17,7 @@ export function register_log() {
     (window as any).log = Log.log;
 }
 
-
 type LogLevels = 'log' | 'info' | 'warn' | 'error';
-const log_priority = ['log', 'info', 'warn', 'error'];
 
 
 function LogModule(_prefix = '', _log_level: LogLevels = 'log') {
@@ -29,31 +27,9 @@ function LogModule(_prefix = '', _log_level: LogLevels = 'log') {
     }
 
     function send(level: LogLevels, _args: any) {
-        let str = '';
-        for (const k in _args) {
-            const a = _args[k];
-            if (typeof a == 'object') {
-                str += JSON.stringify(a) + ', ';
-            }
-            else
-                str += a + ', ';
-        }
-        if (str != '')
-            str = str.substr(0, str.length - 2);
-
-        show(_prefix, level, _log_level, str);
+        console[level](get_hms(),..._args);
+      
     }
-
-    function show(prefix = '', level: LogLevels, log_level: LogLevels, text: string) {
-        const is_logging = log_priority.indexOf(level) >= log_priority.indexOf(log_level);
-        if (!is_logging)
-            return;
-        const time = get_hms();
-        let str = '[' + time + '-' + level + (prefix == '' ? '' : ' _' + prefix + '_ ') + '] ' + text;
-        console[level](str);
-    }
-
-
 
     function log(..._args: any) {
         send('log', _args);

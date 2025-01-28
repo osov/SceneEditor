@@ -1,4 +1,4 @@
-import { EulerTuple, Object3D, Vector2, Vector3Tuple } from "three";
+import { EulerTuple, Object3D, Vector2, Vector3Tuple, Vector4Tuple } from "three";
 
 export enum IObjectTypes {
     SLICE9_PLANE = 'slice9_plane',
@@ -22,11 +22,13 @@ export interface IBaseMesh {
 
 export interface IBaseMeshData {
     id: number;
+    pid:number;
     type: IObjectTypes;
     visible: boolean;
     position: Vector3Tuple;
-    rotation: EulerTuple;
+    rotation: Vector4Tuple;
     scale: Vector3Tuple;
+    pivot:Vector2;
     size: number[];
     color: string;
     children?: IBaseMeshData[];

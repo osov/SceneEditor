@@ -1,8 +1,36 @@
 import { Object3D, Vector2, Vector3 } from "three";
-import { IBaseMesh, IBaseMeshDataAndThree } from "../types";
+import { IBaseMeshDataAndThree } from "../types";
+
+export function get_basename(path: string) {
+    return path.split('/').reverse()[0];
+}
+
+export function get_file_name(path: string) {
+    return get_basename(path).split('.')[0];
+}
 
 export function is_base_mesh(mesh: Object3D) {
     return (mesh as any).mesh_data != undefined;
+}
+
+// исключить из списка дочерние элементы, тк при удалении проще будет восстановить 
+export function format_list_without_children(list: IBaseMeshDataAndThree[]) {
+    const ids = [];
+    for (let i = 0; i < list.length; i++) {
+        ids.push(list[i].mesh_data.id);
+    }
+    const res = [];
+    for (let i = 0; i < list.length; i++) {
+        if (is_base_mesh(list[i].parent!)) {
+            const p = list[i].parent! as IBaseMeshDataAndThree;
+            if (ids.indexOf(p.mesh_data.id) == -1) {
+                res.push(list[i]);
+            }
+        }
+        else
+            res.push(list[i]);
+    }
+    return res;
 }
 
 export function filter_list_base_mesh(tmp: Object3D[]) {
