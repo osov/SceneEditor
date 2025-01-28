@@ -3,14 +3,14 @@ import CameraControls from 'camera-controls';
 import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster, GridHelper, } from 'three';
 
 declare global {
-    const CameraControl: ReturnType<typeof CameraControlModule>;
+    const CameraControl: ReturnType<typeof CameraControlCreate>;
 }
 
 export function register_camera_control() {
-    (window as any).CameraControl = CameraControlModule();
+    (window as any).CameraControl = CameraControlCreate();
 }
 
-function CameraControlModule() {
+function CameraControlCreate() {
     const subsetOfTHREE = {
         Vector2: Vector2,
         Vector3: Vector3,
@@ -35,18 +35,21 @@ function CameraControlModule() {
         control.dollyToCursor = true;
         control.zoomTo(0.9);
         set_position(540 / 2, -960 / 2);
-        const gridHelper = new GridHelper(5000, 100);
-        gridHelper.position.z = -49;
-        gridHelper.rotateX(Math.PI / 2);
+        //const gridHelper = new GridHelper(5000, 100);
+        //gridHelper.position.z = -49;
+        //gridHelper.rotateX(Math.PI / 2);
         //RenderEngine.scene.add(gridHelper);
 
-        (window as any).cameraControls = control;
         EventBus.on('SYS_ON_UPDATE', (e) => control.update(e.dt));
     }
 
     function set_position(x: number, y: number, is_transition = false) {
         control.setTarget(x, y, 0, is_transition);
         control.setPosition(x, y, 50, is_transition);
+    }
+
+    function set_zoom(zoom: number, is_transition = false) {
+        control.zoomTo(zoom,is_transition);
     }
 
     /*
@@ -80,5 +83,5 @@ function CameraControlModule() {
     */
 
     init();
-    return { set_position };
+    return { set_position,set_zoom };
 }

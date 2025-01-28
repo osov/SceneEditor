@@ -1,9 +1,10 @@
+import * as fs from 'fs';
 import { Vector3 } from "three";
-import { NodeType } from "../render_engine/convert_types";
-import { parsePrefab, parseScene } from "./scene_parser";
+import { NodeType, PrefabComponentType } from "../../render_engine/convert_types";
+import { DefoldFileType, parseAtlas, parseFont, parsePrefab, parseScene } from "../scene_parser";
 
 const result = parseScene({
-    name: "main",
+    name: "main/main",
     list: [
         {
             type: NodeType.GO,
@@ -19,13 +20,12 @@ const result = parseScene({
         {
             type: NodeType.COLLECTION,
             data: {
-                name: "test_collection",
+                name: "main/test_collection",
                 list: [
                     {
                         type: NodeType.GO,
                         data: {
-                            // ISSUE: ids inside new collection begin from zero ?
-                            id: 0,
+                            id: 1,
                             pid: 0,
                             name: "test_go_inside_test_collection",
                             position: new Vector3(0, 0, 0),
@@ -49,7 +49,7 @@ const result = parseScene({
                 height: 100,
                 color: "#FFFFFF",
                 texture: "test",
-                atlas: "test.atlas",
+                atlas: "/main/test.atlas",
                 slice_width: 0,
                 slice_height: 0
             }
@@ -65,6 +65,7 @@ const result = parseScene({
                 scale: new Vector3(1, 1, 1),
                 width: 100,
                 height: 100,
+                color: "#FFFFFF",
                 text: "hello world",
                 font: "test.ttf",
                 line_break: true,
@@ -77,7 +78,7 @@ const result = parseScene({
             type: NodeType.SOUND,
             data: {
                 name: "test",
-                path: "test.ogg",
+                path: "/main/test.ogg",
                 loop: true,
                 group: "master",
                 gain: 1,
@@ -90,7 +91,7 @@ const result = parseScene({
             data: {
                 id: 4,
                 pid: 0,
-                name: "ui"
+                name: "/main/ui"
             }
         },
         {
@@ -106,7 +107,7 @@ const result = parseScene({
                 height: 100,
                 color: "#FFFFFF",
                 texture: "test",
-                atlas: "./test.atlas",
+                atlas: "test.atlas",
                 slice_width: 0,
                 slice_height: 0,
                 stencil: false,
@@ -128,8 +129,6 @@ const result = parseScene({
                 width: 100,
                 height: 100,
                 color: "#FFFFFF",
-                texture: "",
-                atlas: "",
                 slice_width: 0,
                 slice_height: 0,
                 stencil: false,
@@ -175,17 +174,104 @@ const result = parseScene({
                 scale: new Vector3(1, 1, 1)
             }
         },
-        // ISSUE: как это будет работать ?
         {
             type: NodeType.FACTORY,
             data: {
                 name: "test_prefab",
-                path: "./test_prefab.prefab"
+                path: "main/test_prefab.prefab"
             }
         }
     ]
 });
 
-// result.push(parse_prefab({}));
+result.push(parsePrefab({
+    name: "/main/test_prefab",
+    data: [
+        {
+            type: PrefabComponentType.SPRITE,
+            data: {
+                id: 0,
+                pid: 0,
+                name: "test_prefab_sprite",
+                position: new Vector3(0, 0, 0),
+                rotation: new Vector3(0, 0, 0),
+                scale: new Vector3(1, 1, 1),
+                width: 100,
+                height: 100,
+                color: "#FFFFFF",
+                texture: "test",
+                atlas: "/main/test.atlas",
+                slice_width: 0,
+                slice_height: 0
+            }
+        },
+        {
+            type: PrefabComponentType.LABEL,
+            data: {
+                id: 0,
+                pid: 0,
+                name: "test_prefab_lable",
+                position: new Vector3(0, 200, 0),
+                rotation: new Vector3(0, 0, 0),
+                scale: new Vector3(1, 1, 1),
+                width: 1000,
+                height: 100,
+                color: "#FFFFFF",
+                text: "hello world",
+                font: "/main/test.ttf",
+                line_break: true,
+                outline: "#000000",
+                shadow: "#000000",
+                leading: 0.7
+            }
 
-console.log(result);
+        }
+    ]
+}));
+
+result.push(parseAtlas({
+    name: "main/test",
+    images: [
+        "main/test.png"
+    ]
+}));
+
+result.push(parseFont({
+    font: "/main/test.ttf",
+    size: 80
+}));
+
+for (const file of result) {
+    switch (file.type) {
+        case DefoldFileType.COLLECTION:
+            fs.writeFile(`${__dirname}/test_project/${file.name}.collection`, file.data, (err: NodeJS.ErrnoException | null) => {
+                if (err) console.error(err);
+                // else console.log(`Succeful created ${file.name}.collection with data:\n${file.data}`);
+            });
+            break;
+        case DefoldFileType.GO:
+            fs.writeFile(`${__dirname}/test_project/${file.name}.go`, file.data, (err: NodeJS.ErrnoException | null) => {
+                if (err) console.error(err);
+                // else console.log(`Succeful created ${file.name}.go with data:\n${file.data}`);
+            });
+            break;
+        case DefoldFileType.GUI:
+            fs.writeFile(`${__dirname}/test_project/${file.name}.gui`, file.data, (err: NodeJS.ErrnoException | null) => {
+                if (err) console.error(err);
+                // else console.log(`Succeful created ${file.name}.gui with data:\n${file.data}`);
+            });
+            break;
+        case DefoldFileType.ATLAS:
+            fs.writeFile(`${__dirname}/test_project/${file.name}.atlas`, file.data, (err: NodeJS.ErrnoException | null) => {
+                if (err) console.error(err);
+                // else console.log(`Succeful created ${file.name}.atlas with data:\n${file.data}`);
+            });
+            break;
+        case DefoldFileType.FONT:
+            fs.writeFile(`${__dirname}/test_project/${file.name}.font`, file.data, (err: NodeJS.ErrnoException | null) => {
+                if (err) console.error(err);
+                // else console.log(`Succeful created ${file.name}.font with data:\n${file.data}`);
+            });
+            break;
+    }
+}

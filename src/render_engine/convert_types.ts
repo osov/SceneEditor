@@ -74,8 +74,8 @@ export interface IGuiNode extends INodeBase {
 }
 
 export interface IGuiBox extends IGuiNode {
-    texture: string;
-    atlas: string;
+    texture?: string;
+    atlas?: string;
     slice_width: number;
     slice_height: number;
     stencil: boolean;
@@ -115,15 +115,42 @@ export interface ILabel extends INodeBase {
     text: string;
     font: string;
     line_break: boolean;
-    outline?: string; // hex формат #RRGGBB
-    shadow?: string; // hex формат #RRGGBB
-    leading?: number;
+    outline: string; // hex формат #RRGGBB
+    shadow: string; // hex формат #RRGGBB
+    leading: number;
     // материал должен быть label-df
+}
+
+export enum PrefabComponentType {
+    SPRITE,
+    LABEL
+}
+
+export type PrefabDataType = ISprite | ILabel;
+
+export interface IPrefabData {
+    type: PrefabComponentType;
+    data: PrefabDataType;
+}
+
+export interface IPrefab {
+    name: string;
+    data: IPrefabData[];
 }
 
 export interface IExtDependencies {
     name: string;
     path: string;
+}
+
+export interface IAtlas {
+    name: string;
+    images: string[];
+}
+
+export interface IFont {
+    font: string;
+    size: number;
 }
 
 /*

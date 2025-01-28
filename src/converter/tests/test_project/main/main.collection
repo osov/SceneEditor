@@ -1,0 +1,26 @@
+name: "main/main"
+collection_instances {
+  id: "test_collection"
+  collection: "/main/test_collection.collection"
+}
+scale_along_z: 0
+embedded_instances {
+  id: "test_go"
+  children: "test_child_go"
+  data: ""
+}
+embedded_instances {
+  id: "test_child_go"
+  data: ""
+}
+embedded_instances {
+  id: "go"
+  data: "embedded_components {\n"
+  "  id: \"sprite\"\n"
+  "  type: \"sprite\"\n"
+  "  data: \"default_animation: \\\"\\\"\\n"
+  "material: \\\"/builtins/materials/sprite.material\\\"\\n"
+  "\"\n"
+  "}\n"
+  ""
+}

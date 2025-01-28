@@ -23,3 +23,16 @@ dist-ssr
 *.sln
 *.sw?
 package-lock.json
+
+# Defold
+/.editor_settings
+/.internal
+/build
+.externalToolBuilders
+.DS_Store
+Thumbs.db
+.lock-wscript
+*.pyc
+.project
+.cproject
+builtins

@@ -1,17 +1,21 @@
 import { Vector3, Vector4 } from "three";
 
 import {
+    IAtlas,
     IExtDependencies,
+    IFont,
     IGuiBox,
     IGuiNode,
     IGuiText,
     ILabel,
     INodeEmpty,
     INodesList,
+    IPrefab,
     ISound,
     ISprite,
     NodeData,
-    NodeType
+    NodeType,
+    PrefabComponentType
 } from "../render_engine/convert_types";
 
 import {
@@ -24,7 +28,24 @@ import {
     DefoldGuiNodeType,
     DefoldClippingMode,
     DefoldPivot,
-    IDefoldCollectionFile
+    IDefoldCollectionFile,
+    encodeAtlas,
+    IDefoldAtlas,
+    encodePrototype,
+    IDefoldPrototype,
+    encodeSprite,
+    encodeLabel,
+    IDefoldLabel,
+    IDefoldSprite,
+    DefoldBlendMode,
+    encodeFont,
+    encodeSound,
+    IDefoldSound,
+    encodeCollectionFactory,
+    encodeCollectionProxy,
+    encodeFactory,
+    IDefoldCollectionProxy,
+    IDefoldFactory
 } from "./defold_encoder";
 import { hexToRGB } from "../modules/utils";
 
@@ -78,8 +99,32 @@ export function parseScene(data: INodesList): DefoldFileData[] {
     return result;
 }
 
-export function parsePrefab(data: INodeEmpty | ISprite | ILabel): DefoldFileData {
-    return {} as DefoldFileData;
+export function parsePrefab(data: IPrefab): DefoldFileData {
+    return {
+        name: data.name,
+        type: DefoldFileType.GO,
+        data: encodePrototype(castPrefab2DefoldProtorype(data))
+    };
+}
+
+export function parseAtlas(data: IAtlas): DefoldFileData {
+    return {
+        name: data.name,
+        type: DefoldFileType.ATLAS,
+        data: encodeAtlas(castAtlas2DefoldAtlas(data))
+    };
+}
+
+export function parseFont(data: IFont): DefoldFileData {
+    return {
+        name: data.font.split(".")[0],
+        type: DefoldFileType.FONT,
+        data: encodeFont({
+            font: data.font,
+            material: "/builtins/fonts/font.material",
+            size: data.size
+        })
+    };
 }
 
 
@@ -178,7 +223,7 @@ function castSprite2DefoldGoSprite(data: ISprite, children?: string[]): IDefoldG
         rotation: data.rotation,
         scale3: data.scale,
         children,
-        data: "" // TODO: embed sprite
+        data: encodeSprite(castSprite2DefoldSprite(data))
     };
 }
 
@@ -189,7 +234,35 @@ function castLabel2DefoldGoLabel(data: ILabel, children?: string[]): IDefoldGo {
         rotation: data.rotation,
         scale3: data.scale,
         children,
-        data: "" // TODO: embed label
+        data: encodeLabel(castLabel2DefoldLabel(data))
+    };
+}
+
+function castSprite2DefoldSprite(data: ISprite): IDefoldSprite {
+    return {
+        textures: {
+            sampler: "texture_sampler",
+            texture: data.atlas
+        },
+        default_animation: data.texture
+    };
+}
+
+function castLabel2DefoldLabel(data: ILabel): IDefoldLabel {
+    return {
+        text: data.text,
+        font: data.font.split(".")[0] + ".font",
+        size: new Vector4(data.width, data.height),
+        scale: new Vector4(data.scale.x, data.scale.y, data.scale.z),
+        color: castColor(data.color, 1),
+        outline: castColor(data.outline, 1),
+        shadow: castColor(data.shadow, 1),
+        leading: data.leading,
+        tracking: 0,
+        pivot: DefoldPivot.PIVOT_CENTER,
+        blend_mode: DefoldBlendMode.BLEND_MODE_ALPHA,
+        line_break: data.line_break,
+        material: "/builtins/fonts/label-df.material"
     };
 }
 
@@ -199,7 +272,7 @@ function castSound2DefoldGoSound(data: ISound): IDefoldGo {
         position: new Vector3(0, 0, 0),
         rotation: new Vector3(0, 0, 0),
         scale3: new Vector3(1, 1, 1),
-        data: "" // TODO: embed sound
+        data: encodeSound(castSound2DefoldSound(data))
     };
 }
 
@@ -209,7 +282,7 @@ function castIExtDependence2DefoldGoCollectionProxy(data: IExtDependencies): IDe
         position: new Vector3(0, 0, 0),
         rotation: new Vector3(0, 0, 0),
         scale3: new Vector3(1, 1, 1),
-        data: "" // TODO: embed collection proxy
+        data: encodeCollectionProxy(castExtDependencies2DefoldCollectionProxy(data))
     };
 }
 
@@ -219,7 +292,7 @@ function castIExtDependence2DefoldGoCollectionFactory(data: IExtDependencies): I
         position: new Vector3(0, 0, 0),
         rotation: new Vector3(0, 0, 0),
         scale3: new Vector3(1, 1, 1),
-        data: "" // TODO: embed collection factory
+        data: encodeCollectionFactory(castExtDependencies2DefoldFactory(data))
     };
 }
 
@@ -229,7 +302,7 @@ function castIExtDependence2DefoldGoFactory(data: IExtDependencies): IDefoldGo {
         position: new Vector3(0, 0, 0),
         rotation: new Vector3(0, 0, 0),
         scale3: new Vector3(1, 1, 1),
-        data: "" // TODO: embed factory
+        data: encodeFactory(castExtDependencies2DefoldFactory(data))
     };
 }
 
@@ -250,8 +323,7 @@ function castGuiBox2DefoldGuiNode(data: IGuiBox): IDefoldGuiNode {
         size: new Vector4(data.width, data.height),
         enabled: data.enabled,
         visible: data.visible,
-        // ISSUE: where default animation ?
-        texture: data.atlas.split(".atlas")[0] + `/${data.texture}`,
+        texture: data.atlas && data.texture ? data.atlas.split(".atlas")[0] + `/${data.texture}` : undefined,
         clipping_mode: castStencil(data.stencil),
         slice9: new Vector4(data.slice_width, data.slice_height, data.slice_width, data.slice_height),
         alpha: data.alpha,
@@ -264,7 +336,7 @@ function castGuiText2DefoldGuiNode(data: IGuiText): IDefoldGuiNode {
         id: data.name,
         type: DefoldGuiNodeType.TYPE_TEXT,
         text: data.text,
-        font: data.font,
+        font: data.font.split(".")[0] + ".font",
         line_break: data.line_break,
         text_leading: data.leading,
         outline: data.outline ? castColor(data.outline, data.outline_alpha ? data.outline_alpha : 1) : undefined,
@@ -319,4 +391,68 @@ function castPivot(data: number[]): DefoldPivot {
 function castColor(hex_rgb: string, alpha: number): Vector4 {
     const color = hexToRGB(hex_rgb);
     return new Vector4(color.x, color.y, color.z, alpha);
+}
+
+function castAtlas2DefoldAtlas(data: IAtlas): IDefoldAtlas {
+    const atlas = {} as IDefoldAtlas;
+    atlas.images = [];
+    for (const image of data.images) {
+        atlas.images.push({ image });
+    }
+    return atlas;
+}
+
+function castPrefab2DefoldProtorype(prefab: IPrefab): IDefoldPrototype {
+    const prototype = {} as IDefoldPrototype;
+    prototype.embedded_components = [];
+
+    for (const data of prefab.data) {
+        switch (data.type) {
+            case PrefabComponentType.SPRITE:
+                const sprite = data.data as ISprite;
+                prototype.embedded_components.push({
+                    id: sprite.name,
+                    position: sprite.position,
+                    rotation: sprite.rotation,
+                    type: "sprite",
+                    data: encodeSprite(castSprite2DefoldSprite(sprite))
+                });
+                break;
+            case PrefabComponentType.LABEL:
+                const label = data.data as ILabel;
+                prototype.embedded_components.push({
+                    id: label.name,
+                    position: label.position,
+                    rotation: label.rotation,
+                    type: "label",
+                    data: encodeLabel(castLabel2DefoldLabel(label))
+                });
+                break;
+        }
+    }
+
+    return prototype;
+}
+
+function castSound2DefoldSound(data: ISound): IDefoldSound {
+    return {
+        sound: data.path,
+        looping: data.loop ? 1 : 0,
+        group: data.group,
+        gain: data.gain,
+        pan: data.pan,
+        speed: data.speed
+    };
+}
+
+function castExtDependencies2DefoldFactory(data: IExtDependencies): IDefoldFactory {
+    return {
+        prototype: data.path
+    };
+}
+
+function castExtDependencies2DefoldCollectionProxy(data: IExtDependencies): IDefoldCollectionProxy {
+    return {
+        collection: data.path
+    };
 }

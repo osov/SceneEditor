@@ -12,6 +12,8 @@ export type _SystemMessages = {
     SYS_INPUT_POINTER_MOVE: { x: number, y: number, offset_x: number, offset_y: number, },
     SYS_INPUT_POINTER_DOWN: { x: number, y: number, offset_x: number, offset_y: number, button: number },
     SYS_INPUT_POINTER_UP: { x: number, y: number, offset_x: number, offset_y: number, button: number },
+    SYS_VIEW_INPUT_KEY_DOWN: { key: string },
+    SYS_VIEW_INPUT_KEY_UP: { key: string },
     SYS_INPUT_UNDO:{}
     SYS_SELECTED_MESH:{mesh:IBaseMeshDataAndThree}
     SYS_SELECTED_MESH_LIST:{list:IBaseMeshDataAndThree[]}

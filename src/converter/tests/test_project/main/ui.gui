@@ -1,0 +1,147 @@
+script: ""
+nodes {
+  id: "test_gui_box"
+  type: 0
+  position {
+    x: 0
+    y: 0
+    z: 0
+    w: 1
+    
+  }
+  rotation {
+    x: 0
+    y: 0
+    z: 0
+    w: 1
+    
+  }
+  scale {
+    x: 1
+    y: 1
+    z: 1
+    w: 1
+    
+  }
+  size {
+    x: 100
+    y: 100
+    z: 0
+    w: 1
+    
+  }
+  enabled: true
+  visible: true
+  texture: "test/test"
+  clipping_mode: 0
+  slice9 {
+    x: 0
+    y: 0
+    z: 0
+    w: 0
+    
+  }
+  alpha: 1
+  pivot: 3
+  
+}
+nodes {
+  id: "test_child_gui_box"
+  type: 0
+  position {
+    x: 0
+    y: 0
+    z: 0
+    w: 1
+    
+  }
+  rotation {
+    x: 0
+    y: 0
+    z: 0
+    w: 1
+    
+  }
+  scale {
+    x: 1
+    y: 1
+    z: 1
+    w: 1
+    
+  }
+  size {
+    x: 100
+    y: 100
+    z: 0
+    w: 1
+    
+  }
+  enabled: true
+  visible: false
+  clipping_mode: 0
+  slice9 {
+    x: 0
+    y: 0
+    z: 0
+    w: 0
+    
+  }
+  alpha: 1
+  pivot: 0
+  
+}
+nodes {
+  id: "test_gui_text"
+  type: 1
+  text: "hello world from gui"
+  font: "test.font"
+  line_break: true
+  text_leading: 0.5
+  outline {
+    x: 1
+    y: 1
+    z: 1
+    w: 1
+    
+  }
+  shadow {
+    x: 1
+    y: 1
+    z: 1
+    w: 1
+    
+  }
+  position {
+    x: 0
+    y: 0
+    z: 0
+    w: 1
+    
+  }
+  rotation {
+    x: 0
+    y: 0
+    z: 0
+    w: 1
+    
+  }
+  scale {
+    x: 1
+    y: 1
+    z: 1
+    w: 1
+    
+  }
+  size {
+    x: 100
+    y: 100
+    z: 0
+    w: 1
+    
+  }
+  enabled: true
+  visible: true
+  alpha: 1
+  pivot: 0
+  
+}

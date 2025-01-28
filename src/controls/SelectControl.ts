@@ -5,33 +5,30 @@ import { filter_list_base_mesh } from "../render_engine/helpers/utils";
 // todo select https://threejs.org/examples/?q=box#misc_boxselection
 
 declare global {
-    const SelectControl: ReturnType<typeof SelectControlModule>;
+    const SelectControl: ReturnType<typeof SelectControlCreate>;
 }
 
 export function register_select_control() {
-    (window as any).SelectControl = SelectControlModule();
+    (window as any).SelectControl = SelectControlCreate();
 }
 
-function SelectControlModule() {
+function SelectControlCreate() {
     const pointer = new Vector2();
     const click_point = new Vector2();
     const prev_point = new Vector2();
     let selected: IBaseMeshDataAndThree | null = null;
     let selected_list: IBaseMeshDataAndThree[] = [];
-    let is_down = false;
     function init() {
 
         EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
             if (e.button != 0)
                 return;
-            is_down = true;
             click_point.set(e.x, e.y);
         });
 
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
             if (e.button != 0)
                 return;
-            is_down = false;
             prev_point.set(pointer.x, pointer.y);
             pointer.x = e.x;
             pointer.y = e.y;
@@ -41,7 +38,7 @@ function SelectControlModule() {
             if (len > 5)
                 return;
             const intersects = RenderEngine.raycast_scene(pointer);
-            set_selected(intersects);
+            set_selected_intersect(intersects);
         });
 
         EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
@@ -84,28 +81,33 @@ function SelectControlModule() {
         return false;
     }
 
-    function set_selected(tmp: Intersection<Object3D<Object3DEventMap>>[]) {
-        if (tmp.length == 0) {
-            if (!Input.is_control())
-                EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
-            return;
-        }
+    function set_selected_intersect(tmp: Intersection<Object3D<Object3DEventMap>>[]) {
         let tmp_list = [];
         for (let i = 0; i < tmp.length; i++)
             tmp_list.push(tmp[i].object);
         const list = filter_list_base_mesh(tmp_list);
+        set_selected_list(list, false);
+    }
+
+    function set_selected_list(list: IBaseMeshDataAndThree[], clear_old = true) {
+        if (clear_old) {
+
+            selected_list = [];
+        }
         if (list.length == 0) {
             if (!Input.is_control())
                 EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
             return;
         }
+        let is_breaked = false;
         for (let i = 0; i < list.length; i++) {
             const it = list[i];
             // если еще ничего не выбрано то выбирается первый
             if (selected == null) {
                 selected = it;
                 EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
-                return;
+                is_breaked = true;
+                break;
             }
             // если уже выбрано то выбирается следующий
             if (it == selected) {
@@ -114,12 +116,20 @@ function SelectControlModule() {
                     next_index = 0;
                 selected = list[next_index];
                 EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
-                return;
+                is_breaked = true;
+                break;
             }
         }
-        // ситуация когда что-то было выбрано, но в этом списке не оказалось
-        selected = list[0];
-        EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
+        if (!is_breaked) {
+            // ситуация когда что-то было выбрано, но в этом списке не оказалось
+            selected = list[0];
+            EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
+        }
+
+        if (clear_old) {
+            selected_list = list.slice(0);
+            EventBus.trigger('SYS_SELECTED_MESH_LIST', { list: selected_list });
+        }
     }
 
     function get_selected_list() {
@@ -128,5 +138,5 @@ function SelectControlModule() {
 
 
     init();
-    return { get_selected_list };
+    return { get_selected_list, set_selected_list };
 }

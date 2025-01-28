@@ -20,11 +20,13 @@ function InputModule() {
         canvas.addEventListener('keydown', (e) => {
             _is_control = e.ctrlKey;
             keys_state[e.key] = true;
+            EventBus.trigger('SYS_VIEW_INPUT_KEY_DOWN', { key: e.key }, false);
         });
 
         canvas.addEventListener('keyup', (e) => {
             _is_control = e.ctrlKey;
             keys_state[e.key] = false;
+            EventBus.trigger('SYS_VIEW_INPUT_KEY_UP', { key: e.key }, false);
             if (e.ctrlKey && e.key == 'z')
                 EventBus.trigger('SYS_INPUT_UNDO');
         });

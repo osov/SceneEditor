@@ -1,5 +1,9 @@
-import { Texture, ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, Mesh } from "three";
-import { IBaseMeshData, IObjectTypes } from "./types";
+import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, Mesh } from "three";
+import { IBaseMesh, IObjectTypes } from "./types";
+import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "./helpers/utils";
+
+// todo optimize material list + attributes color
+// todo set visible only mesh(visible+enabled)
 
 const slice_9_shader = {
     vertexShader: `
@@ -55,22 +59,38 @@ const simple_shader = {
 interface IParameters {
     width: number;
     height: number;
+    pivot_x: number;
+    pivot_y: number;
     slice_width: number;
     slice_height: number;
     color: string;
     clip_width: number;
     clip_height: number;
+    texture: string;
+    atlas: string
 }
 
-export function Slice9(material: ShaderMaterial, width = 1, height = 1, slice_width = 0, slice_height = 0) {
+interface SerializeData {
+    slice_width: number;
+    slice_height: number;
+    atlas: string;
+    texture: string
+}
+
+export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, slice_width = 0, slice_height = 0) {
     const parameters: IParameters = {
+        pivot_x: 0.5,
+        pivot_y: 0.5,
         width,
         height,
         slice_width,
         slice_height,
         color: '#fff',
         clip_width: 1,
-        clip_height: 1
+        clip_height: 1,
+        texture: '',
+        atlas:''
+
     }
 
     const geometry = new PlaneGeometry(width, height);
@@ -80,21 +100,20 @@ export function Slice9(material: ShaderMaterial, width = 1, height = 1, slice_wi
         material.uniforms['u_border'].value.set(parameters.slice_width / parameters.clip_width, parameters.slice_height / parameters.clip_height);
     }
 
-    function set_texture(texture: Texture | null) {
+    function set_texture(name: string, atlas = '') {
+        parameters.texture =  name;
+        parameters.atlas = atlas;
+        let texture = name == '' ? null : ResourceManager.get_texture(name, atlas);
         material.uniforms['tex'].value = texture;
         if (texture) {
             parameters.clip_width = texture.image.width;
             parameters.clip_height = texture.image.height;
-        }
-        else {
-            parameters.clip_width = 1;
-            parameters.clip_height = 1;
-        }
-        if (texture) {
             material.vertexShader = slice_9_shader.vertexShader;
             material.fragmentShader = slice_9_shader.fragmentShader;
         }
         else {
+            parameters.clip_width = 1;
+            parameters.clip_height = 1;
             material.vertexShader = simple_shader.vertexShader;
             material.fragmentShader = simple_shader.fragmentShader;
         }
@@ -102,18 +121,21 @@ export function Slice9(material: ShaderMaterial, width = 1, height = 1, slice_wi
         update_parameters();
     }
 
+
+
     function set_size(w: number, h: number) {
-        geometry.attributes['position'].array[0] = -w / 2;
-        geometry.attributes['position'].array[1] = h / 2;
+        const bb = convert_width_height_to_pivot_bb(w, h, parameters.pivot_x, parameters.pivot_y);
+        geometry.attributes['position'].array[0] = bb[1].x;
+        geometry.attributes['position'].array[1] = bb[1].y;
 
-        geometry.attributes['position'].array[3] = w / 2;
-        geometry.attributes['position'].array[4] = h / 2;
+        geometry.attributes['position'].array[3] = bb[2].x;
+        geometry.attributes['position'].array[4] = bb[2].y;
 
-        geometry.attributes['position'].array[6] = -w / 2;
-        geometry.attributes['position'].array[7] = -h / 2;
+        geometry.attributes['position'].array[6] = bb[0].x;
+        geometry.attributes['position'].array[7] = bb[0].y;
 
-        geometry.attributes['position'].array[9] = w / 2;
-        geometry.attributes['position'].array[10] = -h / 2;
+        geometry.attributes['position'].array[9] = bb[3].x;
+        geometry.attributes['position'].array[10] = bb[3].y;
         geometry.attributes['position'].needsUpdate = true;
         geometry.computeBoundingSphere();
         parameters.width = w;
@@ -133,27 +155,43 @@ export function Slice9(material: ShaderMaterial, width = 1, height = 1, slice_wi
     }
 
     function get_bounds(wp: Vector3, ws: Vector3) {
+        const bb = convert_width_height_to_pivot_bb(parameters.width, parameters.height, parameters.pivot_x, parameters.pivot_y);
         // left top right bottom
         return [
-            wp.x - parameters.width / 2 * ws.x,
-            wp.y + parameters.height / 2 * ws.y,
-            wp.x + parameters.width / 2 * ws.x,
-            wp.y - parameters.height / 2 * ws.y
+            wp.x + bb[0].x * ws.x,
+            wp.y + bb[1].y * ws.y,
+            wp.x + bb[2].x * ws.x,
+            wp.y + bb[3].y * ws.y
         ];
     }
 
-    function serialize(){
-
+    function set_pivot(x: number, y: number) {
+        parameters.pivot_x = x;
+        parameters.pivot_y = y;
     }
 
-    return { set_size, set_slice, set_color, set_texture, get_bounds, serialize, geometry, parameters };
+    function serialize(): SerializeData {
+        return {
+            slice_width: parameters.slice_width,
+            slice_height: parameters.slice_height,
+            texture: parameters.texture,
+            atlas: parameters.atlas
+        };
+    }
+
+    function deserialize(data: SerializeData) {
+        set_texture(data.texture, data.atlas);
+        set_slice(data.slice_width, data.slice_height);
+    }
+
+    return { set_size, set_slice, set_color, set_texture, get_bounds, set_pivot, serialize, deserialize, geometry, parameters };
 }
 
 
-export class Slice9Mesh extends Mesh  implements IBaseMeshData{
+export class Slice9Mesh extends Mesh implements IBaseMesh {
     public type = IObjectTypes.SLICE9_PLANE;
     public mesh_data = { id: -1 };
-    private template: ReturnType<typeof Slice9>;
+    private template: ReturnType<typeof CreateSlice9>;
 
     constructor(width = 1, height = 1, slice_width = 0, slice_height = 0) {
         super();
@@ -169,16 +207,17 @@ export class Slice9Mesh extends Mesh  implements IBaseMeshData{
             transparent: true
 
         });
-        this.template = Slice9(material, width, height, slice_width, slice_height);
+        this.template = CreateSlice9(material, width, height, slice_width, slice_height);
         this.material = material;
         this.geometry = this.template.geometry;
+        this.set_size(width, height);
     }
 
     set_size(w: number, h: number) {
         this.template.set_size(w, h);
     }
 
-    get_size(){
+    get_size() {
         return new Vector2(this.template.parameters.width, this.template.parameters.height);
     }
 
@@ -190,8 +229,8 @@ export class Slice9Mesh extends Mesh  implements IBaseMeshData{
         this.template.set_slice(width, height);
     }
 
-    set_texture(texture: Texture | null) {
-        this.template.set_texture(texture);
+    set_texture(name: string, atlas = '') {
+        this.template.set_texture(name, atlas);
     }
 
     get_bounds() {
@@ -202,8 +241,30 @@ export class Slice9Mesh extends Mesh  implements IBaseMeshData{
         return this.template.get_bounds(wp, ws);
     }
 
-    serialize(){
+    get_color() {
+        return this.template.parameters.color;
+    }
+
+    set_pivot(x: number, y: number, is_sync = false) {
+        if (is_sync) {
+            const size = this.get_size();
+            set_pivot_with_sync_pos(this, size.x, size.y, this.template.parameters.pivot_x, this.template.parameters.pivot_y, x, y);
+        }
+        else
+            this.template.set_pivot(x, y);
+        this.template.set_size(this.get_size().x, this.get_size().y);
+    }
+
+    get_pivot() {
+        return new Vector2(this.template.parameters.pivot_x, this.template.parameters.pivot_y);
+    }
+
+    serialize() {
         return this.template.serialize();
+    }
+
+    deserialize(data: any) {
+        this.template.deserialize(data);
     }
 
 

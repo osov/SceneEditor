@@ -1,5 +1,4 @@
-import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, TextureLoader, Vector3, } from 'three'
-import { Slice9Mesh } from './render_engine/slice9';
+import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, Vector3, } from 'three'
 import { IObjectTypes } from './render_engine/types';
 
 export async function run_debug_scene() {
@@ -7,7 +6,8 @@ export async function run_debug_scene() {
   //Camera.set_width_prjection(-1, 1, 0, 100);
   const scene = RenderEngine.scene;
   (window as any).scene = RenderEngine.scene;
-  const tex = await new TextureLoader().loadAsync('./img/2.png');
+  await ResourceManager.preload_font('ShantellSans-Light11.ttf')
+  const tex = await ResourceManager.preload_texture('./img/2.png');
   tex.magFilter = NearestFilter;
 
 
@@ -22,18 +22,17 @@ export async function run_debug_scene() {
   plane_2.position.set(540, -200, 5);
   SceneManager.add(plane_2);
 
-  const plane_3 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 32, height: 32 });
-  plane_3.scale.setScalar(3)
+  const plane_3 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 200, height: 200 });
   plane_3.set_color('#00f')
-  plane_3.position.set(100, -200, 0.001);
+  plane_3.position.set(300, -300, 0.001);
   SceneManager.add(plane_3);
 
-  const plane_4 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 128, height: 32 }) as Slice9Mesh;
+  const plane_4 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 128, height: 32 });
   plane_4.scale.setScalar(2);
   plane_4.position.set(300, -500, 0);
   plane_4.set_slice(8, 8)
   plane_4.set_color('#0f0')
-  plane_4.set_texture(tex);
+  plane_4.set_texture('2');
   SceneManager.add(plane_4);
 
 
@@ -110,10 +109,28 @@ export async function run_debug_scene() {
   SceneManager.add(tmp);
 
 
- //log('source:', SceneManager.debug_graph(scene));
- //SceneManager.move_mesh_id(21, 10, 13);
- //log('new:', SceneManager.debug_graph(scene));
- //log(SceneManager.make_graph());
+  const t = SceneManager.create(IObjectTypes.TEXT, { text: 'Образец текста раз два три', width: 250, height: 50 });
+  t.set_color('#0f0');
+  t.set_font('ShantellSans-Light11');
+  t.fontSize = 32;
+  t.position.set(300, -300, 0.3)
+  SceneManager.add(t);
+
+
+  tmp = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 15, height: 2 });
+  tmp.position.set(300, -305, 0.2)
+  SceneManager.add(tmp);
+
+  CameraControl.set_position(300, -350);
+  CameraControl.set_zoom(1.);
+
+  plane_3.set_size(50, 50);
+  SceneManager.move_mesh_id(plane_3.mesh_data.id, plane_4.mesh_data.id, 0);
+
+  //log('source:', SceneManager.debug_graph(scene));
+  //SceneManager.move_mesh_id(21, 10, 13);
+  //log('new:', SceneManager.debug_graph(scene));
+  //log(SceneManager.make_graph());
 
 
 }

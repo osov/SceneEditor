@@ -1,5 +1,4 @@
-import { Euler, Object3D, Vector2, Vector3 } from "three";
-import { IBaseMeshDataAndThree } from "../render_engine/types";
+import { Euler,  Vector2, Vector3 } from "three";
 
 export type PositionEventData = {
     id_mesh: number;

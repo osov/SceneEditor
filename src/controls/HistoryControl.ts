@@ -1,12 +1,12 @@
 import { PositionEventData, RotationEventData, ScaleEventData, SizeEventData } from "./types";
 
 declare global {
-    const HistoryControl: ReturnType<typeof HistoryControlModule>;
+    const HistoryControl: ReturnType<typeof HistoryControlCreate>;
     type HistoryKeys = HistoryDataKeys;
 }
 
 export function register_history_control() {
-    (window as any).HistoryControl = HistoryControlModule();
+    (window as any).HistoryControl = HistoryControlCreate();
 }
 
 type HistoryData = {
@@ -14,6 +14,8 @@ type HistoryData = {
     MESH_ROTATE: RotationEventData
     MESH_SCALE: ScaleEventData
     MESH_SIZE: SizeEventData
+    MESH_DELETE: { id_mesh: number }
+    MESH_ADD: any
 }
 type HistoryDataKeys = keyof HistoryData;
 
@@ -22,7 +24,7 @@ interface HistoryDataItem<T extends HistoryDataKeys> {
     data: HistoryData[T][]
 }
 
-function HistoryControlModule() {
+function HistoryControlCreate() {
     const context_data: { [k: string]: HistoryDataItem<HistoryDataKeys>[] } = {};
     function init() {
         EventBus.on('SYS_INPUT_UNDO', () => undo());
@@ -43,11 +45,13 @@ function HistoryControlModule() {
             return;
         const last = ctx.pop()!;
         const type = last.type;
+        const list_mesh = [];
         if (type == 'MESH_TRANSLATE') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_TRANSLATE'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
                 mesh.position.copy(data.position);
+                list_mesh.push(mesh);
             }
         }
         else if (type == 'MESH_ROTATE') {
@@ -55,6 +59,7 @@ function HistoryControlModule() {
                 const data = last.data[i] as HistoryData['MESH_ROTATE'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
                 mesh.rotation.copy(data.rotation);
+                list_mesh.push(mesh);
             }
         }
         else if (type == 'MESH_SCALE') {
@@ -62,6 +67,7 @@ function HistoryControlModule() {
                 const data = last.data[i] as HistoryData['MESH_SCALE'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
                 mesh.scale.copy(data.scale);
+                list_mesh.push(mesh);
             }
         }
         else if (type == 'MESH_SIZE') {
@@ -69,8 +75,31 @@ function HistoryControlModule() {
                 const data = last.data[i] as HistoryData['MESH_SIZE'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
                 mesh.set_size(data.size.x, data.size.y);
+                list_mesh.push(mesh);
             }
         }
+        else if (type == 'MESH_DELETE') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_DELETE'];
+                SceneManager.remove(data.id_mesh)!;
+            }
+            // ---
+        }
+        else if (type == 'MESH_ADD') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_ADD'];
+                const parent = data.pid == -1 ? RenderEngine.scene : SceneManager.get_mesh_by_id(data.pid);
+                if (!parent) {
+                    Log.error('parent is null', data);
+                    return;
+                }
+                const m = SceneManager.deserialize_mesh(data, true, parent);
+                parent.add(m);
+                list_mesh.push(m);
+            }
+        }
+        if (list_mesh.length > 0)
+            SelectControl.set_selected_list(list_mesh, true);
 
     }
 
