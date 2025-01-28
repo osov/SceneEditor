@@ -175,22 +175,9 @@ ul.tree {
   --tree_width: 200px;
 }
 ul.tree li {
-  /* line-height: 20px; */
-  /* min-height: 35px; */
   position: relative;
-  /* border-top: 1px solid transparent; */
-  /* border-bottom: 1px solid transparent; */
   padding: 0;
   margin: 0;
-}
-ul.tree li.top{
-  border-top-color: green;
-}
-ul.tree li.bottom{
-  border-bottom-color: green;
-}
-ul.tree li.bg{
-  background-color: #2e7383;
 }
 a.tree__item {
   --tree__itemHeight: 25px;
@@ -198,19 +185,73 @@ a.tree__item {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  /* border: 1px solid black; */
+  border: none;
+  outline: none;
   padding: 0 8px 0 5px;
   margin-left: 17px;
   height: var(--tree__itemHeight, 25px);
   line-height: calc(var(--tree__itemHeight) - 2px);
   font-size: 15px;
-  cursor: default;
-  /* width: auto; */
+  width: auto;
   flex-grow: 2;
   z-index: 2;
+  cursor: default;
 }
 a.tree__item:hover{
-  opacity: 0.7;
+  /* opacity: 0.7; */
+}
+a.tree__item::before,
+a.tree__item::after {
+  content: '';
+  position: absolute;
+  display: none;
+  z-index: 3;
+  background-color: transparent;
+}
+a.tree__item::before {
+  width: 4px;
+  height: 4px;
+  left: 0;
+  border-radius: 31%;
+  background-color: #ccc;
+}
+a.tree__item.top::before {
+  display: block;
+  top: -2px;
+}
+a.tree__item.bottom::before {
+  display: block;
+  bottom: -2px;
+}
+a.tree__item::after{
+  width: calc(100% - 3px);
+  height: 2px;
+  left: 4px;
+  background-color: #3a7fbd;
+}
+a.tree__item.top::after {
+  display: block;
+  top: -1px;
+}
+a.tree__item.bottom::after {
+  display: block;
+  bottom: -1px;
+  height: 2px;
+}
+a.tree__item.droppable {
+  cursor: copy;
+}
+a.tree__item.droppable:not(.success){
+  cursor: not-allowed;
+}
+a.droppable .tree__item_name {
+  /* color: #9dcf9d; */
+}
+a.droppable:not(.success) .tree__item_name {
+  /* color: #f9c8c8; */
+}
+a.tree__item.bg span.tree__item_bg {
+  /* background-color: #2e7383; */
 }
 .tree__item_bg{
   position: absolute;
@@ -222,6 +263,7 @@ a.tree__item:hover{
   width: var(--tree_width, 200px);
   z-index: 1;
 }
+.tree__btn:hover + .tree__item .tree__item_bg, 
 a.tree__item:hover .tree__item_bg,
 .tree__item_bg:hover {
   background-color: #313a3d;
@@ -248,13 +290,11 @@ a.tree__item:hover .tree__item_bg,
   max-width: 280px;
   overflow: hidden;
   z-index: 2;
-  cursor: pointer;
 }
+
 ul.tree_sub {
   padding-left: 20px;
   transition: height var(--transition_150);
-  /* border-top: 3px solid gray; */
-  /* border-top: 3px solid transparent; */
 }
 li:not(.active) > ul.tree_sub {
   height: 0px;
@@ -263,18 +303,7 @@ li:not(.active) > ul.tree_sub {
 li.active > ul.tree_sub {
   height: auto;
 }
-a.droppable[data-no_drop="true"] {
-  cursor: not-allowed;
-}
-/* li.droppable:has(> a[data-no_drag="true"]) {
-  cursor: not-allowed;
-} */
-a.tree__item.droppable {
-  color: red;
-}
-li.droppable > .tree__item {
-  text-decoration: underline;
-}
+
 .tree__btn {
   width: 12px;
   height: 12px;
@@ -287,7 +316,7 @@ li.droppable > .tree__item {
 }
 .tree__btn:hover{
   opacity: 0.8;
-  color: yellow;
+  color: #ffff00c7;
 }
 .tree__btn .svg_icon{
   transform: rotate(90deg);
@@ -311,6 +340,7 @@ li:not(.active) > .tree__btn .use_trgl {display: none;}
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px;
+  font-size: 14px;
   z-index: 2;
   /* border: 1px solid red; */
   /* padding: 3px; */
@@ -319,7 +349,7 @@ li:not(.active) > .tree__btn .use_trgl {display: none;}
 .drag_and_drop.pos {
   visibility: visible;
 }
-.drag_and_drop__status{
+.drag_and_drop__status {
   display: block;
   width: 16px;
   height: 16px;
