@@ -321,7 +321,7 @@ function castGuiBox2DefoldGuiNode(data: IGuiBox): IDefoldGuiNode {
         size: new Vector4(data.width, data.height),
         enabled: data.enabled,
         visible: data.visible,
-        texture: data.atlas.split(".atlas")[0] + `/${data.texture}`,
+        texture: data.atlas && data.texture ? data.atlas.split(".atlas")[0] + `/${data.texture}` : undefined,
         clipping_mode: castStencil(data.stencil),
         slice9: new Vector4(data.slice_width, data.slice_height, data.slice_width, data.slice_height),
         alpha: data.alpha,

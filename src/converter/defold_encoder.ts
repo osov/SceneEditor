@@ -323,7 +323,7 @@ export function encodePrototype(t: IDefoldPrototype): string {
 }
 
 export function encodeSprite(t: IDefoldSprite): string {
-    return encode(t, root.lookupType("SpriteDesc"))
+    return encode(t, root.lookupType("dmGameSystemDDF.SpriteDesc"))
 }
 
 export function encodeLabel(t: IDefoldLabel): string {

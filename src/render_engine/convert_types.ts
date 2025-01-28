@@ -74,8 +74,8 @@ export interface IGuiNode extends INodeBase {
 }
 
 export interface IGuiBox extends IGuiNode {
-    texture: string;
-    atlas: string;
+    texture?: string;
+    atlas?: string;
     slice_width: number;
     slice_height: number;
     stencil: boolean;
@@ -144,8 +144,9 @@ export interface IExtDependencies {
 }
 
 export interface IAtlas {
-    name: string,
-    images: string[]
+    name: string;
+    images: string[];
+}
 }
 
 /*
