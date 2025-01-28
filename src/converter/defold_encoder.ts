@@ -261,6 +261,21 @@ function indent(s: string, n: number): string {
     return tab + s.replace(/\n/g, `\n${tab}`);
 }
 
+function encodeString(data: string): string {
+    // TODO: refactoring
+    return data
+        .replace(/\"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .split('\\n')
+        .map((line: string, index: number, array: string[]): string => {
+            if (index > 0 && line == "") return `${line}"`;
+            else if (index > 0) return `"${line}\\n"`;
+            else if (array.length > 2) return `${line}\\n"`;
+            else return line;
+        })
+        .join('\n');
+}
+
 export function encode(t: Object, message: Type): string {
     let out = "";
 
@@ -273,7 +288,9 @@ export function encode(t: Object, message: Type): string {
             const field_type = typeof element;
             switch (field_type) {
                 case "string":
-                    if (proto_field.type === "string") out += `${name}: "${element}"\n`; // String
+                    if (proto_field.type === "string") {
+                        out += `${name}: "${encodeString(element)}"\n`; // String
+                    }
                     else out += `${name}: ${element}\n`; // Enum
                     break;
                 case "number":
