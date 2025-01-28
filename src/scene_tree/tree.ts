@@ -131,9 +131,12 @@ export function renderTree() {
     const html = getTreeHtml(renderList);
     const divTree:any = document.querySelector('#wr_tree');
     divTree.innerHTML = html;
-    const tree:any = divTree.querySelector('.tree');
+    const tree = divTree.querySelector('.tree');
     tree.style.setProperty('--tree_width', tree?.clientWidth + 'px');
     console.log({tree});
+
+    const li_lines:any = document.querySelectorAll('.li_line');
+    addClassWithDelay(li_lines, 1200);
     // updateDaD();
 }
 
@@ -311,7 +314,7 @@ let isDrop:boolean = false;
 
 let hoverStart: number;
 let hoverEnd: number | null;
-let hoverTimer: NodeJS.Timeout;
+let hoverTimer: ReturnType<typeof setTimeout>;
 
 
 function onMouseDown(event:any) {
@@ -380,7 +383,6 @@ function onMouseUp(event:any) {
     // setTimeout(()=>movement = false, 10);
 
     if(event.button === 0) {
-        removeClassWithDelay(currentDroppable, 1500); // 
 
         if (event.target.closest('.tree__item') && currentDroppable) {
 
@@ -571,81 +573,6 @@ function toggleCurrentBox(droppableBelow:any, pageX: number, pageY: number) {
 
             boxDD.classList.add('pos');
             // switchClassItem(currentDroppable, pageX, pageY);
-
-            // если дерево скрыто - 
-            const li_line = currentDroppable.closest('.li_line');
-            if(li_line) {
-                // li_line.classList.add('active');
-                addClassWithDelay(li_line, 1500);
-            
-                currentDroppable.addEventListener('mouseout', () => {
-                    removeClassWithDelay(li_line, 1500);
-                });
-            }
-
-            // if(typeGoal == "li") {
-
-
-                
-            //     // статус и li.droppable для добавления рядом
-            //     const cdItem = currentDroppable.querySelector(".tree__item");
-            //     itemDrop = getItemObj(cdItem);
-
-            //     if(
-            //         cdItem === treeItem || 
-            //         isNext(itemDrag, itemDrop) || 
-            //         itemDrop?.pid < 0
-            //     ) { 
-            //         boxDD.classList.remove('pos');
-            //         isDrop = false; 
-            //     }
-            //     else {
-            //         if(ddVisible){}
-            //             boxDD.classList.add('pos');
-
-            //         // если не  root 
-            //         if(itemDrop.pid >= 0) {
-            //             currentDroppable.classList.add('droppable');
-            //         }
-
-            //         if(
-            //             // itemDrop?.no_drop === true || 
-            //             isChild(treeList, itemDrag.id, itemDrop.pid) || 
-            //             isParentNoDrop(treeList, itemDrag, itemDrop)
-            //         ) {
-            //             boxDD.classList.remove('active');
-            //             isDrop = false;
-            //         }
-            //         else {
-            //             boxDD.classList.add('active');
-            //             isDrop = true;
-            //         }
-
-            //     }
-            // }
-            // else {
-            //     // a.tree__item.droppable  и  статус для добавления внутрь
-            //     if(currentDroppable === treeItem || itemDrag?.no_drag === true) { 
-            //         boxDD.classList.remove('pos'); 
-            //         isDrop = false; 
-            //     }
-            //     else {
-            //         if(ddVisible)
-            //             boxDD.classList.add('pos');
-
-            //         currentDroppable.classList.add('droppable');
-            //         itemDrop = getItemObj(currentDroppable);
-            //         if(itemDrop?.no_drop === true && itemDrag || isChild(treeList, itemDrag.id, itemDrop.pid)) {
-            //             boxDD.classList.remove('active');
-            //             isDrop = false;
-            //         }
-            //         else {
-            //             boxDD.classList.add('active');
-            //             isDrop = true;
-            //         }
-            //     }
-            // }
-            
             
         }
     }
@@ -719,6 +646,43 @@ function forLi() {
     }
 }
 
+function addClassWithDelay(list: HTMLElement[], delay: number) {
+
+    list.forEach((element: HTMLElement) => {
+        element.addEventListener('mouseover', () => {
+            if (element?.classList.contains('active')) return;
+            if (!itemDrag) return;
+
+            hoverStart = Date.now();
+            hoverEnd = null;
+    
+            console.log({hoverTimer});
+            
+            hoverTimer = setTimeout(() => {
+                if (hoverEnd === null) {
+                    element.classList.add('active');
+                }
+            }, delay); 
+        });
+    
+        element.addEventListener('mouseout', () => {
+            if (element?.classList.contains('active')) return;
+            if (!itemDrag) return;
+
+            hoverEnd = Date.now();
+            const hoverTime = hoverEnd - hoverStart;
+    
+            clearTimeout(hoverTimer); 
+    
+            if (hoverTime < delay) {
+                element.classList.remove('active');
+            }
+        });
+    });
+
+}
+
+
 function getItemObj(html:any) {
     return {
         id: +html.getAttribute("data-id"),
@@ -732,32 +696,6 @@ function getItemObj(html:any) {
     }
 }
 
-function addClassWithDelay(elem: HTMLElement, delay: number) {
-    
-    if (elem.classList.contains('active')) return;
-
-    hoverStart = Date.now();
-    hoverEnd = null;
-
-    hoverTimer = setTimeout(() => {
-        if (hoverEnd === null) {
-            elem.classList.add('active');
-        }
-    }, delay);
-}
-
-function removeClassWithDelay(elem: HTMLElement, delay: number) {
-    if (elem?.classList.contains('active')) return;
-    if (elem === null) return;
-
-    hoverEnd = Date.now();
-    const hoverTime: number = hoverEnd - hoverStart;
-    clearTimeout(hoverTimer);
-    if (hoverTime < delay) {
-        elem.classList.remove('active');
-    }
-
-}
 
 // // ********************** 0137 ***************************
 document.addEventListener('mousedown', onMouseDown, false)
