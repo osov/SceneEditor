@@ -1,4 +1,4 @@
-import { EulerTuple, Object3D, Vector2, Vector3Tuple, Vector4Tuple } from "three";
+import {  Object3D, Vector2, Vector3Tuple, Vector4Tuple } from "three";
 
 export enum IObjectTypes {
     SLICE9_PLANE = 'slice9_plane',

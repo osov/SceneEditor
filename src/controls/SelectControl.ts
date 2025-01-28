@@ -18,20 +18,17 @@ function SelectControlCreate() {
     const prev_point = new Vector2();
     let selected: IBaseMeshDataAndThree | null = null;
     let selected_list: IBaseMeshDataAndThree[] = [];
-    let is_down = false;
     function init() {
 
         EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
             if (e.button != 0)
                 return;
-            is_down = true;
             click_point.set(e.x, e.y);
         });
 
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
             if (e.button != 0)
                 return;
-            is_down = false;
             prev_point.set(pointer.x, pointer.y);
             pointer.x = e.x;
             pointer.y = e.y;

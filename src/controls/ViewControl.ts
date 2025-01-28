@@ -1,4 +1,4 @@
-import { format_list_without_children, is_base_mesh } from "../render_engine/helpers/utils";
+import { format_list_without_children } from "../render_engine/helpers/utils";
 
 declare global {
     const ViewControl: ReturnType<typeof ViewControlCreate>;

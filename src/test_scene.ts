@@ -1,7 +1,5 @@
 import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, Vector3, } from 'three'
-import { Slice9Mesh } from './render_engine/slice9';
 import { IObjectTypes } from './render_engine/types';
-import { TextMesh } from './render_engine/text';
 
 export async function run_debug_scene() {
   // sov width projection
