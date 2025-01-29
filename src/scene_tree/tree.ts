@@ -1,4 +1,5 @@
-// import { deepClone } from "../modules/utils";
+import { deepClone } from "../modules/utils";
+// console.log(SceneManager.make_graph());
 
 interface Item {
     id: number;
@@ -13,13 +14,14 @@ interface Item {
     no_remove?: boolean; // нельзя удалить
 }
 
-let treeList: Item[] = [
+let treeList: Item[] = [];
+let testList: Item[] = [
     {
-        id: 0,
-        pid: -1,
+        id: -1,
+        pid: -2,
         name: "root",
         visible: true,
-        icon: "cube",
+        icon: "scene",
         no_drag: true,
         no_drop: false
     },
@@ -28,7 +30,7 @@ let treeList: Item[] = [
         pid: 0,
         name: "name 1",
         visible: true,
-        icon: "cube",
+        icon: "box",
         no_drag: false,
         no_drop: false
     },
@@ -37,7 +39,7 @@ let treeList: Item[] = [
         pid: 0,
         name: "name 2",
         visible: true,
-        icon: "cube",
+        icon: "box",
         no_drag: false,
         no_drop: false
     },
@@ -46,7 +48,7 @@ let treeList: Item[] = [
         pid: 0,
         name: "name 3",
         visible: true,
-        icon: "cube",
+        icon: "box",
         no_drag: false,
         no_drop: false
     },
@@ -55,7 +57,7 @@ let treeList: Item[] = [
         pid: 1,
         name: "name 4",
         visible: true,
-        icon: "cube",
+        icon: "box",
         no_drag: true,
         no_drop: true
     },
@@ -64,7 +66,7 @@ let treeList: Item[] = [
         pid: 1,
         name: "name 5",
         visible: true,
-        icon: "cube",
+        icon: "box",
         no_drag: false,
         no_drop: false
     },
@@ -73,7 +75,7 @@ let treeList: Item[] = [
         pid: 4,
         name: "name 6",
         visible: true,
-        icon: "cube",
+        icon: "box",
         no_drag: true,
         no_drop: true
     },
@@ -82,7 +84,7 @@ let treeList: Item[] = [
         pid: 4,
         name: "name 61",
         visible: true,
-        icon: "cube",
+        icon: "text",
         no_drag: false,
         no_drop: false
     },
@@ -91,7 +93,7 @@ let treeList: Item[] = [
         pid: 41,
         name: "name 7 name7777",
         visible: true,
-        icon: "cube",
+        icon: "box",
         no_drag: false,
         no_drop: false
     },
@@ -100,7 +102,7 @@ let treeList: Item[] = [
         pid: 41,
         name: "name 8",
         visible: true,
-        icon: "cube",
+        icon: "box",
         no_drag: false,
         no_drop: true
     },
@@ -109,7 +111,7 @@ let treeList: Item[] = [
         pid: 41,
         name: "name 9",
         visible: true,
-        icon: "cube",
+        icon: "text",
         no_drag: false,
         no_drop: false
     },
@@ -118,7 +120,7 @@ let treeList: Item[] = [
         pid: 5,
         name: "name 10",
         visible: true,
-        icon: "cube",
+        icon: "box",
         no_drag: false,
         no_drop: false
     },
@@ -126,14 +128,15 @@ let treeList: Item[] = [
 ];
 
 export function renderTree() {
-
+    const getList = SceneManager.make_graph();
+    treeList = treeList.length ? deepClone(treeList) : deepClone(getList);
+    
     const renderList = buildTree(treeList);
     const html = getTreeHtml(renderList);
     const divTree:any = document.querySelector('#wr_tree');
     divTree.innerHTML = html;
     const tree = divTree.querySelector('.tree');
     tree.style.setProperty('--tree_width', tree?.clientWidth + 'px');
-    console.log({tree});
 
     const li_lines:any = document.querySelectorAll('.li_line');
     addClassWithDelay(li_lines, 1200);
@@ -143,18 +146,21 @@ export function renderTree() {
 function buildTree(list: any) {
     const treeMap:any = {};
     const tree:any = [];
+    
+    const rootList = [testList[0], ...list];
+    console.log({rootList});
 
     // проиндексировали для сортировки
     for (let i = 0; i < list.length; i++) {
-        list[i].index = i;        
+        rootList[i].index = i;        
     }
     
-    list.forEach((node:any) => {
+    rootList.forEach((node:any) => {
         treeMap[node.id] = { ...node, children: [] };
     });    
 
-    list.forEach((node:any) => {
-        if (node.pid !== -1) {
+    rootList.forEach((node:any) => {
+        if (node.pid !== -2) {
             treeMap[node.pid].children.push(treeMap[node.id]);
         } else {
             tree.push(treeMap[node.id]);
@@ -221,7 +227,15 @@ function getTreeItemHtml(item:any){
 }
 
 function getTreeIcoHtml(icon: string){
-    return `<span class="tree__ico"><svg class="svg_icon"><use href="./img/sprite.svg#${icon}"></use></svg></span>`;
+    return `<span class="tree__ico"><svg class="svg_icon"><use href="./img/sprite.svg#${getIdIco(icon)}"></use></svg></span>`;
+}
+
+function getIdIco(icon: string){
+    if(!icon) return "cube";
+    if(icon === "scene") return "cubes_stacked";
+    if(icon === "text") return "letter_t";
+    if(icon === "box") return "cube";
+    return "cube";
 }
 
 function updateTreeList(type?:string):void{
@@ -614,7 +628,7 @@ function forLi() {
     if(
         currentDroppable === treeItem || 
         // isNext(itemDrag, itemDrop) || 
-        itemDrop?.pid < 0
+        itemDrop?.pid < -1
     ) { 
         boxDD.classList.remove('pos');
         isDrop = false; 
@@ -624,12 +638,13 @@ function forLi() {
             boxDD.classList.add('pos');
 
         // если не  root 
-        if(itemDrop.pid >= 0) {
+        if(itemDrop.pid > -2) {
             currentDroppable.classList.add('droppable');
         }
 
         if(
             // itemDrop?.no_drop === true || 
+            itemDrop?.pid === -2 || // root
             isChild(treeList, itemDrag.id, itemDrop.pid) || 
             isParentNoDrop(treeList, itemDrag, itemDrop)
         ) {
@@ -646,6 +661,7 @@ function forLi() {
     }
 }
 
+// если hover / mousemove на tree__item больше delay, то добавляем класс active
 function addClassWithDelay(list: HTMLElement[], delay: number) {
 
     list.forEach((element: HTMLElement) => {
@@ -656,8 +672,6 @@ function addClassWithDelay(list: HTMLElement[], delay: number) {
             hoverStart = Date.now();
             hoverEnd = null;
     
-            console.log({hoverTimer});
-            
             hoverTimer = setTimeout(() => {
                 if (hoverEnd === null) {
                     element.classList.add('active');
