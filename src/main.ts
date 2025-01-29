@@ -31,7 +31,7 @@ register_view_control();
 register_control_manager();
 register_history_control();
 
-run_debug_scene();
+await run_debug_scene();
 
 initButtons();
 renderTree();

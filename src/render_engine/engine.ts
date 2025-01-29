@@ -14,12 +14,10 @@ export function RenderEngineModule() {
     const canvas = document.querySelector(`canvas#scene`)!;
     const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true })
     const scene = new Scene();
-    const scene_gui = new Scene();
     const clock = new Clock();
     const camera = new OrthographicCamera(-1, 1, -1, 1, 0, 100);
     const camera_gui = new OrthographicCamera(-1, 1, -1, 1, 0, 100);
     const raycaster = new Raycaster();
-
     let is_active_gui_camera = false;
 
     function init() {
@@ -27,6 +25,8 @@ export function RenderEngineModule() {
         renderer.autoClear = false
         camera.position.set(0, 0, 50)
         camera_gui.position.set(0, 0, 50)
+        camera_gui.layers.disable(0)
+        camera_gui.layers.enable(1)
     }
 
     function animate() {
@@ -39,7 +39,7 @@ export function RenderEngineModule() {
         renderer.render(scene, camera);
         if (is_active_gui_camera) {
             renderer.clearDepth();
-            renderer.render(scene_gui, camera_gui);
+            renderer.render(scene, camera_gui);
         }
     }
 
@@ -71,5 +71,5 @@ export function RenderEngineModule() {
         is_active_gui_camera = is_active;
     }
 
-    return { init, animate, get_render_size, raycast_scene, is_intersected_mesh, set_active_gui_camera, scene, scene_gui, camera, camera_gui, raycaster, renderer };
+    return { init, animate, get_render_size, raycast_scene, is_intersected_mesh, set_active_gui_camera, scene, camera, camera_gui, raycaster, renderer };
 }
