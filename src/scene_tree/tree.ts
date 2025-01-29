@@ -127,20 +127,48 @@ let testList: Item[] = [
 
 ];
 
+interface Contexts {
+    [scene: string]: { [id: number]: boolean };
+}
+
+const contexts: Contexts = {};
+let currentSceneName:string = testList[0].name ? testList[0].name : "root";
+
+const divTree:any = document.querySelector('#wr_tree');
+
+let treeItem:any = null;
+let currentDroppable:any = null;
+// let shiftX:number = 0;
+// let shiftY:number = 0;
+let startPageX:number = 0;
+let startPageY:number = 0;
+let ddVisible:boolean = false;
+let boxDD:any = '';
+let itemDrag:any = {};
+let itemDrop:any = {};
+let isDrop:boolean = false;
+
+let hoverStart: number;
+let hoverEnd: number | null;
+let hoverTimer: ReturnType<typeof setTimeout>;
+
+let startY:number;
+
 export function renderTree() {
     const getList = SceneManager.make_graph();
     treeList = treeList.length ? deepClone(treeList) : deepClone(getList);
+
+    contexts[currentSceneName] = contexts[currentSceneName] ? contexts[currentSceneName] : {};
     
     const renderList = buildTree(treeList);
     const html = getTreeHtml(renderList);
-    const divTree:any = document.querySelector('#wr_tree');
     divTree.innerHTML = html;
     const tree = divTree.querySelector('.tree');
     tree.style.setProperty('--tree_width', tree?.clientWidth + 'px');
 
     const li_lines:any = document.querySelectorAll('.li_line');
     addClassWithDelay(li_lines, 1200);
-    // updateDaD();
+    updateDaD();
 }
 
 function buildTree(list: any) {
@@ -186,6 +214,7 @@ function getTreeHtml(e:any){
                     </li>`;
     }
     result += `</ul>`;
+    // result += getHtmlDaD();
     return result;
 }
 
@@ -193,7 +222,7 @@ function getTreeSubHtml(list:any){
     let result = `<ul class="tree_sub">`;
     list.forEach((item:any) => {
         if(item?.children.length) {
-            result += `<li class="li_line active">
+            result += `<li class="li_line ${contexts[currentSceneName][item.id] == false ? '' : 'active'}">
                             ${getTreeBtnHtml()}
                             ${getTreeItemHtml(item)}
                             ${getTreeSubHtml(item?.children)}
@@ -228,6 +257,19 @@ function getTreeItemHtml(item:any){
 
 function getTreeIcoHtml(icon: string){
     return `<span class="tree__ico"><svg class="svg_icon"><use href="./img/sprite.svg#${getIdIco(icon)}"></use></svg></span>`;
+}
+
+function getHtmlDaD(){
+    return `<div class="drag_and_drop">
+                <span class="drag_and_drop__status">
+                    <svg class="svg_icon">
+                    <use class="use_check" href="./img/sprite.svg#circle_check"></use>
+                    <use class="use_close" href="./img/sprite.svg#circle_close"></use>
+                    </svg>
+                </span>
+                <span class="tree__ico"><svg class="svg_icon"><use href="./img/sprite.svg#cube"></use></svg></span>
+                <span class="tree__item_name"></span>
+            </div> `;
 }
 
 function getIdIco(icon: string){
@@ -314,27 +356,11 @@ function findIndexById(array: Item[], id: number): number {
     return -1;
 }
 
-let treeItem:any = null;
-let currentDroppable:any = null;
-// let shiftX:number = 0;
-// let shiftY:number = 0;
-let startPageX:number = 0;
-let startPageY:number = 0;
-let ddVisible:boolean = false;
-const boxDD:any = document.querySelector(".drag_and_drop")
-let itemDrag:any = {};
-let itemDrop:any = {};
-let isDrop:boolean = false;
-
-let hoverStart: number;
-let hoverEnd: number | null;
-let hoverTimer: ReturnType<typeof setTimeout>;
-
-
 function onMouseDown(event:any) {
     // event.preventDefault();
     if(event.button === 0){
 
+        startY = event.clientY;
         treeItem = event.target.closest('.tree__item');
         
         if (treeItem) {
@@ -374,6 +400,7 @@ function onMouseMove(event:any) {
         // if (event.target.closest('.card.pos')) {  // с таким вариантом, курсор при быстром движении уходит за пределы карты 
         if (treeItem) {
             moveAt(event.pageX, event.pageY)
+            myScrollTo(divTree, startY, event);
             let goalBox = getGoal(event)
             
             if (!goalBox) return
@@ -444,6 +471,22 @@ function myClear():void {
         console.log('clear');
         const items = document.querySelectorAll('.tree__item') as NodeListOf<HTMLLIElement>;
         items.forEach(i => { i.classList.remove('top', 'bg', 'bottom'); });
+}
+
+function myScrollTo(block: HTMLElement, startY:number, event:any) {
+
+    const scrollSpeed = 5;  
+    const tree_div_height:any = block?.clientHeight;   // Высота области для прокрутки
+    const tree_height:any = block.querySelector('.tree')?.clientHeight;   // Высота содержимого
+    
+    const currentY = event.clientY;
+    const direction = currentY < startY ? -1 : 1;
+
+    if (currentY < tree_div_height) {
+        block.scrollBy(0, direction * scrollSpeed);
+    } else if (currentY > tree_height - tree_div_height) {
+        block.scrollBy(0, direction * scrollSpeed);
+    }
 }
 
 function switchClassItem(elem:any, pageX:number, pageY :number): void {
@@ -675,6 +718,7 @@ function addClassWithDelay(list: HTMLElement[], delay: number) {
             hoverTimer = setTimeout(() => {
                 if (hoverEnd === null) {
                     element.classList.add('active');
+                    updateContexts(contexts, currentSceneName, element, true); // save state tree_sub
                 }
             }, delay); 
         });
@@ -690,12 +734,18 @@ function addClassWithDelay(list: HTMLElement[], delay: number) {
     
             if (hoverTime < delay) {
                 element.classList.remove('active');
+                updateContexts(contexts, currentSceneName, element, false); // save state tree_sub
             }
         });
     });
 
 }
 
+function updateContexts(contexts: Contexts, scene: string, li: HTMLElement, state: boolean): void {
+    const itemId = li.querySelector("a.tree__item")?.getAttribute("data-id");
+    if(itemId === null || itemId === undefined) return;
+    contexts[scene][+itemId] = state; // save state tree_sub
+}
 
 function getItemObj(html:any) {
     return {
@@ -718,6 +768,9 @@ document.addEventListener('mouseup', onMouseUp, false)
 // // ********************** 0137 ***************************
 
 function updateDaD(): void {
+
+    boxDD = document.querySelector(".drag_and_drop");
+
     // const menuItems: NodeListOf<HTMLElement> = document.querySelectorAll('ul.tree li, ul.tree li a');
     // let draggedItem: HTMLElement | null = null;
 
@@ -732,36 +785,33 @@ function updateDaD(): void {
 // document.addEventListener('mouseup', onMouseUp, false)
 // ********************** 0137 ***************************
 
+    const btns: NodeListOf<HTMLElement> = document.querySelectorAll('ul.tree .tree__btn');
+    btns.forEach(btn => {
+        // slideUp/slideDown for tree
+        btn.addEventListener('click', (event: Event) => {
+            // event.preventDefault();
+            // event.stopPropagation();
+            const li = (btn as HTMLElement).closest("li");
+            if(li === null) return;
+            const treeSub = li.querySelector(".tree_sub") as HTMLElement;
+            if(treeSub === null) return;
 
-    // const btns: NodeListOf<HTMLElement> = document.querySelectorAll('ul.tree .tree__btn');
-    // btns.forEach(btn => {
-    //     // slideUp/slideDown for tree
-    //     btn.addEventListener('click', (event: Event) => {
-    //         event.preventDefault();
-    //         event.stopPropagation();
-    //         console.log("click::1");
-
-    //         const tree__btn = (event.target as HTMLElement).closest(".tree__btn");
-    //         if (tree__btn) {
-    //             console.log("click::::tree__btn");
-                
-    //             const li = (tree__btn as HTMLElement).closest("li");
-    //             const treeSub = li.querySelector(".tree_sub") as HTMLElement;
-    //             treeSub.style.height = 'auto';
-    //             const heightSub = treeSub.clientHeight + 'px';
-    //             treeSub.style.height = heightSub;
-    //             if (li.classList.contains('active')) {
-    //                 setTimeout(() => { treeSub.style.height = '0px'; }, 0);
-    //                 li.classList.remove('active');
-    //             } else {
-    //                 treeSub.style.height = '0px';
-    //                 setTimeout(() => { treeSub.style.height = heightSub; }, 0);
-    //                 li.classList.add('active');
-    //             }
-    //             setTimeout(() => { treeSub.removeAttribute('style'); }, 160);
-    //         }
-    //     });
-    // });
+            treeSub.style.height = 'auto';
+            const heightSub = treeSub.clientHeight + 'px';
+            treeSub.style.height = heightSub;
+            if (li.classList.contains('active')) {
+                setTimeout(() => { treeSub.style.height = '0px'; }, 0);
+                li.classList.remove('active');
+                updateContexts(contexts, currentSceneName, li, false); // save state tree_sub
+            } else {
+                treeSub.style.height = '0px';
+                setTimeout(() => { treeSub.style.height = heightSub; }, 0);
+                li.classList.add('active');
+                updateContexts(contexts, currentSceneName, li, true); // save state tree_sub
+            }
+            setTimeout(() => { treeSub.removeAttribute('style'); }, 160);
+        });
+    });
 
 }
 
