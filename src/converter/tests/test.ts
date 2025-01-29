@@ -60,7 +60,7 @@ const result = parseScene({
                 id: 3,
                 pid: 0,
                 name: "test_label",
-                position: new Vector3(0, 0, 0),
+                position: new Vector3(270, 0, 0),
                 rotation: new Vector3(0, 0, 0),
                 scale: new Vector3(1, 1, 1),
                 width: 100,
@@ -71,7 +71,7 @@ const result = parseScene({
                 line_break: true,
                 outline: "#000000",
                 shadow: "#000000",
-                leading: 0.1
+                leading: 0.7
             }
         },
         {
@@ -144,7 +144,7 @@ const result = parseScene({
                 id: 7,
                 pid: 6,
                 name: "test_gui_text",
-                position: new Vector3(0, 0, 0),
+                position: new Vector3(55, 0, 0),
                 rotation: new Vector3(0, 0, 0),
                 scale: new Vector3(1, 1, 1),
                 width: 100,
@@ -228,7 +228,7 @@ result.push(parsePrefab({
                 id: 0,
                 pid: 0,
                 name: "test_prefab_lable",
-                position: new Vector3(0, 200, 0),
+                position: new Vector3(0, 230, 0),
                 rotation: new Vector3(0, 0, 0),
                 scale: new Vector3(1, 1, 1),
                 width: 1000,

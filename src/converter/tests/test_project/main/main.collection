@@ -1,191 +1,93 @@
 name: "main"
-embedded_instances { 
+collection_instances {
+  id: "test_collection"
+  collection: "/main/test_collection.collection"
+}
+scale_along_z: 0
+embedded_instances {
   id: "test_go"
-  position { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  rotation { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  scale3 { 
-    x: 1 
-    y: 1 
-    z: 1 
-     
-   } 
   children: "test_child_go"
   data: ""
-   
- } 
-embedded_instances { 
+}
+embedded_instances {
   id: "test_sprite"
-  position { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  rotation { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  scale3 { 
-    x: 1 
-    y: 1 
-    z: 1 
-     
-   } 
-  data: "embedded_components { \n  id: \"test_sprite\"\n  position { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  rotation { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  type: \"sprite\"\n  data: \"textures { \\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/test.atlas\\\"\\n   \\n } \\ndefault_animation: \\\"test\\\"\\n\"\n   \n } \n"
-   
- } 
-embedded_instances { 
+  data: "embedded_components {\n"
+  "  id: \"test_sprite\"\n"
+  "  type: \"sprite\"\n"
+  "  data: \"default_animation: \\\"test\\\"\\n"
+  "material: \\\"/builtins/materials/sprite.material\\\"\\n"
+  "textures {\\n"
+  "  sampler: \\\"texture_sampler\\\"\\n"
+  "  texture: \\\"/main/test.atlas\\\"\\n"
+  "}\\n"
+  "\"\n"
+  "}\n"
+  ""
+}
+embedded_instances {
   id: "test_label"
-  position { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  rotation { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  scale3 { 
-    x: 1 
-    y: 1 
-    z: 1 
-     
-   } 
-  data: "embedded_components { \n  id: \"test_label\"\n  position { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  rotation { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  type: \"label\"\n  data: \"text: \\\"hello world\\\"\\nfont: \\\"/main/test.font\\\"\\nsize { \\n  x: 100 \\n  y: 100 \\n  z: 0 \\n  w: 1 \\n   \\n } \\nscale { \\n  x: 1 \\n  y: 1 \\n  z: 1 \\n  w: 1 \\n   \\n } \\ncolor { \\n  x: 1 \\n  y: 1 \\n  z: 1 \\n  w: 1 \\n   \\n } \\noutline { \\n  x: 0 \\n  y: 0 \\n  z: 0 \\n  w: 1 \\n   \\n } \\nshadow { \\n  x: 0 \\n  y: 0 \\n  z: 0 \\n  w: 1 \\n   \\n } \\nleading: 0.1 \\ntracking: 0 \\npivot: 0 \\nblend_mode: 0 \\nline_break: true \\nmaterial: \\\"/builtins/fonts/label-df.material\\\"\\n\"\n   \n } \n"
-   
- } 
-embedded_instances { 
+  data: "embedded_components {\n"
+  "  id: \"test_label\"\n"
+  "  type: \"label\"\n"
+  "  data: \"size {\\n"
+  "  x: 100.0\\n"
+  "  y: 100.0\\n"
+  "}\\n"
+  "leading: 0.7\\n"
+  "line_break: true\\n"
+  "text: \\\"hello world\\\"\\n"
+  "font: \\\"/main/test.font\\\"\\n"
+  "material: \\\"/builtins/fonts/label-df.material\\\"\\n"
+  "\"\n"
+  "}\n"
+  ""
+  position {
+    x: 270.0
+  }
+}
+embedded_instances {
   id: "test_sound"
-  position { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  rotation { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  scale3 { 
-    x: 1 
-    y: 1 
-    z: 1 
-     
-   } 
-  data: "embedded_components { \n  id: \"test_sound\"\n  position { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  rotation { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  type: \"sound\"\n  data: \"sound: \\\"/main/test.ogg\\\"\\nlooping: 1 \\ngroup: \\\"master\\\"\\ngain: 1 \\npan: 1 \\nspeed: 1 \\n\"\n   \n } \n"
-   
- } 
-embedded_instances { 
+  data: "embedded_components {\n"
+  "  id: \"test_sound\"\n"
+  "  type: \"sound\"\n"
+  "  data: \"sound: \\\"/main/test.ogg\\\"\\n"
+  "looping: 1\\n"
+  "pan: 1.0\\n"
+  "\"\n"
+  "}\n"
+  ""
+}
+embedded_instances {
   id: "test_child_go"
-  position { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  rotation { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  scale3 { 
-    x: 1 
-    y: 1 
-    z: 1 
-     
-   } 
   data: ""
-   
- } 
-embedded_instances { 
+}
+embedded_instances {
   id: "test_prefab"
-  position { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  rotation { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  scale3 { 
-    x: 1 
-    y: 1 
-    z: 1 
-     
-   } 
-  data: "embedded_components { \n  id: \"test_prefab\"\n  position { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  rotation { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  type: \"factory\"\n  data: \"prototype: \\\"/main/test_prefab.go\\\"\\n\"\n   \n } \n"
-   
- } 
-embedded_instances { 
+  data: "embedded_components {\n"
+  "  id: \"test_prefab\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/test_prefab.go\\\"\\n"
+  "\"\n"
+  "}\n"
+  ""
+}
+embedded_instances {
   id: "test_collection_proxy"
-  position { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  rotation { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  scale3 { 
-    x: 1 
-    y: 1 
-    z: 1 
-     
-   } 
-  data: "embedded_components { \n  id: \"test_collection_proxy\"\n  position { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  rotation { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  type: \"collectionproxy\"\n  data: \"collection: \\\"/main/test_collection.collection\\\"\\n\"\n   \n } \n"
-   
- } 
-embedded_instances { 
+  data: "embedded_components {\n"
+  "  id: \"test_collection_proxy\"\n"
+  "  type: \"collectionproxy\"\n"
+  "  data: \"collection: \\\"/main/test_collection.collection\\\"\\n"
+  "\"\n"
+  "}\n"
+  ""
+}
+embedded_instances {
   id: "test_collection_factory"
-  position { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  rotation { 
-    x: 0 
-    y: 0 
-    z: 0 
-     
-   } 
-  scale3 { 
-    x: 1 
-    y: 1 
-    z: 1 
-     
-   } 
-  data: "embedded_components { \n  id: \"test_collection_factory\"\n  position { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  rotation { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  type: \"collectionfactory\"\n  data: \"prototype: \\\"/main/test_collection.collection\\\"\\n\"\n   \n } \n"
-   
- } 
-collection_instances { 
-  id: "test_collection"
-  collection: "test_collection.collection"
-   
- } 
+  data: "embedded_components {\n"
+  "  id: \"test_collection_factory\"\n"
+  "  type: \"collectionfactory\"\n"
+  "  data: \"prototype: \\\"/main/test_collection.collection\\\"\\n"
+  "\"\n"
+  "}\n"
+  ""
+}

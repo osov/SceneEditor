@@ -20,7 +20,7 @@ embedded_components {
   id: "test_prefab_lable"
   position { 
     x: 0 
-    y: 200 
+    y: 230 
     z: 0 
      
    } 

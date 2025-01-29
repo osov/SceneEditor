@@ -88,6 +88,7 @@ nodes {
    } 
   alpha: 1 
   pivot: 0 
+  parent: "test_gui_box"
    
  } 
 nodes { 
@@ -112,7 +113,7 @@ nodes {
      
    } 
   position { 
-    x: 0 
+    x: 55 
     y: 0 
     z: 0 
     w: 1 
@@ -143,6 +144,7 @@ nodes {
   visible: true 
   alpha: 1 
   pivot: 0 
+  parent: "test_child_gui_box"
    
  } 
 textures { 

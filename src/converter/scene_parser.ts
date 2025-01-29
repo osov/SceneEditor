@@ -144,17 +144,17 @@ function generateCollection(data: INodesList): string {
                 break;
             case NodeType.GO:
                 const go_id = (node.data as INodeEmpty).id;
-                const go_instance = castNodeEmpty2DefoldGo(node.data as INodeEmpty, getChildrens(go_id, data));
+                const go_instance = castNodeEmpty2DefoldGo(node.data as INodeEmpty, getGoChildrens(go_id, data));
                 collection.embedded_instances.push(go_instance);
                 break;
             case NodeType.SPRITE:
                 const sprite_id = (node.data as ISprite).id;
-                const sprite_instance = castSprite2DefoldGoSprite(node.data as ISprite, getChildrens(sprite_id, data));
+                const sprite_instance = castSprite2DefoldGoSprite(node.data as ISprite, getGoChildrens(sprite_id, data));
                 collection.embedded_instances.push(sprite_instance);
                 break;
             case NodeType.LABEL:
                 const lable_id = (node.data as ISprite).id;
-                const lable_instance = castLabel2DefoldGoLabel(node.data as ILabel, getChildrens(lable_id, data));
+                const lable_instance = castLabel2DefoldGoLabel(node.data as ILabel, getGoChildrens(lable_id, data));
                 collection.embedded_instances.push(lable_instance);
                 break;
             case NodeType.SOUND:
@@ -179,7 +179,7 @@ function generateCollection(data: INodesList): string {
     return encodeCollection(collection);
 }
 
-function getChildrens(id: number, data: INodesList): string[] {
+function getGoChildrens(id: number, data: INodesList): string[] {
     return data.list.filter((node: NodeData) => {
         const is_go = node.type == NodeType.GO;
         const is_parent = (node.data as INodeEmpty).pid == id;
@@ -187,6 +187,16 @@ function getChildrens(id: number, data: INodesList): string[] {
     }).map((node: NodeData) => {
         return (node.data as INodeEmpty).name;
     });
+}
+
+function getNodeBoxParent(pid: number, data: INodesList): string {
+    return data.list.filter((node: NodeData) => {
+        const is_node = (node.type == NodeType.GUI_BOX) || (node.type == NodeType.GUI_TEXT);
+        const is_parent = (node.data as IGuiNode).id == pid;
+        return is_node && is_parent;
+    }).map((node: NodeData) => {
+        return (node.data as IGuiNode).name;
+    })[0];
 }
 
 function generateGui(data: INodesList): string {
@@ -200,7 +210,9 @@ function generateGui(data: INodesList): string {
         switch (node.type) {
             case NodeType.GUI_BOX:
                 const box_data = node.data as IGuiBox;
-                gui.nodes.push(castGuiBox2DefoldGuiNode(box_data));
+                const box_node = castGuiBox2DefoldGuiNode(box_data);
+                box_node.parent = getNodeBoxParent(box_data.pid, data);
+                gui.nodes.push(box_node);
                 if (box_data.atlas) {
                     gui.textures.push({
                         name: box_data.atlas.split(".")[0],
@@ -210,7 +222,9 @@ function generateGui(data: INodesList): string {
                 break;
             case NodeType.GUI_TEXT:
                 const text_data = node.data as IGuiText;
-                gui.nodes.push(castGuiText2DefoldGuiNode(text_data));
+                const text_node = castGuiText2DefoldGuiNode(text_data);
+                text_node.parent = getNodeBoxParent(text_data.pid, data);
+                gui.nodes.push(text_node);
                 gui.fonts.push({
                     name: text_data.font.split(".")[0],
                     font: text_data.font,
@@ -439,11 +453,11 @@ function castPrefab2DefoldProtorype(prefab: IPrefab): IDefoldPrototype {
         switch (data.type) {
             case PrefabComponentType.SPRITE:
                 const sprite = data.data as ISprite;
-                prototype.embedded_components.push(castSprite2DefoldEmbeddedComponent(sprite));
+                prototype.embedded_components.push(castSprite2DefoldEmbeddedComponent(sprite, true));
                 break;
             case PrefabComponentType.LABEL:
                 const label = data.data as ILabel;
-                prototype.embedded_components.push(castLabel2DefoldEmbeddedComponent(label));
+                prototype.embedded_components.push(castLabel2DefoldEmbeddedComponent(label, true));
                 break;
         }
     }
@@ -451,21 +465,21 @@ function castPrefab2DefoldProtorype(prefab: IPrefab): IDefoldPrototype {
     return prototype;
 }
 
-function castSprite2DefoldEmbeddedComponent(sprite: ISprite): IDefoldEmbeddedComponent {
+function castSprite2DefoldEmbeddedComponent(sprite: ISprite, with_transform = false): IDefoldEmbeddedComponent {
     return {
         id: sprite.name,
-        position: sprite.position,
-        rotation: sprite.rotation,
+        position: with_transform ? sprite.position : new Vector3(0, 0, 0),
+        rotation: with_transform ? sprite.rotation : new Vector3(0, 0, 0),
         type: "sprite",
         data: encodeSprite(castSprite2DefoldSprite(sprite))
     };
 }
 
-function castLabel2DefoldEmbeddedComponent(label: ILabel): IDefoldEmbeddedComponent {
+function castLabel2DefoldEmbeddedComponent(label: ILabel, with_transform = false): IDefoldEmbeddedComponent {
     return {
         id: label.name,
-        position: label.position,
-        rotation: label.rotation,
+        position: with_transform ? label.position : new Vector3(0, 0, 0),
+        rotation: with_transform ? label.rotation : new Vector3(0, 0, 0),
         type: "label",
         data: encodeLabel(castLabel2DefoldLabel(label))
     };
