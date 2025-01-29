@@ -1,5 +1,5 @@
-import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2 } from "three";
-import { IBaseMeshDataAndThree } from "../render_engine/types";
+import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry } from "three";
+import { IBaseMeshDataAndThree, PivotX, PivotY } from "../render_engine/types";
 import { PositionEventData, SizeEventData } from "./types";
 
 declare global {
@@ -13,7 +13,8 @@ export function register_size_control() {
 function SizeControlCreate() {
     const scene = RenderEngine.scene;
     let debug_center: Mesh;
-    const debug_poins: Mesh[] = [];
+    const bb_points: Mesh[] = [];
+    const pivot_points: Mesh[] = [];
     const pointer = new Vector2();
     const click_point = new Vector2();
     const prev_point = new Vector2();
@@ -36,8 +37,41 @@ function SizeControlCreate() {
             const sphere = new Mesh(geometry, material);
             sphere.visible = false;
             scene.add(sphere)
-            debug_poins.push(sphere);
+            bb_points.push(sphere);
         }
+        for (let i = 0; i < 9; i++) {
+            const material = new MeshBasicMaterial({ color: 0xff0000 });
+            const geometry = new CircleGeometry(7, 4);
+            const mesh = new Mesh(geometry, material);
+            mesh.visible = false;
+            scene.add(mesh)
+            pivot_points.push(mesh);
+        }
+
+        EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
+            if (!is_active) return;
+            if (Input.is_shift())
+                set_pivot_visible(true);
+        })
+
+        EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
+            if (!is_active) return;
+            if (!Input.is_shift())
+                set_pivot_visible(false);
+        })
+
+        EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
+            if (!is_active) return;
+            if (e.button != 0)
+                return;
+            for (let i = 0; i < pivot_points.length; i++) {
+                const pp = pivot_points[i];
+                if (RenderEngine.is_intersected_mesh(new Vector2(e.x, e.y), pp))
+                    log('pp', i);
+
+            }
+        })
+
         debug_center = new Mesh(geometry, new MeshBasicMaterial({ color: 0xff0000 }));
         debug_center.visible = false;
         debug_center.scale.setScalar(0.5)
@@ -81,6 +115,8 @@ function SizeControlCreate() {
 
         EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
             if (!is_active) return;
+            if (Input.is_shift())
+                return;
             prev_point.set(pointer.x, pointer.y);
             pointer.x = event.x;
             pointer.y = event.y;
@@ -207,6 +243,17 @@ function SizeControlCreate() {
         });
     }
 
+    // todo
+    function pivot_index_to_pivot(id:number):Vector2{
+        return new Vector2(0,0);
+    }
+
+    function pivot_to_index(pivot:Vector2):number{
+        if (pivot.x == PivotX.CENTER && pivot.y == PivotY.CENTER)
+            return 4;
+        return 0;
+    }
+
     function get_bounds_from_list() {
         const list = selected_list;
         if (list.length == 0)
@@ -224,29 +271,55 @@ function SizeControlCreate() {
 
     function draw_debug_bb(bb: number[]) {
         const z = 49;
-        debug_poins[0].position.set(bb[0], bb[1], z);
-        debug_poins[1].position.set(bb[2], bb[1], z);
-        debug_poins[2].position.set(bb[2], bb[3], z);
-        debug_poins[3].position.set(bb[0], bb[3], z);
+        // left top, right top, right bottom, left bottom
+        bb_points[0].position.set(bb[0], bb[1], z);
+        bb_points[1].position.set(bb[2], bb[1], z);
+        bb_points[2].position.set(bb[2], bb[3], z);
+        bb_points[3].position.set(bb[0], bb[3], z);
+
+        for (let i = 0; i < pivot_points.length; i++) {
+            const pp = pivot_points[i];
+            (pp.material as MeshBasicMaterial).color.set(0xffffff);
+        }
+        const offset = 0;
+        pivot_points[0].position.set(bb[0] + offset, bb[1] - offset, z);
+        pivot_points[1].position.set(bb[2] - offset, bb[1] - offset, z);
+        pivot_points[2].position.set(bb[2] - offset, bb[3] + offset, z);
+        pivot_points[3].position.set(bb[0] + offset, bb[3] + offset, z);
+        pivot_points[4].position.set(bb[0] + offset, bb[1] - Math.abs(bb[3] - bb[1]) / 2, z);
+        pivot_points[5].position.set(bb[2] - offset, bb[1] - Math.abs(bb[3] - bb[1]) / 2, z);
+        pivot_points[6].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[1] - offset, z);
+        pivot_points[7].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[3] + offset, z);
+        pivot_points[8].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[1] - Math.abs(bb[3] - bb[1]) / 2, z);
+
         if (selected_list.length == 1) {
             const wp = new Vector3();
             selected_list[0].getWorldPosition(wp);
             debug_center.position.x = wp.x;
             debug_center.position.y = wp.y;
+            const pivot = selected_list[0].get_pivot();
+            (pivot_points[pivot_to_index(pivot)].material as MeshBasicMaterial).color.set(0xff0000);
         }
-        set_debug_visible(true);
+        set_bb_visible(true);
         if (selected_list.length != 1)
             debug_center.visible = false;
     }
 
-    function set_debug_visible(visible: boolean) {
-        debug_poins.forEach(p => p.visible = visible);
+    function set_bb_visible(visible: boolean) {
+        bb_points.forEach(p => p.visible = visible);
         debug_center.visible = visible;
+    }
+
+    function set_pivot_visible(visible: boolean) {
+        if (visible)
+            document.body.style.cursor = 'default';
+        pivot_points.forEach(p => p.visible = visible);
     }
 
     function detach() {
         selected_list = [];
-        set_debug_visible(false);
+        set_bb_visible(false);
+        set_pivot_visible(false);
         document.body.style.cursor = 'default';
     }
 
@@ -260,8 +333,10 @@ function SizeControlCreate() {
 
     function set_active(val: boolean) {
         is_active = val;
-        if (!val)
-            set_debug_visible(false);
+        if (!val) {
+            set_bb_visible(false);
+            set_pivot_visible(false);
+        }
     }
 
     init();

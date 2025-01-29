@@ -29,6 +29,8 @@ function SelectControlCreate() {
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
             if (e.button != 0)
                 return;
+            if (Input.is_shift())
+                return;
             prev_point.set(pointer.x, pointer.y);
             pointer.x = e.x;
             pointer.y = e.y;

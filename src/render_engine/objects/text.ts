@@ -1,7 +1,9 @@
 import { Vector2, Vector3 } from "three";
 import { Text } from 'troika-three-text';
-import { IBaseMesh, IObjectTypes } from "./types";
-import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "./helpers/utils";
+import { IBaseMesh, IObjectTypes } from "../types";
+import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
+
+// https://protectwise.github.io/troika/troika-three-text/
 
 interface IParameters {
     width: number;

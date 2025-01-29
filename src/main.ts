@@ -35,3 +35,4 @@ await run_debug_scene();
 
 initButtons();
 renderTree();
+(window as any).renderTree = renderTree;

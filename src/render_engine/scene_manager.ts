@@ -1,8 +1,10 @@
 import { Object3D, Quaternion, Vector3 } from "three";
 import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
-import { Slice9Mesh } from "./slice9";
+import { Slice9Mesh } from "./objects/slice9";
 import { IBaseMeshData, IBaseMeshDataAndThree, IObjectTypes } from "./types";
-import { TextMesh } from "./text";
+import { TextMesh } from "./objects/text";
+import { GoContainer } from "./objects/container";
+import { deepClone } from "../modules/utils";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -14,12 +16,13 @@ export function register_scene_manager() {
 
 type IMeshTypes = {
     [IObjectTypes.SLICE9_PLANE]: Slice9Mesh,
-    [IObjectTypes.TEXT]: TextMesh
+    [IObjectTypes.TEXT]: TextMesh,
+    [IObjectTypes.GO_CONTAINER]: GoContainer,
+    [IObjectTypes.GUI_CONTAINER]: GoContainer,
 }
 
 export function SceneManagerModule() {
     const scene = RenderEngine.scene;
-    //const scene_gui = RenderEngine.scene_gui;
     let id_counter = 0;
 
     function get_unique_id() {
@@ -37,6 +40,12 @@ export function SceneManagerModule() {
         }
         else if (type == IObjectTypes.TEXT) {
             mesh = new TextMesh(params.text || '', params.width || 1, params.height || 1);
+        }
+        else if (type == IObjectTypes.GO_CONTAINER) {
+            mesh = new GoContainer(params.width || 1, params.height || 1, params.slice_width || 0, params.slice_height || 0);
+        }
+        else if (type == IObjectTypes.GUI_CONTAINER) {
+            mesh = new GoContainer(params.width || 1, params.height || 1, params.slice_width || 0, params.slice_height || 0);
         }
         else {
             Log.error('Unknown mesh type', type);
@@ -56,6 +65,7 @@ export function SceneManagerModule() {
             mesh.mesh_data.id = get_unique_id();
         }
         mesh.name = type + mesh.mesh_data.id;
+        mesh.layers.enable(31);
         return mesh as IMeshTypes[T];
     }
 
@@ -77,7 +87,7 @@ export function SceneManagerModule() {
             scale: ws.toArray(),
             size: m.get_size().toArray(),
             color: m.get_color(),
-            pivot:m.get_pivot(),
+            pivot: m.get_pivot(),
             other_data: m.serialize(),
         };
         if (m.children.length > 0) {
@@ -116,6 +126,74 @@ export function SceneManagerModule() {
                 mesh.add(deserialize_mesh(data.children[i], with_id, mesh));
         }
         return mesh;
+    }
+
+    function clear_scene() {
+        for (let i = scene.children.length - 1; i >= 0; i--) {
+            const m = scene.children[i];
+            if (is_base_mesh(m))
+                scene.remove(m);
+        }
+    }
+
+    function save_scene() {
+        const list: IBaseMeshData[] = [];
+        for (let i = 0; i < scene.children.length; i++) {
+            const m = scene.children[i];
+            if (is_base_mesh(m))
+                list.push(serialize_mesh(m as IBaseMeshDataAndThree));
+        }
+        return list;
+    }
+
+    function load_scene(data: IBaseMeshData[], sub_name = '') {
+        if (sub_name == '') {
+            clear_scene();
+            for (let i = 0; i < data.length; i++) {
+                const it = data[i];
+                const mesh = deserialize_mesh(it, true, scene);
+                scene.add(mesh);
+            }
+        }
+        else {
+            const container = create(IObjectTypes.GO_CONTAINER, {});
+            container.name = sub_name;
+            const max = find_max_id(data, 0);
+            if (id_counter <= max)
+                id_counter = max + 1;
+            const inc = get_unique_id();
+            const tmp = deepClone(data);
+            modify_id_pid_list(tmp, inc);
+            for (let i = 0; i < tmp.length; i++) {
+                const it = tmp[i];
+                const mesh = deserialize_mesh(it, true, container);
+                container.add(mesh);
+            }
+            scene.add(container);
+        }
+    }
+
+    function find_max_id(list: IBaseMeshData[], max = 0) {
+        for (let i = 0; i < list.length; i++) {
+            const it = list[i];
+            if (it.id > max)
+                max = it.id;
+            if (it.children)
+                max = find_max_id(it.children, max);
+        }
+        return max;
+    }
+
+    function modify_id_pid_list(list: IBaseMeshData[], inc: number) {
+        for (let i = 0; i < list.length; i++) {
+            const it = list[i];
+            if (it.id != -1)
+                it.id += inc;
+            if (it.pid != -1)
+                it.pid += inc;
+            if (it.children) 
+                modify_id_pid_list(it.children, inc);
+        }
     }
 
 
@@ -219,13 +297,13 @@ export function SceneManagerModule() {
         return graph;
     }
 
-    function save() {
+    function save_editor() {
         return { id_counter };
     }
 
-    function load(data: any) {
+    function load_editor(data: any) {
         id_counter = data.id_counter;
     }
 
-    return { create, add, remove, get_mesh_by_id, move_mesh, move_mesh_id, make_graph, debug_graph, save, load, serialize_mesh, deserialize_mesh };
+    return { get_unique_id,create, add, remove, get_mesh_by_id, move_mesh, move_mesh_id, make_graph, debug_graph, save_editor, load_editor, serialize_mesh, deserialize_mesh, save_scene, load_scene };
 }

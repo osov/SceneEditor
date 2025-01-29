@@ -1,3 +1,4 @@
+import { ArrowHelper, CircleGeometry, DoubleSide, Mesh, MeshBasicMaterial, RingGeometry, SphereGeometry, Vector3 } from "three";
 import { format_list_without_children } from "../render_engine/helpers/utils";
 
 declare global {
@@ -13,8 +14,15 @@ function ViewControlCreate() {
 
 
     function init() {
+       //const geometry = new RingGeometry(4.5, 5, 12);
+       //const material = new MeshBasicMaterial({ color: 0xffff00, side: DoubleSide });
+       //const mesh = new Mesh(geometry, material); 
+       //mesh.position.set(300, -200, 49);
+       //mesh.scale.setScalar(5)
+       //RenderEngine.scene.add(mesh);
+
         EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
-            if (Input.is_control() && e.key == 'c') {
+            if (Input.is_control() && (e.key == 'c' || e.key == 'с')) {
                 const list = format_list_without_children(SelectControl.get_selected_list());
                 if (list.length == 0) return;
                 copy_mesh_list = [];
@@ -23,7 +31,7 @@ function ViewControlCreate() {
                 }
                 //log('copy_mesh_list',copy_mesh_list);
             }
-            if (Input.is_control() && e.key == 'v') {
+            if (Input.is_control() && (e.key == 'v' || e.key == 'м')) {
                 if (copy_mesh_list.length == 0) return;
                 const selected = SelectControl.get_selected_list();
                 const target: any = selected.length == 1 ? selected[0].parent : RenderEngine.scene;
@@ -31,6 +39,8 @@ function ViewControlCreate() {
                 const mesh_ids = [];
                 for (let i = 0; i < copy_mesh_list.length; i++) {
                     const m = SceneManager.deserialize_mesh(copy_mesh_list[i], false, target);
+                    m.position.x += 5;
+                    m.position.y -= 5;
                     target.add(m);
                     mesh_ids.push({ id_mesh: m.mesh_data.id });
                     mesh_list.push(m);

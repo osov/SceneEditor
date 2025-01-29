@@ -55,6 +55,7 @@ export function RenderEngineModule() {
 
     function raycast_scene(n_pos: Vector2) {
         raycaster.setFromCamera(n_pos, camera);
+        raycaster.layers.enable(31);
         return raycaster.intersectObjects(scene.children);
     }
 

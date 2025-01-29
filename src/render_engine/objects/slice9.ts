@@ -1,11 +1,11 @@
 import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, Mesh } from "three";
-import { IBaseMesh, IObjectTypes } from "./types";
-import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "./helpers/utils";
+import { IBaseMesh, IObjectTypes } from "../types";
+import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
 
 // todo optimize material list + attributes color
 // todo set visible only mesh(visible+enabled)
 
-const slice_9_shader = {
+export const slice_9_shader = {
     vertexShader: `
         varying vec2 texCoord;
             void main() {
@@ -43,7 +43,7 @@ const slice_9_shader = {
         }`
 };
 
-const simple_shader = {
+export const simple_shader = {
     vertexShader: `
             void main() {
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -89,19 +89,19 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         clip_width: 1,
         clip_height: 1,
         texture: '',
-        atlas:''
-
+        atlas: ''
     }
-
     const geometry = new PlaneGeometry(width, height);
 
     function update_parameters() {
-        material.uniforms['u_dimensions'].value.set(parameters.slice_width / parameters.width, parameters.slice_height / parameters.height);
-        material.uniforms['u_border'].value.set(parameters.slice_width / parameters.clip_width, parameters.slice_height / parameters.clip_height);
+        if (material.uniforms && material.uniforms['u_dimensions']) {
+            material.uniforms['u_dimensions'].value.set(parameters.slice_width / parameters.width, parameters.slice_height / parameters.height);
+            material.uniforms['u_border'].value.set(parameters.slice_width / parameters.clip_width, parameters.slice_height / parameters.clip_height);
+        }
     }
 
     function set_texture(name: string, atlas = '') {
-        parameters.texture =  name;
+        parameters.texture = name;
         parameters.atlas = atlas;
         let texture = name == '' ? null : ResourceManager.get_texture(name, atlas);
         material.uniforms['tex'].value = texture;
@@ -193,9 +193,9 @@ export class Slice9Mesh extends Mesh implements IBaseMesh {
     public mesh_data = { id: -1 };
     private template: ReturnType<typeof CreateSlice9>;
 
-    constructor(width = 1, height = 1, slice_width = 0, slice_height = 0) {
+    constructor(width = 1, height = 1, slice_width = 0, slice_height = 0, custom_material?: ShaderMaterial) {
         super();
-        const material = new ShaderMaterial({
+        const material = custom_material ? custom_material : new ShaderMaterial({
             uniforms: {
                 tex: { value: null },
                 u_dimensions: { value: new Vector2(1, 1) },
