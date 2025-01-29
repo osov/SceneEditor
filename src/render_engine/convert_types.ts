@@ -138,8 +138,15 @@ export interface IPrefab {
     data: IPrefabData[];
 }
 
+export enum ExtDependenceType {
+    COLLECTION_PROXY,
+    COLLECTION_FACTORY,
+    GO_FACTORY
+}
+
 export interface IExtDependencies {
     name: string;
+    type: ExtDependenceType;
     path: string;
 }
 

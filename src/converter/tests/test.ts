@@ -1,10 +1,10 @@
 import * as fs from 'fs';
 import { Vector3 } from "three";
-import { NodeType, PrefabComponentType } from "../../render_engine/convert_types";
-import { DefoldFileType, parseAtlas, parseFont, parsePrefab, parseScene } from "../scene_parser";
+import { ExtDependenceType, NodeType, PrefabComponentType } from "../../render_engine/convert_types";
+import { DefoldType, parseAtlas, parseFont, parsePrefab, parseScene } from "../scene_parser";
 
 const result = parseScene({
-    name: "main/main",
+    name: "main",
     list: [
         {
             type: NodeType.GO,
@@ -20,7 +20,7 @@ const result = parseScene({
         {
             type: NodeType.COLLECTION,
             data: {
-                name: "main/test_collection",
+                name: "test_collection",
                 list: [
                     {
                         type: NodeType.GO,
@@ -59,7 +59,7 @@ const result = parseScene({
             data: {
                 id: 3,
                 pid: 0,
-                name: "test_lable",
+                name: "test_label",
                 position: new Vector3(0, 0, 0),
                 rotation: new Vector3(0, 0, 0),
                 scale: new Vector3(1, 1, 1),
@@ -67,7 +67,7 @@ const result = parseScene({
                 height: 100,
                 color: "#FFFFFF",
                 text: "hello world",
-                font: "test.ttf",
+                font: "/main/test.ttf",
                 line_break: true,
                 outline: "#000000",
                 shadow: "#000000",
@@ -77,7 +77,7 @@ const result = parseScene({
         {
             type: NodeType.SOUND,
             data: {
-                name: "test",
+                name: "test_sound",
                 path: "/main/test.ogg",
                 loop: true,
                 group: "master",
@@ -178,7 +178,24 @@ const result = parseScene({
             type: NodeType.FACTORY,
             data: {
                 name: "test_prefab",
-                path: "main/test_prefab.prefab"
+                type: ExtDependenceType.GO_FACTORY,
+                path: "/main/test_prefab.prefab"
+            }
+        },
+        {
+            type: NodeType.COLLECTION_PROXY,
+            data: {
+                name: "test_collection_proxy",
+                type: ExtDependenceType.COLLECTION_PROXY,
+                path: "/main/test_collection.scene"
+            }
+        },
+        {
+            type: NodeType.COLLECTION_FACTORY,
+            data: {
+                name: "test_collection_factory",
+                type: ExtDependenceType.COLLECTION_FACTORY,
+                path: "/main/test_collection.scene"
             }
         }
     ]
@@ -243,34 +260,34 @@ result.push(parseFont({
 
 for (const file of result) {
     switch (file.type) {
-        case DefoldFileType.COLLECTION:
-            fs.writeFile(`${__dirname}/test_project/${file.name}.collection`, file.data, (err: NodeJS.ErrnoException | null) => {
+        case DefoldType.COLLECTION:
+            fs.writeFile(`${__dirname}/test_project/main/${file.name}.collection`, file.data, (err: NodeJS.ErrnoException | null) => {
                 if (err) console.error(err);
-                // else console.log(`Succeful created ${file.name}.collection with data:\n${file.data}`);
+                else console.log(`Succeful created ${file.name}.collection`);
             });
             break;
-        case DefoldFileType.GO:
+        case DefoldType.GO:
             fs.writeFile(`${__dirname}/test_project/${file.name}.go`, file.data, (err: NodeJS.ErrnoException | null) => {
                 if (err) console.error(err);
-                // else console.log(`Succeful created ${file.name}.go with data:\n${file.data}`);
+                else console.log(`Succeful created ${file.name}.go`);
             });
             break;
-        case DefoldFileType.GUI:
+        case DefoldType.GUI:
             fs.writeFile(`${__dirname}/test_project/${file.name}.gui`, file.data, (err: NodeJS.ErrnoException | null) => {
                 if (err) console.error(err);
-                // else console.log(`Succeful created ${file.name}.gui with data:\n${file.data}`);
+                else console.log(`Succeful created ${file.name}.gui`);
             });
             break;
-        case DefoldFileType.ATLAS:
+        case DefoldType.ATLAS:
             fs.writeFile(`${__dirname}/test_project/${file.name}.atlas`, file.data, (err: NodeJS.ErrnoException | null) => {
                 if (err) console.error(err);
-                // else console.log(`Succeful created ${file.name}.atlas with data:\n${file.data}`);
+                else console.log(`Succeful created ${file.name}.atlas`);
             });
             break;
-        case DefoldFileType.FONT:
+        case DefoldType.FONT:
             fs.writeFile(`${__dirname}/test_project/${file.name}.font`, file.data, (err: NodeJS.ErrnoException | null) => {
                 if (err) console.error(err);
-                // else console.log(`Succeful created ${file.name}.font with data:\n${file.data}`);
+                else console.log(`Succeful created ${file.name}.font`);
             });
             break;
     }

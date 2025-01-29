@@ -1,6 +1,7 @@
 import { Vector3, Vector4 } from "three";
 
 import {
+    ExtDependenceType,
     IAtlas,
     IExtDependencies,
     IFont,
@@ -45,12 +46,13 @@ import {
     encodeCollectionProxy,
     encodeFactory,
     IDefoldCollectionProxy,
-    IDefoldFactory
+    IDefoldFactory,
+    IDefoldEmbeddedComponent
 } from "./defold_encoder";
 import { hexToRGB } from "../modules/utils";
 
 
-export enum DefoldFileType {
+export enum DefoldType {
     COLLECTION,
     GO,
     GUI,
@@ -58,19 +60,19 @@ export enum DefoldFileType {
     FONT
 }
 
-export interface DefoldFileData {
+export interface DefoldData {
     name: string;
-    type: DefoldFileType;
+    type: DefoldType;
     data: string;
 }
 
-export function parseScene(data: INodesList): DefoldFileData[] {
-    const result = [] as DefoldFileData[];
+export function parseScene(data: INodesList): DefoldData[] {
+    const result = [] as DefoldData[];
 
     // main коллекция
     result.push({
         name: data.name,
-        type: DefoldFileType.COLLECTION,
+        type: DefoldType.COLLECTION,
         data: generateCollection(data)
     });
 
@@ -81,7 +83,7 @@ export function parseScene(data: INodesList): DefoldFileData[] {
                 const node_list = (node.data as INodesList);
                 result.push({
                     name: node_list.name,
-                    type: DefoldFileType.COLLECTION,
+                    type: DefoldType.COLLECTION,
                     data: generateCollection(node_list)
                 })
                 break;
@@ -89,7 +91,7 @@ export function parseScene(data: INodesList): DefoldFileData[] {
                 const gui = (node.data as IGuiNode);
                 result.push({
                     name: gui.name,
-                    type: DefoldFileType.GUI,
+                    type: DefoldType.GUI,
                     data: generateGui(data)
                 });
                 break;
@@ -99,26 +101,26 @@ export function parseScene(data: INodesList): DefoldFileData[] {
     return result;
 }
 
-export function parsePrefab(data: IPrefab): DefoldFileData {
+export function parsePrefab(data: IPrefab): DefoldData {
     return {
         name: data.name,
-        type: DefoldFileType.GO,
+        type: DefoldType.GO,
         data: encodePrototype(castPrefab2DefoldProtorype(data))
     };
 }
 
-export function parseAtlas(data: IAtlas): DefoldFileData {
+export function parseAtlas(data: IAtlas): DefoldData {
     return {
         name: data.name,
-        type: DefoldFileType.ATLAS,
+        type: DefoldType.ATLAS,
         data: encodeAtlas(castAtlas2DefoldAtlas(data))
     };
 }
 
-export function parseFont(data: IFont): DefoldFileData {
+export function parseFont(data: IFont): DefoldData {
     return {
         name: data.font.split(".")[0],
-        type: DefoldFileType.FONT,
+        type: DefoldType.FONT,
         data: encodeFont({
             font: data.font,
             material: "/builtins/fonts/font.material",
@@ -191,14 +193,29 @@ function generateGui(data: INodesList): string {
     const gui = {} as IDefoldGui;
     gui.script = "";
     gui.nodes = [];
+    gui.textures = [];
+    gui.fonts = [];
 
     for (const node of data.list) {
         switch (node.type) {
-            case NodeType.GUI:
-
+            case NodeType.GUI_BOX:
+                const box_data = node.data as IGuiBox;
+                gui.nodes.push(castGuiBox2DefoldGuiNode(box_data));
+                if (box_data.atlas) {
+                    gui.textures.push({
+                        name: box_data.atlas.split(".")[0],
+                        texture: box_data.atlas
+                    });
+                }
                 break;
-            case NodeType.GUI_BOX: gui.nodes.push(castGuiBox2DefoldGuiNode(node.data as IGuiBox)); break;
-            case NodeType.GUI_TEXT: gui.nodes.push(castGuiText2DefoldGuiNode(node.data as IGuiText)); break;
+            case NodeType.GUI_TEXT:
+                const text_data = node.data as IGuiText;
+                gui.nodes.push(castGuiText2DefoldGuiNode(text_data));
+                gui.fonts.push({
+                    name: text_data.font.split(".")[0],
+                    font: text_data.font,
+                });
+                break;
         }
     }
 
@@ -223,7 +240,9 @@ function castSprite2DefoldGoSprite(data: ISprite, children?: string[]): IDefoldG
         rotation: data.rotation,
         scale3: data.scale,
         children,
-        data: encodeSprite(castSprite2DefoldSprite(data))
+        data: encodePrototype({
+            embedded_components: [castSprite2DefoldEmbeddedComponent(data)]
+        })
     };
 }
 
@@ -234,7 +253,9 @@ function castLabel2DefoldGoLabel(data: ILabel, children?: string[]): IDefoldGo {
         rotation: data.rotation,
         scale3: data.scale,
         children,
-        data: encodeLabel(castLabel2DefoldLabel(data))
+        data: encodePrototype({
+            embedded_components: [castLabel2DefoldEmbeddedComponent(data)]
+        })
     };
 }
 
@@ -272,7 +293,9 @@ function castSound2DefoldGoSound(data: ISound): IDefoldGo {
         position: new Vector3(0, 0, 0),
         rotation: new Vector3(0, 0, 0),
         scale3: new Vector3(1, 1, 1),
-        data: encodeSound(castSound2DefoldSound(data))
+        data: encodePrototype({
+            embedded_components: [castSound2DefoldEmbeddedComponent(data)]
+        })
     };
 }
 
@@ -282,7 +305,9 @@ function castIExtDependence2DefoldGoCollectionProxy(data: IExtDependencies): IDe
         position: new Vector3(0, 0, 0),
         rotation: new Vector3(0, 0, 0),
         scale3: new Vector3(1, 1, 1),
-        data: encodeCollectionProxy(castExtDependencies2DefoldCollectionProxy(data))
+        data: encodePrototype({
+            embedded_components: [castExtDependencies2DefoldEmbeddedComponent(data)]
+        })
     };
 }
 
@@ -292,7 +317,9 @@ function castIExtDependence2DefoldGoCollectionFactory(data: IExtDependencies): I
         position: new Vector3(0, 0, 0),
         rotation: new Vector3(0, 0, 0),
         scale3: new Vector3(1, 1, 1),
-        data: encodeCollectionFactory(castExtDependencies2DefoldFactory(data))
+        data: encodePrototype({
+            embedded_components: [castExtDependencies2DefoldEmbeddedComponent(data)]
+        })
     };
 }
 
@@ -302,7 +329,9 @@ function castIExtDependence2DefoldGoFactory(data: IExtDependencies): IDefoldGo {
         position: new Vector3(0, 0, 0),
         rotation: new Vector3(0, 0, 0),
         scale3: new Vector3(1, 1, 1),
-        data: encodeFactory(castExtDependencies2DefoldFactory(data))
+        data: encodePrototype({
+            embedded_components: [castExtDependencies2DefoldEmbeddedComponent(data)]
+        })
     };
 }
 
@@ -336,7 +365,7 @@ function castGuiText2DefoldGuiNode(data: IGuiText): IDefoldGuiNode {
         id: data.name,
         type: DefoldGuiNodeType.TYPE_TEXT,
         text: data.text,
-        font: data.font.split(".")[0] + ".font",
+        font: data.font.split(".")[0],
         line_break: data.line_break,
         text_leading: data.leading,
         outline: data.outline ? castColor(data.outline, data.outline_alpha ? data.outline_alpha : 1) : undefined,
@@ -410,23 +439,11 @@ function castPrefab2DefoldProtorype(prefab: IPrefab): IDefoldPrototype {
         switch (data.type) {
             case PrefabComponentType.SPRITE:
                 const sprite = data.data as ISprite;
-                prototype.embedded_components.push({
-                    id: sprite.name,
-                    position: sprite.position,
-                    rotation: sprite.rotation,
-                    type: "sprite",
-                    data: encodeSprite(castSprite2DefoldSprite(sprite))
-                });
+                prototype.embedded_components.push(castSprite2DefoldEmbeddedComponent(sprite));
                 break;
             case PrefabComponentType.LABEL:
                 const label = data.data as ILabel;
-                prototype.embedded_components.push({
-                    id: label.name,
-                    position: label.position,
-                    rotation: label.rotation,
-                    type: "label",
-                    data: encodeLabel(castLabel2DefoldLabel(label))
-                });
+                prototype.embedded_components.push(castLabel2DefoldEmbeddedComponent(label));
                 break;
         }
     }
@@ -434,25 +451,73 @@ function castPrefab2DefoldProtorype(prefab: IPrefab): IDefoldPrototype {
     return prototype;
 }
 
-function castSound2DefoldSound(data: ISound): IDefoldSound {
+function castSprite2DefoldEmbeddedComponent(sprite: ISprite): IDefoldEmbeddedComponent {
     return {
-        sound: data.path,
-        looping: data.loop ? 1 : 0,
-        group: data.group,
-        gain: data.gain,
-        pan: data.pan,
-        speed: data.speed
+        id: sprite.name,
+        position: sprite.position,
+        rotation: sprite.rotation,
+        type: "sprite",
+        data: encodeSprite(castSprite2DefoldSprite(sprite))
     };
 }
 
-function castExtDependencies2DefoldFactory(data: IExtDependencies): IDefoldFactory {
+function castLabel2DefoldEmbeddedComponent(label: ILabel): IDefoldEmbeddedComponent {
     return {
-        prototype: data.path
+        id: label.name,
+        position: label.position,
+        rotation: label.rotation,
+        type: "label",
+        data: encodeLabel(castLabel2DefoldLabel(label))
     };
 }
 
-function castExtDependencies2DefoldCollectionProxy(data: IExtDependencies): IDefoldCollectionProxy {
+function castSound2DefoldEmbeddedComponent(data: ISound): IDefoldEmbeddedComponent {
     return {
-        collection: data.path
+        id: data.name,
+        position: new Vector3(0, 0, 0),
+        rotation: new Vector3(0, 0, 0),
+        type: "sound",
+        data: encodeSound({
+            sound: data.path,
+            looping: data.loop ? 1 : 0,
+            group: data.group,
+            gain: data.gain,
+            pan: data.pan,
+            speed: data.speed
+        })
     };
+}
+
+function castExtDependencies2DefoldEmbeddedComponent(data: IExtDependencies): IDefoldEmbeddedComponent {
+    const component = {
+        id: data.name,
+        position: new Vector3(0, 0, 0),
+        rotation: new Vector3(0, 0, 0),
+        type: "",
+        data: ""
+    };
+
+    switch (data.type) {
+        case ExtDependenceType.COLLECTION_PROXY:
+            component.type = "collectionproxy";
+            component.data = encodeCollectionProxy({
+                collection: data.path.split(".")[0] + ".collection"
+            });
+            break;
+        case ExtDependenceType.COLLECTION_FACTORY:
+            component.type = "collectionfactory";
+            component.data = encodeCollectionFactory({
+                prototype: data.path.split(".")[0] + ".collection"
+            });
+            break;
+        case ExtDependenceType.GO_FACTORY:
+            component.type = "factory";
+            component.data = encodeFactory({
+                prototype: data.path.split(".")[0] + ".go"
+            });
+
+            break;
+    }
+
+    return component;
 }

@@ -28,11 +28,23 @@
         :html
       ]
       [
+        "/main/test2.font"
+        :scene
+      ]
+      [
+        "/test_collection.collection"
+        :scene
+      ]
+      [
+        "/main/test.font"
+        :scene
+      ]
+      [
         "/main/test.atlas"
         :scene
       ]
       [
-        "/main/test2.font"
+        "/main/test.go"
         :scene
       ]
       [
@@ -40,7 +52,7 @@
         :scene
       ]
       [
-        "/main/test.font"
+        "/main/test_prefab.go"
         :scene
       ]
       [
@@ -49,14 +61,6 @@
       ]
       [
         "/main/main.collection"
-        :scene
-      ]
-      [
-        "/main/test.go"
-        :scene
-      ]
-      [
-        "/main/test_prefab.go"
         :scene
       ]
     ]

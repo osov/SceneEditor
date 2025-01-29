@@ -1,24 +1,24 @@
-name: "main/test_collection"
-embedded_instances {
+name: "test_collection"
+embedded_instances { 
   id: "test_go_inside_test_collection"
-  position {
-    x: 0
-    y: 0
-    z: 0
-    
-  }
-  rotation {
-    x: 0
-    y: 0
-    z: 0
-    
-  }
-  scale3 {
-    x: 1
-    y: 1
-    z: 1
-    
-  }
+  position { 
+    x: 0 
+    y: 0 
+    z: 0 
+     
+   } 
+  rotation { 
+    x: 0 
+    y: 0 
+    z: 0 
+     
+   } 
+  scale3 { 
+    x: 1 
+    y: 1 
+    z: 1 
+     
+   } 
   data: ""
-  
-}
+   
+ } 

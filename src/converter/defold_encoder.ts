@@ -167,6 +167,11 @@ export interface IDefoldTexture {
 }
 
 export interface IDefoldFont {
+    name: string;
+    font: string;
+}
+
+export interface IDefoldFontFile {
     font: string;
     material: string;
     size: number;
@@ -253,7 +258,7 @@ function getField(k: string, message: Type): Field | undefined {
             return field;
         }
     }
-    console.error(`Unable to find field ${k} in message ${message.name}`);
+    console.error(`Unable to find field ${k} in message ${message.fullName}`);
     return undefined;
 }
 
@@ -263,16 +268,17 @@ function indent(s: string, n: number): string {
 }
 
 function encodeString(data: string): string {
-    // TODO: refactoring
     return data
+        .replace(/\\/g, '\\\\')
         .replace(/\"/g, '\\"')
         .replace(/\n/g, '\\n')
-        .split('\\n')
+        .split(/(?='\\n')/g)
+
         .map((line: string, index: number, array: string[]): string => {
-            if (index > 0 && line == "") return `${line}"`;
-            else if (index > 0) return `"${line}\\n"`;
-            else if (array.length > 2) return `${line}\\n"`;
-            else return line;
+            if (array.length > 1 && index != array.length - 1) {
+                return `${line}\\n"`;
+            }
+            else return `${line}`;
         })
         .join('\n');
 }
@@ -292,21 +298,21 @@ export function encode(t: Object, message: Type): string {
                     if (proto_field.type === "string") {
                         out += `${name}: "${encodeString(element)}"\n`; // String
                     }
-                    else out += `${name}: ${element}\n`; // Enum
+                    else out += `${name}: ${element} \n`; // Enum
                     break;
                 case "number":
                     const not_int = ["double", "float"];
-                    if (not_int.includes(proto_field.type)) out += `${name}: ${element}\n`; // Decimal
-                    else out += `${name}: ${Math.trunc(element)}\n`; // Integer
+                    if (not_int.includes(proto_field.type)) out += `${name}: ${element} \n`; // Decimal
+                    else out += `${name}: ${Math.trunc(element)} \n`; // Integer
                     break;
                 case "boolean":
-                    out += `${name}: ${element ? "true" : "false"}\n`;
+                    out += `${name}: ${element ? "true" : "false"} \n`;
                     break;
                 case "object":
                     const nestedMessage = getMessage(proto_field.type);
                     if (!nestedMessage)
                         break;
-                    out += `${name} {\n${indent(encode(element, nestedMessage), 1)}\n}\n`;
+                    out += `${name} { \n${indent(encode(element, nestedMessage), 1)} \n } \n`;
                     break;
             }
         }
@@ -335,7 +341,7 @@ export function encodeGui(t: IDefoldGui): string {
     return encode(t, root.lookupType("dmGuiDDF.SceneDesc"));
 }
 
-export function encodeFont(t: IDefoldFont): string {
+export function encodeFont(t: IDefoldFontFile): string {
     return encode(t, root.lookupType("dmRenderDDF.FontDesc"));
 }
 
