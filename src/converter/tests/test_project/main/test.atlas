@@ -1,8 +1,0 @@
-images { 
-  image: "/main/test.png"
-   
- } 
-images { 
-  image: "/assets/test2.png"
-   
- } 

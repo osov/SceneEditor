@@ -32,15 +32,7 @@
         :scene
       ]
       [
-        "/test_collection.collection"
-        :scene
-      ]
-      [
         "/main/test.go"
-        :scene
-      ]
-      [
-        "/main/test.font"
         :scene
       ]
       [
@@ -52,15 +44,47 @@
         :scene
       ]
       [
-        "/main/test_collection.collection"
-        :scene
-      ]
-      [
         "/main/test_prefab.go"
         :scene
       ]
       [
         "/main/test.atlas"
+        :scene
+      ]
+      [
+        "/test_collection.collection"
+        :scene
+      ]
+      [
+        "/test_other_scene.collection"
+        :scene
+      ]
+      [
+        "/main/test.font"
+        :scene
+      ]
+      [
+        "/assets/test.font"
+        :scene
+      ]
+      [
+        "/assets/test.atlas"
+        :scene
+      ]
+      [
+        "/main/test_collection.collection"
+        :scene
+      ]
+      [
+        "/main.collection"
+        :scene
+      ]
+      [
+        "/collections/test_collection.collection"
+        :scene
+      ]
+      [
+        "/collections/test_other_scene.collection"
         :scene
       ]
       [

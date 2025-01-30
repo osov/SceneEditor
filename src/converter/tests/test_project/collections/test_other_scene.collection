@@ -1,0 +1,25 @@
+name: "test_other_scene"
+embedded_instances { 
+  id: "test_go"
+  position { 
+    x: 0 
+    y: 50 
+    z: 0 
+     
+   } 
+  rotation { 
+    x: 0 
+    y: 0 
+    z: 0 
+    w: 1 
+     
+   } 
+  scale3 { 
+    x: 1 
+    y: 1 
+    z: 1 
+     
+   } 
+  data: ""
+   
+ } 

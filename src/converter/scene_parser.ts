@@ -140,7 +140,7 @@ export function parseFont(data: IFont): DefoldData {
 
 function generateCollection(data: INodesList): string {
     const collection = {} as IDefoldCollection;
-    collection.name = data.name;
+    collection.name = getNameFromPath(data.name);
     collection.embedded_instances = [];
     collection.collection_instances = [];
 
@@ -361,8 +361,9 @@ function castIExtDependence2DefoldGoFactory(data: IExtDependencies): IDefoldGo {
 }
 
 function castNodeList2DefoldCollection(data: INodesList): IDefoldCollectionFile {
+    const name = getNameFromPath(data.name);
     return {
-        id: data.name,
+        id: name,
         collection: data.name + ".collection"
     }
 }
@@ -548,4 +549,9 @@ function castExtDependencies2DefoldEmbeddedComponent(data: IExtDependencies): ID
     }
 
     return component;
+}
+
+function getNameFromPath(data: string): string {
+    const match = data.match(/\/([^\/]+)$/);
+    return match ? match[1] : "error";
 }

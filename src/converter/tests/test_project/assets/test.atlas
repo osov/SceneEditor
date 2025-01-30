@@ -1,0 +1,8 @@
+images { 
+  image: "/assets/test.png"
+   
+ } 
+images { 
+  image: "/assets/subdir/test2.png"
+   
+ } 

@@ -20,7 +20,7 @@ embedded_components {
      
    } 
   type: "sprite"
-  data: "textures { \n  sampler: \"texture_sampler\"\n  texture: \"/main/test.atlas\"\n   \n } \ndefault_animation: \"test\"\nsize_mode: 0 \nsize { \n  x: 200 \n  y: 100 \n  z: 0 \n   \n } \nslice9 { \n  x: 10 \n  y: 5 \n  z: 10 \n  w: 5 \n   \n } \n"
+  data: "textures { \n  sampler: \"texture_sampler\"\n  texture: \"/assets/test.atlas\"\n   \n } \ndefault_animation: \"test\"\nsize_mode: 0 \nsize { \n  x: 200 \n  y: 100 \n  z: 0 \n   \n } \nslice9 { \n  x: 10 \n  y: 5 \n  z: 10 \n  w: 5 \n   \n } \n"
    
  } 
 embedded_components { 
@@ -45,6 +45,6 @@ embedded_components {
      
    } 
   type: "label"
-  data: "text: \"hello world\"\nfont: \"/main/test.font\"\nsize { \n  x: 1000 \n  y: 100 \n  z: 0 \n  w: 1 \n   \n } \nscale { \n  x: 1 \n  y: 1 \n  z: 2 \n  w: 1 \n   \n } \ncolor { \n  x: 1 \n  y: 0 \n  z: 0 \n  w: 1 \n   \n } \noutline { \n  x: 1 \n  y: 1 \n  z: 1 \n  w: 1 \n   \n } \nshadow { \n  x: 0 \n  y: 0 \n  z: 0 \n  w: 1 \n   \n } \nleading: 0.7 \ntracking: 0 \npivot: 0 \nblend_mode: 0 \nline_break: true \nmaterial: \"/builtins/fonts/label-df.material\"\n"
+  data: "text: \"hello world\"\nfont: \"/assets/test.font\"\nsize { \n  x: 1000 \n  y: 100 \n  z: 0 \n  w: 1 \n   \n } \nscale { \n  x: 1 \n  y: 1 \n  z: 2 \n  w: 1 \n   \n } \ncolor { \n  x: 1 \n  y: 0 \n  z: 0 \n  w: 1 \n   \n } \noutline { \n  x: 1 \n  y: 1 \n  z: 1 \n  w: 1 \n   \n } \nshadow { \n  x: 0 \n  y: 0 \n  z: 0 \n  w: 1 \n   \n } \nleading: 0.7 \ntracking: 0 \npivot: 0 \nblend_mode: 0 \nline_break: true \nmaterial: \"/builtins/fonts/label-df.material\"\n"
    
  } 

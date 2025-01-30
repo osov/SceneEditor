@@ -4,7 +4,7 @@ import { ExtDependenceType, NodeType, PrefabComponentType } from "../../render_e
 import { DefoldType, parseAtlas, parseFont, parsePrefab, parseScene } from "../scene_parser";
 
 const result = parseScene({
-    name: "main",
+    name: "/main/main",
     list: [
         {
             type: NodeType.GO,
@@ -20,7 +20,7 @@ const result = parseScene({
         {
             type: NodeType.COLLECTION,
             data: {
-                name: "test_collection",
+                name: "/collections/test_collection",
                 list: [
                     {
                         type: NodeType.GO,
@@ -49,7 +49,7 @@ const result = parseScene({
                 height: 100,
                 color: "#FFFFFF",
                 texture: "test2",
-                atlas: "/main/test.atlas",
+                atlas: "/assets/test.atlas",
                 slice_width: 0,
                 slice_height: 0
             }
@@ -67,7 +67,7 @@ const result = parseScene({
                 height: 100,
                 color: "#FFFFFF",
                 text: "hello world",
-                font: "/main/test.ttf",
+                font: "/assets/test.ttf",
                 line_break: true,
                 outline: "#000000",
                 shadow: "#000000",
@@ -78,7 +78,7 @@ const result = parseScene({
             type: NodeType.SOUND,
             data: {
                 name: "test_sound",
-                path: "/main/test.ogg",
+                path: "/assets/test.ogg",
                 loop: true,
                 group: "master",
                 gain: 0.7,
@@ -187,7 +187,7 @@ const result = parseScene({
             data: {
                 name: "test_collection_proxy",
                 type: ExtDependenceType.COLLECTION_PROXY,
-                path: "/main/test_collection.scene"
+                path: "/collections/test_other_scene.scene"
             }
         },
         {
@@ -195,7 +195,7 @@ const result = parseScene({
             data: {
                 name: "test_collection_factory",
                 type: ExtDependenceType.COLLECTION_FACTORY,
-                path: "/main/test_collection.scene"
+                path: "/collections/test_collection.scene"
             }
         }
     ]
@@ -217,7 +217,7 @@ result.push(parsePrefab({
                 height: 100,
                 color: "#FFFFFF",
                 texture: "test",
-                atlas: "/main/test.atlas",
+                atlas: "/assets/test.atlas",
                 slice_width: 10,
                 slice_height: 5
             }
@@ -235,7 +235,7 @@ result.push(parsePrefab({
                 height: 100,
                 color: "#FF0000",
                 text: "hello world",
-                font: "/main/test.ttf",
+                font: "/assets/test.ttf",
                 line_break: true,
                 outline: "#FFFFFF",
                 shadow: "#000000",
@@ -247,15 +247,15 @@ result.push(parsePrefab({
 }));
 
 result.push(parseAtlas({
-    name: "main/test",
+    name: "assets/test",
     images: [
-        "/main/test.png",
-        "/assets/test2.png"
+        "/assets/test.png",
+        "/assets/subdir/test2.png"
     ]
 }));
 
 result.push(parseFont({
-    font: "/main/test.ttf",
+    font: "/assets/test.ttf",
     outline_width: 1,
     outline_alpha: 1,
     shadow_x: 100,
@@ -265,10 +265,27 @@ result.push(parseFont({
     size: 80
 }));
 
+result.push(...parseScene({
+    name: "/collections/test_other_scene",
+    list: [
+        {
+            type: NodeType.GO,
+            data: {
+                id: 1,
+                pid: 0,
+                name: "test_go",
+                position: new Vector3(0, 50, 0),
+                rotation: new Vector3(0, 0, 0),
+                scale: new Vector3(1, 1, 1)
+            }
+        }
+    ]
+}));
+
 for (const file of result) {
     switch (file.type) {
         case DefoldType.COLLECTION:
-            fs.writeFile(`${__dirname}/test_project/main/${file.name}.collection`, file.data, (err: NodeJS.ErrnoException | null) => {
+            fs.writeFile(`${__dirname}/test_project/${file.name}.collection`, file.data, (err: NodeJS.ErrnoException | null) => {
                 if (err) console.error(err);
                 else console.log(`Succeful created ${file.name}.collection`);
             });

@@ -1,4 +1,4 @@
-font: "/main/test.ttf"
+font: "/assets/test.ttf"
 material: "/builtins/fonts/font-df.material"
 outline_alpha: 1 
 outline_width: 1 
