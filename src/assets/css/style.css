@@ -194,7 +194,7 @@ textarea {
   max-height: 350px;
 }
 
-input.poisk_us{
+input.searchInTree{
   height: 30px;
   padding: 0 10px;
 }
@@ -285,13 +285,10 @@ a.tree__item.droppable:not(.success){
   cursor: not-allowed;
 }
 a.droppable .tree__item_name {
-  /* color: #9dcf9d; */
+  color: #9dcf9d;
 }
 a.droppable:not(.success) .tree__item_name {
-  /* color: #f9c8c8; */
-}
-a.tree__item.bg span.tree__item_bg {
-  /* background-color: #2e7383; */
+  color: #f9c8c8;
 }
 .tree__item_bg{
   position: absolute;
