@@ -40,10 +40,6 @@
         :scene
       ]
       [
-        "/main/ui.gui"
-        :scene
-      ]
-      [
         "/main/test_prefab.go"
         :scene
       ]
@@ -64,19 +60,23 @@
         :scene
       ]
       [
-        "/assets/test.font"
-        :scene
-      ]
-      [
-        "/assets/test.atlas"
-        :scene
-      ]
-      [
         "/main/test_collection.collection"
         :scene
       ]
       [
         "/main.collection"
+        :scene
+      ]
+      [
+        "/main/main.collection"
+        :scene
+      ]
+      [
+        "/assets/test.font"
+        :scene
+      ]
+      [
+        "/assets/test.atlas"
         :scene
       ]
       [
@@ -88,7 +88,7 @@
         :scene
       ]
       [
-        "/main/main.collection"
+        "/main/ui.gui"
         :scene
       ]
     ]

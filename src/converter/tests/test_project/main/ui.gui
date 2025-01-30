@@ -33,7 +33,7 @@ nodes {
    } 
   enabled: true 
   visible: true 
-  texture: "test/test"
+  texture: "/assets/test/test"
   clipping_mode: 0 
   slice9 { 
     x: 0 
@@ -97,7 +97,7 @@ nodes {
   id: "test_gui_text"
   type: 1 
   text: "hello world from gui"
-  font: "test"
+  font: "/assets/test"
   line_break: true 
   text_leading: 0.5 
   outline { 
@@ -150,12 +150,12 @@ nodes {
    
  } 
 textures { 
-  name: "test"
-  texture: "test.atlas"
+  name: "/assets/test"
+  texture: "/assets/test.atlas"
    
  } 
 fonts { 
-  name: "test"
-  font: "test.ttf"
+  name: "/assets/test"
+  font: "/assets/test.ttf"
    
  } 
