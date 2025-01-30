@@ -48,7 +48,7 @@ const result = parseScene({
                 width: 100,
                 height: 100,
                 color: "#FFFFFF",
-                texture: "test",
+                texture: "test2",
                 atlas: "/main/test.atlas",
                 slice_width: 0,
                 slice_height: 0
@@ -249,7 +249,8 @@ result.push(parsePrefab({
 result.push(parseAtlas({
     name: "main/test",
     images: [
-        "main/test.png"
+        "/main/test.png",
+        "/assets/test2.png"
     ]
 }));
 

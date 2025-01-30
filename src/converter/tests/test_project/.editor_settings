@@ -36,10 +36,6 @@
         :scene
       ]
       [
-        "/main/test.atlas"
-        :scene
-      ]
-      [
         "/main/test.go"
         :scene
       ]
@@ -61,6 +57,10 @@
       ]
       [
         "/main/test_prefab.go"
+        :scene
+      ]
+      [
+        "/main/test.atlas"
         :scene
       ]
       [

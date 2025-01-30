@@ -49,6 +49,7 @@ import {
     DefoldFontTextureFormat
 } from "./defold_encoder";
 import { eulerToQuaternion, hexToRGB } from "../modules/utils";
+import { PivotX, PivotY } from "../render_engine/types";
 
 
 export enum DefoldType {
@@ -415,28 +416,28 @@ function castPivot(data: number[]): DefoldPivot {
     const x = data[0];
     const y = data[1];
 
-    const is_n = (x == 0) && (y == 1);
+    const is_n = (x == PivotX.CENTER) && (y == PivotY.TOP);
     if (is_n) return DefoldPivot.PIVOT_N;
 
-    const is_ne = (x == 1) && (y == 1);
+    const is_ne = (x == PivotX.RIGHT) && (y == PivotY.TOP);
     if (is_ne) return DefoldPivot.PIVOT_NE;
 
-    const is_e = (x == 1) && (y == 0);
+    const is_e = (x == PivotX.RIGHT) && (y == PivotY.CENTER);
     if (is_e) return DefoldPivot.PIVOT_E;
 
-    const is_se = (x == 1) && (y == -1);
+    const is_se = (x == PivotX.RIGHT) && (y == PivotY.BOTTOM);
     if (is_se) return DefoldPivot.PIVOT_SE;
 
-    const is_s = (x == -1) && (y == 0);
+    const is_s = (x == PivotX.CENTER) && (y == PivotY.BOTTOM);
     if (is_s) return DefoldPivot.PIVOT_S;
 
-    const is_sw = (x == -1) && (y == -1);
+    const is_sw = (x == PivotX.LEFT) && (y == PivotY.BOTTOM);
     if (is_sw) return DefoldPivot.PIVOT_SW;
 
-    const is_w = (x == 0) && (y == -1);
+    const is_w = (x == PivotX.LEFT) && (y == PivotY.CENTER);
     if (is_w) return DefoldPivot.PIVOT_W;
 
-    const is_nw = (x == -1) && (y == 1);
+    const is_nw = (x == PivotX.LEFT) && (y == PivotY.TOP);
     if (is_nw) return DefoldPivot.PIVOT_NW;
 
     return DefoldPivot.PIVOT_CENTER;
