@@ -37,19 +37,20 @@ export async function run_debug_scene() {
 
 
 
-  var points = [];
-  points.push(
-    new Vector3(0, 0, 0),
-    new Vector3(1, 0, 0),
-    new Vector3(1, -1, 0),
-    new Vector3(0, -1, 0),
-    new Vector3(0, 0, 0),
-  );
+  const offset = 0.5;
+  var points = [
+    new Vector3(-offset, offset, 0),
+    new Vector3(offset, offset, 0),
+    new Vector3(offset, - offset, 0),
+    new Vector3(-offset, - offset, 0),
+    new Vector3(-offset, offset, 0),
+  ];
+
   var geometry = new BufferGeometry().setFromPoints(points);
   var line = new Line(geometry, new LineDashedMaterial({ color: 0xffaa00, dashSize: 0.005, gapSize: 0.005 }));
   line.scale.set(540, 960, 1);
-  line.position.x = 0;
-  line.position.y = 0;
+  line.position.x = 270;
+  line.position.y = -480;
   line.computeLineDistances();
   scene.add(line)
 

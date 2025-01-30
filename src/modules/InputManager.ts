@@ -25,6 +25,7 @@ function InputModule() {
             _is_alt = e.altKey;
             keys_state[e.key] = true;
             EventBus.trigger('SYS_VIEW_INPUT_KEY_DOWN', { key: e.key }, false);
+            e.preventDefault(); // alt перехватывал браузер
         });
 
         canvas.addEventListener('keyup', (e) => {

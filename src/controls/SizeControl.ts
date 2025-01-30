@@ -1,4 +1,4 @@
-import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry } from "three";
+import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, PlaneGeometry, DoubleSide, LineBasicMaterial, LineDashedMaterial, Shape, BufferGeometry, Line } from "three";
 import { IBaseMeshDataAndThree, PivotX, PivotY } from "../render_engine/types";
 import { PositionEventData, SizeEventData } from "./types";
 
@@ -15,6 +15,8 @@ function SizeControlCreate() {
     let debug_center: Mesh;
     const bb_points: Mesh[] = [];
     const pivot_points: Mesh[] = [];
+    let slice_box: Line;
+    let slice_box_range: Line;
     const pointer = new Vector2();
     const click_point = new Vector2();
     const prev_point = new Vector2();
@@ -48,16 +50,41 @@ function SizeControlCreate() {
             pivot_points.push(mesh);
         }
 
+
+        const offset = 0.5;
+        var points = [
+            new Vector3(-offset, offset, 0),
+            new Vector3(offset, offset, 0),
+            new Vector3(offset, -offset, 0),
+            new Vector3(-offset, -offset, 0),
+            new Vector3(-offset, offset, 0),
+        ];
+        slice_box = new Line(new BufferGeometry().setFromPoints(points), new LineDashedMaterial({ color: 0xffaa00, dashSize: 0.1, gapSize: 0.05 }));
+        slice_box.computeLineDistances();
+        slice_box.position.set(0,0,49);
+        scene.add(slice_box)
+        slice_box.visible = false;
+        slice_box_range = new Line(new BufferGeometry().setFromPoints(points), new LineDashedMaterial({ color: 0xffaa00, dashSize: 0.1, gapSize: 0.05 }));
+        slice_box_range.computeLineDistances();
+        slice_box_range.position.set(0,0,49);
+        scene.add(slice_box_range)
+
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
             if (!is_active) return;
             if (Input.is_shift())
                 set_pivot_visible(true);
+           
+            if (Input.is_alt() && selected_list.length == 1 && (selected_list[0] as any).get_slice){{}
+                set_slice_visible(true);
+}
         })
 
         EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
             if (!is_active) return;
             if (!Input.is_shift())
                 set_pivot_visible(false);
+            if (!Input.is_alt())
+                set_slice_visible(false);
         })
 
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
@@ -328,14 +355,29 @@ function SizeControlCreate() {
         pivot_points[6].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[1] - offset, z);
         pivot_points[7].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[3] + offset, z);
         pivot_points[8].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[1] - Math.abs(bb[3] - bb[1]) / 2, z);
-
         if (selected_list.length == 1) {
+            const mesh = selected_list[0];
             const wp = new Vector3();
-            selected_list[0].getWorldPosition(wp);
+            mesh.getWorldPosition(wp);
             debug_center.position.x = wp.x;
             debug_center.position.y = wp.y;
-            const pivot = selected_list[0].get_pivot();
+            const pivot = mesh.get_pivot();
             (pivot_points[pivot_to_index(pivot)].material as MeshBasicMaterial).color.set(0xff0000);
+            // slice box
+            if ((mesh as any).get_slice) {
+                const scale = mesh.get_size();
+                const ws = new Vector3();
+                mesh.getWorldScale(ws);
+                scale.x *= ws.x;
+                scale.y *= ws.y;
+                slice_box.position.x = bb[0] + Math.abs(bb[2] - bb[0]) / 2;
+                slice_box.position.y = bb[1] - Math.abs(bb[3] - bb[1]) / 2;
+                slice_box.scale.set(scale.x, scale.y, 1);
+
+               // slice_box_range.position.copy(slice_box.position);
+               // slice_box.scale.x -= 10;
+               // slice_box_range.scale.copy(slice_box.scale);
+            }
         }
         set_bb_visible(true);
         if (selected_list.length != 1)
@@ -355,10 +397,16 @@ function SizeControlCreate() {
         pivot_points.forEach(p => p.visible = visible);
     }
 
+    function set_slice_visible(visible: boolean) {
+        slice_box.visible = visible;
+        slice_box_range.visible = visible;
+    }
+
     function detach() {
         selected_list = [];
         set_bb_visible(false);
         set_pivot_visible(false);
+        set_slice_visible(false);
         document.body.style.cursor = 'default';
     }
 
@@ -375,6 +423,7 @@ function SizeControlCreate() {
         if (!val) {
             set_bb_visible(false);
             set_pivot_visible(false);
+            set_slice_visible(false);
         }
     }
 

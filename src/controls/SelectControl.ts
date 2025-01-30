@@ -1,8 +1,8 @@
+// todo select https://threejs.org/examples/?q=box#misc_boxselection
 import { Intersection, Object3D, Object3DEventMap, Vector2 } from "three";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
 import { filter_list_base_mesh } from "../render_engine/helpers/utils";
 
-// todo select https://threejs.org/examples/?q=box#misc_boxselection
 
 declare global {
     const SelectControl: ReturnType<typeof SelectControlCreate>;

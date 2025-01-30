@@ -229,6 +229,10 @@ export class Slice9Mesh extends Mesh implements IBaseMesh {
         this.template.set_slice(width, height);
     }
 
+    get_slice() {
+        return new Vector2(this.template.parameters.slice_width, this.template.parameters.slice_height);
+    }
+
     set_texture(name: string, atlas = '') {
         this.template.set_texture(name, atlas);
     }
