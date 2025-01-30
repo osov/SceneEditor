@@ -12,7 +12,7 @@ const result = parseScene({
                 id: 1,
                 pid: 0,
                 name: "test_go",
-                position: new Vector3(0, 0, 0),
+                position: new Vector3(0, 50, 0),
                 rotation: new Vector3(0, 0, 0),
                 scale: new Vector3(1, 1, 1)
             }
@@ -29,7 +29,7 @@ const result = parseScene({
                             pid: 0,
                             name: "test_go_inside_test_collection",
                             position: new Vector3(0, 0, 0),
-                            rotation: new Vector3(0, 0, 0),
+                            rotation: new Vector3(0, 0, 90),
                             scale: new Vector3(1, 1, 1)
                         }
                     }
@@ -61,7 +61,7 @@ const result = parseScene({
                 pid: 0,
                 name: "test_label",
                 position: new Vector3(270, 0, 0),
-                rotation: new Vector3(0, 0, 0),
+                rotation: new Vector3(0, 0, 45),
                 scale: new Vector3(1, 1, 1),
                 width: 100,
                 height: 100,
@@ -81,7 +81,7 @@ const result = parseScene({
                 path: "/main/test.ogg",
                 loop: true,
                 group: "master",
-                gain: 1,
+                gain: 0.7,
                 pan: 1,
                 speed: 1
             }
@@ -101,7 +101,7 @@ const result = parseScene({
                 pid: 4,
                 name: "test_gui_box",
                 position: new Vector3(0, 0, 0),
-                rotation: new Vector3(0, 0, 0),
+                rotation: new Vector3(0, 0, -45),
                 scale: new Vector3(1, 1, 1),
                 width: 100,
                 height: 100,
@@ -126,7 +126,7 @@ const result = parseScene({
                 position: new Vector3(0, 0, 0),
                 rotation: new Vector3(0, 0, 0),
                 scale: new Vector3(1, 1, 1),
-                width: 100,
+                width: 300,
                 height: 100,
                 color: "#FFFFFF",
                 slice_width: 0,
@@ -135,7 +135,7 @@ const result = parseScene({
                 visible: false,
                 enabled: true,
                 alpha: 1,
-                pivot: [0, 0]
+                pivot: [1, -1]
             }
         },
         {
@@ -145,7 +145,7 @@ const result = parseScene({
                 pid: 6,
                 name: "test_gui_text",
                 position: new Vector3(55, 0, 0),
-                rotation: new Vector3(0, 0, 0),
+                rotation: new Vector3(0, 0, 45),
                 scale: new Vector3(1, 1, 1),
                 width: 100,
                 height: 100,
@@ -160,7 +160,7 @@ const result = parseScene({
                 visible: true,
                 enabled: true,
                 alpha: 1,
-                pivot: [0, 0]
+                pivot: [0, 1]
             }
         },
         {
@@ -177,7 +177,7 @@ const result = parseScene({
         {
             type: NodeType.FACTORY,
             data: {
-                name: "test_prefab",
+                name: "test_factory",
                 type: ExtDependenceType.GO_FACTORY,
                 path: "/main/test_prefab.prefab"
             }
@@ -211,15 +211,15 @@ result.push(parsePrefab({
                 pid: 0,
                 name: "test_prefab_sprite",
                 position: new Vector3(0, 0, 0),
-                rotation: new Vector3(0, 0, 0),
-                scale: new Vector3(1, 1, 1),
-                width: 100,
+                rotation: new Vector3(0, 0, 45),
+                scale: new Vector3(1, 2, 1),
+                width: 200,
                 height: 100,
                 color: "#FFFFFF",
                 texture: "test",
                 atlas: "/main/test.atlas",
-                slice_width: 0,
-                slice_height: 0
+                slice_width: 10,
+                slice_height: 5
             }
         },
         {
@@ -229,15 +229,15 @@ result.push(parsePrefab({
                 pid: 0,
                 name: "test_prefab_lable",
                 position: new Vector3(0, 230, 0),
-                rotation: new Vector3(0, 0, 0),
-                scale: new Vector3(1, 1, 1),
+                rotation: new Vector3(180, 0, 45),
+                scale: new Vector3(1, 1, 2),
                 width: 1000,
                 height: 100,
-                color: "#FFFFFF",
+                color: "#FF0000",
                 text: "hello world",
                 font: "/main/test.ttf",
                 line_break: true,
-                outline: "#000000",
+                outline: "#FFFFFF",
                 shadow: "#000000",
                 leading: 0.7
             }
@@ -255,6 +255,12 @@ result.push(parseAtlas({
 
 result.push(parseFont({
     font: "/main/test.ttf",
+    outline_width: 1,
+    outline_alpha: 1,
+    shadow_x: 100,
+    shadow_alpha: 1,
+    shadow_blur: 1,
+    alpha: 1,
     size: 80
 }));
 

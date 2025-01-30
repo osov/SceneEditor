@@ -41,15 +41,14 @@ import {
     DefoldBlendMode,
     encodeFont,
     encodeSound,
-    IDefoldSound,
     encodeCollectionFactory,
     encodeCollectionProxy,
     encodeFactory,
-    IDefoldCollectionProxy,
-    IDefoldFactory,
-    IDefoldEmbeddedComponent
+    IDefoldEmbeddedComponent,
+    DefoldSizeMode,
+    DefoldFontTextureFormat
 } from "./defold_encoder";
-import { hexToRGB } from "../modules/utils";
+import { eulerToQuaternion, hexToRGB } from "../modules/utils";
 
 
 export enum DefoldType {
@@ -123,8 +122,16 @@ export function parseFont(data: IFont): DefoldData {
         type: DefoldType.FONT,
         data: encodeFont({
             font: data.font,
-            material: "/builtins/fonts/font.material",
-            size: data.size
+            material: "/builtins/fonts/font-df.material",
+            outline_alpha: data.outline_alpha,
+            outline_width: data.outline_width,
+            shadow_alpha: data.shadow_alpha,
+            shadow_x: data.shadow_x,
+            shadow_y: data.shadow_y,
+            shadow_blur: data.shadow_blur,
+            output_format: DefoldFontTextureFormat.TYPE_DISTANCE_FIELD,
+            alpha: data.alpha,
+            size: data.size,
         })
     };
 }
@@ -240,7 +247,7 @@ function castNodeEmpty2DefoldGo(data: INodeEmpty, children?: string[]): IDefoldG
     return {
         id: data.name,
         position: data.position,
-        rotation: data.rotation,
+        rotation: eulerToQuaternion(data.rotation),
         scale3: data.scale,
         children,
         data: ""
@@ -251,7 +258,7 @@ function castSprite2DefoldGoSprite(data: ISprite, children?: string[]): IDefoldG
     return {
         id: data.name,
         position: data.position,
-        rotation: data.rotation,
+        rotation: eulerToQuaternion(data.rotation),
         scale3: data.scale,
         children,
         data: encodePrototype({
@@ -264,7 +271,7 @@ function castLabel2DefoldGoLabel(data: ILabel, children?: string[]): IDefoldGo {
     return {
         id: data.name,
         position: data.position,
-        rotation: data.rotation,
+        rotation: eulerToQuaternion(data.rotation),
         scale3: data.scale,
         children,
         data: encodePrototype({
@@ -279,7 +286,10 @@ function castSprite2DefoldSprite(data: ISprite): IDefoldSprite {
             sampler: "texture_sampler",
             texture: data.atlas
         },
-        default_animation: data.texture
+        default_animation: data.texture,
+        size_mode: DefoldSizeMode.SIZE_MODE_MANUAL,
+        size: new Vector3(data.width, data.height),
+        slice9: new Vector4(data.slice_width, data.slice_height, data.slice_width, data.slice_height)
     };
 }
 
@@ -304,8 +314,8 @@ function castLabel2DefoldLabel(data: ILabel): IDefoldLabel {
 function castSound2DefoldGoSound(data: ISound): IDefoldGo {
     return {
         id: data.name,
-        position: new Vector3(0, 0, 0),
-        rotation: new Vector3(0, 0, 0),
+        position: new Vector3(),
+        rotation: new Vector4(),
         scale3: new Vector3(1, 1, 1),
         data: encodePrototype({
             embedded_components: [castSound2DefoldEmbeddedComponent(data)]
@@ -316,8 +326,8 @@ function castSound2DefoldGoSound(data: ISound): IDefoldGo {
 function castIExtDependence2DefoldGoCollectionProxy(data: IExtDependencies): IDefoldGo {
     return {
         id: data.name,
-        position: new Vector3(0, 0, 0),
-        rotation: new Vector3(0, 0, 0),
+        position: new Vector3(),
+        rotation: new Vector4(),
         scale3: new Vector3(1, 1, 1),
         data: encodePrototype({
             embedded_components: [castExtDependencies2DefoldEmbeddedComponent(data)]
@@ -328,8 +338,8 @@ function castIExtDependence2DefoldGoCollectionProxy(data: IExtDependencies): IDe
 function castIExtDependence2DefoldGoCollectionFactory(data: IExtDependencies): IDefoldGo {
     return {
         id: data.name,
-        position: new Vector3(0, 0, 0),
-        rotation: new Vector3(0, 0, 0),
+        position: new Vector3(),
+        rotation: new Vector4(),
         scale3: new Vector3(1, 1, 1),
         data: encodePrototype({
             embedded_components: [castExtDependencies2DefoldEmbeddedComponent(data)]
@@ -340,8 +350,8 @@ function castIExtDependence2DefoldGoCollectionFactory(data: IExtDependencies): I
 function castIExtDependence2DefoldGoFactory(data: IExtDependencies): IDefoldGo {
     return {
         id: data.name,
-        position: new Vector3(0, 0, 0),
-        rotation: new Vector3(0, 0, 0),
+        position: new Vector3(),
+        rotation: new Vector4(),
         scale3: new Vector3(1, 1, 1),
         data: encodePrototype({
             embedded_components: [castExtDependencies2DefoldEmbeddedComponent(data)]
@@ -363,6 +373,7 @@ function castGuiBox2DefoldGuiNode(data: IGuiBox): IDefoldGuiNode {
         position: new Vector4(data.position.x, data.position.y, data.position.z),
         rotation: new Vector4(data.rotation.x, data.rotation.y, data.rotation.z),
         scale: new Vector4(data.scale.x, data.scale.y, data.scale.z),
+        size_mode: DefoldSizeMode.SIZE_MODE_MANUAL,
         size: new Vector4(data.width, data.height),
         enabled: data.enabled,
         visible: data.visible,
@@ -468,8 +479,9 @@ function castPrefab2DefoldProtorype(prefab: IPrefab): IDefoldPrototype {
 function castSprite2DefoldEmbeddedComponent(sprite: ISprite, with_transform = false): IDefoldEmbeddedComponent {
     return {
         id: sprite.name,
-        position: with_transform ? sprite.position : new Vector3(0, 0, 0),
-        rotation: with_transform ? sprite.rotation : new Vector3(0, 0, 0),
+        position: with_transform ? sprite.position : new Vector3(),
+        rotation: with_transform ? eulerToQuaternion(sprite.rotation) : new Vector4(),
+        scale: with_transform ? sprite.scale : new Vector3(1, 1, 1),
         type: "sprite",
         data: encodeSprite(castSprite2DefoldSprite(sprite))
     };
@@ -478,8 +490,9 @@ function castSprite2DefoldEmbeddedComponent(sprite: ISprite, with_transform = fa
 function castLabel2DefoldEmbeddedComponent(label: ILabel, with_transform = false): IDefoldEmbeddedComponent {
     return {
         id: label.name,
-        position: with_transform ? label.position : new Vector3(0, 0, 0),
-        rotation: with_transform ? label.rotation : new Vector3(0, 0, 0),
+        position: with_transform ? label.position : new Vector3(),
+        rotation: with_transform ? eulerToQuaternion(label.rotation) : new Vector4(),
+        scale: with_transform ? label.scale : new Vector3(1, 1, 1),
         type: "label",
         data: encodeLabel(castLabel2DefoldLabel(label))
     };
@@ -488,8 +501,8 @@ function castLabel2DefoldEmbeddedComponent(label: ILabel, with_transform = false
 function castSound2DefoldEmbeddedComponent(data: ISound): IDefoldEmbeddedComponent {
     return {
         id: data.name,
-        position: new Vector3(0, 0, 0),
-        rotation: new Vector3(0, 0, 0),
+        position: new Vector3(),
+        rotation: new Vector4(),
         type: "sound",
         data: encodeSound({
             sound: data.path,
@@ -505,8 +518,8 @@ function castSound2DefoldEmbeddedComponent(data: ISound): IDefoldEmbeddedCompone
 function castExtDependencies2DefoldEmbeddedComponent(data: IExtDependencies): IDefoldEmbeddedComponent {
     const component = {
         id: data.name,
-        position: new Vector3(0, 0, 0),
-        rotation: new Vector3(0, 0, 0),
+        position: new Vector3(),
+        rotation: new Vector4(),
         type: "",
         data: ""
     };

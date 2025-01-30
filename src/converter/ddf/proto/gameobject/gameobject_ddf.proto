@@ -57,6 +57,7 @@ message EmbeddedComponentDesc
     required string data = 3;
     optional dmMath.Point3  position    = 4;
     optional dmMath.Quat    rotation    = 5;
+    optional dmMath.Vector3 scale       = 6;
 }
 
 message PrototypeDesc

@@ -1,4 +1,4 @@
-import { Vector3 } from "three";
+import { Vector3, Vector4 } from "three";
 
 export function get_hms() {
     var now = new Date();
@@ -47,4 +47,21 @@ export function hexToRGB(hex: string): Vector3 {
     } else console.error("Неправильный формат шестнадцатеричного цвета");
 
     return new Vector3(r, g, b);
+}
+
+export function degToRad(degrees: number) {
+    return degrees * (Math.PI / 180);
+}
+
+export function eulerToQuaternion(euler: Vector3) {
+    const roll = degToRad(euler.x);
+    const pitch = degToRad(euler.y);
+    const yaw = degToRad(euler.z);
+
+    const qx = Math.sin(roll / 2) * Math.cos(pitch / 2) * Math.cos(yaw / 2) - Math.cos(roll / 2) * Math.sin(pitch / 2) * Math.sin(yaw / 2);
+    const qy = Math.cos(roll / 2) * Math.sin(pitch / 2) * Math.cos(yaw / 2) + Math.sin(roll / 2) * Math.cos(pitch / 2) * Math.sin(yaw / 2);
+    const qz = Math.cos(roll / 2) * Math.cos(pitch / 2) * Math.sin(yaw / 2) - Math.sin(roll / 2) * Math.sin(pitch / 2) * Math.cos(yaw / 2);
+    const qw = Math.cos(roll / 2) * Math.cos(pitch / 2) * Math.cos(yaw / 2) + Math.sin(roll / 2) * Math.sin(pitch / 2) * Math.sin(yaw / 2);
+
+    return new Vector4(qx, qy, qz, qw);
 }

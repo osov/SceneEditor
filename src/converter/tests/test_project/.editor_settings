@@ -36,10 +36,6 @@
         :scene
       ]
       [
-        "/main/test.font"
-        :scene
-      ]
-      [
         "/main/test.atlas"
         :scene
       ]
@@ -48,15 +44,23 @@
         :scene
       ]
       [
+        "/main/test.font"
+        :scene
+      ]
+      [
+        "/builtins/fonts/default.font"
+        :scene
+      ]
+      [
         "/main/ui.gui"
         :scene
       ]
       [
-        "/main/test_prefab.go"
+        "/main/test_collection.collection"
         :scene
       ]
       [
-        "/main/test_collection.collection"
+        "/main/test_prefab.go"
         :scene
       ]
       [

@@ -158,6 +158,13 @@ export interface IAtlas {
 export interface IFont {
     font: string;
     size: number;
+    outline_width?: number;
+    outline_alpha?: number;
+    shadow_x?: number;
+    shadow_y?: number;
+    shadow_alpha?: number;
+    shadow_blur?: number;
+    alpha?: number;
 }
 
 /*

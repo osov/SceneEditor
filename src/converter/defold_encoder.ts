@@ -1,5 +1,5 @@
 import { Type, Field, Root, Namespace } from 'protobufjs';
-import { Vector3, Vector4 } from 'three';
+import { Vector2, Vector3, Vector4 } from 'three';
 
 export enum DefoldGuiNodeType {
     TYPE_BOX = 0,
@@ -27,9 +27,9 @@ export enum DefoldClippingMode {
     CLIPPING_MODE_STENCIL,
 }
 
-export enum DefoldGuiNodeSizeMode {
+export enum DefoldSizeMode {
     SIZE_MODE_MANUAL = 0,
-    SIZE_MODE_AUTO,
+    SIZE_MODE_AUTO
 }
 
 export enum DefoldBlendMode {
@@ -52,11 +52,16 @@ export enum DefoldPivot {
     PIVOT_NW
 }
 
+export enum DefoldFontTextureFormat {
+    TYPE_BITMAP = 0,
+    TYPE_DISTANCE_FIELD
+}
+
 export interface IDefoldTransform {
     id: string;
 
     position?: Vector3;
-    rotation?: Vector3;
+    rotation?: Vector4;
     scale3?: Vector3;
 }
 
@@ -94,6 +99,7 @@ export interface IDefoldComponent extends IDefoldTransform {
 }
 
 export interface IDefoldEmbeddedComponent extends IDefoldTransform {
+    scale?: Vector3;
     type: string;
     data: string;
 }
@@ -104,6 +110,9 @@ export interface IDefoldSprite {
         texture: string;
     };
     default_animation: string;
+    size_mode: DefoldSizeMode;
+    size: Vector3;
+    slice9: Vector4;
     material?: string;
     blend_mode?: DefoldBlendMode;
 }
@@ -150,7 +159,7 @@ export interface IDefoldGuiNode {
     template?: string;
     text_leading?: number;
     text_tracking?: number;
-    size_mode?: DefoldGuiNodeSizeMode;
+    size_mode?: DefoldSizeMode;
 }
 
 export interface IDefoldAtlas {
@@ -174,7 +183,16 @@ export interface IDefoldFont {
 export interface IDefoldFontFile {
     font: string;
     material: string;
+    output_format: DefoldFontTextureFormat;
     size: number;
+
+    outline_width?: number;
+    outline_alpha?: number;
+    shadow_x?: number;
+    shadow_y?: number;
+    shadow_alpha?: number;
+    shadow_blur?: number;
+    alpha?: number;
 }
 
 export interface IDefoldLabel {
@@ -273,7 +291,6 @@ function encodeString(data: string): string {
         .replace(/\"/g, '\\"')
         .replace(/\n/g, '\\n')
         .split(/(?='\\n')/g)
-
         .map((line: string, index: number, array: string[]): string => {
             if (array.length > 1 && index != array.length - 1) {
                 return `${line}\\n"`;

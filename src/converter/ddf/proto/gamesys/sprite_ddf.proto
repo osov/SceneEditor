@@ -29,7 +29,14 @@ message SpriteDesc
         BLEND_MODE_SCREEN    = 4 [(displayName) = "Screen"];
     }
 
-    message TextureDesc {
+    enum SizeMode
+    {
+        SIZE_MODE_MANUAL = 0 [(displayName) = "SIZE_MODE_MANUAL"];
+        SIZE_MODE_AUTO = 1 [(displayName) = "SIZE_MODE_AUTO"];
+    }
+
+    message TextureDesc
+    {
         required string sampler = 1;
         required string texture = 2 [(resource)=true];
     }
@@ -38,6 +45,9 @@ message SpriteDesc
     required string default_animation   = 2;
     optional string material            = 3 [(resource)=true, default="/builtins/materials/sprite.material"];
     optional BlendMode blend_mode       = 4 [default = BLEND_MODE_ALPHA];
+    optional SizeMode size_mode         = 5 [default = SIZE_MODE_MANUAL];
+    optional dmMath.Vector3 size        = 6;
+    optional dmMath.Vector4 slice9      = 7;
 }
 
 /*# Sprite API documentation
