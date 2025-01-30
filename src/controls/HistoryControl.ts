@@ -1,3 +1,4 @@
+import { Vector2 } from "three";
 import { PositionEventData, RotationEventData, ScaleEventData, SizeEventData } from "./types";
 
 declare global {
@@ -16,6 +17,7 @@ type HistoryData = {
     MESH_SIZE: SizeEventData
     MESH_DELETE: { id_mesh: number }
     MESH_ADD: any
+    MESH_PIVOT:{pivot:Vector2, id_mesh:number}
 }
 type HistoryDataKeys = keyof HistoryData;
 
@@ -75,6 +77,7 @@ function HistoryControlCreate() {
                 const data = last.data[i] as HistoryData['MESH_SIZE'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
                 mesh.set_size(data.size.x, data.size.y);
+                mesh.position.set(data.position.x, data.position.y, data.position.z);
                 list_mesh.push(mesh);
             }
         }
@@ -96,6 +99,14 @@ function HistoryControlCreate() {
                 const m = SceneManager.deserialize_mesh(data, true, parent);
                 parent.add(m);
                 list_mesh.push(m);
+            }
+        }
+        else if (type == 'MESH_PIVOT') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_PIVOT'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                mesh.set_pivot(data.pivot.x, data.pivot.y, true);
+                list_mesh.push(mesh);
             }
         }
         if (list_mesh.length > 0)

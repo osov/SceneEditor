@@ -64,11 +64,29 @@ function SizeControlCreate() {
             if (!is_active) return;
             if (e.button != 0)
                 return;
-            for (let i = 0; i < pivot_points.length; i++) {
-                const pp = pivot_points[i];
-                if (RenderEngine.is_intersected_mesh(new Vector2(e.x, e.y), pp))
-                    log('pp', i);
+            if (!Input.is_shift())
+                return;
+            if (selected_list.length == 1) {
+                const mesh = selected_list[0];
+                for (let i = 0; i < pivot_points.length; i++) {
+                    const pp = pivot_points[i];
+                    if (RenderEngine.is_intersected_mesh(new Vector2(e.x, e.y), pp)) {
+                        const pivot = index_to_pivot(i);
+                        HistoryControl.add('MESH_PIVOT', [{ id_mesh: mesh.mesh_data.id, pivot: mesh.get_pivot() }]);
+                        mesh.set_pivot(pivot.x, pivot.y, true);
+                        // для текста почему-то прыгает размер и поэтому bb определяется неверно на ближайших кадрах
+                        // поэтому не обновляем draw_debug_bb
+                        for (let i = 0; i < pivot_points.length; i++)
+                            (pivot_points[i].material as MeshBasicMaterial).color.set(0xffffff);
+                        (pivot_points[i].material as MeshBasicMaterial).color.set(0xff0000);
+                        const wp = new Vector3();
+                        mesh.getWorldPosition(wp);
+                        debug_center.position.x = wp.x;
+                        debug_center.position.y = wp.y;
 
+                        // draw_debug_bb(get_bounds_from_list());
+                    }
+                }
             }
         })
 
@@ -243,15 +261,35 @@ function SizeControlCreate() {
         });
     }
 
-    // todo
-    function pivot_index_to_pivot(id:number):Vector2{
-        return new Vector2(0,0);
+    function index_to_pivot(id: number): Vector2 {
+        if (id == 4)
+            return new Vector2(PivotX.LEFT, PivotY.CENTER);
+        if (id == 0)
+            return new Vector2(PivotX.LEFT, PivotY.TOP);
+        if (id == 6)
+            return new Vector2(PivotX.CENTER, PivotY.TOP);
+        if (id == 1)
+            return new Vector2(PivotX.RIGHT, PivotY.TOP);
+        if (id == 5)
+            return new Vector2(PivotX.RIGHT, PivotY.CENTER);
+        if (id == 2)
+            return new Vector2(PivotX.RIGHT, PivotY.BOTTOM);
+        if (id == 7)
+            return new Vector2(PivotX.CENTER, PivotY.BOTTOM);
+        if (id == 3)
+            return new Vector2(PivotX.LEFT, PivotY.BOTTOM);
+        if (id == 8)
+            return new Vector2(PivotX.CENTER, PivotY.CENTER);
+        return new Vector2(PivotX.CENTER, PivotY.CENTER);
     }
 
-    function pivot_to_index(pivot:Vector2):number{
-        if (pivot.x == PivotX.CENTER && pivot.y == PivotY.CENTER)
-            return 4;
-        return 0;
+    function pivot_to_index(pivot: Vector2): number {
+        for (let i = 0; i < 9; i++) {
+            if (index_to_pivot(i).equals(pivot))
+                return i;
+        }
+        Log.error("Pivot not found", pivot);
+        return -1;
     }
 
     function get_bounds_from_list() {
@@ -277,10 +315,9 @@ function SizeControlCreate() {
         bb_points[2].position.set(bb[2], bb[3], z);
         bb_points[3].position.set(bb[0], bb[3], z);
 
-        for (let i = 0; i < pivot_points.length; i++) {
-            const pp = pivot_points[i];
-            (pp.material as MeshBasicMaterial).color.set(0xffffff);
-        }
+        for (let i = 0; i < pivot_points.length; i++)
+            (pivot_points[i].material as MeshBasicMaterial).color.set(0xffffff);
+
         const offset = 0;
         pivot_points[0].position.set(bb[0] + offset, bb[1] - offset, z);
         pivot_points[1].position.set(bb[2] - offset, bb[1] - offset, z);
@@ -313,6 +350,8 @@ function SizeControlCreate() {
     function set_pivot_visible(visible: boolean) {
         if (visible)
             document.body.style.cursor = 'default';
+        if (visible && selected_list.length != 1)
+            return;
         pivot_points.forEach(p => p.visible = visible);
     }
 

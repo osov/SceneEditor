@@ -12,6 +12,7 @@ function InputModule() {
     let keys_state: { [key: string]: boolean } = {};
     let _is_control = false;
     let _is_shift = false;
+    let _is_alt = false;
     const mouse_pos = new Vector2();
     const mouse_pos_normalized = new Vector2();
 
@@ -21,6 +22,7 @@ function InputModule() {
         canvas.addEventListener('keydown', (e) => {
             _is_control = e.ctrlKey;
             _is_shift = e.shiftKey;
+            _is_alt = e.altKey;
             keys_state[e.key] = true;
             EventBus.trigger('SYS_VIEW_INPUT_KEY_DOWN', { key: e.key }, false);
         });
@@ -28,6 +30,7 @@ function InputModule() {
         canvas.addEventListener('keyup', (e) => {
             _is_control = e.ctrlKey;
             _is_shift = e.shiftKey;
+            _is_alt = e.altKey;
             keys_state[e.key] = false;
             EventBus.trigger('SYS_VIEW_INPUT_KEY_UP', { key: e.key }, false);
             if (e.ctrlKey && (e.key == 'z' || e.key == 'я'))
@@ -49,14 +52,18 @@ function InputModule() {
         });
     }
 
-    function is_control(){
+    function is_control() {
         return _is_control;
     }
 
-    function is_shift(){
+    function is_shift() {
         return _is_shift;
     }
 
-    return { bind_events, is_control, is_shift, keys_state };
+    function is_alt() {
+        return _is_alt;
+    }
+
+    return { bind_events, is_control, is_shift, is_alt, keys_state };
 
 }

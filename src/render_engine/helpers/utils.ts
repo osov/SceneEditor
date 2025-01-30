@@ -54,7 +54,7 @@ export function convert_width_height_to_pivot_bb(w: number, h: number, ax = 0.5,
     ]
 }
 
-export function set_pivot_with_sync_pos(mesh: IBaseMeshDataAndThree, width: number, height: number, old_pivot_x: number, old_pivot_y: number, new_pivot_x: number, new_pivot_y: number,) {
+export function set_pivot_with_sync_pos(mesh: IBaseMeshDataAndThree, width: number, height: number, old_pivot_x: number, old_pivot_y: number, new_pivot_x: number, new_pivot_y: number) {
     const scale = mesh.scale;
     const op = convert_width_height_to_pivot_bb(width * scale.x, height * scale.y, old_pivot_x, old_pivot_y);
     const old_positions = [];

@@ -121,7 +121,7 @@ export async function run_debug_scene() {
   tmp.position.set(300, -305, 0.2)
   SceneManager.add(tmp);
 
-  CameraControl.set_position(300, -350);
+  CameraControl.set_position(300, -450);
   CameraControl.set_zoom(1.);
 
   plane_3.set_size(50, 50);
