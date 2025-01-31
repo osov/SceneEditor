@@ -74,12 +74,15 @@ function SizeControlCreate() {
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
             if (!is_active) return;
             if (Input.is_shift()) {
-                if (!pivot_points[0].visible)
+                if (!pivot_points[0].visible){
+                    document.body.style.cursor = 'default';
                     set_pivot_visible(true);
+                }
             }
 
             if (Input.is_alt() && selected_list.length == 1 && (selected_list[0] instanceof Slice9Mesh)) {
                 if (!slice_box.visible) {
+                    
                     set_slice_visible(true);
                     draw_debug_bb(get_bounds_from_list());
                 }
