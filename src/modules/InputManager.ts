@@ -18,8 +18,9 @@ function InputModule() {
 
     function bind_events() {
         const canvas = RenderEngine.renderer.domElement;
+        const body = document.body;
 
-        canvas.addEventListener('keydown', (e) => {
+        body.addEventListener('keydown', (e) => {
             if (e.repeat) return;
             _is_control = e.ctrlKey;
             _is_shift = e.shiftKey;
@@ -30,7 +31,7 @@ function InputModule() {
                 e.preventDefault(); // alt перехватывал браузер
         });
 
-        canvas.addEventListener('keyup', (e) => {
+        body.addEventListener('keyup', (e) => {
             _is_control = e.ctrlKey;
             _is_shift = e.shiftKey;
             _is_alt = e.altKey;
@@ -40,17 +41,17 @@ function InputModule() {
                 EventBus.trigger('SYS_INPUT_UNDO');
         });
 
-        canvas.addEventListener('pointermove', (event: any) => {
+        body.addEventListener('pointermove', (event: any) => {
             mouse_pos.set(event.offsetX, event.offsetY);
             mouse_pos_normalized.set((event.offsetX / canvas.clientWidth) * 2 - 1, - (event.offsetY / canvas.clientHeight) * 2 + 1);
             EventBus.trigger('SYS_INPUT_POINTER_MOVE', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y }, false);
         });
 
-        canvas.addEventListener('mousedown', (e: any) => {
+        body.addEventListener('mousedown', (e: any) => {
             EventBus.trigger('SYS_INPUT_POINTER_DOWN', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, button: e.button }, false);
         });
 
-        canvas.addEventListener('mouseup', (e: any) => {
+        body.addEventListener('mouseup', (e: any) => {
             EventBus.trigger('SYS_INPUT_POINTER_UP', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, button: e.button }, false);
         });
     }

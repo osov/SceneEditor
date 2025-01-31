@@ -292,6 +292,9 @@ a.tree__item.droppable.bg {
 a.tree__item.droppable.bg:not(.success) {
   color: #f9c8c8;
 }
+a.tree__item.selected .tree__item_bg{
+  background-color: #02708f!important;
+}
 .tree__item_bg{
   position: absolute;
   min-width: 100%;

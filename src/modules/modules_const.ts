@@ -19,6 +19,7 @@ export type _SystemMessages = {
     SYS_SELECTED_MESH_LIST:{list:IBaseMeshDataAndThree[]}
     SYS_UNSELECTED_MESH_LIST:{}
     SYS_ON_UPDATE: { dt: number },
+    SYS_GRAPH_SELECTED: { list: number[] },
 };
 
 

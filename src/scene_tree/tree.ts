@@ -35,6 +35,7 @@ interface Contexts {
             name: "root",
             visible: true,
             icon: "scene",
+            // selected: true,
             no_drag: true,
             no_drop: false
         }
@@ -147,7 +148,7 @@ interface Contexts {
     }
     
     function getTreeItemHtml(item:any){
-        return `<a class="tree__item" ${setAttrs(item)} >
+        return `<a class="tree__item ${item?.selected ? 'selected' : ''}" ${setAttrs(item)}>
                     <span class="tree__item_bg"></span>
                     ${getTreeIcoHtml(item.icon)}
                     <span class="tree__item_name" >${item.name}</span>
@@ -255,6 +256,8 @@ interface Contexts {
     function onMouseDown(event:any) {
         // event.preventDefault();
         if(event.button === 0){
+
+            setSelected(event);
     
             startY = event.clientY;
             treeItem = event.target.closest('.tree__item');
@@ -641,18 +644,13 @@ interface Contexts {
                             removeClassActive(s.closest(".li_line"), s.closest(".tree__item")?.getAttribute("data-pid"));
                         }
                     });
-                }, 777); //  поиск спаузой
+                }, 777); //  поиск с паузой
                 
             });
         }
     }
-    
-    // вешаем обработчики
-    function updateDaD(): void {
 
-        SearchInTree();
-
-        // 
+    function treeBtnInit() {
         const btns: NodeListOf<HTMLElement> = document.querySelectorAll('ul.tree .tree__btn');
         btns.forEach(btn => {
             // slideUp/slideDown for tree
@@ -685,27 +683,73 @@ interface Contexts {
                 setTimeout(() => { treeSub.removeAttribute('style'); }, 160);
             });
         });
+    }
 
+    function setSelected(event:any) {
+        const btn = event.target.closest(".tree__btn");
+        if(btn) return;
 
-        // const menuItems: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item');
-        // let draggedItem: HTMLElement | null = null;
+        const currentItem = event.target.closest("a.tree__item");
+        if(!currentItem) return;
+        
+        const currentId = +currentItem?.getAttribute("data-id");
+        if(!currentId) return;
+
+        // если не зажата - выделяем текущий
+        if (!Input.is_control()) {
+            const menuItems: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item');
+            menuItems.forEach(item => {
+                item.classList.remove("selected");
+            });
     
-        // menuItems.forEach(item => {
-        //     item.addEventListener('mousedown', onMouseDown, false)
-        //     item.addEventListener('mousemove', onMouseMove, false)
-        //     item.addEventListener('mouseup', onMouseUp, false)
-        // });
+            currentItem.classList.add("selected");
+            // EventBus.trigger('SYS_GRAPH_SELECTED', {list: [currentId]});
+            // log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: [${currentId}]})`);
+        }
+        else {
+            currentItem.classList.toggle("selected");
+            const listIds: number[] = []; 
+            const listSelected = document.querySelectorAll('.selected') as NodeListOf<HTMLElement>;
+            listSelected.forEach(item => {
+                const id = item?.getAttribute("data-id"); 
+                if (id) {
+                    listIds.push(+id);
+                }
+            });
+    
+            // EventBus.trigger('SYS_GRAPH_SELECTED', {list: listIds});
+            log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: [${listIds}]})`);
+        }
+    }
+    
+    // вешаем обработчики
+    function updateDaD(): void {
+
+        // поиск по дереву
+        SearchInTree();
+
+        // скрыть/раскрыть дерево
+        treeBtnInit();
+
+        const menuItems: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item');
+        // let draggedItem: HTMLElement | null = null;
+        menuItems.forEach(item => {
+            item.addEventListener('mousedown', onMouseDown, false);
+            item.addEventListener('mousemove', onMouseMove, false);
+            item.addEventListener('mouseup', onMouseUp, false);
+        });
     
     }
 
     // // ********************** 0137 ***************************
-    document.addEventListener('mousedown', onMouseDown, false);
-    document.addEventListener('mousemove', onMouseMove, false);
-    document.addEventListener('mouseup', onMouseUp, false);
+    // document.addEventListener('mousedown', onMouseDown, false);
+    // document.addEventListener('mousemove', onMouseMove, false);
+    // document.addEventListener('mouseup', onMouseUp, false);
     // // ********************** 0137 ***************************
-
     
 
     renderTree();   
+
+    return { renderTree };
     
 }
