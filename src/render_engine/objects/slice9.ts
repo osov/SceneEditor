@@ -61,6 +61,8 @@ interface IParameters {
     height: number;
     pivot_x: number;
     pivot_y: number;
+    anchor_x: number;
+    anchor_y: number;
     slice_width: number;
     slice_height: number;
     color: string;
@@ -81,6 +83,8 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
     const parameters: IParameters = {
         pivot_x: 0.5,
         pivot_y: 0.5,
+        anchor_x: -1,
+        anchor_y: -1,
         width,
         height,
         slice_width,
@@ -170,6 +174,11 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         parameters.pivot_y = y;
     }
 
+    function set_anchor(x: number, y: number) {
+        parameters.anchor_x = x;
+        parameters.anchor_y = y;
+    }
+
     function serialize(): SerializeData {
         return {
             slice_width: parameters.slice_width,
@@ -184,7 +193,7 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         set_slice(data.slice_width, data.slice_height);
     }
 
-    return { set_size, set_slice, set_color, set_texture, get_bounds, set_pivot, serialize, deserialize, geometry, parameters };
+    return { set_size, set_slice, set_color, set_texture, get_bounds, set_pivot, set_anchor, serialize, deserialize, geometry, parameters };
 }
 
 
@@ -261,6 +270,14 @@ export class Slice9Mesh extends Mesh implements IBaseMesh {
 
     get_pivot() {
         return new Vector2(this.template.parameters.pivot_x, this.template.parameters.pivot_y);
+    }
+
+    get_anchor() {
+        return new Vector2(this.template.parameters.anchor_x, this.template.parameters.anchor_y);
+    }
+
+    set_anchor(x: number, y: number): void {
+        this.template.set_anchor(x, y);
     }
 
     serialize() {

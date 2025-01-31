@@ -16,10 +16,11 @@ type HistoryData = {
     MESH_ROTATE: RotationEventData
     MESH_SCALE: ScaleEventData
     MESH_SIZE: SizeEventData
-    MESH_SLICE: SizeEventData
+    MESH_SLICE:  { slice: Vector2, id_mesh: number }
     MESH_DELETE: { id_mesh: number }
     MESH_ADD: any
     MESH_PIVOT: { pivot: Vector2, id_mesh: number }
+    MESH_ANCHOR: { anchor: Vector2, id_mesh: number }
 }
 type HistoryDataKeys = keyof HistoryData;
 
@@ -88,7 +89,7 @@ function HistoryControlCreate() {
                 const data = last.data[i] as HistoryData['MESH_SLICE'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
                 if (mesh instanceof Slice9Mesh)
-                    mesh.set_slice(data.size.x, data.size.y);
+                    mesh.set_slice(data.slice.x, data.slice.y);
                 list_mesh.push(mesh);
             }
         }
@@ -117,6 +118,14 @@ function HistoryControlCreate() {
                 const data = last.data[i] as HistoryData['MESH_PIVOT'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
                 mesh.set_pivot(data.pivot.x, data.pivot.y, true);
+                list_mesh.push(mesh);
+            }
+        }
+        else if (type == 'MESH_ANCHOR') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_ANCHOR'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                mesh.set_anchor(data.anchor.x, data.anchor.y);
                 list_mesh.push(mesh);
             }
         }

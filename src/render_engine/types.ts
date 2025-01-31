@@ -29,6 +29,8 @@ export interface IBaseMesh {
     set_color(hex_color: string): void
     get_pivot(): Vector2
     set_pivot(x: PivotX, y: PivotY, is_sync?: boolean): void
+    get_anchor(): Vector2
+    set_anchor(x: number, y: number): void
     serialize(): any;
     deserialize(data: any): void
 }

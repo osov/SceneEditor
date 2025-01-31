@@ -20,6 +20,7 @@ function InputModule() {
         const canvas = RenderEngine.renderer.domElement;
 
         canvas.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
             _is_control = e.ctrlKey;
             _is_shift = e.shiftKey;
             _is_alt = e.altKey;

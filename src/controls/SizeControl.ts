@@ -1,7 +1,8 @@
-import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, PlaneGeometry, DoubleSide, LineBasicMaterial, LineDashedMaterial, Shape, BufferGeometry, Line } from "three";
+import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, LineDashedMaterial, BufferGeometry, Line, Object3DEventMap, Scene } from "three";
 import { IBaseMeshDataAndThree, PivotX, PivotY } from "../render_engine/types";
 import { PositionEventData, SizeEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
+import { is_base_mesh } from "../render_engine/helpers/utils";
 
 declare global {
     const SizeControl: ReturnType<typeof SizeControlCreate>;
@@ -13,9 +14,11 @@ export function register_size_control() {
 
 function SizeControlCreate() {
     const scene = RenderEngine.scene;
+    const editor_z = 49;
     let debug_center: Mesh;
-    const bb_points: Mesh[] = [];
-    const pivot_points: Mesh[] = [];
+    const bb_points: Mesh<SphereGeometry, MeshBasicMaterial, Object3DEventMap>[] = [];
+    const pivot_points: Mesh<CircleGeometry, MeshBasicMaterial, Object3DEventMap>[] = [];
+    let anchor_mesh: Mesh<CircleGeometry, MeshBasicMaterial, Object3DEventMap>;
     let slice_box: Line;
     let slice_box_range: Line;
     const pointer = new Vector2();
@@ -26,12 +29,15 @@ function SizeControlCreate() {
     let selected_list: IBaseMeshDataAndThree[] = [];
     let is_down = false;
     let is_active = false;
+    let is_selected_anchor = false;
     let old_size: SizeEventData[] = [];
     let old_pos: PositionEventData[] = [];
-    let old_slice: SizeEventData[] = [];
+    let old_slice: { slice: Vector2, id_mesh: number }[] = [];
+    let old_anchor: { anchor: Vector2, id_mesh: number }[] = [];
     let is_changed_size = false;
     let is_changed_pos = false;
     let is_changed_slice = false;
+    let is_changed_anchor = false;
     const dir = [0, 0];
 
     function init() {
@@ -52,6 +58,15 @@ function SizeControlCreate() {
             pivot_points.push(mesh);
         }
 
+        anchor_mesh = new Mesh(new CircleGeometry(15, 12), new MeshBasicMaterial({ color: 0xffff00, transparent: true }));
+        anchor_mesh.position.set(300, -220, editor_z);
+        ResourceManager.preload_texture('img/target.png', 'editor').then(() => {
+            anchor_mesh.material.map = ResourceManager.get_texture('target', 'editor');
+            anchor_mesh.material.needsUpdate = true;
+        })
+        anchor_mesh.visible = false;
+        scene.add(anchor_mesh)
+
 
         const offset = 0.5;
         var points = [
@@ -63,26 +78,24 @@ function SizeControlCreate() {
         ];
         slice_box = new Line(new BufferGeometry().setFromPoints(points), new LineDashedMaterial({ color: 0xffaa00, dashSize: 0.1, gapSize: 0.05 }));
         slice_box.computeLineDistances();
-        slice_box.position.set(0, 0, 49);
+        slice_box.position.set(0, 0, editor_z);
         scene.add(slice_box)
         slice_box.visible = false;
-        slice_box_range = new Line(new BufferGeometry().setFromPoints(points), new LineDashedMaterial({ color: 0xffaa00, dashSize: 0.1, gapSize: 0.05 }));
+        slice_box_range = new Line(new BufferGeometry().setFromPoints(points), new LineDashedMaterial({ color: 0xffaaff, dashSize: 0.1, gapSize: 0.05 }));
         slice_box_range.computeLineDistances();
-        slice_box_range.position.set(0, 0, 49);
+        slice_box_range.position.set(0, 0, editor_z);
         scene.add(slice_box_range)
 
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
             if (!is_active) return;
             if (Input.is_shift()) {
-                if (!pivot_points[0].visible){
-                    document.body.style.cursor = 'default';
-                    set_pivot_visible(true);
-                }
+                document.body.style.cursor = 'default';
+                set_pivot_visible(true);
+                draw_anchor_point();
             }
 
             if (Input.is_alt() && selected_list.length == 1 && (selected_list[0] instanceof Slice9Mesh)) {
                 if (!slice_box.visible) {
-                    
                     set_slice_visible(true);
                     draw_debug_bb(get_bounds_from_list());
                 }
@@ -92,13 +105,15 @@ function SizeControlCreate() {
 
         EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
             if (!is_active) return;
-            if (!Input.is_shift())
+            if (!Input.is_shift()) {
+                is_selected_anchor = false;
                 set_pivot_visible(false);
+            }
             if (!Input.is_alt())
                 set_slice_visible(false);
         })
 
-        // pivots logic
+        // pivots/anchor logic
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
             if (!is_active) return;
             if (e.button != 0)
@@ -107,23 +122,27 @@ function SizeControlCreate() {
                 return;
             if (selected_list.length == 1) {
                 const mesh = selected_list[0];
-                for (let i = 0; i < pivot_points.length; i++) {
-                    const pp = pivot_points[i];
-                    if (RenderEngine.is_intersected_mesh(new Vector2(e.x, e.y), pp)) {
-                        const pivot = index_to_pivot(i);
-                        HistoryControl.add('MESH_PIVOT', [{ id_mesh: mesh.mesh_data.id, pivot: mesh.get_pivot() }]);
-                        mesh.set_pivot(pivot.x, pivot.y, true);
-                        // для текста почему-то прыгает размер и поэтому bb определяется неверно на ближайших кадрах
-                        // поэтому не обновляем draw_debug_bb
-                        for (let i = 0; i < pivot_points.length; i++)
-                            (pivot_points[i].material as MeshBasicMaterial).color.set(0xffffff);
-                        (pivot_points[i].material as MeshBasicMaterial).color.set(0xff0000);
-                        const wp = new Vector3();
-                        mesh.getWorldPosition(wp);
-                        debug_center.position.x = wp.x;
-                        debug_center.position.y = wp.y;
-
-                        // draw_debug_bb(get_bounds_from_list());
+                if (is_selected_anchor) {
+                    is_selected_anchor = false;
+                }
+                else {
+                    for (let i = 0; i < pivot_points.length; i++) {
+                        const pp = pivot_points[i];
+                        if (RenderEngine.is_intersected_mesh(new Vector2(e.x, e.y), pp)) {
+                            const pivot = index_to_pivot(i);
+                            HistoryControl.add('MESH_PIVOT', [{ id_mesh: mesh.mesh_data.id, pivot: mesh.get_pivot() }]);
+                            mesh.set_pivot(pivot.x, pivot.y, true);
+                            // для текста почему-то прыгает размер и поэтому bb определяется неверно на ближайших кадрах
+                            // поэтому не обновляем draw_debug_bb
+                            for (let i = 0; i < pivot_points.length; i++)
+                                pivot_points[i].material.color.set(0xffffff);
+                            pivot_points[i].material.color.set(0xff0000);
+                            const wp = new Vector3();
+                            mesh.getWorldPosition(wp);
+                            debug_center.position.x = wp.x;
+                            debug_center.position.y = wp.y;
+                            // draw_debug_bb(get_bounds_from_list());
+                        }
                     }
                 }
             }
@@ -161,10 +180,17 @@ function SizeControlCreate() {
             for (let i = 0; i < selected_list.length; i++) {
                 const m = selected_list[i];
                 if (m instanceof Slice9Mesh) {
-                    old_slice.push({ id_mesh: m.mesh_data.id, size: m.get_slice(), position: m.position.clone() });
+                    old_slice.push({ id_mesh: m.mesh_data.id, slice: m.get_slice() });
                 }
             }
-
+            is_changed_anchor = false;
+            old_anchor = [];
+            for (let i = 0; i < selected_list.length; i++) {
+                const m = selected_list[i];
+                old_anchor.push({ id_mesh: m.mesh_data.id, anchor: m.get_anchor() });
+            }
+            if (RenderEngine.is_intersected_mesh(new Vector2(pointer.x, pointer.y), anchor_mesh))
+                is_selected_anchor = true;
         });
 
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
@@ -178,6 +204,8 @@ function SizeControlCreate() {
                 HistoryControl.add('MESH_SIZE', old_size);
             if (is_changed_slice)
                 HistoryControl.add('MESH_SLICE', old_slice);
+            if (is_changed_anchor)
+                HistoryControl.add('MESH_ANCHOR', old_anchor);
         });
 
         EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
@@ -187,6 +215,9 @@ function SizeControlCreate() {
             pointer.y = event.y;
             const wp = Camera.screen_to_world(pointer.x, pointer.y);
             const bounds = get_bounds_from_list();
+            if (Input.is_shift() && is_selected_anchor) {
+                draw_anchor_point(true);
+            }
             // slice logic
             if (Input.is_alt() && selected_list.length == 1 && (selected_list[0] instanceof Slice9Mesh)) {
                 if (!is_down) {
@@ -387,26 +418,25 @@ function SizeControlCreate() {
     }
 
     function draw_debug_bb(bb: number[]) {
-        const z = 49;
         // left top, right top, right bottom, left bottom
-        bb_points[0].position.set(bb[0], bb[1], z);
-        bb_points[1].position.set(bb[2], bb[1], z);
-        bb_points[2].position.set(bb[2], bb[3], z);
-        bb_points[3].position.set(bb[0], bb[3], z);
+        bb_points[0].position.set(bb[0], bb[1], editor_z);
+        bb_points[1].position.set(bb[2], bb[1], editor_z);
+        bb_points[2].position.set(bb[2], bb[3], editor_z);
+        bb_points[3].position.set(bb[0], bb[3], editor_z);
 
         for (let i = 0; i < pivot_points.length; i++)
-            (pivot_points[i].material as MeshBasicMaterial).color.set(0xffffff);
+            pivot_points[i].material.color.set(0xffffff);
 
         const offset = 0;
-        pivot_points[0].position.set(bb[0] + offset, bb[1] - offset, z);
-        pivot_points[1].position.set(bb[2] - offset, bb[1] - offset, z);
-        pivot_points[2].position.set(bb[2] - offset, bb[3] + offset, z);
-        pivot_points[3].position.set(bb[0] + offset, bb[3] + offset, z);
-        pivot_points[4].position.set(bb[0] + offset, bb[1] - Math.abs(bb[3] - bb[1]) / 2, z);
-        pivot_points[5].position.set(bb[2] - offset, bb[1] - Math.abs(bb[3] - bb[1]) / 2, z);
-        pivot_points[6].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[1] - offset, z);
-        pivot_points[7].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[3] + offset, z);
-        pivot_points[8].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[1] - Math.abs(bb[3] - bb[1]) / 2, z);
+        pivot_points[0].position.set(bb[0] + offset, bb[1] - offset, editor_z);
+        pivot_points[1].position.set(bb[2] - offset, bb[1] - offset, editor_z);
+        pivot_points[2].position.set(bb[2] - offset, bb[3] + offset, editor_z);
+        pivot_points[3].position.set(bb[0] + offset, bb[3] + offset, editor_z);
+        pivot_points[4].position.set(bb[0] + offset, bb[1] - Math.abs(bb[3] - bb[1]) / 2, editor_z);
+        pivot_points[5].position.set(bb[2] - offset, bb[1] - Math.abs(bb[3] - bb[1]) / 2, editor_z);
+        pivot_points[6].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[1] - offset, editor_z);
+        pivot_points[7].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[3] + offset, editor_z);
+        pivot_points[8].position.set(bb[0] + Math.abs(bb[2] - bb[0]) / 2, bb[1] - Math.abs(bb[3] - bb[1]) / 2, editor_z);
         if (selected_list.length == 1) {
             const mesh = selected_list[0];
             const wp = new Vector3();
@@ -414,7 +444,7 @@ function SizeControlCreate() {
             debug_center.position.x = wp.x;
             debug_center.position.y = wp.y;
             const pivot = mesh.get_pivot();
-            (pivot_points[pivot_to_index(pivot)].material as MeshBasicMaterial).color.set(0xff0000);
+            pivot_points[pivot_to_index(pivot)].material.color.set(0xff0000);
             // slice box
             if (mesh instanceof Slice9Mesh && Input.is_alt()) {
                 const slice = mesh.get_slice();
@@ -465,6 +495,61 @@ function SizeControlCreate() {
         set_bb_visible(true);
         if (selected_list.length != 1)
             debug_center.visible = false;
+        draw_anchor_point();
+    }
+
+    function get_parent_bb(mesh: IBaseMeshDataAndThree) {
+        if (mesh.parent instanceof Scene) {
+            return [0, 0, 540, -960];
+        }
+        else if (is_base_mesh(mesh.parent!)) {
+            const parent = mesh.parent as IBaseMeshDataAndThree;
+            return parent.get_bounds();
+        }
+        return [0, 0, 0, 0];
+    }
+
+    function draw_anchor_point(is_set_pos = false) {
+        if (selected_list.length != 1)
+            return;
+        const mesh = selected_list[0];
+        const wp = new Vector3();
+        mesh.getWorldPosition(wp);
+        const bb_limit = get_parent_bb(mesh);
+        if (is_set_pos) {
+            const cp = Camera.screen_to_world(pointer.x, pointer.y);
+            if (cp.x < bb_limit[0]) cp.x = bb_limit[0];
+            if (cp.x > bb_limit[2]) cp.x = bb_limit[2];
+            if (cp.y > bb_limit[1]) cp.y = bb_limit[1];
+            if (cp.y < bb_limit[3]) cp.y = bb_limit[3];
+            anchor_mesh.position.x = cp.x;
+            anchor_mesh.position.y = cp.y;
+            const size_x = bb_limit[2] - bb_limit[0];
+            const size_y = bb_limit[1] - bb_limit[3];
+            const ax = (cp.x - bb_limit[0]) / size_x;
+            const ay = (cp.y - bb_limit[3]) / size_y;
+            is_changed_anchor = true;
+            mesh.set_anchor(ax, ay);
+            //log(ax, ay);
+        }
+        else {
+            const anchor = mesh.get_anchor();
+            if (anchor.x == -1 || anchor.y == -1) {
+                anchor_mesh.position.x = wp.x;
+                anchor_mesh.position.y = wp.y;
+                return;
+            }
+            else {
+                const target = new Vector2();
+                const size_x = bb_limit[2] - bb_limit[0];
+                const size_y = bb_limit[1] - bb_limit[3];
+                target.x = anchor.x * size_x + bb_limit[0];
+                target.y = anchor.y * size_y + bb_limit[3];
+                anchor_mesh.position.x = target.x;
+                anchor_mesh.position.y = target.y;
+            }
+        }
+
     }
 
     function set_bb_visible(visible: boolean) {
@@ -476,6 +561,7 @@ function SizeControlCreate() {
         if (visible && selected_list.length != 1)
             return;
         pivot_points.forEach(p => p.visible = visible);
+        anchor_mesh.visible = visible;
     }
 
     function set_slice_visible(visible: boolean) {

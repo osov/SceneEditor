@@ -10,6 +10,8 @@ interface IParameters {
     height: number;
     pivot_x: number;
     pivot_y: number;
+    anchor_x: number;
+    anchor_y: number;
     color: string;
     font: string;
 }
@@ -29,6 +31,8 @@ export class TextMesh extends Text implements IBaseMesh {
         height: 1,
         pivot_x: 0.5,
         pivot_y: 0.5,
+        anchor_x: -1,
+        anchor_y: -1,
         color: '#fff',
         font: '',
     };
@@ -55,6 +59,15 @@ export class TextMesh extends Text implements IBaseMesh {
         const bb = this._get_bounds();
         const size = new Vector2(Math.abs(bb[2] - bb[0]), Math.abs(bb[3] - bb[1]));
         return size;
+    }
+
+    get_anchor() {
+        return new Vector2(this.parameters.anchor_x, this.parameters.anchor_y);
+    }
+
+    set_anchor(x: number, y: number): void {
+        this.parameters.anchor_x = x;
+        this.parameters.anchor_y = y;
     }
 
     set_color(hex_color: string) {
