@@ -1,5 +1,6 @@
 import { Vector2 } from "three";
 import { PositionEventData, RotationEventData, ScaleEventData, SizeEventData } from "./types";
+import { Slice9Mesh } from "../render_engine/objects/slice9";
 
 declare global {
     const HistoryControl: ReturnType<typeof HistoryControlCreate>;
@@ -15,9 +16,10 @@ type HistoryData = {
     MESH_ROTATE: RotationEventData
     MESH_SCALE: ScaleEventData
     MESH_SIZE: SizeEventData
+    MESH_SLICE: SizeEventData
     MESH_DELETE: { id_mesh: number }
     MESH_ADD: any
-    MESH_PIVOT:{pivot:Vector2, id_mesh:number}
+    MESH_PIVOT: { pivot: Vector2, id_mesh: number }
 }
 type HistoryDataKeys = keyof HistoryData;
 
@@ -78,6 +80,15 @@ function HistoryControlCreate() {
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
                 mesh.set_size(data.size.x, data.size.y);
                 mesh.position.set(data.position.x, data.position.y, data.position.z);
+                list_mesh.push(mesh);
+            }
+        }
+        else if (type == 'MESH_SLICE') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_SLICE'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                if (mesh instanceof Slice9Mesh)
+                    mesh.set_slice(data.size.x, data.size.y);
                 list_mesh.push(mesh);
             }
         }

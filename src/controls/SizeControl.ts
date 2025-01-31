@@ -1,6 +1,7 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, PlaneGeometry, DoubleSide, LineBasicMaterial, LineDashedMaterial, Shape, BufferGeometry, Line } from "three";
 import { IBaseMeshDataAndThree, PivotX, PivotY } from "../render_engine/types";
 import { PositionEventData, SizeEventData } from "./types";
+import { Slice9Mesh } from "../render_engine/objects/slice9";
 
 declare global {
     const SizeControl: ReturnType<typeof SizeControlCreate>;
@@ -27,10 +28,11 @@ function SizeControlCreate() {
     let is_active = false;
     let old_size: SizeEventData[] = [];
     let old_pos: PositionEventData[] = [];
+    let old_slice: SizeEventData[] = [];
     let is_changed_size = false;
     let is_changed_pos = false;
+    let is_changed_slice = false;
     const dir = [0, 0];
-    const range = 5;
 
     function init() {
         const geometry = new SphereGeometry(8, 4, 2);
@@ -61,22 +63,28 @@ function SizeControlCreate() {
         ];
         slice_box = new Line(new BufferGeometry().setFromPoints(points), new LineDashedMaterial({ color: 0xffaa00, dashSize: 0.1, gapSize: 0.05 }));
         slice_box.computeLineDistances();
-        slice_box.position.set(0,0,49);
+        slice_box.position.set(0, 0, 49);
         scene.add(slice_box)
         slice_box.visible = false;
         slice_box_range = new Line(new BufferGeometry().setFromPoints(points), new LineDashedMaterial({ color: 0xffaa00, dashSize: 0.1, gapSize: 0.05 }));
         slice_box_range.computeLineDistances();
-        slice_box_range.position.set(0,0,49);
+        slice_box_range.position.set(0, 0, 49);
         scene.add(slice_box_range)
 
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
             if (!is_active) return;
-            if (Input.is_shift())
-                set_pivot_visible(true);
-           
-            if (Input.is_alt() && selected_list.length == 1 && (selected_list[0] as any).get_slice){{}
-                set_slice_visible(true);
-}
+            if (Input.is_shift()) {
+                if (!pivot_points[0].visible)
+                    set_pivot_visible(true);
+            }
+
+            if (Input.is_alt() && selected_list.length == 1 && (selected_list[0] instanceof Slice9Mesh)) {
+                if (!slice_box.visible) {
+                    set_slice_visible(true);
+                    draw_debug_bb(get_bounds_from_list());
+                }
+            }
+
         })
 
         EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
@@ -87,6 +95,7 @@ function SizeControlCreate() {
                 set_slice_visible(false);
         })
 
+        // pivots logic
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
             if (!is_active) return;
             if (e.button != 0)
@@ -144,6 +153,15 @@ function SizeControlCreate() {
                 const m = selected_list[i];
                 old_size.push({ id_mesh: m.mesh_data.id, size: m.get_size(), position: m.position.clone() });
             }
+            is_changed_slice = false;
+            old_slice = [];
+            for (let i = 0; i < selected_list.length; i++) {
+                const m = selected_list[i];
+                if (m instanceof Slice9Mesh) {
+                    old_slice.push({ id_mesh: m.mesh_data.id, size: m.get_slice(), position: m.position.clone() });
+                }
+            }
+
         });
 
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
@@ -155,61 +173,46 @@ function SizeControlCreate() {
                 HistoryControl.add('MESH_TRANSLATE', old_pos);
             if (is_changed_size)
                 HistoryControl.add('MESH_SIZE', old_size);
-
+            if (is_changed_slice)
+                HistoryControl.add('MESH_SLICE', old_slice);
         });
 
         EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
             if (!is_active) return;
-            if (Input.is_shift())
-                return;
             prev_point.set(pointer.x, pointer.y);
             pointer.x = event.x;
             pointer.y = event.y;
-            if (selected_list.length == 0)
-                return;
             const wp = Camera.screen_to_world(pointer.x, pointer.y);
             const bounds = get_bounds_from_list();
-            if (!is_down) {
-                document.body.style.cursor = 'default';
-                dir[0] = 0; dir[1] = 0;
-                if (wp.x > bounds[0] - range && wp.x < bounds[2] + range && wp.y > bounds[3] - range && wp.y < bounds[1] + range) {
-                    if (Math.abs(bounds[0] - wp.x) < range) {
-                        document.body.style.cursor = 'e-resize';
-                        dir[0] = 1;
-                    }
-                    if (Math.abs(bounds[2] - wp.x) < range) {
-                        document.body.style.cursor = 'e-resize';
-                        dir[0] = 1;
-                    }
-                    if (Math.abs(bounds[1] - wp.y) < range) {
-                        document.body.style.cursor = 'n-resize';
-                        dir[1] = 1;
-                    }
-                    if (Math.abs(bounds[3] - wp.y) < range) {
-                        document.body.style.cursor = 'n-resize';
-                        dir[1] = 1;
-                    }
-                    if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
-                        document.body.style.cursor = 'nw-resize';
-                        dir[0] = 1;
-                        dir[1] = 1;
-                    }
-                    if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
-                        document.body.style.cursor = 'ne-resize';
-                        dir[0] = 1;
-                        dir[1] = 1;
-                    }
-                    if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
-                        document.body.style.cursor = 'sw-resize';
-                        dir[0] = 1;
-                        dir[1] = 1;
-                    }
-                    if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
-                        document.body.style.cursor = 'se-resize';
-                        dir[0] = 1;
-                        dir[1] = 1;
-                    }
+            // slice logic
+            if (Input.is_alt() && selected_list.length == 1 && (selected_list[0] instanceof Slice9Mesh)) {
+                if (!is_down) {
+                    const size = selected_list[0].get_slice();
+                    const ws = new Vector3();
+                    selected_list[0].getWorldScale(ws);
+                    const dx = size.x;
+                    const dy = size.y;
+                    const bounds2 = get_bounds_from_list();
+                    bounds2[0] += dx;
+                    bounds2[1] -= dy;
+                    bounds2[2] -= dx;
+                    bounds2[3] += dy;
+                    const tmp = get_cursor_dir(wp, bounds2);
+                    dir[0] = tmp[0];
+                    dir[1] = tmp[1];
                 }
+                draw_debug_bb(bounds);
+                return;
+            }
+            if (Input.is_shift() || Input.is_alt())
+                return;
+            if (selected_list.length == 0)
+                return;
+
+            if (!is_down) {
+                const tmp = get_cursor_dir(wp, bounds);
+                dir[0] = tmp[0];
+                dir[1] = tmp[1];
             }
             if (is_down) {
                 offset_move = click_pos.clone().sub(wp).length();
@@ -288,6 +291,52 @@ function SizeControlCreate() {
         });
     }
 
+    function get_cursor_dir(wp: Vector3, bounds: number[], range = 5) {
+        const tmp_dir = [0, 0];
+        document.body.style.cursor = 'default';
+        tmp_dir[0] = 0;
+        tmp_dir[1] = 0;
+        if (wp.x > bounds[0] - range && wp.x < bounds[2] + range && wp.y > bounds[3] - range && wp.y < bounds[1] + range) {
+            if (Math.abs(bounds[0] - wp.x) < range) {
+                document.body.style.cursor = 'e-resize';
+                tmp_dir[0] = 1;
+            }
+            if (Math.abs(bounds[2] - wp.x) < range) {
+                document.body.style.cursor = 'e-resize';
+                tmp_dir[0] = 1;
+            }
+            if (Math.abs(bounds[1] - wp.y) < range) {
+                document.body.style.cursor = 'n-resize';
+                tmp_dir[1] = 1;
+            }
+            if (Math.abs(bounds[3] - wp.y) < range) {
+                document.body.style.cursor = 'n-resize';
+                tmp_dir[1] = 1;
+            }
+            if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
+                document.body.style.cursor = 'nw-resize';
+                tmp_dir[0] = 1;
+                tmp_dir[1] = 1;
+            }
+            if (Math.abs(bounds[0] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
+                document.body.style.cursor = 'ne-resize';
+                tmp_dir[0] = 1;
+                tmp_dir[1] = 1;
+            }
+            if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[1] - wp.y) < range) {
+                document.body.style.cursor = 'sw-resize';
+                tmp_dir[0] = 1;
+                tmp_dir[1] = 1;
+            }
+            if (Math.abs(bounds[2] - wp.x) < range && Math.abs(bounds[3] - wp.y) < range) {
+                document.body.style.cursor = 'se-resize';
+                tmp_dir[0] = 1;
+                tmp_dir[1] = 1;
+            }
+        }
+        return tmp_dir;
+    }
+
     function index_to_pivot(id: number): Vector2 {
         if (id == 4)
             return new Vector2(PivotX.LEFT, PivotY.CENTER);
@@ -364,7 +413,8 @@ function SizeControlCreate() {
             const pivot = mesh.get_pivot();
             (pivot_points[pivot_to_index(pivot)].material as MeshBasicMaterial).color.set(0xff0000);
             // slice box
-            if ((mesh as any).get_slice) {
+            if (mesh instanceof Slice9Mesh && Input.is_alt()) {
+                const slice = mesh.get_slice();
                 const scale = mesh.get_size();
                 const ws = new Vector3();
                 mesh.getWorldScale(ws);
@@ -374,9 +424,39 @@ function SizeControlCreate() {
                 slice_box.position.y = bb[1] - Math.abs(bb[3] - bb[1]) / 2;
                 slice_box.scale.set(scale.x, scale.y, 1);
 
-               // slice_box_range.position.copy(slice_box.position);
-               // slice_box.scale.x -= 10;
-               // slice_box_range.scale.copy(slice_box.scale);
+                slice_box_range.position.copy(slice_box.position);
+                slice_box_range.scale.copy(slice_box.scale);
+                slice_box_range.scale.x -= slice.x * ws.x;
+                slice_box_range.scale.y -= slice.y * ws.y;
+                const cp = Camera.screen_to_world(pointer.x, pointer.y);
+                const pp = Camera.screen_to_world(prev_point.x, prev_point.y);
+                const delta = cp.clone().sub(pp);
+                const center_x = (bb[0] + bb[2]) / 2;
+                const center_y = (bb[1] + bb[3]) / 2;
+                const diff_size = new Vector2();
+                if (is_down) {
+                    if (dir[0] > 0 || dir[1] > 0) {
+                        if (dir[0] > 0) {
+                            diff_size.x = delta.x;
+                            if (cp.x < center_x) {
+                                diff_size.x = - delta.x;
+                            }
+                        }
+                        if (dir[1] > 0) {
+                            diff_size.y = -delta.y;
+                            if (cp.y > center_y) {
+                                diff_size.y = delta.y;
+                            }
+                        }
+                        const slice = mesh.get_slice();
+                        slice.x -= diff_size.x;
+                        slice.y -= diff_size.y;
+                        if (slice.x < 0) slice.x = 0;
+                        if (slice.y < 0) slice.y = 0;
+                        mesh.set_slice(slice.x, slice.y);
+                        is_changed_slice = true;
+                    }
+                }
             }
         }
         set_bb_visible(true);
@@ -390,8 +470,6 @@ function SizeControlCreate() {
     }
 
     function set_pivot_visible(visible: boolean) {
-        if (visible)
-            document.body.style.cursor = 'default';
         if (visible && selected_list.length != 1)
             return;
         pivot_points.forEach(p => p.visible = visible);
