@@ -288,34 +288,27 @@ interface Contexts {
             
             // if (event.target.closest('.card.pos')) {  // с таким вариантом, курсор при быстром движении уходит за пределы карты 
             if (treeItem) {
-                moveAt(event.pageX, event.pageY)
+                moveAt(event.pageX, event.pageY);
                 myScrollTo(divTree, startY, event);
-                let goalBox = getGoal(event)
-                
-                if (!goalBox) return
-    
-                // переключаем блок цели
-                if (goalBox.closest('.tree__item')) {
-                    toggleCurrentBox(goalBox.closest('.tree__item'), event.pageX, event.pageY);
-                    switchClassItem(goalBox.closest('.tree__item'), event.pageX, event.pageY);
-                }
-                // else {
-                //     const items = document.querySelectorAll('.tree__item') as NodeListOf<HTMLLIElement>;
-                //     items.forEach(i => { i.classList.remove('top', 'bg', 'bottom'); });
-                // }
+
+                toggleCurrentBox(event.target.closest('.tree__item'), event.pageX, event.pageY);
+                switchClassItem(event.target.closest('.tree__item'), event.pageX, event.pageY);
             }
         }
     }
     
     function onMouseUp(event:any) {
-        // event.preventDefault();
         // mousedown = false;
         // setTimeout(()=>movement = false, 10);
-    
+        
         if(event.button === 0) {
-    
+            event.preventDefault();
+
+            toggleCurrentBox(event.target.closest('.tree__item'), event.pageX, event.pageY);
+            switchClassItem(event.target.closest('.tree__item'), event.pageX, event.pageY);
+
             if (event.target.closest('.tree__item') && currentDroppable) {
-    
+
                 const posInItem = getPosMouseInBlock(event.target.closest('.tree__item'), event.pageX, event.pageY);
                 if(!posInItem) {
                     myClear();
@@ -327,7 +320,6 @@ interface Contexts {
                     if(isDrop && itemDrop?.no_drop === false) {
                         updateTreeList("a");
                         renderTree();
-                        console.log("done bg");
                     }
                 }
                 else if(posInItem === 'top' || posInItem === 'bottom') {
@@ -381,12 +373,12 @@ interface Contexts {
     function switchClassItem(elem:any, pageX:number, pageY :number): void {
     
         if(!elem) return;
-        
+
         const items = document.querySelectorAll('.tree__item') as NodeListOf<HTMLLIElement>;
         items.forEach(i => { i.classList.remove('top', 'bg', 'bottom'); });
     
         const posInItem = getPosMouseInBlock(elem, pageX, pageY);
-        if(!posInItem) return;
+        if(!posInItem)  return;
     
         if(posInItem === 'bg') {
             elem.classList.add('bg');
@@ -414,22 +406,25 @@ interface Contexts {
         const itemBg = item.querySelector('.tree__item_bg') as HTMLLIElement | null;
         if(!itemBg) return false;
     
-        const itemTop = item.getBoundingClientRect().top;
         const mouseY = pageY;
         const mouseX = pageX;
-    
+        
+        const itemTop: number = +item.getBoundingClientRect().top;
+        const itemBottom: number = +itemTop + item.clientHeight;
         const itemLeft: number = +itemBg.getBoundingClientRect().left;
         const itemRight: number = +itemLeft + +itemBg.clientWidth;
+
+        const headItem: number = +itemTop + (item.clientHeight * 0.2); // нижняя граница области для линии top
+        const footItem: number = +itemTop + (item.clientHeight* 0.8); // верхняя граница области для линии bottom
     
         if(
-            mouseY > itemTop && 
-            mouseX > itemLeft && 
-            mouseX < itemRight
+            mouseX >= itemLeft && 
+            mouseX <= itemRight
         ) {
             // вычисляем по высоте
-            if(mouseY < itemTop + item.clientHeight * 0.2) return "top";
-            else if(mouseY < itemTop + item.clientHeight * 0.8) return "bg";
-            else if(mouseY < itemTop + item.clientHeight) return "bottom";
+            if(mouseY >= itemTop && mouseY <= headItem) return "top";
+            if(mouseY >= footItem && mouseY <= itemBottom) return "bottom";
+            if(mouseY > headItem && mouseY < footItem) return "bg";
             else return false;
         }
         else {
@@ -444,18 +439,7 @@ interface Contexts {
             // boxDD.querySelector(".tree__item_name").innerText = `${pageY} : ${pageX} __ ${itemDrag.name}`;
             // switchClassItem(currentDroppable, pageY, pageX);
     }
-    
-    function getGoal(event:any) {
-        // treeItem.hidden = true  // скрываем карту
-        // получаем элемент под мышью
-        let elemBelow = document.elementFromPoint(event.clientX, event.clientY)
-        // treeItem.hidden = false  // показываем карту
-    
-        return elemBelow ? elemBelow : false
-        // если элемент .box возвращаем его
-        // return elemBelow.closest('.box') ? elemBelow : false
-    }
-    
+        
     function isParentNoDrop(list: Item[], drag: Item, drop: Item): boolean {
     
         // внутри родителя можно перемещать...
@@ -489,20 +473,18 @@ interface Contexts {
     }
     
     function toggleCurrentBox(droppableBelow:any, pageX: number, pageY: number) {
-        // если элемент есть, сравниваем с текущим
         
+        // если элемент есть, сравниваем с текущим
         if (currentDroppable != droppableBelow) {
             if (currentDroppable) {
-                currentDroppable.classList.remove('droppable')
+                currentDroppable.classList.remove('droppable');
             }
-    
+            
             currentDroppable = droppableBelow
-    
+            
             if (currentDroppable) {
-    
+                currentDroppable.classList.add('droppable');
                 boxDD.classList.add('pos');
-                // switchClassItem(currentDroppable, pageX, pageY);
-                
             }
         }
     }
@@ -518,7 +500,7 @@ interface Contexts {
             if(ddVisible)
                 boxDD.classList.add('pos');
     
-            currentDroppable.classList.add('droppable');
+            // currentDroppable.classList.add('droppable');
             itemDrop = getItemObj(currentDroppable);
     
             if(itemDrop?.no_drop === true && itemDrag || isChild(treeList, itemDrag.id, itemDrop.pid)) {
@@ -673,6 +655,11 @@ interface Contexts {
             btn.addEventListener('click', (event: Event) => {
                 // event.preventDefault();
                 // event.stopPropagation();
+                log('click');
+                // SceneManager.make_graph();
+                // SYS_GRAPH_SELECTED ([55])
+                // SceneManager.make_graph();
+
                 const li = (btn as HTMLElement).closest("li");
                 if(li === null) return;
                 const treeSub = li.querySelector(".tree_sub") as HTMLElement;

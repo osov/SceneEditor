@@ -225,10 +225,9 @@ a.tree__item {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  border: none;
   outline: none;
   padding: 0 8px 0 5px;
-  margin-left: 17px;
+  margin: 0 0 0 17px;
   height: var(--tree__itemHeight, 25px);
   line-height: calc(var(--tree__itemHeight) - 2px);
   font-size: 15px;
@@ -236,6 +235,7 @@ a.tree__item {
   flex-grow: 2;
   z-index: 2;
   cursor: default;
+  border: 0;
 }
 a.tree__item:hover{
   /* opacity: 0.7; */
@@ -245,38 +245,37 @@ a.tree__item::after {
   content: '';
   position: absolute;
   display: none;
-  z-index: 3;
+  z-index: 2;
   background-color: transparent;
 }
 a.tree__item::before {
-  width: 4px;
-  height: 4px;
+  width: 2px;
+  height: 2px;
   left: 0;
-  border-radius: 31%;
+  border-radius: 18%;
   background-color: #ccc;
 }
-a.tree__item.top::before {
+a.tree__item.droppable.top::before {
   display: block;
-  top: -2px;
+  top: 0px;
 }
-a.tree__item.bottom::before {
+a.tree__item.droppable.bottom::before {
   display: block;
-  bottom: -2px;
+  bottom: 0px;
 }
 a.tree__item::after{
-  width: calc(100% - 3px);
+  width: calc(100% - 4px);
   height: 2px;
   left: 4px;
   background-color: #3a7fbd;
 }
-a.tree__item.top::after {
+a.tree__item.droppable.top::after {
   display: block;
-  top: -1px;
+  top: 0px;
 }
-a.tree__item.bottom::after {
+a.tree__item.droppable.bottom::after {
   display: block;
-  bottom: -1px;
-  height: 2px;
+  bottom: 0px;
 }
 a.tree__item.droppable {
   cursor: copy;
@@ -293,7 +292,7 @@ a.droppable:not(.success) .tree__item_name {
 .tree__item_bg{
   position: absolute;
   min-width: 100%;
-  height: 25px;
+  height: 100%;
   top: 0;
   right: 0;
   opacity: 1;
