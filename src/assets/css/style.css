@@ -207,6 +207,7 @@ input.searchInTree{
   /* background-color: rgba(0, 0, 0, 0.1); */
   padding: 10px;
   overflow-y: auto;
+  height: calc(100% - 65px);
   max-height: calc(100% - 65px);
 }
 ul.tree {
@@ -283,10 +284,12 @@ a.tree__item.droppable {
 a.tree__item.droppable:not(.success){
   cursor: not-allowed;
 }
-a.droppable .tree__item_name {
+.tree__btn:hover + a.tree__item.bg,
+a.tree__item.droppable.bg {
   color: #9dcf9d;
 }
-a.droppable:not(.success) .tree__item_name {
+.tree__btn:hover + a.tree__item.bg:not(.success),
+a.tree__item.droppable.bg:not(.success) {
   color: #f9c8c8;
 }
 .tree__item_bg{
@@ -299,9 +302,9 @@ a.droppable:not(.success) .tree__item_name {
   width: var(--tree_width, 200px);
   z-index: 1;
 }
-.tree__btn:hover + .tree__item .tree__item_bg, 
-a.tree__item:hover .tree__item_bg,
-.tree__item_bg:hover {
+.tree__btn:hover + a.tree__item:not(.bottom, .top) .tree__item_bg, 
+a.tree__item:not(.bottom, .top):hover .tree__item_bg,
+a.tree__item:not(.bottom, .top) .tree__item_bg:hover {
   background-color: #313a3d;
 }
 .li_line:not(.active) ul .tree__item_bg {

@@ -45,8 +45,8 @@ interface Contexts {
     const divTree:any = document.querySelector('#wr_tree');
     let treeItem:any = null;
     let currentDroppable:any = null;
-    let itemDrag:any = {};
-    let itemDrop:any = {};
+    let itemDrag:any = null;
+    let itemDrop:any = null;
     let isDrop:boolean = false;
     
     let hoverStart: number; // для добавления класса с задержкой
@@ -272,7 +272,6 @@ interface Contexts {
                 else {                    
                     boxDD.querySelector(".tree__item_name").innerText = itemDrag.name;
                     boxDD.querySelector(".tree__ico use").setAttribute('href', `./img/sprite.svg#${getIdIco(itemDrag?.icon)}`);
-                    moveAt(event.pageX, event.pageY); // 
                 }
     
             }
@@ -298,11 +297,16 @@ interface Contexts {
     }
     
     function onMouseUp(event:any) {
+        // event.preventDefault(); // иногда отключается плавное сворачивание ...
         // mousedown = false;
         // setTimeout(()=>movement = false, 10);
         
         if(event.button === 0) {
-            event.preventDefault();
+
+            if(!itemDrag || !itemDrop) {
+                myClear();
+                return; 
+            }
 
             toggleCurrentBox(event.target.closest('.tree__item'), event.pageX, event.pageY);
             switchClassItem(event.target.closest('.tree__item'), event.pageX, event.pageY);
