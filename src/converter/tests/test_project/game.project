@@ -17,4 +17,4 @@ scale_mode = stretch
 
 [project]
 title = test_project
-
+dependencies#0 = https://github.com/defold/extension-spine/archive/refs/tags/3.6.3.zip

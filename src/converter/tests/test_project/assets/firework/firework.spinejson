@@ -1,0 +1,2045 @@
+{
+"skeleton": {
+	"hash": "hxMLv9iZKU8",
+	"spine": "4.2.33",
+	"x": -389.85,
+	"y": -170.61,
+	"width": 906.71,
+	"height": 368.94,
+	"fps": 26.4,
+	"images": "./Animations/Firework/Firework/images/",
+	"audio": "./audio"
+},
+"bones": [
+	{ "name": "root" },
+	{ "name": "f1", "parent": "root", "x": 339.5, "color": "fffc00ff" },
+	{ "name": "f2", "parent": "root", "x": -217.34, "y": 5.95, "color": "ff0000ff" },
+	{ "name": "f3", "parent": "root", "color": "0047ffff" },
+	{ "name": "f4", "parent": "f1", "x": 3.85, "y": 7.82, "color": "fffc00ff" },
+	{ "name": "f5", "parent": "f3", "x": 1.1, "y": 26.13, "color": "0047ffff" },
+	{ "name": "f6", "parent": "f2", "x": 0.86, "y": 18.11, "color": "ff0000ff" }
+],
+"slots": [
+	{ "name": "Firework_01", "bone": "f1", "attachment": "Firework_01" },
+	{ "name": "Firework_010", "bone": "root", "attachment": "Firework_01" },
+	{ "name": "Firework_02", "bone": "f1", "attachment": "Firework_02" },
+	{ "name": "Firework_011", "bone": "root", "attachment": "Firework_02" },
+	{ "name": "Firework_03", "bone": "f1", "attachment": "Firework_03" },
+	{ "name": "Firework_012", "bone": "root", "attachment": "Firework_03" },
+	{ "name": "Firework_04", "bone": "f1", "attachment": "Firework_04" },
+	{ "name": "Firework_013", "bone": "root", "attachment": "Firework_04" },
+	{ "name": "Firework_05", "bone": "f1", "attachment": "Firework_05" },
+	{ "name": "Firework_014", "bone": "root", "attachment": "Firework_05" },
+	{ "name": "Firework_06", "bone": "f1", "attachment": "Firework_06" },
+	{ "name": "Firework_015", "bone": "root", "attachment": "Firework_06" },
+	{ "name": "Firework_07", "bone": "f1", "attachment": "Firework_07" },
+	{ "name": "Firework_016", "bone": "root", "attachment": "Firework_07" },
+	{ "name": "Firework_08", "bone": "f1", "attachment": "Firework_08" },
+	{ "name": "Firework_017", "bone": "root", "attachment": "Firework_08" },
+	{ "name": "Firework_09", "bone": "f1", "attachment": "Firework_09" },
+	{ "name": "Firework_018", "bone": "root", "attachment": "Firework_09" },
+	{ "name": "Firework_10", "bone": "f1", "attachment": "Firework_10" },
+	{ "name": "Firework_31", "bone": "root", "attachment": "Firework_10" },
+	{ "name": "Firework_11", "bone": "f1", "attachment": "Firework_11" },
+	{ "name": "Firework_32", "bone": "root", "attachment": "Firework_11" },
+	{ "name": "Firework_12", "bone": "f1", "attachment": "Firework_12" },
+	{ "name": "Firework_33", "bone": "root", "attachment": "Firework_12" },
+	{ "name": "Firework_13", "bone": "f1", "attachment": "Firework_13" },
+	{ "name": "Firework_34", "bone": "root", "attachment": "Firework_13" },
+	{ "name": "Firework_14", "bone": "f1", "attachment": "Firework_14" },
+	{ "name": "Firework_35", "bone": "root", "attachment": "Firework_14" },
+	{ "name": "Firework_15", "bone": "f1", "attachment": "Firework_15" },
+	{ "name": "Firework_36", "bone": "root", "attachment": "Firework_15" },
+	{ "name": "Firework_16", "bone": "f1", "attachment": "Firework_16" },
+	{ "name": "Firework_37", "bone": "root", "attachment": "Firework_16" },
+	{ "name": "Firework_17", "bone": "f1", "attachment": "Firework_17" },
+	{ "name": "Firework_38", "bone": "root", "attachment": "Firework_17" },
+	{ "name": "Firework_18", "bone": "f1", "attachment": "Firework_18" },
+	{ "name": "Firework_39", "bone": "root", "attachment": "Firework_18" },
+	{ "name": "Firework_19", "bone": "f1", "attachment": "Firework_19" },
+	{ "name": "Firework_40", "bone": "root", "attachment": "Firework_19" },
+	{ "name": "Firework_20", "bone": "f1", "attachment": "Firework_20" },
+	{ "name": "Firework_41", "bone": "root", "attachment": "Firework_20" },
+	{ "name": "Firework_21", "bone": "f1", "attachment": "Firework_21" },
+	{ "name": "Firework_42", "bone": "root", "attachment": "Firework_21" },
+	{ "name": "Firework_22", "bone": "f1", "attachment": "Firework_22" },
+	{ "name": "Firework_43", "bone": "root", "attachment": "Firework_22" },
+	{ "name": "Firework_23", "bone": "f1", "attachment": "Firework_23" },
+	{ "name": "Firework_44", "bone": "root", "attachment": "Firework_23" },
+	{ "name": "Firework_24", "bone": "f1", "attachment": "Firework_24" },
+	{ "name": "Firework_45", "bone": "root", "attachment": "Firework_24" },
+	{ "name": "Firework_25", "bone": "f1", "attachment": "Firework_25" },
+	{ "name": "Firework_46", "bone": "root", "attachment": "Firework_25" },
+	{ "name": "Firework_26", "bone": "f1", "attachment": "Firework_26" },
+	{ "name": "Firework_47", "bone": "root", "attachment": "Firework_26" },
+	{ "name": "Firework_27", "bone": "f1", "attachment": "Firework_27" },
+	{ "name": "Firework_48", "bone": "root", "attachment": "Firework_27" },
+	{ "name": "Firework_28", "bone": "f1", "attachment": "Firework_28" },
+	{ "name": "Firework_49", "bone": "root", "attachment": "Firework_28" },
+	{ "name": "Firework_29", "bone": "f1", "attachment": "Firework_29" },
+	{ "name": "Firework_50", "bone": "root", "attachment": "Firework_29" },
+	{ "name": "Firework_30", "bone": "f1", "attachment": "Firework_30" },
+	{ "name": "Firework_51", "bone": "root", "attachment": "Firework_30" },
+	{ "name": "f1", "bone": "f3", "attachment": "Firework_01" },
+	{ "name": "f2", "bone": "f3", "attachment": "Firework_02" },
+	{ "name": "f3", "bone": "f3", "attachment": "Firework_03" },
+	{ "name": "f4", "bone": "f3", "attachment": "Firework_04" },
+	{ "name": "f5", "bone": "f3", "attachment": "Firework_05" },
+	{ "name": "f6", "bone": "f3", "attachment": "Firework_06" },
+	{ "name": "f7", "bone": "f3", "attachment": "Firework_07" },
+	{ "name": "f8", "bone": "f3", "attachment": "Firework_08" },
+	{ "name": "f9", "bone": "f3", "attachment": "Firework_09" },
+	{ "name": "f10", "bone": "f3", "attachment": "Firework_10" },
+	{ "name": "f11", "bone": "f3", "attachment": "Firework_11" },
+	{ "name": "f12", "bone": "f3", "attachment": "Firework_12" },
+	{ "name": "f13", "bone": "f3", "attachment": "Firework_13" },
+	{ "name": "f14", "bone": "f3", "attachment": "Firework_14" },
+	{ "name": "f15", "bone": "f3", "attachment": "Firework_15" },
+	{ "name": "f16", "bone": "f3", "attachment": "Firework_16" },
+	{ "name": "f17", "bone": "f3", "attachment": "Firework_17" },
+	{ "name": "f18", "bone": "f3", "attachment": "Firework_18" },
+	{ "name": "f19", "bone": "f3", "attachment": "Firework_19" },
+	{ "name": "f20", "bone": "f3", "attachment": "Firework_20" },
+	{ "name": "f21", "bone": "f3", "attachment": "Firework_21" },
+	{ "name": "f22", "bone": "f3", "attachment": "Firework_22" },
+	{ "name": "f23", "bone": "f3", "attachment": "Firework_23" },
+	{ "name": "f24", "bone": "f3", "attachment": "Firework_24" },
+	{ "name": "f25", "bone": "f3", "attachment": "Firework_25" },
+	{ "name": "f26", "bone": "f3", "attachment": "Firework_26" },
+	{ "name": "f27", "bone": "f3", "attachment": "Firework_27" },
+	{ "name": "f28", "bone": "f3", "attachment": "Firework_28" },
+	{ "name": "f29", "bone": "f3", "attachment": "Firework_29" },
+	{ "name": "f30", "bone": "f3", "attachment": "Firework_30" },
+	{ "name": "ball_2_big", "bone": "f1", "attachment": "ball_2_big" },
+	{ "name": "ball_2_big2", "bone": "f3", "attachment": "ball_2_big" },
+	{ "name": "ball_2_big3", "bone": "root", "attachment": "ball_2_big" }
+],
+"skins": [
+	{
+		"name": "default",
+		"attachments": {
+			"ball_2_big": {
+				"ball_2_big": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 4, 173.51, -164.73, 1, 1, 4, -180.49, -164.73, 1, 1, 4, -180.49, 189.27, 1, 1, 4, 173.51, 189.27, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 354,
+					"height": 354
+				}
+			},
+			"ball_2_big2": {
+				"ball_2_big": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 5, 170.31, -181.8, 1, 1, 5, -183.69, -181.8, 1, 1, 5, -183.69, 172.2, 1, 1, 5, 170.31, 172.2, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 354,
+					"height": 354
+				}
+			},
+			"ball_2_big3": {
+				"ball_2_big": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 6, 180.63, -194.67, 1, 1, 6, -173.37, -194.67, 1, 1, 6, -173.37, 159.33, 1, 1, 6, 180.63, 159.33, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 354,
+					"height": 354
+				}
+			},
+			"f1": {
+				"Firework_01": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f2": {
+				"Firework_02": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f3": {
+				"Firework_03": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f4": {
+				"Firework_04": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f5": {
+				"Firework_05": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f6": {
+				"Firework_06": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f7": {
+				"Firework_07": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f8": {
+				"Firework_08": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f9": {
+				"Firework_09": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f10": {
+				"Firework_10": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f11": {
+				"Firework_11": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f12": {
+				"Firework_12": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f13": {
+				"Firework_13": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f14": {
+				"Firework_14": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f15": {
+				"Firework_15": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f16": {
+				"Firework_16": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f17": {
+				"Firework_17": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f18": {
+				"Firework_18": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f19": {
+				"Firework_19": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f20": {
+				"Firework_20": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f21": {
+				"Firework_21": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f22": {
+				"Firework_22": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f23": {
+				"Firework_23": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f24": {
+				"Firework_24": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f25": {
+				"Firework_25": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f26": {
+				"Firework_26": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f27": {
+				"Firework_27": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f28": {
+				"Firework_28": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f29": {
+				"Firework_29": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"f30": {
+				"Firework_30": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 3, 128, -128, 1, 1, 3, -128, -128, 1, 1, 3, -128, 128, 1, 1, 3, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_01": {
+				"Firework_01": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_02": {
+				"Firework_02": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_03": {
+				"Firework_03": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_04": {
+				"Firework_04": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_05": {
+				"Firework_05": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_06": {
+				"Firework_06": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_07": {
+				"Firework_07": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_08": {
+				"Firework_08": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_09": {
+				"Firework_09": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_10": {
+				"Firework_10": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_010": {
+				"Firework_01": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_11": {
+				"Firework_11": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_011": {
+				"Firework_02": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_12": {
+				"Firework_12": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_012": {
+				"Firework_03": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_13": {
+				"Firework_13": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_013": {
+				"Firework_04": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_14": {
+				"Firework_14": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_014": {
+				"Firework_05": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_15": {
+				"Firework_15": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_015": {
+				"Firework_06": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_16": {
+				"Firework_16": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_016": {
+				"Firework_07": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_17": {
+				"Firework_17": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_017": {
+				"Firework_08": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_18": {
+				"Firework_18": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_018": {
+				"Firework_09": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_19": {
+				"Firework_19": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_20": {
+				"Firework_20": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_21": {
+				"Firework_21": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_22": {
+				"Firework_22": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_23": {
+				"Firework_23": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_24": {
+				"Firework_24": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_25": {
+				"Firework_25": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_26": {
+				"Firework_26": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_27": {
+				"Firework_27": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_28": {
+				"Firework_28": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_29": {
+				"Firework_29": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_30": {
+				"Firework_30": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 2, 3, 1, 3, 0 ],
+					"vertices": [ 1, 1, 128, -128, 1, 1, 1, -128, -128, 1, 1, 1, -128, 128, 1, 1, 1, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_31": {
+				"Firework_10": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_32": {
+				"Firework_11": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_33": {
+				"Firework_12": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_34": {
+				"Firework_13": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_35": {
+				"Firework_14": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_36": {
+				"Firework_15": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_37": {
+				"Firework_16": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_38": {
+				"Firework_17": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_39": {
+				"Firework_18": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_40": {
+				"Firework_19": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_41": {
+				"Firework_20": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_42": {
+				"Firework_21": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_43": {
+				"Firework_22": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_44": {
+				"Firework_23": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_45": {
+				"Firework_24": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_46": {
+				"Firework_25": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_47": {
+				"Firework_26": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_48": {
+				"Firework_27": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_49": {
+				"Firework_28": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_50": {
+				"Firework_29": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			},
+			"Firework_51": {
+				"Firework_30": {
+					"type": "mesh",
+					"uvs": [ 1, 1, 0, 1, 0, 0, 1, 0 ],
+					"triangles": [ 1, 3, 0, 1, 2, 3 ],
+					"vertices": [ 1, 2, 128, -128, 1, 1, 2, -128, -128, 1, 1, 2, -128, 128, 1, 1, 2, 128, 128, 1 ],
+					"hull": 4,
+					"edges": [ 0, 2, 2, 4, 4, 6, 0, 6 ],
+					"width": 256,
+					"height": 256
+				}
+			}
+		}
+	}
+],
+"animations": {
+	"firework": {
+		"slots": {
+			"ball_2_big": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 0.1515, "color": "f9ffb000" },
+					{ "time": 0.4167, "color": "f9ffb052" },
+					{ "time": 1.1364, "color": "f9ffb000" }
+				]
+			},
+			"ball_2_big2": {
+				"rgba": [
+					{ "color": "ffffff00" },
+					{ "time": 0.6061, "color": "f2ff6f62" },
+					{ "time": 0.9848, "color": "f2ff6f00" }
+				]
+			},
+			"ball_2_big3": {
+				"rgba": [
+					{ "color": "ed5a5a00" },
+					{ "time": 0.6439, "color": "ed5a5a85" },
+					{ "time": 1.0985, "color": "ed5a5a00" }
+				]
+			},
+			"f1": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.1136, "color": "fcff6b00" },
+					{ "time": 0.1515, "color": "fcff6bff" },
+					{ "time": 0.1894, "color": "fcff6b00" }
+				]
+			},
+			"f2": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.1515, "color": "fcff6b00" },
+					{ "time": 0.1894, "color": "fcff6bff" },
+					{ "time": 0.2273, "color": "fcff6b00" }
+				]
+			},
+			"f3": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.1894, "color": "fcff6b00" },
+					{ "time": 0.2273, "color": "fcff6bff" },
+					{ "time": 0.2652, "color": "fcff6b00" }
+				]
+			},
+			"f4": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.2273, "color": "fcff6b00" },
+					{ "time": 0.2652, "color": "fcff6bff" },
+					{ "time": 0.303, "color": "fcff6b00" }
+				]
+			},
+			"f5": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.2652, "color": "fcff6b00" },
+					{ "time": 0.303, "color": "fcff6bff" },
+					{ "time": 0.3409, "color": "fcff6b00" }
+				]
+			},
+			"f6": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.303, "color": "fcff6b00" },
+					{ "time": 0.3409, "color": "fcff6bff" },
+					{ "time": 0.3788, "color": "fcff6b00" }
+				]
+			},
+			"f7": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.3409, "color": "fcff6b00" },
+					{ "time": 0.3788, "color": "fcff6bff" },
+					{ "time": 0.4167, "color": "fcff6b00" }
+				]
+			},
+			"f8": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.3788, "color": "fcff6b00" },
+					{ "time": 0.4167, "color": "fcff6bff" },
+					{ "time": 0.4545, "color": "fcff6b00" }
+				]
+			},
+			"f9": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.4167, "color": "fcff6b00" },
+					{ "time": 0.4545, "color": "fcff6bff" },
+					{ "time": 0.4924, "color": "fcff6b00" }
+				]
+			},
+			"f10": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.4545, "color": "fcff6b00" },
+					{ "time": 0.4924, "color": "fcff6bff" },
+					{ "time": 0.5303, "color": "fcff6b00" }
+				]
+			},
+			"f11": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.4924, "color": "fcff6b00" },
+					{ "time": 0.5303, "color": "fcff6bff" },
+					{ "time": 0.5682, "color": "fcff6b00" }
+				]
+			},
+			"f12": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.5303, "color": "fcff6b00" },
+					{ "time": 0.5682, "color": "fcff6bff" },
+					{ "time": 0.6061, "color": "fcff6b00" }
+				]
+			},
+			"f13": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.5682, "color": "fcff6b00" },
+					{ "time": 0.6061, "color": "fcff6bff" },
+					{ "time": 0.6439, "color": "fcff6b00" }
+				]
+			},
+			"f14": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.6061, "color": "fcff6b00" },
+					{ "time": 0.6439, "color": "fcff6bff" },
+					{ "time": 0.6818, "color": "fcff6b00" }
+				]
+			},
+			"f15": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.6439, "color": "fcff6b00" },
+					{ "time": 0.6818, "color": "fcff6bff" },
+					{ "time": 0.7197, "color": "fcff6b00" }
+				]
+			},
+			"f16": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.6818, "color": "fcff6b00" },
+					{ "time": 0.7197, "color": "fcff6bff" },
+					{ "time": 0.7576, "color": "fcff6b00" }
+				]
+			},
+			"f17": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.7197, "color": "fcff6b00" },
+					{ "time": 0.7576, "color": "fcff6bff" },
+					{ "time": 0.7955, "color": "fcff6b00" }
+				]
+			},
+			"f18": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.7576, "color": "fcff6b00" },
+					{ "time": 0.7955, "color": "fcff6bff" },
+					{ "time": 0.8333, "color": "fcff6b00" }
+				]
+			},
+			"f19": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.7955, "color": "fcff6b00" },
+					{ "time": 0.8333, "color": "fcff6bff" },
+					{ "time": 0.8712, "color": "fcff6b00" }
+				]
+			},
+			"f20": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.8333, "color": "fcff6b00" },
+					{ "time": 0.8712, "color": "fcff6bff" },
+					{ "time": 0.9091, "color": "fcff6b00" }
+				]
+			},
+			"f21": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.8712, "color": "fcff6b00" },
+					{ "time": 0.9091, "color": "fcff6bff" },
+					{ "time": 0.947, "color": "fcff6b00" }
+				]
+			},
+			"f22": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.9091, "color": "fcff6b00" },
+					{ "time": 0.947, "color": "fcff6bff" },
+					{ "time": 0.9848, "color": "fcff6b00" }
+				]
+			},
+			"f23": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.947, "color": "fcff6b00" },
+					{ "time": 0.9848, "color": "fcff6bff" },
+					{ "time": 1.0227, "color": "fcff6b00" }
+				]
+			},
+			"f24": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 0.9848, "color": "fcff6b00" },
+					{ "time": 1.0227, "color": "fcff6bff" },
+					{ "time": 1.0606, "color": "fcff6b00" }
+				]
+			},
+			"f25": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 1.0227, "color": "fcff6b00" },
+					{ "time": 1.0606, "color": "fcff6bff" },
+					{ "time": 1.0985, "color": "fcff6b00" }
+				]
+			},
+			"f26": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 1.0606, "color": "fcff6b00" },
+					{ "time": 1.0985, "color": "fcff6bff" },
+					{ "time": 1.1364, "color": "fcff6b00" }
+				]
+			},
+			"f27": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 1.0985, "color": "fcff6b00" },
+					{ "time": 1.1364, "color": "fcff6bff" },
+					{ "time": 1.1742, "color": "fcff6b00" }
+				]
+			},
+			"f28": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 1.1364, "color": "fcff6b00" },
+					{ "time": 1.1742, "color": "fcff6bff" },
+					{ "time": 1.2121, "color": "fcff6b00" }
+				]
+			},
+			"f29": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 1.1742, "color": "fcff6b00" },
+					{ "time": 1.2121, "color": "fcff6bff" },
+					{ "time": 1.25, "color": "fcff6b00" }
+				]
+			},
+			"f30": {
+				"rgba": [
+					{ "color": "fcff6b00", "curve": "stepped" },
+					{ "time": 1.2121, "color": "fcff6b00" },
+					{ "time": 1.25, "color": "fcff6bff" },
+					{ "time": 1.2879, "color": "fcff6b00" }
+				]
+			},
+			"Firework_01": {
+				"rgba": [
+					{ "color": "f0ff8b00" },
+					{ "time": 0.0379, "color": "f0ff8bff" },
+					{ "time": 0.0758, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_02": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.0379, "color": "f0ff8b00" },
+					{ "time": 0.0758, "color": "f0ff8bff" },
+					{ "time": 0.1136, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_03": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.0758, "color": "f0ff8b00" },
+					{ "time": 0.1136, "color": "f0ff8bff" },
+					{ "time": 0.1515, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_04": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.1136, "color": "f0ff8b00" },
+					{ "time": 0.1515, "color": "f0ff8bff" },
+					{ "time": 0.1894, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_05": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.1515, "color": "f0ff8b00" },
+					{ "time": 0.1894, "color": "f0ff8bff" },
+					{ "time": 0.2273, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_06": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.1894, "color": "f0ff8b00" },
+					{ "time": 0.2273, "color": "f0ff8bff" },
+					{ "time": 0.2652, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_07": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.2273, "color": "f0ff8b00" },
+					{ "time": 0.2652, "color": "f0ff8bff" },
+					{ "time": 0.303, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_08": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.2652, "color": "f0ff8b00" },
+					{ "time": 0.303, "color": "f0ff8bff" },
+					{ "time": 0.3409, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_09": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.303, "color": "f0ff8b00" },
+					{ "time": 0.3409, "color": "f0ff8bff" },
+					{ "time": 0.3788, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_10": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.3409, "color": "f0ff8b00" },
+					{ "time": 0.3788, "color": "f0ff8bff" },
+					{ "time": 0.4167, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_010": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.3409, "color": "fb404000" },
+					{ "time": 0.3788, "color": "fb4040ff" },
+					{ "time": 0.4167, "color": "fb404000" }
+				]
+			},
+			"Firework_11": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.3788, "color": "f0ff8b00" },
+					{ "time": 0.4167, "color": "f0ff8bff" },
+					{ "time": 0.4545, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_011": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.3788, "color": "fb404000" },
+					{ "time": 0.4167, "color": "fb4040ff" },
+					{ "time": 0.4545, "color": "fb404000" }
+				]
+			},
+			"Firework_12": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.4167, "color": "f0ff8b00" },
+					{ "time": 0.4545, "color": "f0ff8bff" },
+					{ "time": 0.4924, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_012": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.4167, "color": "fb404000" },
+					{ "time": 0.4545, "color": "fb4040ff" },
+					{ "time": 0.4924, "color": "fb404000" }
+				]
+			},
+			"Firework_13": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.4545, "color": "f0ff8b00" },
+					{ "time": 0.4924, "color": "f0ff8bff" },
+					{ "time": 0.5303, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_013": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.4545, "color": "fb404000" },
+					{ "time": 0.4924, "color": "fb4040ff" },
+					{ "time": 0.5303, "color": "fb404000" }
+				]
+			},
+			"Firework_14": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.4924, "color": "f0ff8b00" },
+					{ "time": 0.5303, "color": "f0ff8bff" },
+					{ "time": 0.5682, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_014": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.4924, "color": "fb404000" },
+					{ "time": 0.5303, "color": "fb4040ff" },
+					{ "time": 0.5682, "color": "fb404000" }
+				]
+			},
+			"Firework_15": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.5303, "color": "f0ff8b00" },
+					{ "time": 0.5682, "color": "f0ff8bff" },
+					{ "time": 0.6061, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_015": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.5303, "color": "fb404000" },
+					{ "time": 0.5682, "color": "fb4040ff" },
+					{ "time": 0.6061, "color": "fb404000" }
+				]
+			},
+			"Firework_16": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.5682, "color": "f0ff8b00" },
+					{ "time": 0.6061, "color": "f0ff8bff" },
+					{ "time": 0.6439, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_016": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.5682, "color": "fb404000" },
+					{ "time": 0.6061, "color": "fb4040ff" },
+					{ "time": 0.6439, "color": "fb404000" }
+				]
+			},
+			"Firework_17": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.6061, "color": "f0ff8b00" },
+					{ "time": 0.6439, "color": "f0ff8bff" },
+					{ "time": 0.6818, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_017": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.6061, "color": "fb404000" },
+					{ "time": 0.6439, "color": "fb4040ff" },
+					{ "time": 0.6818, "color": "fb404000" }
+				]
+			},
+			"Firework_18": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.6439, "color": "f0ff8b00" },
+					{ "time": 0.6818, "color": "f0ff8bff" },
+					{ "time": 0.7197, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_018": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.6439, "color": "fb404000" },
+					{ "time": 0.6818, "color": "fb4040ff" },
+					{ "time": 0.7197, "color": "fb404000" }
+				]
+			},
+			"Firework_19": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.6818, "color": "f0ff8b00" },
+					{ "time": 0.7197, "color": "f0ff8bff" },
+					{ "time": 0.7576, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_20": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.7197, "color": "f0ff8b00" },
+					{ "time": 0.7576, "color": "f0ff8bff" },
+					{ "time": 0.7955, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_21": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.7576, "color": "f0ff8b00" },
+					{ "time": 0.7955, "color": "f0ff8bff" },
+					{ "time": 0.8333, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_22": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.7955, "color": "f0ff8b00" },
+					{ "time": 0.8333, "color": "f0ff8bff" },
+					{ "time": 0.8712, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_23": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.8333, "color": "f0ff8b00" },
+					{ "time": 0.8712, "color": "f0ff8bff" },
+					{ "time": 0.9091, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_24": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.8712, "color": "f0ff8b00" },
+					{ "time": 0.9091, "color": "f0ff8bff" },
+					{ "time": 0.947, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_25": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.9091, "color": "f0ff8b00" },
+					{ "time": 0.947, "color": "f0ff8bff" },
+					{ "time": 0.9848, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_26": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.947, "color": "f0ff8b00" },
+					{ "time": 0.9848, "color": "f0ff8bff" },
+					{ "time": 1.0227, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_27": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 0.9848, "color": "f0ff8b00" },
+					{ "time": 1.0227, "color": "f0ff8bff" },
+					{ "time": 1.0606, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_28": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 1.0227, "color": "f0ff8b00" },
+					{ "time": 1.0606, "color": "f0ff8bff" },
+					{ "time": 1.0985, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_29": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 1.0606, "color": "f0ff8b00" },
+					{ "time": 1.0985, "color": "f0ff8bff" },
+					{ "time": 1.1364, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_30": {
+				"rgba": [
+					{ "color": "f0ff8b00", "curve": "stepped" },
+					{ "time": 1.0985, "color": "f0ff8b00" },
+					{ "time": 1.1364, "color": "f0ff8bff" },
+					{ "time": 1.1742, "color": "f0ff8b00" }
+				]
+			},
+			"Firework_31": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.6818, "color": "fb404000" },
+					{ "time": 0.7197, "color": "fb4040ff" },
+					{ "time": 0.7576, "color": "fb404000" }
+				]
+			},
+			"Firework_32": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.7197, "color": "fb404000" },
+					{ "time": 0.7576, "color": "fb4040ff" },
+					{ "time": 0.7955, "color": "fb404000" }
+				]
+			},
+			"Firework_33": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.7576, "color": "fb404000" },
+					{ "time": 0.7955, "color": "fb4040ff" },
+					{ "time": 0.8333, "color": "fb404000" }
+				]
+			},
+			"Firework_34": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.7955, "color": "fb404000" },
+					{ "time": 0.8333, "color": "fb4040ff" },
+					{ "time": 0.8712, "color": "fb404000" }
+				]
+			},
+			"Firework_35": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.8333, "color": "fb404000" },
+					{ "time": 0.8712, "color": "fb4040ff" },
+					{ "time": 0.9091, "color": "fb404000" }
+				]
+			},
+			"Firework_36": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.8712, "color": "fb404000" },
+					{ "time": 0.9091, "color": "fb4040ff" },
+					{ "time": 0.947, "color": "fb404000" }
+				]
+			},
+			"Firework_37": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.9091, "color": "fb404000" },
+					{ "time": 0.947, "color": "fb4040ff" },
+					{ "time": 0.9848, "color": "fb404000" }
+				]
+			},
+			"Firework_38": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.947, "color": "fb404000" },
+					{ "time": 0.9848, "color": "fb4040ff" },
+					{ "time": 1.0227, "color": "fb404000" }
+				]
+			},
+			"Firework_39": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 0.9848, "color": "fb404000" },
+					{ "time": 1.0227, "color": "fb4040ff" },
+					{ "time": 1.0606, "color": "fb404000" }
+				]
+			},
+			"Firework_40": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.0227, "color": "fb404000" },
+					{ "time": 1.0606, "color": "fb4040ff" },
+					{ "time": 1.0985, "color": "fb404000" }
+				]
+			},
+			"Firework_41": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.0606, "color": "fb404000" },
+					{ "time": 1.0985, "color": "fb4040ff" },
+					{ "time": 1.1364, "color": "fb404000" }
+				]
+			},
+			"Firework_42": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.0985, "color": "fb404000" },
+					{ "time": 1.1364, "color": "fb4040ff" },
+					{ "time": 1.1742, "color": "fb404000" }
+				]
+			},
+			"Firework_43": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.1364, "color": "fb404000" },
+					{ "time": 1.1742, "color": "fb4040ff" },
+					{ "time": 1.2121, "color": "fb404000" }
+				]
+			},
+			"Firework_44": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.1742, "color": "fb404000" },
+					{ "time": 1.2121, "color": "fb4040ff" },
+					{ "time": 1.25, "color": "fb404000" }
+				]
+			},
+			"Firework_45": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.2121, "color": "fb404000" },
+					{ "time": 1.25, "color": "fb4040ff" },
+					{ "time": 1.2879, "color": "fb404000" }
+				]
+			},
+			"Firework_46": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.25, "color": "fb404000" },
+					{ "time": 1.2879, "color": "fb4040ff" },
+					{ "time": 1.3258, "color": "fb404000" }
+				]
+			},
+			"Firework_47": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.2879, "color": "fb404000" },
+					{ "time": 1.3258, "color": "fb4040ff" },
+					{ "time": 1.3636, "color": "fb404000" }
+				]
+			},
+			"Firework_48": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.3258, "color": "fb404000" },
+					{ "time": 1.3636, "color": "fb4040ff" },
+					{ "time": 1.4015, "color": "fb404000" }
+				]
+			},
+			"Firework_49": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.3636, "color": "fb404000" },
+					{ "time": 1.4015, "color": "fb4040ff" },
+					{ "time": 1.4394, "color": "fb404000" }
+				]
+			},
+			"Firework_50": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.4015, "color": "fb404000" },
+					{ "time": 1.4394, "color": "fb4040ff" },
+					{ "time": 1.4773, "color": "fb404000" }
+				]
+			},
+			"Firework_51": {
+				"rgba": [
+					{ "color": "ff5c5c00" },
+					{ "time": 1.4394, "color": "fb404000" },
+					{ "time": 1.4773, "color": "fb4040ff" },
+					{ "time": 1.5152, "color": "fb404000" }
+				]
+			}
+		},
+		"bones": {
+			"f1": {
+				"rotate": [
+					{ "value": -18.52 }
+				],
+				"translate": [
+					{ "x": -11.3, "y": 913.53 }
+				],
+				"scale": [
+					{ "x": 0.899, "y": 0.899 },
+					{ "time": 1.1364, "x": 1.106, "y": 1.106 }
+				]
+			},
+			"f3": {
+				"rotate": [
+					{ "value": 25.73 }
+				],
+				"translate": [
+					{ "x": -432.17, "y": 827.02 }
+				],
+				"scale": [
+					{},
+					{ "time": 1.2879, "x": 1.594, "y": 1.594 }
+				]
+			},
+			"f2": {
+				"translate": [
+					{ "x": 179.02, "y": 1123.19 }
+				],
+				"scale": [
+					{ "x": 0.935, "y": 0.935 },
+					{ "time": 1.3258, "x": 1.672, "y": 1.672 }
+				]
+			},
+			"f4": {
+				"scale": [
+					{ "x": 0.199, "y": 0.199 },
+					{ "time": 0.5682, "x": 1.236, "y": 1.236 },
+					{ "time": 1.4015, "x": 0.324, "y": 0.324 }
+				]
+			},
+			"f5": {
+				"scale": [
+					{ "x": 0.264, "y": 0.264, "curve": "stepped" },
+					{ "time": 0.1894, "x": 0.264, "y": 0.264 },
+					{ "time": 0.5303, "x": 1.022, "y": 1.022 },
+					{ "time": 1.1742, "x": 0.427, "y": 0.427 }
+				]
+			},
+			"f6": {
+				"scale": [
+					{ "x": 0.351, "y": 0.351, "curve": "stepped" },
+					{ "time": 0.1894, "x": 0.351, "y": 0.351 },
+					{ "time": 0.6818, "x": 0.792, "y": 0.792 },
+					{ "time": 1.3636, "x": 0.291, "y": 0.291 }
+				]
+			}
+		}
+	}
+}
+}

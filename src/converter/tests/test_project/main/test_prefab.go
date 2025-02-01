@@ -45,6 +45,6 @@ embedded_components {
      
    } 
   type: "label"
-  data: "text: \"hello world\"\nfont: \"/assets/test.font\"\nsize { \n  x: 1000 \n  y: 100 \n  z: 0 \n  w: 1 \n   \n } \nscale { \n  x: 1 \n  y: 1 \n  z: 2 \n  w: 1 \n   \n } \ncolor { \n  x: 1 \n  y: 0 \n  z: 0 \n  w: 1 \n   \n } \noutline { \n  x: 1 \n  y: 1 \n  z: 1 \n  w: 1 \n   \n } \nshadow { \n  x: 0 \n  y: 0 \n  z: 0 \n  w: 1 \n   \n } \nleading: 0.7 \ntracking: 0 \npivot: 0 \nblend_mode: 0 \nline_break: true \nmaterial: \"/builtins/fonts/label-df.material\"\n"
+  data: "text: \"hello world\"\nfont: \"/assets/test.font\"\nsize { \n  x: 1000 \n  y: 100 \n  z: 0 \n  w: 1 \n   \n } \nscale { \n  x: 1 \n  y: 1 \n  z: 2 \n  w: 1 \n   \n } \ncolor { \n  x: 1 \n  y: 0 \n  z: 0 \n   \n } \noutline { \n  x: 1 \n  y: 1 \n  z: 1 \n   \n } \nshadow { \n  x: 0 \n  y: 0 \n  z: 0 \n   \n } \nleading: 0.7 \ntracking: 0 \npivot: 0 \nblend_mode: 0 \nline_break: true \nmaterial: \"/builtins/fonts/label-df.material\"\n"
    
  } 

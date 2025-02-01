@@ -1,5 +1,5 @@
 import { Type, Field, Root, Namespace } from 'protobufjs';
-import { Vector2, Vector3, Vector4 } from 'three';
+import { Vector3, Vector4 } from 'three';
 
 export enum DefoldGuiNodeType {
     TYPE_BOX = 0,
@@ -124,6 +124,7 @@ export interface IDefoldGui {
     fonts?: IDefoldFont[];
     textures?: IDefoldTexture[];
     material?: string;
+    resources?: IDefoldResource[];
 }
 
 export interface IDefoldGuiNode {
@@ -135,7 +136,7 @@ export interface IDefoldGuiNode {
     rotation?: Vector4;
     scale?: Vector4;
     size?: Vector4;
-    color?: Vector4;
+    color?: Vector3;
     blend_mode?: DefoldBlendMode;
     text?: string;
     texture?: string;
@@ -143,8 +144,8 @@ export interface IDefoldGuiNode {
     xanchor?: DefoldXAnchor;
     yanchor?: DefoldYAnchor;
     pivot?: DefoldPivot;
-    outline?: Vector4;
-    shadow?: Vector4;
+    outline?: Vector3;
+    shadow?: Vector3;
     line_break?: boolean;
     parent?: string;
     layer?: string;
@@ -160,6 +161,10 @@ export interface IDefoldGuiNode {
     text_leading?: number;
     text_tracking?: number;
     size_mode?: DefoldSizeMode;
+    spine_scene?: string;
+    spine_default_animation?: string;
+    spine_skin?: string;
+    // spine_node_child?: boolean;
 }
 
 export interface IDefoldAtlas {
@@ -173,6 +178,11 @@ export interface IDefoldAtlasImage {
 export interface IDefoldTexture {
     name: string;
     texture: string;
+}
+
+export interface IDefoldResource {
+    name: string;
+    path: string;
 }
 
 export interface IDefoldFont {
@@ -200,9 +210,9 @@ export interface IDefoldLabel {
     font: string;
     size: Vector4;
     scale: Vector4;
-    color: Vector4;
-    outline: Vector4;
-    shadow: Vector4;
+    color: Vector3;
+    outline: Vector3;
+    shadow: Vector3;
     leading: number;
     tracking: number;
     pivot: DefoldPivot;
@@ -231,6 +241,17 @@ export interface IDefoldCollectionProxy {
 export interface IDefoldFactory {
     prototype: string;
     load_dynamically?: boolean;
+}
+
+export interface IDefoldSpineScene {
+    spine_json: string;
+    atlas: string;
+}
+
+export interface IDefoldSpineModel {
+    spine_scene: string;
+    default_animation: string;
+    skin: string;
 }
 
 
@@ -364,6 +385,14 @@ export function encodeFont(t: IDefoldFontFile): string {
 
 export function encodeAtlas(t: IDefoldAtlas): string {
     return encode(t, root.lookupType("dmGameSystemDDF.Atlas"));
+}
+
+export function encodeSpineScene(t: IDefoldSpineScene): string {
+    return encode(t, root.lookupType("dmGameSystemDDF.SpineSceneDesc"));
+}
+
+export function encodeSpineModel(t: IDefoldSpineModel): string {
+    return encode(t, root.lookupType("dmGameSystemDDF.SpineModelDesc"));
 }
 
 export function encodeSound(t: IDefoldSound): string {

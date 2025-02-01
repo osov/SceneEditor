@@ -7,12 +7,15 @@ import {
     IFont,
     IGuiBox,
     IGuiNode,
+    IGuiSpine,
     IGuiText,
     ILabel,
     INodeEmpty,
     INodesList,
     IPrefab,
     ISound,
+    ISpineModel,
+    ISpineScene,
     ISprite,
     NodeData,
     NodeType,
@@ -46,7 +49,11 @@ import {
     encodeFactory,
     IDefoldEmbeddedComponent,
     DefoldSizeMode,
-    DefoldFontTextureFormat
+    DefoldFontTextureFormat,
+    encodeSpineScene,
+    IDefoldSpineScene,
+    encodeSpineModel,
+    IDefoldSpineModel
 } from "./defold_encoder";
 import { eulerToQuaternion, hexToRGB } from "../modules/utils";
 import { PivotX, PivotY } from "../render_engine/types";
@@ -57,7 +64,8 @@ export enum DefoldType {
     GO,
     GUI,
     ATLAS,
-    FONT
+    FONT,
+    SPINE
 }
 
 export interface DefoldData {
@@ -117,6 +125,14 @@ export function parseAtlas(data: IAtlas): DefoldData {
     };
 }
 
+export function parseSpineScene(data: ISpineScene): DefoldData {
+    return {
+        name: data.name,
+        type: DefoldType.SPINE,
+        data: encodeSpineScene(castSpine2DefoldSpineScene(data))
+    };
+}
+
 export function parseFont(data: IFont): DefoldData {
     return {
         name: data.font.split(".")[0],
@@ -164,6 +180,11 @@ function generateCollection(data: INodesList): string {
                 const lable_id = (node.data as ISprite).id;
                 const lable_instance = castLabel2DefoldGoLabel(node.data as ILabel, getGoChildrens(lable_id, data));
                 collection.embedded_instances.push(lable_instance);
+                break;
+            case NodeType.SPINE_MODEL:
+                const model_id = (node.data as ISpineModel).id;
+                const model_instance = castSpineModel2DefoldGoSpineModel(node.data as ISpineModel, getGoChildrens(model_id, data));
+                collection.embedded_instances.push(model_instance);
                 break;
             case NodeType.SOUND:
                 const sound_instance = castSound2DefoldGoSound(node.data as ISound);
@@ -213,6 +234,7 @@ function generateGui(data: INodesList): string {
     gui.nodes = [];
     gui.textures = [];
     gui.fonts = [];
+    gui.resources = [];
 
     for (const node of data.list) {
         switch (node.type) {
@@ -238,6 +260,17 @@ function generateGui(data: INodesList): string {
                     font: text_data.font,
                 });
                 break;
+            case NodeType.GUI_SPINE:
+                const spine_data = node.data as IGuiSpine;
+                const spine_node = castGuiSpine2DefoldGuiNode(spine_data);
+                spine_node.parent = getNodeBoxParent(spine_data.pid, data);
+                gui.nodes.push(spine_node);
+                gui.resources.push({
+                    name: spine_data.spine_scene.split(".")[0],
+                    path: spine_data.spine_scene
+                });
+                break;
+            // TODO: check duplicates of dependencies
         }
     }
 
@@ -281,6 +314,19 @@ function castLabel2DefoldGoLabel(data: ILabel, children?: string[]): IDefoldGo {
     };
 }
 
+function castSpineModel2DefoldGoSpineModel(data: ISpineModel, children?: string[]): IDefoldGo {
+    return {
+        id: data.name,
+        position: data.position,
+        rotation: eulerToQuaternion(data.rotation),
+        scale3: data.scale,
+        children,
+        data: encodePrototype({
+            embedded_components: [castSpineModel2DefoldEmbeddedComponent(data)]
+        })
+    };
+}
+
 function castSprite2DefoldSprite(data: ISprite): IDefoldSprite {
     return {
         textures: {
@@ -300,15 +346,23 @@ function castLabel2DefoldLabel(data: ILabel): IDefoldLabel {
         font: data.font.split(".")[0] + ".font",
         size: new Vector4(data.width, data.height),
         scale: new Vector4(data.scale.x, data.scale.y, data.scale.z),
-        color: castColor(data.color, 1),
-        outline: castColor(data.outline, 1),
-        shadow: castColor(data.shadow, 1),
+        color: castColor(data.color),
+        outline: castColor(data.outline),
+        shadow: castColor(data.shadow),
         leading: data.leading,
         tracking: 0,
         pivot: DefoldPivot.PIVOT_CENTER,
         blend_mode: DefoldBlendMode.BLEND_MODE_ALPHA,
         line_break: data.line_break,
         material: "/builtins/fonts/label-df.material"
+    };
+}
+
+function castSpineModel2DefoldSpineModel(data: ISpineModel): IDefoldSpineModel {
+    return {
+        spine_scene: data.spine_scene,
+        default_animation: data.default_animation,
+        skin: data.skin
     };
 }
 
@@ -377,6 +431,7 @@ function castGuiBox2DefoldGuiNode(data: IGuiBox): IDefoldGuiNode {
         scale: new Vector4(data.scale.x, data.scale.y, data.scale.z),
         size_mode: DefoldSizeMode.SIZE_MODE_MANUAL,
         size: new Vector4(data.width, data.height),
+        color: castColor(data.color),
         enabled: data.enabled,
         visible: data.visible,
         texture: data.atlas && data.texture ? data.atlas.split(".atlas")[0] + `/${data.texture}` : undefined,
@@ -395,8 +450,11 @@ function castGuiText2DefoldGuiNode(data: IGuiText): IDefoldGuiNode {
         font: data.font.split(".")[0],
         line_break: data.line_break,
         text_leading: data.leading,
-        outline: data.outline ? castColor(data.outline, data.outline_alpha ? data.outline_alpha : 1) : undefined,
-        shadow: data.shadow ? castColor(data.shadow, data.shadow_alpha ? data.shadow_alpha : 1) : undefined,
+        color: data.color ? castColor(data.color) : undefined,
+        outline: data.outline ? castColor(data.outline) : undefined,
+        outline_alpha: data.outline_alpha,
+        shadow: data.shadow ? castColor(data.shadow) : undefined,
+        shadow_alpha: data.shadow_alpha,
         position: new Vector4(data.position.x, data.position.y, data.position.z),
         rotation: new Vector4(data.rotation.x, data.rotation.y, data.rotation.z),
         scale: new Vector4(data.scale.x, data.scale.y, data.scale.z),
@@ -405,6 +463,25 @@ function castGuiText2DefoldGuiNode(data: IGuiText): IDefoldGuiNode {
         visible: data.visible,
         alpha: data.alpha,
         pivot: castPivot(data.pivot)
+    };
+}
+
+function castGuiSpine2DefoldGuiNode(data: IGuiSpine): IDefoldGuiNode {
+    return {
+        id: data.name,
+        type: DefoldGuiNodeType.TYPE_SPINE,
+        position: new Vector4(data.position.x, data.position.y, data.position.z),
+        rotation: new Vector4(data.rotation.x, data.rotation.y, data.rotation.z),
+        scale: new Vector4(data.scale.x, data.scale.y, data.scale.z),
+        color: castColor(data.color),
+        size: new Vector4(data.width, data.height),
+        enabled: data.enabled,
+        visible: data.visible,
+        alpha: data.alpha,
+        pivot: castPivot(data.pivot),
+        spine_scene: data.spine_scene.split(".")[0],
+        spine_default_animation: data.default_animation,
+        spine_skin: data.skin
     };
 }
 
@@ -444,9 +521,9 @@ function castPivot(data: number[]): DefoldPivot {
     return DefoldPivot.PIVOT_CENTER;
 }
 
-function castColor(hex_rgb: string, alpha: number): Vector4 {
+function castColor(hex_rgb: string): Vector3 {
     const color = hexToRGB(hex_rgb);
-    return new Vector4(color.x, color.y, color.z, alpha);
+    return new Vector3(color.x, color.y, color.z);
 }
 
 function castAtlas2DefoldAtlas(data: IAtlas): IDefoldAtlas {
@@ -456,6 +533,13 @@ function castAtlas2DefoldAtlas(data: IAtlas): IDefoldAtlas {
         atlas.images.push({ image });
     }
     return atlas;
+}
+
+function castSpine2DefoldSpineScene(data: ISpineScene): IDefoldSpineScene {
+    return {
+        spine_json: data.json,
+        atlas: data.atlas
+    };
 }
 
 function castPrefab2DefoldProtorype(prefab: IPrefab): IDefoldPrototype {
@@ -497,6 +581,17 @@ function castLabel2DefoldEmbeddedComponent(label: ILabel, with_transform = false
         scale: with_transform ? label.scale : new Vector3(1, 1, 1),
         type: "label",
         data: encodeLabel(castLabel2DefoldLabel(label))
+    };
+}
+
+function castSpineModel2DefoldEmbeddedComponent(spine_model: ISpineModel, with_transform = false): IDefoldEmbeddedComponent {
+    return {
+        id: spine_model.name,
+        position: with_transform ? spine_model.position : new Vector3(),
+        rotation: with_transform ? eulerToQuaternion(spine_model.rotation) : new Vector4(),
+        scale: with_transform ? spine_model.scale : new Vector3(1, 1, 1),
+        type: "spinemodel",
+        data: encodeSpineModel(castSpineModel2DefoldSpineModel(spine_model))
     };
 }
 

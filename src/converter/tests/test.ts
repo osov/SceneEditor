@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import { Vector3 } from "three";
-import { ExtDependenceType, NodeType, PrefabComponentType } from "../../render_engine/convert_types";
-import { DefoldType, parseAtlas, parseFont, parsePrefab, parseScene } from "../scene_parser";
+import { ExtDependenceType, ISpineModel, NodeType, PrefabComponentType } from "../../render_engine/convert_types";
+import { DefoldType, parseAtlas, parseFont, parsePrefab, parseScene, parseSpineScene } from "../scene_parser";
 
 const result = parseScene({
     name: "/main/main",
@@ -153,6 +153,7 @@ const result = parseScene({
                 font: "/assets/test.ttf",
                 line_break: true,
                 leading: 0.5,
+                color: "#FF0000",
                 outline: "#FFFFFF",
                 outline_alpha: 1,
                 shadow: "#FFFFFF",
@@ -161,6 +162,28 @@ const result = parseScene({
                 enabled: true,
                 alpha: 1,
                 pivot: [0, 1]
+            }
+        },
+        {
+            type: NodeType.GUI_SPINE,
+            data: {
+                id: 10,
+                pid: 4,
+                name: "firework_gui",
+                position: new Vector3(0, 200, 0),
+                rotation: new Vector3(0, 0, 0),
+                scale: new Vector3(1, 1, 1),
+                width: 300,
+                height: 100,
+                color: "#FFFFFF",
+                spine_scene: "/assets/firework/firework.spinescene",
+                default_animation: "firework",
+                skin: "",
+                stencil: false,
+                visible: false,
+                enabled: true,
+                alpha: 1,
+                pivot: [1, -1]
             }
         },
         {
@@ -196,6 +219,20 @@ const result = parseScene({
                 name: "test_collection_factory",
                 type: ExtDependenceType.COLLECTION_FACTORY,
                 path: "/collections/test_collection.scene"
+            }
+        },
+        {
+            type: NodeType.SPINE_MODEL,
+            data: {
+                id: 9,
+                pid: 0,
+                name: "firework_model",
+                position: new Vector3(0, 200, 0),
+                rotation: new Vector3(0, 0, 0),
+                scale: new Vector3(1, 1, 1),
+                spine_scene: "/assets/firework/firework.spinescene",
+                default_animation: "firework",
+                skin: ""
             }
         }
     ]
@@ -252,6 +289,50 @@ result.push(parseAtlas({
         "/assets/test.png",
         "/assets/subdir/test2.png"
     ]
+}));
+
+result.push(parseAtlas({
+    name: "assets/firework/firework",
+    images: [
+        "/assets/firework/images/ball_2_big.png",
+        "/assets/firework/images/Firework_01.png",
+        "/assets/firework/images/Firework_02.png",
+        "/assets/firework/images/Firework_03.png",
+        "/assets/firework/images/Firework_04.png",
+        "/assets/firework/images/Firework_05.png",
+        "/assets/firework/images/Firework_06.png",
+        "/assets/firework/images/Firework_07.png",
+        "/assets/firework/images/Firework_08.png",
+        "/assets/firework/images/Firework_09.png",
+        "/assets/firework/images/Firework_10.png",
+        "/assets/firework/images/Firework_11.png",
+        "/assets/firework/images/Firework_12.png",
+        "/assets/firework/images/Firework_13.png",
+        "/assets/firework/images/Firework_14.png",
+        "/assets/firework/images/Firework_15.png",
+        "/assets/firework/images/Firework_16.png",
+        "/assets/firework/images/Firework_17.png",
+        "/assets/firework/images/Firework_18.png",
+        "/assets/firework/images/Firework_19.png",
+        "/assets/firework/images/Firework_20.png",
+        "/assets/firework/images/Firework_21.png",
+        "/assets/firework/images/Firework_22.png",
+        "/assets/firework/images/Firework_23.png",
+        "/assets/firework/images/Firework_24.png",
+        "/assets/firework/images/Firework_25.png",
+        "/assets/firework/images/Firework_26.png",
+        "/assets/firework/images/Firework_27.png",
+        "/assets/firework/images/Firework_28.png",
+        "/assets/firework/images/Firework_29.png",
+        "/assets/firework/images/Firework_30.png",
+    ]
+}));
+
+result.push(parseSpineScene({
+    name: "assets/firework/firework",
+    json: "/assets/firework/firework.spinejson",
+    atlas: "/assets/firework/firework.atlas"
+
 }));
 
 result.push(parseFont({
@@ -312,6 +393,12 @@ for (const file of result) {
             fs.writeFile(`${__dirname}/test_project/${file.name}.font`, file.data, (err: NodeJS.ErrnoException | null) => {
                 if (err) console.error(err);
                 else console.log(`Succeful created ${file.name}.font`);
+            });
+            break;
+        case DefoldType.SPINE:
+            fs.writeFile(`${__dirname}/test_project/${file.name}.spinescene`, file.data, (err: NodeJS.ErrnoException | null) => {
+                if (err) console.error(err);
+                else console.log(`Succeful created ${file.name}.spinescene`);
             });
             break;
     }

@@ -6,6 +6,7 @@ export enum NodeType {
     SPRITE,
     LABEL,
     SOUND,
+    SPINE_MODEL,
     SCRIPT,
     FACTORY,
     COLLECTION_PROXY,
@@ -13,7 +14,8 @@ export enum NodeType {
     COLLECTION,
     GUI,
     GUI_BOX,
-    GUI_TEXT
+    GUI_TEXT,
+    GUI_SPINE
 }
 
 // для создания данных коллекции
@@ -27,7 +29,7 @@ export interface NodeData {
     data: NodeDataType;
 }
 
-export type NodeDataType = INodesList | INodeEmpty | ISprite | ILabel | ISound | IGui | IGuiNode | IGuiBox | IGuiText | IExtDependencies;
+export type NodeDataType = INodesList | INodeEmpty | ISprite | ILabel | ISpineModel | ISound | IGui | IGuiNode | IGuiBox | IGuiText | IGuiSpine | IExtDependencies;
 
 /*
     type - варианты - gui, gui_box, gui_text, sprite, label, go_empty(INodeEmpty), sound, [script, factory, collection_factory, collection_proxy], 
@@ -69,13 +71,14 @@ export interface IGui {
 export interface IGuiNode extends INodeBase {
     enabled: boolean;
     visible: boolean;
+    color: string; // hex формат #RRGGBB
     alpha: number; // 0..1
     pivot: number[]; // массив 2х чисел
 }
 
 export interface IGuiBox extends IGuiNode {
-    texture?: string;
-    atlas?: string;
+    texture?: string; // имя изображения в атласе
+    atlas?: string; // путь до .atlas
     slice_width: number;
     slice_height: number;
     stencil: boolean;
@@ -83,7 +86,7 @@ export interface IGuiBox extends IGuiNode {
 
 export interface IGuiText extends IGuiNode {
     text: string;
-    font: string;
+    font: string; // путь до .ttf
     line_break: boolean;
     leading?: number;
     outline?: string; // hex формат #RRGGBB
@@ -92,9 +95,15 @@ export interface IGuiText extends IGuiNode {
     shadow_alpha?: number; // 0..1
 }
 
+export interface IGuiSpine extends IGuiNode {
+    spine_scene: string;
+    default_animation: string;
+    skin: string;
+}
+
 export interface ISound {
     name: string;
-    path: string;
+    path: string; // путь до .ogg
     loop: boolean;
     group: string;
     gain: number;
@@ -103,8 +112,8 @@ export interface ISound {
 }
 
 export interface ISprite extends INodeBase {
-    texture: string;
-    atlas: string;
+    texture: string; // имя изображения в атласе
+    atlas: string; // путь до .atlas
     slice_width: number;
     slice_height: number;
     // важное замечание, тк тут есть переданное свойство color то чтобы не разбивать батчинг будем потом использовать вертексные атрибуты https://defold.com/examples/material/vertexcolor/
@@ -119,6 +128,12 @@ export interface ILabel extends INodeBase {
     shadow: string; // hex формат #RRGGBB
     leading: number;
     // материал должен быть label-df
+}
+
+export interface ISpineModel extends INodeEmpty {
+    spine_scene: string;
+    default_animation: string;
+    skin: string;
 }
 
 export enum PrefabComponentType {
@@ -147,12 +162,12 @@ export enum ExtDependenceType {
 export interface IExtDependencies {
     name: string;
     type: ExtDependenceType;
-    path: string;
+    path: string; // путь до .scene или .go
 }
 
 export interface IAtlas {
     name: string;
-    images: string[];
+    images: string[]; // пути до пнгшек
 }
 
 export interface IFont {
@@ -165,6 +180,12 @@ export interface IFont {
     shadow_alpha?: number;
     shadow_blur?: number;
     alpha?: number;
+}
+
+export interface ISpineScene {
+    name: string;
+    json: string; // путь до .spinejson
+    atlas: string; // путь до .atlas
 }
 
 /*
@@ -181,5 +202,3 @@ export interface IFont {
 - если stencil = true, то задает Clipping Mode = Stencil
 
 */
-
-

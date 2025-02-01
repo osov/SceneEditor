@@ -40,10 +40,6 @@
         :scene
       ]
       [
-        "/main/test_prefab.go"
-        :scene
-      ]
-      [
         "/main/test.atlas"
         :scene
       ]
@@ -68,15 +64,7 @@
         :scene
       ]
       [
-        "/main/main.collection"
-        :scene
-      ]
-      [
         "/assets/test.font"
-        :scene
-      ]
-      [
-        "/assets/test.atlas"
         :scene
       ]
       [
@@ -85,6 +73,30 @@
       ]
       [
         "/collections/test_other_scene.collection"
+        :scene
+      ]
+      [
+        "/main/test_prefab.go"
+        :scene
+      ]
+      [
+        "/assets/test2.atlas"
+        :scene
+      ]
+      [
+        "/defold-spine/assets/template/template.spinescene"
+        :scene
+      ]
+      [
+        "/assets/test.spinescene"
+        :scene
+      ]
+      [
+        "/assets/test.atlas"
+        :scene
+      ]
+      [
+        "/main/main.collection"
         :scene
       ]
       [
