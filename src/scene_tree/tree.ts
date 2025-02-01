@@ -44,6 +44,7 @@ interface Contexts {
     let currentSceneName:string = defaultList[0].name ? defaultList[0].name : "root";
 
     const divTree:any = document.querySelector('#wr_tree');
+    let _is_mousedown: boolean = false;
     let treeItem:any = null;
     let currentDroppable:any = null;
     let itemDrag:any = null;
@@ -256,16 +257,14 @@ interface Contexts {
     function onMouseDown(event:any) {
         // event.preventDefault();
         if(event.button === 0){
-
-            setSelected(event);
+            _is_mousedown = true;
     
-            startY = event.clientY;
+            startY = event.offset_y;
             treeItem = event.target.closest('.tree__item');
-            
             if (treeItem) {
                 ddVisible = true;
                 itemDrag = getItemObj(treeItem);
-                console.log({itemDrag});
+                log({itemDrag});
               
                 if (itemDrag?.no_drag === true) {
                     treeItem = null;
@@ -285,16 +284,15 @@ interface Contexts {
     function onMouseMove(event:any) {
         // event.preventDefault();
         // event.stopPropagation();
-    
-        if(event.button === 0){
+        if(_is_mousedown) {
             
             // if (event.target.closest('.card.pos')) {  // с таким вариантом, курсор при быстром движении уходит за пределы карты 
             if (treeItem) {
-                moveAt(event.pageX, event.pageY);
+                moveAt(event.offset_x, event.offset_y);
                 myScrollTo(divTree, startY, event);
 
-                toggleCurrentBox(event.target.closest('.tree__item'), event.pageX, event.pageY);
-                switchClassItem(event.target.closest('.tree__item'), event.pageX, event.pageY);
+                toggleCurrentBox(event.target.closest('.tree__item'));
+                switchClassItem(event.target.closest('.tree__item'), event.offset_x, event.offset_y);
             }
         }
     }
@@ -303,20 +301,20 @@ interface Contexts {
         // event.preventDefault(); // иногда отключается плавное сворачивание ...
         // mousedown = false;
         // setTimeout(()=>movement = false, 10);
-        
         if(event.button === 0) {
+            _is_mousedown = false;
+            setSelected(event);
 
             if(!itemDrag || !itemDrop) {
                 myClear();
                 return; 
             }
-
-            toggleCurrentBox(event.target.closest('.tree__item'), event.pageX, event.pageY);
-            switchClassItem(event.target.closest('.tree__item'), event.pageX, event.pageY);
+            toggleCurrentBox(event.target.closest('.tree__item'));
+            switchClassItem(event.target.closest('.tree__item'), event.offset_x, event.offset_y);
 
             if (event.target.closest('.tree__item') && currentDroppable) {
 
-                const posInItem = getPosMouseInBlock(event.target.closest('.tree__item'), event.pageX, event.pageY);
+                const posInItem = getPosMouseInBlock(event.target.closest('.tree__item'), event.offset_x, event.offset_y);
                 if(!posInItem) {
                     myClear();
                     return;
@@ -367,9 +365,9 @@ interface Contexts {
         const tree_div_height:any = block?.clientHeight;   // Высота области для прокрутки
         const tree_height:any = block.querySelector('.tree')?.clientHeight;   // Высота содержимого
         
-        const currentY = event.clientY;
+        const currentY = event.offset_y;
         const direction = currentY < startY ? -1 : 1;
-    
+        
         if (currentY < tree_div_height) {
             block.scrollBy(0, direction * scrollSpeed);
         } else if (currentY > tree_height - tree_div_height) {
@@ -479,7 +477,7 @@ interface Contexts {
         return false;
     }
     
-    function toggleCurrentBox(droppableBelow:any, pageX: number, pageY: number) {
+    function toggleCurrentBox(droppableBelow:any) {
         
         // если элемент есть, сравниваем с текущим
         if (currentDroppable != droppableBelow) {
@@ -657,10 +655,6 @@ interface Contexts {
             btn.addEventListener('click', (event: Event) => {
                 // event.preventDefault();
                 // event.stopPropagation();
-                log('click');
-                // SceneManager.make_graph();
-                // SYS_GRAPH_SELECTED ([55])
-                // SceneManager.make_graph();
 
                 const li = (btn as HTMLElement).closest("li");
                 if(li === null) return;
@@ -730,25 +724,29 @@ interface Contexts {
 
         // скрыть/раскрыть дерево
         treeBtnInit();
-
-        const menuItems: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item');
-        // let draggedItem: HTMLElement | null = null;
-        menuItems.forEach(item => {
-            item.addEventListener('mousedown', onMouseDown, false);
-            item.addEventListener('mousemove', onMouseMove, false);
-            item.addEventListener('mouseup', onMouseUp, false);
-        });
     
-    }
-
-    // // ********************** 0137 ***************************
+    }   
+    
+    
     // document.addEventListener('mousedown', onMouseDown, false);
-    // document.addEventListener('mousemove', onMouseMove, false);
-    // document.addEventListener('mouseup', onMouseUp, false);
-    // // ********************** 0137 ***************************
+    EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown );
+    EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove );
+    EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp );
     
+    
+    // window.addEventListener('click', (event: any) => {
+    EventBus.on('SYS_INPUT_POINTER_UP', (event) => {
+        // show/hide block menu
+        const btn_menu = event.target.closest(".btn_menu");
+        if (btn_menu) {
+            const menu_section = btn_menu.closest(".menu_section");
+            menu_section?.classList.toggle("active");
+        }
+    });
 
-    renderTree();   
+
+    
+    renderTree(); 
 
     return { renderTree };
     

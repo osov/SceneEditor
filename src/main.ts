@@ -2,7 +2,6 @@ import '@/assets/css/style.css'
 import { register_manager } from "./modules/Manager";
 import { register_engine } from './render_engine/engine';
 import { run_debug_scene } from './test_scene';
-import { initButtons } from './scene_tree/buttons';
 import { register_tree_control } from './scene_tree/tree';
 import { register_select_control } from './controls/SelectControl';
 import { register_camera_control } from './controls/CameraContol';
@@ -33,5 +32,4 @@ register_history_control();
 
 await run_debug_scene();
 
-initButtons();
 register_tree_control();
