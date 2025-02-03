@@ -180,7 +180,7 @@ const result = parseScene({
                 default_animation: "firework",
                 skin: "",
                 stencil: false,
-                visible: false,
+                visible: true,
                 enabled: true,
                 alpha: 1,
                 pivot: [1, -1]
@@ -202,7 +202,7 @@ const result = parseScene({
                 default_animation: "idle",
                 skin: "",
                 stencil: false,
-                visible: false,
+                visible: true,
                 enabled: true,
                 alpha: 1,
                 pivot: [1, -1]

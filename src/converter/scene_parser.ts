@@ -53,7 +53,8 @@ import {
     encodeSpineScene,
     IDefoldSpineScene,
     encodeSpineModel,
-    IDefoldSpineModel
+    IDefoldSpineModel,
+    IDefoldResource
 } from "./defold_encoder";
 import { eulerToQuaternion, hexToRGB } from "../modules/utils";
 import { PivotX, PivotY } from "../render_engine/types";
@@ -166,6 +167,10 @@ function generateCollection(data: INodesList): string {
                 const collection_instance = castNodeList2DefoldCollection(node.data as INodesList);
                 collection.collection_instances.push(collection_instance);
                 break;
+            case NodeType.GUI:
+                const ui_instance = castGui2DefoldGo(node.data as IGuiNode);
+                collection.embedded_instances.push(ui_instance);
+                break;
             case NodeType.GO:
                 const go_id = (node.data as INodeEmpty).id;
                 const go_instance = castNodeEmpty2DefoldGo(node.data as INodeEmpty, getGoChildrens(go_id, data));
@@ -244,8 +249,11 @@ function generateGui(data: INodesList): string {
                 box_node.parent = getNodeBoxParent(box_data.pid, data);
                 gui.nodes.push(box_node);
                 if (box_data.atlas) {
+                    const box_node_name = box_data.atlas.split(".")[0];
+                    if (hasDependency(gui, box_node_name))
+                        continue;
                     gui.textures.push({
-                        name: box_data.atlas.split(".")[0],
+                        name: getNameFromPath(box_node_name),
                         texture: box_data.atlas
                     });
                 }
@@ -255,8 +263,11 @@ function generateGui(data: INodesList): string {
                 const text_node = castGuiText2DefoldGuiNode(text_data);
                 text_node.parent = getNodeBoxParent(text_data.pid, data);
                 gui.nodes.push(text_node);
+                const text_node_name = text_data.font.split(".")[0];
+                if (hasDependency(gui, text_node_name))
+                    continue;
                 gui.fonts.push({
-                    name: text_data.font.split(".")[0],
+                    name: getNameFromPath(text_node_name),
                     font: text_data.font,
                 });
                 break;
@@ -265,16 +276,30 @@ function generateGui(data: INodesList): string {
                 const spine_node = castGuiSpine2DefoldGuiNode(spine_data);
                 spine_node.parent = getNodeBoxParent(spine_data.pid, data);
                 gui.nodes.push(spine_node);
+                const spine_node_name = spine_data.spine_scene.split(".")[0];
+                if (hasDependency(gui, spine_node_name))
+                    continue;
                 gui.resources.push({
-                    name: spine_data.spine_scene.split(".")[0],
+                    name: getNameFromPath(spine_node_name),
                     path: spine_data.spine_scene
                 });
                 break;
-            // TODO: check duplicates of dependencies
         }
     }
 
     return encodeGui(gui);
+}
+
+function hasDependency(gui: IDefoldGui, name: string): boolean {
+    if (!gui.resources)
+        return false;
+
+    for (const res of gui.resources) {
+        if (res.name == name)
+            return true;
+    }
+
+    return false;
 }
 
 function castNodeEmpty2DefoldGo(data: INodeEmpty, children?: string[]): IDefoldGo {
@@ -285,6 +310,22 @@ function castNodeEmpty2DefoldGo(data: INodeEmpty, children?: string[]): IDefoldG
         scale3: data.scale,
         children,
         data: ""
+    };
+}
+
+function castGui2DefoldGo(data: IGuiNode, children?: string[]): IDefoldGo {
+    return {
+        id: "ui",
+        position: new Vector3(),
+        rotation: new Vector4(),
+        scale3: new Vector3(1, 1, 1),
+        children,
+        data: encodePrototype({
+            components: [{
+                id: getNameFromPath(data.name),
+                component: data.name + ".gui"
+            }]
+        })
     };
 }
 
@@ -434,7 +475,7 @@ function castGuiBox2DefoldGuiNode(data: IGuiBox): IDefoldGuiNode {
         color: castColor(data.color),
         enabled: data.enabled,
         visible: data.visible,
-        texture: data.atlas && data.texture ? data.atlas.split(".atlas")[0] + `/${data.texture}` : undefined,
+        texture: data.atlas && data.texture ? getNameFromPath(data.atlas) + `/${data.texture}` : undefined,
         clipping_mode: castStencil(data.stencil),
         slice9: new Vector4(data.slice_width, data.slice_height, data.slice_width, data.slice_height),
         alpha: data.alpha,
@@ -447,7 +488,7 @@ function castGuiText2DefoldGuiNode(data: IGuiText): IDefoldGuiNode {
         id: data.name,
         type: DefoldGuiNodeType.TYPE_TEXT,
         text: data.text,
-        font: data.font.split(".")[0],
+        font: getNameFromPath(data.font),
         line_break: data.line_break,
         text_leading: data.leading,
         color: data.color ? castColor(data.color) : undefined,
@@ -479,7 +520,7 @@ function castGuiSpine2DefoldGuiNode(data: IGuiSpine): IDefoldGuiNode {
         visible: data.visible,
         alpha: data.alpha,
         pivot: castPivot(data.pivot),
-        spine_scene: data.spine_scene.split(".")[0],
+        spine_scene: getNameFromPath(data.spine_scene),
         spine_default_animation: data.default_animation,
         spine_skin: data.skin
     };
@@ -647,6 +688,7 @@ function castExtDependencies2DefoldEmbeddedComponent(data: IExtDependencies): ID
 }
 
 function getNameFromPath(data: string): string {
+    data = data.split(".")[0];
     const match = data.match(/\/([^\/]+)$/);
     return match ? match[1] : "error";
 }

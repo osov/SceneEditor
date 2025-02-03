@@ -97,6 +97,30 @@ embedded_instances {
    
  } 
 embedded_instances { 
+  id: "ui"
+  position { 
+    x: 0 
+    y: 0 
+    z: 0 
+     
+   } 
+  rotation { 
+    x: 0 
+    y: 0 
+    z: 0 
+    w: 1 
+     
+   } 
+  scale3 { 
+    x: 1 
+    y: 1 
+    z: 1 
+     
+   } 
+  data: "components { \n  id: \"ui\"\n  component: \"/main/ui.gui\"\n   \n } \n"
+   
+ } 
+embedded_instances { 
   id: "test_child_go"
   position { 
     x: 0 

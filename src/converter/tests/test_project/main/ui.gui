@@ -39,7 +39,7 @@ nodes {
    } 
   enabled: true 
   visible: true 
-  texture: "/assets/test/test"
+  texture: "test/test"
   clipping_mode: 0 
   slice9 { 
     x: 0 
@@ -109,7 +109,7 @@ nodes {
   id: "test_gui_text"
   type: 1 
   text: "hello world from gui"
-  font: "/assets/test"
+  font: "test"
   line_break: true 
   text_leading: 0.5 
   color { 
@@ -205,10 +205,10 @@ nodes {
      
    } 
   enabled: true 
-  visible: false 
+  visible: true 
   alpha: 1 
   pivot: 0 
-  spine_scene: "/assets/firework/firework"
+  spine_scene: "firework"
   spine_default_animation: "firework"
   spine_skin: ""
    
@@ -251,31 +251,31 @@ nodes {
      
    } 
   enabled: true 
-  visible: false 
+  visible: true 
   alpha: 1 
   pivot: 0 
-  spine_scene: "/assets/dog/dog"
+  spine_scene: "dog"
   spine_default_animation: "idle"
   spine_skin: ""
    
  } 
 textures { 
-  name: "/assets/test"
+  name: "test"
   texture: "/assets/test.atlas"
    
  } 
 fonts { 
-  name: "/assets/test"
+  name: "test"
   font: "/assets/test.font"
    
  } 
 resources { 
-  name: "/assets/firework/firework"
+  name: "firework"
   path: "/assets/firework/firework.spinescene"
    
  } 
 resources { 
-  name: "/assets/dog/dog"
+  name: "dog"
   path: "/assets/dog/dog.spinescene"
    
  } 
