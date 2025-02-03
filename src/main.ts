@@ -27,9 +27,8 @@ register_select_control();
 register_size_control();
 register_transform_control();
 register_view_control();
+register_tree_control();
 register_control_manager();
 register_history_control();
 
 await run_debug_scene();
-
-register_tree_control();

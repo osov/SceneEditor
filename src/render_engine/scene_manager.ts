@@ -272,14 +272,14 @@ export function SceneManagerModule() {
     }
 
     function make_graph() {
-        const list: any[] = [];
+       const list: { id: number, pid: number, name: string, visible: boolean, type: IObjectTypes }[]  = [];
         scene.traverse((child) => {
             if (is_base_mesh(child)) {
                 const it = child as any as IBaseMeshDataAndThree;
                 let pid = -1;
                 if (is_base_mesh(it.parent!))
                     pid = (it.parent as any as IBaseMeshDataAndThree).mesh_data.id;
-                list.push({ id: it.mesh_data.id, pid: pid, name: it.name, visible: it.visible, icon: it.type });
+                list.push({ id: it.mesh_data.id, pid: pid, name: it.name, visible: it.visible, type: it.type });
             }
         });
         return list;

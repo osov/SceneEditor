@@ -1,3 +1,5 @@
+import { TreeItem } from "../scene_tree/tree";
+
 declare global {
     const ControlManager: ReturnType<typeof ControlManagerCreate>;
 }
@@ -19,12 +21,25 @@ function ControlManagerCreate() {
         EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
             TransformControl.set_selected_list(e.list);
             SizeControl.set_selected_list(e.list);
+            update_graph();
         });
 
         EventBus.on('SYS_UNSELECTED_MESH_LIST', () => {
             TransformControl.detach();
             SizeControl.detach();
+            update_graph();
         });
+
+        // Graph select
+        EventBus.on('SYS_GRAPH_SELECTED', (e) => {
+            const list = [];
+            for (let i = 0; i < e.list.length; i++) {
+                const m = SceneManager.get_mesh_by_id(e.list[i]);
+                if (m)
+                    list.push(m);
+            }
+            SelectControl.set_selected_list(list);
+        })
 
         set_active_control('size_transform_btn');
     }
@@ -62,7 +77,7 @@ function ControlManagerCreate() {
         if (name == 'size_transform_btn') {
             active_control = 'size';
             SizeControl.set_active(true);
-           SizeControl.set_selected_list(SelectControl.get_selected_list());
+            SizeControl.set_selected_list(SelectControl.get_selected_list());
         }
     }
 
@@ -79,6 +94,30 @@ function ControlManagerCreate() {
         document.querySelector('.menu_min a.' + name)!.classList.add('active');
     }
 
+    function get_tree_graph() {
+        const graph = SceneManager.make_graph();
+        const sel_list_ids = SelectControl.get_selected_list().map(m => m.mesh_data.id);
+        const list: TreeItem[] = [];
+        for (let i = 0; i < graph.length; i++) {
+            const g_item = graph[i];
+            const item: TreeItem = {
+                id: g_item.id,
+                pid: g_item.pid,
+                name: g_item.name,
+                icon: g_item.type,
+                selected: sel_list_ids.includes(g_item.id),
+                visible: g_item.visible
+            };
+            list.push(item);
+        }
+        //log(list)
+        return list;
+    }
+
+    function update_graph() {
+        TreeControl.draw_graph(ControlManager.get_tree_graph(), 'test_scene');
+    }
+
     init();
-    return { clear_all_controls, set_active_control };
+    return { clear_all_controls, set_active_control, get_tree_graph, update_graph };
 }

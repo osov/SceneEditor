@@ -133,5 +133,5 @@ export async function run_debug_scene() {
   //log('new:', SceneManager.debug_graph(scene));
   //log(SceneManager.make_graph());
 
-
+  ControlManager.update_graph();
 }
