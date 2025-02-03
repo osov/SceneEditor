@@ -4,21 +4,20 @@ import { Slice9Mesh } from "../render_engine/objects/slice9";
 
 declare global {
     const HistoryControl: ReturnType<typeof HistoryControlCreate>;
-    type HistoryKeys = HistoryDataKeys;
 }
 
 export function register_history_control() {
     (window as any).HistoryControl = HistoryControlCreate();
 }
 
-type HistoryData = {
+export type HistoryData = {
     MESH_TRANSLATE: PositionEventData
     MESH_ROTATE: RotationEventData
     MESH_SCALE: ScaleEventData
     MESH_SIZE: SizeEventData
     MESH_SLICE:  { slice: Vector2, id_mesh: number }
     MESH_DELETE: { id_mesh: number }
-    MESH_ADD: any
+    MESH_ADD: {mesh:any,  next_id: number}
     MESH_PIVOT: { pivot: Vector2, id_mesh: number }
     MESH_ANCHOR: { anchor: Vector2, id_mesh: number }
 }
@@ -103,13 +102,15 @@ function HistoryControlCreate() {
         else if (type == 'MESH_ADD') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_ADD'];
-                const parent = data.pid == -1 ? RenderEngine.scene : SceneManager.get_mesh_by_id(data.pid);
+                const mdata = data.mesh;
+                const parent = mdata.pid == -1 ? RenderEngine.scene : SceneManager.get_mesh_by_id(mdata.pid);
                 if (!parent) {
                     Log.error('parent is null', data);
                     return;
                 }
-                const m = SceneManager.deserialize_mesh(data, true, parent);
+                const m = SceneManager.deserialize_mesh(mdata, true, parent);
                 parent.add(m);
+                SceneManager.move_mesh(m, mdata.pid, data.next_id);
                 list_mesh.push(m);
             }
         }

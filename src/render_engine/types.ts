@@ -39,6 +39,7 @@ export interface IBaseMesh {
 export interface IBaseMeshData {
     id: number;
     pid: number;
+    name: string;
     type: IObjectTypes;
     visible: boolean;
     position: Vector3Tuple;

@@ -1,5 +1,6 @@
 import { ArrowHelper, CircleGeometry, DoubleSide, Mesh, MeshBasicMaterial, RingGeometry, SphereGeometry, Vector3 } from "three";
 import { format_list_without_children } from "../render_engine/helpers/utils";
+import { HistoryData } from "./HistoryControl";
 
 declare global {
     const ViewControl: ReturnType<typeof ViewControlCreate>;
@@ -14,12 +15,12 @@ function ViewControlCreate() {
 
 
     function init() {
-       //const geometry = new RingGeometry(4.5, 5, 12);
-       //const material = new MeshBasicMaterial({ color: 0xffff00, side: DoubleSide });
-       //const mesh = new Mesh(geometry, material); 
-       //mesh.position.set(300, -200, 49);
-       //mesh.scale.setScalar(5)
-       //RenderEngine.scene.add(mesh);
+        //const geometry = new RingGeometry(4.5, 5, 12);
+        //const material = new MeshBasicMaterial({ color: 0xffff00, side: DoubleSide });
+        //const mesh = new Mesh(geometry, material); 
+        //mesh.position.set(300, -200, 49);
+        //mesh.scale.setScalar(5)
+        //RenderEngine.scene.add(mesh);
 
         EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
             if (Input.is_control() && (e.key == 'c' || e.key == 'с')) {
@@ -51,10 +52,11 @@ function ViewControlCreate() {
             if (e.key == 'Delete') {
                 const list = format_list_without_children(SelectControl.get_selected_list());
                 if (list.length == 0) return;
-                const mesh_data = [];
+                const mesh_data: HistoryData['MESH_ADD'][] = [];
                 for (let i = 0; i < list.length; i++) {
-                    mesh_data.push(SceneManager.serialize_mesh(list[i]));
-                    SceneManager.remove(list[i].mesh_data.id);
+                    const m = list[i];
+                    mesh_data.push({ mesh: SceneManager.serialize_mesh(m), next_id: SceneManager.find_next_id_mesh(m) });
+                    SceneManager.remove(m.mesh_data.id);
                 }
                 HistoryControl.add('MESH_ADD', mesh_data);
                 SelectControl.set_selected_list([], true);

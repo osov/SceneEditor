@@ -81,6 +81,7 @@ export function SceneManagerModule() {
             id: m.mesh_data.id,
             pid,
             type: m.type,
+            name: m.name,
             visible: m.visible,
             position: wp.toArray(),
             rotation: wr.toArray(),
@@ -116,6 +117,7 @@ export function SceneManagerModule() {
             if (data.scale)
                 mesh.scale.set(data.scale[0], data.scale[1], data.scale[2]);
         }
+        mesh.name = data.name;
         mesh.visible = data.visible;
         mesh.set_pivot(data.pivot.x, data.pivot.y, false);
         mesh.set_size(data.size[0], data.size[1]);
@@ -191,7 +193,7 @@ export function SceneManagerModule() {
                 it.id += inc;
             if (it.pid != -1)
                 it.pid += inc;
-            if (it.children) 
+            if (it.children)
                 modify_id_pid_list(it.children, inc);
         }
     }
@@ -223,6 +225,30 @@ export function SceneManagerModule() {
             move_mesh(mesh, pid, next_id);
         else
             Log.error('mesh is null');
+    }
+
+    function get_next_base_mesh_id(mesh: IBaseMeshDataAndThree) {
+        const parent = mesh.parent ? mesh.parent : scene;
+        const index = parent.children.indexOf(mesh);
+        if (index == parent.children.length - 1) 
+            return -1;
+        for (let i = index + 1; i < parent.children.length; i++) {
+            const child = parent.children[i];
+            if (is_base_mesh(child)) {
+                return (child as any as IBaseMeshDataAndThree).mesh_data.id;
+            }
+        }
+        return -1;
+    }
+
+    function find_next_id_mesh(mesh: IBaseMeshDataAndThree) {
+        const parent = mesh.parent ? mesh.parent : scene;
+        const index = parent.children.indexOf(mesh);
+
+        if (index == parent.children.length - 1) {
+            return -1;
+        }
+        return get_next_base_mesh_id(mesh);
     }
 
     function move_mesh(mesh: IBaseMeshDataAndThree, pid = -1, next_id = -1) {
@@ -272,7 +298,7 @@ export function SceneManagerModule() {
     }
 
     function make_graph() {
-       const list: { id: number, pid: number, name: string, visible: boolean, type: IObjectTypes }[]  = [];
+        const list: { id: number, pid: number, name: string, visible: boolean, type: IObjectTypes }[] = [];
         scene.traverse((child) => {
             if (is_base_mesh(child)) {
                 const it = child as any as IBaseMeshDataAndThree;
@@ -305,5 +331,5 @@ export function SceneManagerModule() {
         id_counter = data.id_counter;
     }
 
-    return { get_unique_id,create, add, remove, get_mesh_by_id, move_mesh, move_mesh_id, make_graph, debug_graph, save_editor, load_editor, serialize_mesh, deserialize_mesh, save_scene, load_scene };
+    return { get_unique_id, create, add, remove, get_mesh_by_id, move_mesh, move_mesh_id, find_next_id_mesh, make_graph, debug_graph, save_editor, load_editor, serialize_mesh, deserialize_mesh, save_scene, load_scene };
 }
