@@ -21,12 +21,16 @@ function SelectControlCreate() {
     function init() {
 
         EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
+            if (e.target != RenderEngine.renderer.domElement)
+                return;
             if (e.button != 0)
                 return;
             click_point.set(e.x, e.y);
         });
 
         EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
+            if (e.target != RenderEngine.renderer.domElement)
+                return;
             if (e.button != 0)
                 return;
             if (Input.is_shift())
