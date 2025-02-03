@@ -43,10 +43,12 @@ function TreeControlCreate() {
         }
     ];
     const contexts: Contexts = {};
-    let currentSceneName: string = defaultList[0].name ? defaultList[0].name : "root";
+    let currentSceneName: string = defaultList[0]?.name ? defaultList[0]?.name : "root";
+    let listSelected: number[] = [];
 
     const divTree: any = document.querySelector('#wr_tree');
     let _is_mousedown: boolean = false;
+    let _is_dragging: boolean = true;
     let treeItem: any = null;
     let currentDroppable: any = null;
     let itemDrag: any = null;
@@ -65,31 +67,30 @@ function TreeControlCreate() {
 
     function draw_graph(getList: Item[], scene_name?: string, is_clear_state = false) {
         currentSceneName = scene_name ? scene_name : currentSceneName;
-        //treeList = treeList.length ? deepClone(treeList) : deepClone(getList);
+        // treeList = treeList.length ? treeList : deepClone(getList);
         treeList = deepClone(getList);
         contexts[currentSceneName] = contexts[currentSceneName] ? contexts[currentSceneName] : {};
 
         const renderList = buildTree(treeList);
         const html = getTreeHtml(renderList);
         divTree.innerHTML = html;
-        const tree = divTree.querySelector('.tree');
-        tree.style.setProperty('--tree_width', tree?.clientWidth + 'px');
 
-        const li_lines: any = document.querySelectorAll('.li_line');
-        addClassWithDelay(li_lines, 1200);
         updateDaD();
     }
 
     function buildTree(list: any) {
         const treeMap: any = {};
         const tree: any = [];
+        listSelected = []; // сбрасываем 
 
         const rootList = [defaultList[0], ...list];
-        console.log({ rootList });
-
+        log({ rootList });
+        
         rootList.forEach((node: any) => {
             treeMap[node.id] = { ...node, children: [] };
+            if(node?.selected == true) listSelected.push(node.id);
         });
+        log('build: ', { listSelected });
 
         rootList.forEach((node: any) => {
             if (node.pid !== -2) {
@@ -260,13 +261,14 @@ function TreeControlCreate() {
         // event.preventDefault();
         if (event.button === 0) {
             _is_mousedown = true;
+            toggleClassSelected(event);
 
             startY = event.offset_y;
             treeItem = event.target.closest('.tree__item');
-            if (treeItem) {
+            if (treeItem && _is_dragging) {
                 ddVisible = true;
                 itemDrag = getItemObj(treeItem);
-                log({ itemDrag });
+                console.log({ itemDrag });
 
                 if (itemDrag?.no_drag === true) {
                     treeItem = null;
@@ -289,7 +291,7 @@ function TreeControlCreate() {
         if (_is_mousedown) {
 
             // if (event.target.closest('.card.pos')) {  // с таким вариантом, курсор при быстром движении уходит за пределы карты 
-            if (treeItem) {
+            if (treeItem && _is_dragging) {
                 moveAt(event.offset_x, event.offset_y);
                 myScrollTo(divTree, startY, event);
 
@@ -305,8 +307,8 @@ function TreeControlCreate() {
         // setTimeout(()=>movement = false, 10);
         if (event.button === 0) {
             _is_mousedown = false;
-            setSelected(event);
-
+            
+            sendListSelected(event);
             if (!itemDrag || !itemDrop) {
                 myClear();
                 return;
@@ -325,14 +327,20 @@ function TreeControlCreate() {
                 if (posInItem === 'bg') {
 
                     if (isDrop && itemDrop?.no_drop === false) {
-                        updateTreeList("a");
-                        draw_graph(treeList);
+                        
+                        // updateTreeList("a");
+                        // draw_graph(treeList);
+                        // EventBus.trigger("SYS_GRAPH_MOVED_TO", { list: [{ id: itemDrag?.id, pid: itemDrag?.pid }],  next_id: itemDrop?.id });
+                        // log("SYS_GRAPH_MOVED_TO", { list: { id: itemDrag?.id, pid: itemDrag?.pid },  next_id: itemDrop?.id });
                     }
                 }
                 else if (posInItem === 'top' || posInItem === 'bottom') {
                     if (isDrop) {
-                        updateTreeList(posInItem);
-                        draw_graph(treeList);
+                        
+                        // updateTreeList(posInItem);
+                        // draw_graph(treeList);
+                        // EventBus.trigger("SYS_GRAPH_MOVED_TO", { list: [{ id: itemDrag?.id, pid: itemDrag?.pid }],  next_id: itemDrop?.id });
+                        // log("SYS_GRAPH_MOVED_TO", { list: { id: itemDrag?.id, pid: itemDrag?.pid },  next_id: itemDrop?.id });
                     }
                 }
                 else {
@@ -348,7 +356,7 @@ function TreeControlCreate() {
 
     function myClear(): void {
         // clear
-        // ddVisible = false;
+        ddVisible = false;
         boxDD.classList.remove('pos')
         boxDD.removeAttribute('style')
         currentDroppable?.classList.remove('droppable')
@@ -559,7 +567,7 @@ function TreeControlCreate() {
         }
     }
 
-    // если hover / mousemove на tree__item больше delay, то добавляем класс active
+    // если mousemove на tree__item больше delay, то добавляем класс active
     function addClassWithDelay(list: HTMLElement[], delay: number) {
 
         list.forEach((element: HTMLElement) => {
@@ -681,45 +689,87 @@ function TreeControlCreate() {
         });
     }
 
-    function setSelected(event: any) {
+    function toggleClassSelected(event: any) {
+        _is_dragging = true;
+
+        const btn = event.target.closest(".tree__btn");
+        if (btn) return;
+        
+        const currentItem = event.target.closest("a.tree__item");
+        if (!currentItem) return;
+        
+        const currentId = +currentItem?.getAttribute("data-id");
+        if (!currentId) return;
+        
+        // если зажата ctrl
+        if (Input.is_control()) {
+
+            if (listSelected.includes(currentId)) { // если он уже выделен - исключаем его
+                _is_dragging = false; // когда мы его отключаем - то и тащить нельзя как в юнити
+                currentItem.classList.remove("selected");
+                listSelected = listSelected.filter((item) => item != currentId);
+                // treeList.forEach(item => { if (item?.id == currentId) item.selected = false;});
+            }
+            else {
+                currentItem.classList.add("selected");
+                listSelected.push(currentId);
+                // treeList.forEach(item => { if (item?.id == currentId) item.selected = true;});
+            }
+
+        }
+        else { //  если НЕ зажата ctrl
+
+            if (listSelected?.length === 0) {
+                log({currentId})
+                log({listSelected})
+                currentItem.classList.add("selected");
+                listSelected = [currentId]; // add first elem
+                log('00', {listSelected})
+                // treeList.forEach(item => { if (item?.id == currentId) item.selected = true;});
+            }
+            else {
+                if (listSelected.includes(currentId)) { // таскаем все selected
+                    log({currentId})
+                    log({listSelected})
+                    currentItem.classList.add("selected");
+                    listSelected = [...listSelected];
+                    return; 
+                }
+                else {
+                    const menuItems: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item');
+                    menuItems.forEach(item => {
+                        item.classList.remove("selected");
+                    });
+                    currentItem.classList.add("selected");
+                    listSelected = [currentId]; // остается один
+                    // treeList.forEach(item => { 
+                    //     if (item?.id == currentId) item.selected = true;
+                    //     else item.selected = false;
+                    // });
+                }
+
+            } 
+
+        }
+    }
+
+    function sendListSelected(event: any) {
         const btn = event.target.closest(".tree__btn");
         if (btn) return;
 
-        const currentItem = event.target.closest("a.tree__item");
-        if (!currentItem) return;
-
-        const currentId = +currentItem?.getAttribute("data-id");
-        if (!currentId) return;
-
-        // если не зажата - выделяем текущий
-        if (!Input.is_control()) {
-            const menuItems: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item');
-            menuItems.forEach(item => {
-                item.classList.remove("selected");
-            });
-
-            currentItem.classList.add("selected");
-            EventBus.trigger('SYS_GRAPH_SELECTED', { list: [currentId] });
-            //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: [${currentId}]})`);
-        }
-        else {
-            currentItem.classList.toggle("selected");
-            const listIds: number[] = [];
-            const listSelected = document.querySelectorAll('.selected') as NodeListOf<HTMLElement>;
-            listSelected.forEach(item => {
-                const id = item?.getAttribute("data-id");
-                if (id) {
-                    listIds.push(+id);
-                }
-            });
-
-            EventBus.trigger('SYS_GRAPH_SELECTED', { list: listIds });
-            //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: [${listIds}]})`);
-        }
+        log('send: ', listSelected)
+        log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+        EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
     }
 
     // вешаем обработчики
     function updateDaD(): void {
+
+        const tree = divTree.querySelector('.tree');
+        tree.style.setProperty('--tree_width', tree?.clientWidth + 'px'); // устанавливаем ширину для span.tree__item_bg
+
+        const li_lines: any = document.querySelectorAll('.li_line');
+        addClassWithDelay(li_lines, 1200); // раскрываем дерево при переносе с delay
 
         // поиск по дереву
         SearchInTree();
