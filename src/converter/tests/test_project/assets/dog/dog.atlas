@@ -1,0 +1,49 @@
+images {
+  image: "/assets/dog/images/body.png"
+}
+images {
+  image: "/assets/dog/images/ear_l.png"
+}
+images {
+  image: "/assets/dog/images/ear_r.png"
+}
+images {
+  image: "/assets/dog/images/eye_l.png"
+}
+images {
+  image: "/assets/dog/images/eye_r.png"
+}
+images {
+  image: "/assets/dog/images/head.png"
+}
+images {
+  image: "/assets/dog/images/jaw_down.png"
+}
+images {
+  image: "/assets/dog/images/jaw_down2.png"
+}
+images {
+  image: "/assets/dog/images/jaw_up2.png"
+}
+images {
+  image: "/assets/dog/images/jaw_up2_dop.png"
+}
+images {
+  image: "/assets/dog/images/paw_l_back.png"
+}
+images {
+  image: "/assets/dog/images/paw_l_front.png"
+}
+images {
+  image: "/assets/dog/images/paw_r_back.png"
+}
+images {
+  image: "/assets/dog/images/paw_r_front.png"
+}
+images {
+  image: "/assets/dog/images/tail.png"
+}
+images {
+  image: "/assets/dog/images/tongue.png"
+}
+extrude_borders: 2

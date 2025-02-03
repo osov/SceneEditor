@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { Vector3 } from "three";
-import { ExtDependenceType, ISpineModel, NodeType, PrefabComponentType } from "../../render_engine/convert_types";
+import { ExtDependenceType, NodeType, PrefabComponentType } from "../../render_engine/convert_types";
 import { DefoldType, parseAtlas, parseFont, parsePrefab, parseScene, parseSpineScene } from "../scene_parser";
 
 const result = parseScene({
@@ -150,7 +150,7 @@ const result = parseScene({
                 width: 100,
                 height: 100,
                 text: "hello world from gui",
-                font: "/assets/test.ttf",
+                font: "/assets/test.font",
                 line_break: true,
                 leading: 0.5,
                 color: "#FF0000",
@@ -178,6 +178,28 @@ const result = parseScene({
                 color: "#FFFFFF",
                 spine_scene: "/assets/firework/firework.spinescene",
                 default_animation: "firework",
+                skin: "",
+                stencil: false,
+                visible: false,
+                enabled: true,
+                alpha: 1,
+                pivot: [1, -1]
+            }
+        },
+        {
+            type: NodeType.GUI_SPINE,
+            data: {
+                id: 12,
+                pid: 4,
+                name: "dog_gui",
+                position: new Vector3(200, 0, 0),
+                rotation: new Vector3(0, 0, 0),
+                scale: new Vector3(0.5, 0.5, 1),
+                width: 300,
+                height: 100,
+                color: "#FFFFFF",
+                spine_scene: "/assets/dog/dog.spinescene",
+                default_animation: "idle",
                 skin: "",
                 stencil: false,
                 visible: false,
@@ -227,14 +249,28 @@ const result = parseScene({
                 id: 9,
                 pid: 0,
                 name: "firework_model",
-                position: new Vector3(0, 200, 0),
+                position: new Vector3(360, 550, 0),
                 rotation: new Vector3(0, 0, 0),
                 scale: new Vector3(1, 1, 1),
                 spine_scene: "/assets/firework/firework.spinescene",
                 default_animation: "firework",
                 skin: ""
             }
-        }
+        },
+        {
+            type: NodeType.SPINE_MODEL,
+            data: {
+                id: 11,
+                pid: 0,
+                name: "dog_model",
+                position: new Vector3(480, 0, 0),
+                rotation: new Vector3(0, 0, 0),
+                scale: new Vector3(0.5, 0.5, 1),
+                spine_scene: "/assets/dog/dog.spinescene",
+                default_animation: "idle",
+                skin: ""
+            }
+        },
     ]
 });
 

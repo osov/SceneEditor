@@ -213,6 +213,52 @@ nodes {
   spine_skin: ""
    
  } 
+nodes { 
+  id: "dog_gui"
+  type: 4 
+  position { 
+    x: 200 
+    y: 0 
+    z: 0 
+    w: 1 
+     
+   } 
+  rotation { 
+    x: 0 
+    y: 0 
+    z: 0 
+    w: 1 
+     
+   } 
+  scale { 
+    x: 0.5 
+    y: 0.5 
+    z: 1 
+    w: 1 
+     
+   } 
+  color { 
+    x: 1 
+    y: 1 
+    z: 1 
+     
+   } 
+  size { 
+    x: 300 
+    y: 100 
+    z: 0 
+    w: 1 
+     
+   } 
+  enabled: true 
+  visible: false 
+  alpha: 1 
+  pivot: 0 
+  spine_scene: "/assets/dog/dog"
+  spine_default_animation: "idle"
+  spine_skin: ""
+   
+ } 
 textures { 
   name: "/assets/test"
   texture: "/assets/test.atlas"
@@ -220,11 +266,16 @@ textures {
  } 
 fonts { 
   name: "/assets/test"
-  font: "/assets/test.ttf"
+  font: "/assets/test.font"
    
  } 
 resources { 
   name: "/assets/firework/firework"
   path: "/assets/firework/firework.spinescene"
+   
+ } 
+resources { 
+  name: "/assets/dog/dog"
+  path: "/assets/dog/dog.spinescene"
    
  } 

@@ -25,9 +25,8 @@ dist-ssr
 package-lock.json
 
 # Defold
-/.editor_settings
-/.internal
-/build
+
+**/build
 .externalToolBuilders
 .DS_Store
 Thumbs.db
@@ -36,3 +35,5 @@ Thumbs.db
 .project
 .cproject
 builtins
+*.editor_settings
+*.internal

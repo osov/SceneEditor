@@ -1,0 +1,51 @@
+fonts {
+  name: "test"
+  font: "/assets/test.font"
+}
+textures {
+  name: "test"
+  texture: "/assets/test.atlas"
+}
+nodes {
+  rotation {
+    z: -45.0
+  }
+  type: TYPE_BOX
+  texture: "test/test"
+  id: "test_gui_box"
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  size {
+    x: 200.0
+    y: 100.0
+  }
+  type: TYPE_BOX
+  id: "test_child_gui_box"
+  parent: "test_gui_box"
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+  visible: false
+}
+nodes {
+  position {
+    x: 55.0
+  }
+  size {
+    x: 200.0
+    y: 100.0
+  }
+  color {
+    y: 0.0
+    z: 0.0
+  }
+  type: TYPE_TEXT
+  text: "herlolo"
+  font: "test"
+  id: "test_gui_text"
+  parent: "test_child_gui_box"
+  inherit_alpha: true
+}
+material: "/builtins/materials/gui.material"
+adjust_reference: ADJUST_REFERENCE_PARENT
