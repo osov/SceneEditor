@@ -12,6 +12,7 @@ import { register_control_manager } from './controls/ControlManager';
 import { register_history_control } from './controls/HistoryControl';
 import { register_resource_manager } from './render_engine/resource_manager';
 import { register_view_control } from './controls/ViewControl';
+import { register_inspector_control } from './controls/InspectorControl';
 
 register_manager();
 register_engine();
@@ -28,6 +29,7 @@ register_size_control();
 register_transform_control();
 register_view_control();
 register_tree_control();
+register_inspector_control();
 register_control_manager();
 register_history_control();
 
