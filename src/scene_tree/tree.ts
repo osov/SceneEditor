@@ -50,7 +50,7 @@ function TreeControlCreate() {
     let _is_dragging: boolean = true; 
     let _is_moveItemDrag: boolean = false; // если начали тащить 
     let _is_editItem: boolean = false; // ренейм возможен только в одном случае 
-    let _is_currentOnly: boolean = false; // ренейм возможен только в одном случае 
+    let _is_currentOnly: boolean = false; // когда кликаем по единственному и текущему элементу 
 
     const divTree: any = document.querySelector('#wr_tree');
     let treeItem: any = null;
@@ -632,7 +632,7 @@ function TreeControlCreate() {
         contexts[scene][+itemId] = state; // save state tree_sub
     }
 
-    function removeClassActive(eLi: any, itemPid: any): void {
+    function addClassActive(eLi: any, itemPid: any): void {
         if (!eLi) return;
         if (!itemPid || itemPid <= -1) return;
 
@@ -642,14 +642,16 @@ function TreeControlCreate() {
             if (!liLine) return;
             if (!liLine?.classList.contains("active")) {
                 liLine.classList.add("active");
+                updateContexts(contexts, currentSceneName, liLine, true); // save state tree_sub
             }
-            removeClassActive(liLine?.closest("ul")?.closest(".li_line"), itemPid);
+            addClassActive(liLine?.closest("ul")?.closest(".li_line"), itemPid);
         }
         else {
             if (!eLi?.classList.contains("active")) {
                 eLi.classList.add("active");
+                updateContexts(contexts, currentSceneName, eLi, true); // save state tree_sub
             }
-            removeClassActive(eLi?.closest("ul")?.closest(".li_line"), itemPid);
+            addClassActive(eLi?.closest("ul")?.closest(".li_line"), itemPid);
         }
 
         return;
@@ -671,7 +673,7 @@ function TreeControlCreate() {
                         s.classList.remove("color_green")
                         if (event.target?.value.trim()?.length > 0 && s.textContent.includes(event.target?.value.trim())) {
                             s.classList.add("color_green");
-                            removeClassActive(s.closest(".li_line"), s.closest(".tree__item")?.getAttribute("data-pid"));
+                            addClassActive(s.closest(".li_line"), s.closest(".tree__item")?.getAttribute("data-pid"));
                         }
                     });
                 }, 777); //  поиск с паузой
@@ -831,6 +833,17 @@ function TreeControlCreate() {
 
         const tree = divTree.querySelector('.tree');
         tree.style.setProperty('--tree_width', tree?.clientWidth + 'px'); // устанавливаем ширину для span.tree__item_bg
+
+        // раскрываем дерево с tree__item.selected
+        if (listSelected.length) {
+            listSelected.forEach((id) => {
+                const item = document.querySelector(`.tree__item[data-id="${id}"]`);
+                if(item) {
+                    item.classList.add("selected");
+                    addClassActive(item.closest(".li_line"), item.closest(".tree__item")?.getAttribute("data-pid"));
+                }
+            })
+        }
 
         const li_lines: any = document.querySelectorAll('.li_line');
         addClassWithDelay(li_lines, 1200); // раскрываем дерево при переносе с delay
