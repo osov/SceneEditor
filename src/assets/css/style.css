@@ -327,11 +327,15 @@ a.tree__item:not(.bottom, .top) .tree__item_bg:hover {
 }
 .tree__item_name {
   position: relative;
-  white-space: nowrap;
   min-width: 28px;
   max-width: 280px;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   z-index: 2;
+}
+.tree__item_name[contenteditable="true"] {
+  cursor: text;
 }
 
 ul.tree_sub {

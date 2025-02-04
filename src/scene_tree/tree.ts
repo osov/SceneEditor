@@ -46,9 +46,12 @@ function TreeControlCreate() {
     let currentSceneName: string = defaultList[0]?.name ? defaultList[0]?.name : "root";
     let listSelected: number[] = [];
 
+    let _is_mousedown: boolean = false; // зажата ли при mousemove
+    let _is_dragging: boolean = true; 
+    let _is_moveItemDrag: boolean = false; // если начали тащить 
+    let _is_editItem: boolean = false; // ренейм возможен только в одном случае 
+
     const divTree: any = document.querySelector('#wr_tree');
-    let _is_mousedown: boolean = false;
-    let _is_dragging: boolean = true;
     let treeItem: any = null;
     let currentDroppable: any = null;
     let itemDrag: any = null;
@@ -155,7 +158,7 @@ function TreeControlCreate() {
         return `<a class="tree__item ${item?.selected ? 'selected' : ''}" ${setAttrs(item)}>
                     <span class="tree__item_bg"></span>
                     ${getTreeIcoHtml(item.icon)}
-                    <span class="tree__item_name" >${item.name}</span>
+                    <span class="tree__item_name">${item.name}</span>
                 </a>`;
     }
 
@@ -168,6 +171,7 @@ function TreeControlCreate() {
         result += item?.visible ? ` data-visible="${item.visible}" ` : '';
         result += item?.no_drop ? ` data-no_drop="${item.no_drop}" ` : '';
         result += item?.no_drag ? ` data-no_drag="${item.no_drag}" ` : '';
+        result += item?.no_rename ? ` data-no_rename="${item.no_rename}" ` : '';
         return result;
     }
 
@@ -180,6 +184,7 @@ function TreeControlCreate() {
             icon: html.getAttribute("data-icon"),
             no_drag: html.getAttribute("data-no_drag") === "true" ? true : false,
             no_drop: html.getAttribute("data-no_drop") === "true" ? true : false,
+            no_rename: html.getAttribute("data-no_rename") === "true" ? true : false,
         }
     }
 
@@ -261,10 +266,14 @@ function TreeControlCreate() {
         // event.preventDefault();
         if (event.button === 0) {
             _is_mousedown = true;
+            
+            const item = event.target.closest('a.tree__item.selected .tree__item_name[contenteditable="true"]');
+            if(item) return;
             toggleClassSelected(event);
 
             startY = event.offset_y;
             treeItem = event.target.closest('.tree__item');
+
             if (treeItem && _is_dragging) {
                 ddVisible = true;
                 itemDrag = getItemObj(treeItem);
@@ -288,12 +297,19 @@ function TreeControlCreate() {
     function onMouseMove(event: any) {
         // event.preventDefault();
         // event.stopPropagation();
-        if (_is_mousedown) {
+        if (_is_mousedown) { // ЛКМ зажата
 
+            _is_moveItemDrag = true; // начало движения было
+            
             // if (event.target.closest('.card.pos')) {  // с таким вариантом, курсор при быстром движении уходит за пределы карты 
             if (treeItem && _is_dragging) {
                 moveAt(event.offset_x, event.offset_y);
                 myScrollTo(divTree, startY, event);
+
+                // отмены не происходит, если выбрано больше одного
+                if (Input.is_control() && listSelected?.length > 0) { 
+                    treeItem?.classList.add("selected");
+                }
 
                 toggleCurrentBox(event.target.closest('.tree__item'));
                 switchClassItem(event.target.closest('.tree__item'), event.offset_x, event.offset_y);
@@ -308,7 +324,9 @@ function TreeControlCreate() {
         if (event.button === 0) {
             _is_mousedown = false;
             
+            setContendEditAble(event);
             sendListSelected(event);
+
             if (!itemDrag || !itemDrop) {
                 myClear();
                 return;
@@ -331,7 +349,7 @@ function TreeControlCreate() {
                         // updateTreeList("a");
                         // draw_graph(treeList);
                         // EventBus.trigger("SYS_GRAPH_MOVED_TO", { list: [{ id: itemDrag?.id, pid: itemDrag?.pid }],  next_id: itemDrop?.id });
-                        // log("SYS_GRAPH_MOVED_TO", { list: { id: itemDrag?.id, pid: itemDrag?.pid },  next_id: itemDrop?.id });
+                        log("SYS_GRAPH_MOVED_TO", { list: { id: itemDrag?.id, pid: itemDrag?.pid },  next_id: itemDrop?.id });
                     }
                 }
                 else if (posInItem === 'top' || posInItem === 'bottom') {
@@ -340,7 +358,7 @@ function TreeControlCreate() {
                         // updateTreeList(posInItem);
                         // draw_graph(treeList);
                         // EventBus.trigger("SYS_GRAPH_MOVED_TO", { list: [{ id: itemDrag?.id, pid: itemDrag?.pid }],  next_id: itemDrop?.id });
-                        // log("SYS_GRAPH_MOVED_TO", { list: { id: itemDrag?.id, pid: itemDrag?.pid },  next_id: itemDrop?.id });
+                        log("SYS_GRAPH_MOVED_TO", { list: { id: itemDrag?.id, pid: itemDrag?.pid },  next_id: itemDrop?.id });
                     }
                 }
                 else {
@@ -360,6 +378,8 @@ function TreeControlCreate() {
         boxDD.classList.remove('pos')
         boxDD.removeAttribute('style')
         currentDroppable?.classList.remove('droppable')
+        _is_moveItemDrag = false; 
+        _is_editItem = false; 
         treeItem = null;
         itemDrag = null;
         itemDrop = null;
@@ -689,6 +709,24 @@ function TreeControlCreate() {
         });
     }
 
+    function setContendEditAble(event: any) {
+        if (_is_moveItemDrag) return; // если движение было 
+
+        if (!_is_editItem) return; // разрешено ли редактирование
+
+        const itemName = event.target.closest("a.tree__item.selected .tree__item_name");
+        if (!itemName) return;
+        
+        const currentItem = event.target.closest("a.tree__item.selected");
+        if (!currentItem) return;
+        
+        const currentId = +currentItem?.getAttribute("data-id");
+        if (!currentId) return;
+        
+        itemName.setAttribute("contenteditable", "true");
+        itemName.focus();
+    }
+    
     function toggleClassSelected(event: any) {
         _is_dragging = true;
 
@@ -701,14 +739,24 @@ function TreeControlCreate() {
         const currentId = +currentItem?.getAttribute("data-id");
         if (!currentId) return;
         
+        const itemsName: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item .tree__item_name');
+        itemsName.forEach(item => item?.removeAttribute("contenteditable"));
+
         // если зажата ctrl
         if (Input.is_control()) {
 
             if (listSelected.includes(currentId)) { // если он уже выделен - исключаем его
-                _is_dragging = false; // когда мы его отключаем - то и тащить нельзя как в юнити
+                _is_dragging = listSelected.length > 1 ? true : false; // отключаем, если единственный выбранный
+
                 currentItem.classList.remove("selected");
                 listSelected = listSelected.filter((item) => item != currentId);
                 // treeList.forEach(item => { if (item?.id == currentId) item.selected = false;});
+
+                // если была отмена 1 выбранного сразу шлем пустой массив
+                if(!_is_dragging) { 
+                    log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+                    // EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
+                }
             }
             else {
                 currentItem.classList.add("selected");
@@ -719,21 +767,16 @@ function TreeControlCreate() {
         }
         else { //  если НЕ зажата ctrl
 
-            if (listSelected?.length === 0) {
-                log({currentId})
-                log({listSelected})
+            if (listSelected?.length == 0) {
                 currentItem.classList.add("selected");
                 listSelected = [currentId]; // add first elem
-                log('00', {listSelected})
                 // treeList.forEach(item => { if (item?.id == currentId) item.selected = true;});
             }
             else {
-                if (listSelected.includes(currentId)) { // таскаем все selected
-                    log({currentId})
-                    log({listSelected})
-                    currentItem.classList.add("selected");
-                    listSelected = [...listSelected];
-                    return; 
+                if (listSelected.includes(currentId)) { 
+                    if (listSelected?.length == 1) { // если 1 и текущий
+                        _is_editItem = itemDrag?.no_rename ? false : true; // разрешаем редактировать
+                    }
                 }
                 else {
                     const menuItems: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item');
@@ -757,7 +800,23 @@ function TreeControlCreate() {
         const btn = event.target.closest(".tree__btn");
         if (btn) return;
 
-        log('send: ', listSelected)
+        if (!itemDrag) return;
+
+        if (!_is_moveItemDrag) { // если движения не было
+            if(!Input.is_control() && listSelected?.length > 1) {
+                const menuItems: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item');
+                menuItems.forEach(item => item.classList.remove("selected"));
+                treeItem?.classList.add("selected");
+                listSelected = [itemDrag?.id];
+            }
+        }
+        else {
+            if (Input.is_control() && listSelected?.length > 0) { // возвращаем текущий выбранный в массив selected
+                listSelected.push(itemDrag?.id);
+                treeList.forEach(item => { if (item?.id == itemDrag?.id) item.selected = true;});
+            }
+        }
+
         log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
         EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
     }
