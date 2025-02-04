@@ -50,6 +50,7 @@ function TreeControlCreate() {
     let _is_dragging: boolean = true; 
     let _is_moveItemDrag: boolean = false; // если начали тащить 
     let _is_editItem: boolean = false; // ренейм возможен только в одном случае 
+    let _is_currentOnly: boolean = false; // ренейм возможен только в одном случае 
 
     const divTree: any = document.querySelector('#wr_tree');
     let treeItem: any = null;
@@ -380,6 +381,7 @@ function TreeControlCreate() {
         currentDroppable?.classList.remove('droppable')
         _is_moveItemDrag = false; 
         _is_editItem = false; 
+        _is_currentOnly = false; 
         treeItem = null;
         itemDrag = null;
         itemDrop = null;
@@ -776,6 +778,7 @@ function TreeControlCreate() {
                 if (listSelected.includes(currentId)) { 
                     if (listSelected?.length == 1) { // если 1 и текущий
                         _is_editItem = itemDrag?.no_rename ? false : true; // разрешаем редактировать
+                        _is_currentOnly = true; // только текущий
                     }
                 }
                 else {
@@ -817,8 +820,10 @@ function TreeControlCreate() {
             }
         }
 
-        log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
-        EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
+        if (!_is_currentOnly) { // trigger   кроме текущего
+            log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+            EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
+        }
     }
 
     // вешаем обработчики
