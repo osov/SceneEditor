@@ -1,3 +1,4 @@
+import { join } from "path";
 import { deepClone } from "../modules/utils";
 
 declare global {
@@ -94,7 +95,6 @@ function TreeControlCreate() {
             treeMap[node.id] = { ...node, children: [] };
             if(node?.selected == true) listSelected.push(node.id);
         });
-        log('build: ', { listSelected });
 
         rootList.forEach((node: any) => {
             if (node.pid !== -2) {
@@ -257,7 +257,18 @@ function TreeControlCreate() {
     function findLastIdItemByPid(pid: number): number | undefined {
         for (let i = treeList.length - 1; i > 0; i--) {
             if (treeList[i].pid === pid) {
-                return treeList[i].id;
+                return treeList[i]?.id;
+            }
+        }
+        return undefined;
+    }
+
+    function findNextIdItemByPid(id: number, pid: number): number | undefined {
+        const listPid = treeList.filter(e => e.pid === pid);
+        log(listPid);
+        for (let i = 0; i < listPid.length - 1; i++) {
+            if (listPid[i]?.id === id) {
+                return listPid[i + 1]?.id || listPid[i]?.id;
             }
         }
         return undefined;
@@ -326,44 +337,31 @@ function TreeControlCreate() {
             _is_mousedown = false;
             
             setContendEditAble(event);
-            sendListSelected(event);
-
+            if(!_is_moveItemDrag) { // если движение не было sendListSelected
+                sendListSelected(event);
+            }
+            
             if (!itemDrag || !itemDrop) {
                 myClear();
                 return;
             }
+            // log('sendListSelected::after');
             toggleCurrentBox(event.target.closest('.tree__item'));
             switchClassItem(event.target.closest('.tree__item'), event.offset_x, event.offset_y);
 
             if (event.target.closest('.tree__item') && currentDroppable) {
 
                 const posInItem = getPosMouseInBlock(event.target.closest('.tree__item'), event.offset_x, event.offset_y);
-                if (!posInItem) {
-                    myClear();
-                    return;
-                }
-
-                if (posInItem === 'bg') {
-
-                    if (isDrop && itemDrop?.no_drop === false) {
-                        
-                        // updateTreeList("a");
-                        // draw_graph(treeList);
-                        // EventBus.trigger("SYS_GRAPH_MOVED_TO", { list: [{ id: itemDrag?.id, pid: itemDrag?.pid }],  next_id: itemDrop?.id });
-                        log("SYS_GRAPH_MOVED_TO", { list: { id: itemDrag?.id, pid: itemDrag?.pid },  next_id: itemDrop?.id });
+                if (posInItem) {
+                    const movedList = getMovedList(listSelected, itemDrag, itemDrop, posInItem);
+                    if(movedList) {
+                        log(`SYS_GRAPH_MOVED_TO`, movedList);
+                        EventBus.trigger("SYS_GRAPH_MOVED_TO", movedList);
+                        log(`SYS_GRAPH_SELECTED, {list: ${listSelected}}`);
+                        EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
                     }
-                }
-                else if (posInItem === 'top' || posInItem === 'bottom') {
-                    if (isDrop) {
-                        
-                        // updateTreeList(posInItem);
-                        // draw_graph(treeList);
-                        // EventBus.trigger("SYS_GRAPH_MOVED_TO", { list: [{ id: itemDrag?.id, pid: itemDrag?.pid }],  next_id: itemDrop?.id });
-                        log("SYS_GRAPH_MOVED_TO", { list: { id: itemDrag?.id, pid: itemDrag?.pid },  next_id: itemDrop?.id });
-                    }
-                }
-                else {
-                    myClear();
+                    // updateTreeList(posInItem);
+                    // draw_graph(treeList);
                 }
 
             }
@@ -389,6 +387,27 @@ function TreeControlCreate() {
         console.log('clear');
         const items = document.querySelectorAll('.tree__item') as NodeListOf<HTMLLIElement>;
         items.forEach(i => { i.classList.remove('top', 'bg', 'bottom'); });
+    }
+
+    function getMovedList(list: number[], drag: any, drop: any, type: string): any {
+        // SYS_GRAPH_MOVED_TO: { pid: number, next_id: number, id_mesh_list: number[] }
+        if(!list || !list.length || !drag || !drop || !type || !list.includes(drag?.id)) return null;
+
+        if(type === 'top') {
+            log('top')
+            return { pid: drop?.pid, next_id: drop?.id, id_mesh_list: list };
+        }
+        if(type === 'bg') {
+            log('bg')
+            return itemDrop?.no_drop === false ? { pid: drop?.id, next_id: -1, id_mesh_list: list } : null; 
+        }
+        if (type === 'bottom') {
+            log('bottom')
+            const next_id = findNextIdItemByPid(drop?.id, drop?.pid) || -1;
+            return { pid: drop?.pid, next_id: next_id, id_mesh_list: list };
+        }
+
+        return null;
     }
 
     function myScrollTo(block: HTMLElement, startY: number, event: any) {
@@ -729,6 +748,7 @@ function TreeControlCreate() {
         
         itemName.setAttribute("contenteditable", "true");
         itemName.focus();
+        document.execCommand('selectAll', false, null);
     }
     
     function toggleClassSelected(event: any) {
@@ -839,7 +859,6 @@ function TreeControlCreate() {
             listSelected.forEach((id) => {
                 const item = document.querySelector(`.tree__item[data-id="${id}"]`);
                 if(item) {
-                    item.classList.add("selected");
                     addClassActive(item.closest(".li_line"), item.closest(".tree__item")?.getAttribute("data-pid"));
                 }
             })
@@ -863,8 +882,7 @@ function TreeControlCreate() {
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
 
-    // window.addEventListener('click', (event: any) => {
-    EventBus.on('SYS_INPUT_POINTER_UP', (event) => {
+    EventBus.on('SYS_INPUT_POINTER_UP', (event: any) => {
         // show/hide block menu
         const btn_menu = event.target.closest(".btn_menu");
         if (btn_menu) {

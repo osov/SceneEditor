@@ -292,9 +292,7 @@ a.tree__item.droppable.bg {
 a.tree__item.droppable.bg:not(.success) {
   color: #f9c8c8;
 }
-a.tree__item.selected .tree__item_bg{
-  background-color: #02708f!important;
-}
+
 .tree__item_bg{
   position: absolute;
   min-width: 100%;
@@ -315,10 +313,17 @@ a.tree__item:not(.bottom, .top) .tree__item_bg:hover {
   width: 0px;
   transition: opacity var(--transition_150), width var(--transition_300);
 }
+/* ul.tree li a.tree__item.selected span.tree__item_bg, */
+ul.tree li a.tree__item.selected span.tree__item_bg:not(:has(~ .tree__item_name[contenteditable="true"])){
+  background-color: #02708f;
+}
+
 .tree__ico {
   display: block;
   width: 12px;
+  min-width: 12px;
   height: 12px;
+  min-height: 12px;
   line-height: 12px;
   position: relative;
   z-index: 2;
@@ -327,15 +332,26 @@ a.tree__item:not(.bottom, .top) .tree__item_bg:hover {
 }
 .tree__item_name {
   position: relative;
+  /* min-width: calc(100% - 17px); */
   min-width: 28px;
   max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  outline: none;
+  padding: 0 5px 0 2px;
+  border-radius: 2px;
+  line-height: 20px;
+  height: 21px;
+  font-size: 14px;
+  border: 1px solid transparent;
   z-index: 2;
 }
 .tree__item_name[contenteditable="true"] {
   cursor: text;
+  border-color: #656565;
+  text-overflow: clip;
+  background-color: rgba(0, 0, 0, 0.07);
 }
 
 ul.tree_sub {
@@ -398,9 +414,11 @@ li:not(.active) > .tree__btn .use_trgl {display: none;}
 .drag_and_drop__status {
   display: block;
   width: 16px;
+  min-width: 16px;
   height: 16px;
+  min-height: 16px;
   margin-right: 5px;
-  color: var(--color_red);
+  color: var(--min-color_red);
 }
 .drag_and_drop.active .drag_and_drop__status{
   color: var(--color_green);

@@ -28,7 +28,7 @@ function LogModule(_prefix = '', _log_level: LogLevels = 'log') {
 
     function send(level: LogLevels, _args: any) {
         console[level](get_hms(),..._args);
-      
+        // console[level](get_hms(),..._args,new Error().stack!.split('\n').slice(3).join('\n'));
     }
 
     function log(..._args: any) {
