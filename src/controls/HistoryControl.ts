@@ -131,7 +131,7 @@ function HistoryControlCreate() {
             }
         }
         if (list_mesh.length > 0)
-            SelectControl.set_selected_list(list_mesh, true);
+            SelectControl.set_selected_list(list_mesh);
 
     }
 

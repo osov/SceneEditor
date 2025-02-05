@@ -97,7 +97,6 @@ function SelectControlCreate() {
 
     function set_selected_list(list: IBaseMeshDataAndThree[], clear_old = true) {
         if (clear_old) {
-
             selected_list = [];
         }
         if (list.length == 0) {
@@ -111,7 +110,8 @@ function SelectControlCreate() {
             // если еще ничего не выбрано то выбирается первый
             if (selected == null) {
                 selected = it;
-                EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
+                if (!clear_old)
+                    EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
                 is_breaked = true;
                 break;
             }
@@ -121,7 +121,8 @@ function SelectControlCreate() {
                 if (next_index >= list.length)
                     next_index = 0;
                 selected = list[next_index];
-                EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
+                if (!clear_old)
+                    EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
                 is_breaked = true;
                 break;
             }
@@ -129,7 +130,8 @@ function SelectControlCreate() {
         if (!is_breaked) {
             // ситуация когда что-то было выбрано, но в этом списке не оказалось
             selected = list[0];
-            EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
+            if (!clear_old)
+                EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
         }
 
         if (clear_old) {

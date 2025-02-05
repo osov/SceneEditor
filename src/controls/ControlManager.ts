@@ -40,7 +40,6 @@ function ControlManagerCreate() {
             }
             SelectControl.set_selected_list(list);
         })
-
         set_active_control('size_transform_btn');
     }
 

@@ -47,7 +47,7 @@ function ViewControlCreate() {
                     mesh_list.push(m);
                 }
                 HistoryControl.add('MESH_DELETE', mesh_ids);
-                SelectControl.set_selected_list(mesh_list, true);
+                SelectControl.set_selected_list(mesh_list);
             }
             if (e.key == 'Delete') {
                 const list = format_list_without_children(SelectControl.get_selected_list());
@@ -59,7 +59,7 @@ function ViewControlCreate() {
                     SceneManager.remove(m.mesh_data.id);
                 }
                 HistoryControl.add('MESH_ADD', mesh_data);
-                SelectControl.set_selected_list([], true);
+                SelectControl.set_selected_list([]);
             }
 
         });
