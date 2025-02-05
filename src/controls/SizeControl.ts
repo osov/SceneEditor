@@ -88,6 +88,8 @@ function SizeControlCreate() {
 
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
             if (!is_active) return;
+            if (e.target != RenderEngine.renderer.domElement)
+                return;
             if (Input.is_shift()) {
                 document.body.style.cursor = 'default';
                 set_pivot_visible(true);
@@ -155,6 +157,8 @@ function SizeControlCreate() {
 
 
         EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
+            if (e.target != RenderEngine.renderer.domElement)
+                return;
             if (!is_active) return;
             if (e.button != 0)
                 return;
