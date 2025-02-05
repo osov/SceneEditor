@@ -56,8 +56,8 @@ type PropertyParams = {
     [PropertyType.COLOR]: {};
     [PropertyType.STRING]: {};
     [PropertyType.SLIDER]: { min: number, max: number, step: number };
-    [PropertyType.LIST_TEXT]: {};
-    [PropertyType.LIST_TEXTURES]: {};
+    [PropertyType.LIST_TEXT]: { key: string; text: string }[];
+    [PropertyType.LIST_TEXTURES]: { key: string; text: string, src: string }[];
     [PropertyType.BUTTON]: {};
     [PropertyType.POINT_2D]: { x: { min?: number, max?: number, step?: number }, y: { min?: number, max?: number, step?: number } };
     [PropertyType.LOG_DATA]: {};
@@ -72,8 +72,8 @@ type PropertyValues = {
     [PropertyType.COLOR]: { hex: string };
     [PropertyType.STRING]: string;
     [PropertyType.SLIDER]: number;
-    [PropertyType.LIST_TEXT]: { key: string; text: string }[];
-    [PropertyType.LIST_TEXTURES]: { key: string; text: string, src: string }[];
+    [PropertyType.LIST_TEXT]: string; //  selected key
+    [PropertyType.LIST_TEXTURES]: string;// selected key;
     [PropertyType.BUTTON]: null;
     [PropertyType.POINT_2D]: { x: number, y: number };
     [PropertyType.LOG_DATA]: string;
