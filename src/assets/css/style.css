@@ -199,8 +199,9 @@ input.searchInTree{
   padding: 0 10px;
 }
 
-.color_green { color: var(--color_green); }
 .color_blue { color: var(--color_blue); }
+.color_red { color: var(--color_red); }
+.color_green { color: var(--color_green); }
 
 /* tree */
 .tree_div {
@@ -352,6 +353,9 @@ ul.tree li a.tree__item.selected span.tree__item_bg:not(:has(~ .tree__item_name[
   border-color: #656565;
   text-overflow: clip;
   background-color: rgba(0, 0, 0, 0.07);
+}
+.tree__item.selected .tree__item_name.color_green {
+  color: yellowgreen;
 }
 
 ul.tree_sub {

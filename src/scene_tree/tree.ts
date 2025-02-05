@@ -69,6 +69,9 @@ function TreeControlCreate() {
     let boxDD: any = document.querySelector(".drag_and_drop"); // div таскания за мышью
     let ddVisible: boolean = false; //  видимость div перетаскивания 
 
+    // поиск по дереву, вешаем обработчик  1 раз
+    paintIdentacalLive(".searchInTree", "#wr_tree .tree__item_name", "color_green", 777);
+
 
     function draw_graph(getList: Item[], scene_name?: string, is_clear_state = false) {
         currentSceneName = scene_name ? scene_name : currentSceneName;
@@ -676,31 +679,6 @@ function TreeControlCreate() {
         return;
     }
 
-
-    function SearchInTree() {
-        // поиск по дереву 
-        const fieldSearchInTree = document.querySelector(".searchInTree");
-        if (fieldSearchInTree) {
-            let timer: any;
-            fieldSearchInTree.addEventListener('keyup', (event: any) => {
-
-                clearTimeout(timer);
-
-                timer = setTimeout(() => {
-                    const spans = document.querySelectorAll(`#wr_tree span.tree__item_name`);
-                    spans.forEach((s: any) => {
-                        s.classList.remove("color_green")
-                        if (event.target?.value.trim()?.length > 0 && s.textContent.includes(event.target?.value.trim())) {
-                            s.classList.add("color_green");
-                            addClassActive(s.closest(".li_line"), s.closest(".tree__item")?.getAttribute("data-pid"));
-                        }
-                    });
-                }, 777); //  поиск с паузой
-
-            });
-        }
-    }
-
     function treeBtnInit() {
         const btns: NodeListOf<HTMLElement> = document.querySelectorAll('ul.tree .tree__btn');
         btns.forEach(btn => {
@@ -749,6 +727,8 @@ function TreeControlCreate() {
         itemName.setAttribute("contenteditable", "true");
         itemName.focus();
         document.execCommand('selectAll', false, null);
+
+        renameItem(currentId, itemName);
     }
     
     function toggleClassSelected(event: any) {
@@ -848,11 +828,105 @@ function TreeControlCreate() {
         }
     }
 
+    function getIdentacalNames(list: string[]): string[] {
+        return list.filter((item, index) => list.indexOf(item) !== index);
+    }
+    
+    function paintIdentacal(): void {
+        const listName: string[] = [];
+        treeList.forEach((item) => listName.push(item?.name));
+        log({ listName });
+        const identacalNames = getIdentacalNames(listName);
+        log({ identacalNames });
+        if(identacalNames.length == 0) return;
+
+        const itemsName: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item .tree__item_name');
+        if(!itemsName) return;
+
+        itemsName.forEach((item: any) => {
+            if (identacalNames.includes(item?.textContent)) {
+                item.classList.add("color_red");
+                addClassActive(item.closest(".li_line"), item.closest(".tree__item")?.getAttribute("data-pid"));
+            }
+            else {
+                item.classList.remove("color_red");
+            }
+        });
+    }
+
+    function paintIdentacalLive(fieldSelector: string, selectorAll: string, className: string, delay: number): void {
+        const field = document.querySelector(fieldSelector);
+        if(!field) return;
+
+        log({ field, selectorAll, className, delay });
+
+        let timer: any;
+        
+        field.addEventListener('keyup', (event: any) => {
+            // event.preventDefault();
+
+            clearTimeout(timer);
+            field.classList.remove(className);
+            
+            timer = setTimeout(() => {
+                const spans = document.querySelectorAll(selectorAll);
+                if(spans?.length == 0) return;
+
+                const name = event.target?.value ? event.target?.value?.trim() : event.target?.textContent?.trim();
+                if(name == null || name == undefined) return;
+
+                spans.forEach((s: any) => {
+                    s.classList.remove(className);
+                    if (s.textContent.includes(name)) {
+                        if (name?.length > 0 && event.target != s) {
+                            s.classList.add(className);
+                            addClassActive(s.closest(".li_line"), s.closest(".tree__item")?.getAttribute("data-pid"));
+                        }
+                    }
+                    
+                });
+            }, delay); //  поиск с паузой
+
+        });
+    }
+
+    function renameItem(id: number, itemName: any): void {
+         
+        if (!itemName && !id) return;
+
+        // подсвечиваем имя если не уникальное
+        paintIdentacalLive(`.tree__item[data-id='${id}'] .tree__item_name`, "#wr_tree .tree__item_name", "color_red", 555);
+        
+        itemName.addEventListener('blur', (e: any) => { actionRename(e, 'blur') });
+        itemName.addEventListener('keypress', (e: any) => { actionRename(e, 'keypress') });
+
+        function actionRename(e: any, type: string) {
+            
+            const name = e.target?.value ? e.target?.value?.trim() : e.target?.textContent?.trim();
+            if(name == null || name == undefined || name?.length == 0) return;
+            
+            if (type === 'blur') {
+                log('SYS_GRAPH_CHANGE_NAME', { id, name });
+                EventBus.trigger('SYS_GRAPH_CHANGE_NAME', { id, name });
+                return;
+            }
+            
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                log('SYS_GRAPH_CHANGE_NAME', { id, name });
+                EventBus.trigger('SYS_GRAPH_CHANGE_NAME', { id, name });
+            }
+
+        }
+
+    }
+
     // вешаем обработчики
     function updateDaD(): void {
 
+        // устанавливаем ширину для span.tree__item_bg
         const tree = divTree.querySelector('.tree');
-        tree.style.setProperty('--tree_width', tree?.clientWidth + 'px'); // устанавливаем ширину для span.tree__item_bg
+        tree.style.setProperty('--tree_width', tree?.clientWidth + 'px'); 
 
         // раскрываем дерево с tree__item.selected
         if (listSelected.length) {
@@ -867,11 +941,11 @@ function TreeControlCreate() {
         const li_lines: any = document.querySelectorAll('.li_line');
         addClassWithDelay(li_lines, 1200); // раскрываем дерево при переносе с delay
 
-        // поиск по дереву
-        SearchInTree();
-
         // скрыть/раскрыть дерево
         treeBtnInit();
+
+        // подсветка идентичных имен();
+        paintIdentacal(); 
 
     }
 
