@@ -31,6 +31,11 @@ export function register_inspector_control() {
 
 */
 
+enum ComponentType {
+    MESH,
+    FILE
+}
+
 enum PropertyType {
     NUMBER,
     VECTOR_2, // https://tweakpane.github.io/docs/input-bindings/#pointnd
@@ -109,7 +114,7 @@ interface ObjectData {
 
 function InspectorControlCreate() {
 
-    function setup_config(config: InspectorGroup[]) {
+    function setup_config(config: InspectorGroup[], type:ComponentType) {
 
     }
 

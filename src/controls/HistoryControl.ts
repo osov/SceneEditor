@@ -1,5 +1,5 @@
 import { Vector2 } from "three";
-import { PositionEventData, RotationEventData, ScaleEventData, SizeEventData } from "./types";
+import { AnchorEventData, MeshMoveEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 
 declare global {
@@ -15,12 +15,12 @@ export type HistoryData = {
     MESH_ROTATE: RotationEventData
     MESH_SCALE: ScaleEventData
     MESH_SIZE: SizeEventData
-    MESH_SLICE: { slice: Vector2, id_mesh: number }
+    MESH_SLICE: SliceEventData
     MESH_DELETE: { id_mesh: number }
     MESH_ADD: { mesh: any, next_id: number }
-    MESH_PIVOT: { pivot: Vector2, id_mesh: number }
-    MESH_ANCHOR: { anchor: Vector2, id_mesh: number }
-    MESH_MOVE: { id_mesh: number, pid: number, next_id: number }
+    MESH_PIVOT: PivotEventData
+    MESH_ANCHOR: AnchorEventData
+    MESH_MOVE: MeshMoveEventData
 }
 type HistoryDataKeys = keyof HistoryData;
 

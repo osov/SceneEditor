@@ -1,4 +1,3 @@
-import { ArrowHelper, CircleGeometry, DoubleSide, Mesh, MeshBasicMaterial, RingGeometry, SphereGeometry, Vector3 } from "three";
 import { format_list_without_children } from "../render_engine/helpers/utils";
 import { HistoryData } from "./HistoryControl";
 

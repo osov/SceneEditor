@@ -1,6 +1,6 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, LineDashedMaterial, BufferGeometry, Line, Object3DEventMap, Scene } from "three";
 import { IBaseMeshDataAndThree, PivotX, PivotY } from "../render_engine/types";
-import { PositionEventData, SizeEventData } from "./types";
+import { AnchorEventData, PositionEventData, SizeEventData, SliceEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { is_base_mesh } from "../render_engine/helpers/utils";
 
@@ -32,8 +32,8 @@ function SizeControlCreate() {
     let is_selected_anchor = false;
     let old_size: SizeEventData[] = [];
     let old_pos: PositionEventData[] = [];
-    let old_slice: { slice: Vector2, id_mesh: number }[] = [];
-    let old_anchor: { anchor: Vector2, id_mesh: number }[] = [];
+    let old_slice:SliceEventData[] = [];
+    let old_anchor: AnchorEventData[] = [];
     let is_changed_size = false;
     let is_changed_pos = false;
     let is_changed_slice = false;

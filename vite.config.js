@@ -1,22 +1,21 @@
 import includeHtml from "./src/pluginTpl.js";
-
+import { DynamicPublicDirectory } from "vite-multiple-assets";
 import { defineConfig } from 'vite';
 import { resolve } from "path"
 
+const dirAssets = ["public/**", "../ExampleProject/{\x01,assets}/**"];
+
 export default defineConfig({
-  plugins: [ includeHtml() ],
+  plugins: [
+    includeHtml(),
+    DynamicPublicDirectory(dirAssets, { ssr: !true, })
+  ],
   resolve: {
-      alias: {
-        "@": resolve(__dirname, "./src")
-      }
+    alias: {
+      "@": resolve(__dirname, "./src")
+    }
   },
-  build: {
-    outDir: "dist"
-  },
-  server: {
-    host: true,
-    hmr: true,
-    // strictPort: true
-    // port: 3000,
-  },
+  build: { outDir: "dist" },
+  publicDir: false,
+  server: { host: true, hmr: true, },
 })

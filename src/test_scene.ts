@@ -9,7 +9,8 @@ export async function run_debug_scene() {
   await ResourceManager.preload_font('ShantellSans-Light11.ttf')
   const tex = await ResourceManager.preload_texture('./img/2.png');
   tex.magFilter = NearestFilter;
-
+  
+  //const tex2 = await ResourceManager.preload_texture('/assets/textures/cir_b.png');
 
 
   const plane_1 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 50, height: 50 });
