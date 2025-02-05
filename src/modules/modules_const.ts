@@ -22,7 +22,7 @@ export type _SystemMessages = {
     SYS_UNSELECTED_MESH_LIST: {}
     SYS_ON_UPDATE: { dt: number },
     SYS_GRAPH_SELECTED: { list: number[] },
-    SYS_GRAPH_MOVED_TO: { list: { id: number, pid: number, next_id: number }[] }
+    SYS_GRAPH_MOVED_TO: { pid: number, next_id: number, id_mesh_list: number[] }
 };
 
 

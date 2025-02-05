@@ -15,11 +15,12 @@ export type HistoryData = {
     MESH_ROTATE: RotationEventData
     MESH_SCALE: ScaleEventData
     MESH_SIZE: SizeEventData
-    MESH_SLICE:  { slice: Vector2, id_mesh: number }
+    MESH_SLICE: { slice: Vector2, id_mesh: number }
     MESH_DELETE: { id_mesh: number }
-    MESH_ADD: {mesh:any,  next_id: number}
+    MESH_ADD: { mesh: any, next_id: number }
     MESH_PIVOT: { pivot: Vector2, id_mesh: number }
     MESH_ANCHOR: { anchor: Vector2, id_mesh: number }
+    MESH_MOVE: { id_mesh: number, pid: number, next_id: number }
 }
 type HistoryDataKeys = keyof HistoryData;
 
@@ -127,6 +128,14 @@ function HistoryControlCreate() {
                 const data = last.data[i] as HistoryData['MESH_ANCHOR'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
                 mesh.set_anchor(data.anchor.x, data.anchor.y);
+                list_mesh.push(mesh);
+            }
+        }
+        else if (type == 'MESH_MOVE') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_MOVE'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                SceneManager.move_mesh(mesh, data.pid, data.next_id);
                 list_mesh.push(mesh);
             }
         }
