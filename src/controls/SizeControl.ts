@@ -500,6 +500,8 @@ function SizeControlCreate() {
         if (selected_list.length != 1)
             debug_center.visible = false;
         draw_anchor_point();
+        if (selected_list.length == 0)
+            set_bb_visible(false);
     }
 
     function get_parent_bb(mesh: IBaseMeshDataAndThree) {
