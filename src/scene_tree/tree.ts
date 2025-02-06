@@ -1,4 +1,3 @@
-import { join } from "path";
 import { deepClone } from "../modules/utils";
 
 declare global {
@@ -70,7 +69,7 @@ function TreeControlCreate() {
     let ddVisible: boolean = false; //  видимость div перетаскивания 
 
     // поиск по дереву, вешаем обработчик  1 раз
-    paintIdentacalLive(".searchInTree", "#wr_tree .tree__item_name", "color_green", 777);
+    paintIdenticalLive(".searchInTree", "#wr_tree .tree__item_name", "color_green", 777);
 
 
     function draw_graph(getList: Item[], scene_name?: string, is_clear_state = false) {
@@ -278,6 +277,8 @@ function TreeControlCreate() {
     }
 
     function onMouseDown(event: any) {
+        if (!event.target.closest('.tree_div')) return;
+
         // event.preventDefault();
         if (event.button === 0) {
             _is_mousedown = true;
@@ -333,6 +334,7 @@ function TreeControlCreate() {
     }
 
     function onMouseUp(event: any) {
+        if (!event.target.closest('.tree_div')) return;
         // event.preventDefault(); // иногда отключается плавное сворачивание ...
         // mousedown = false;
         // setTimeout(()=>movement = false, 10);
@@ -758,7 +760,7 @@ function TreeControlCreate() {
 
                 // если была отмена 1 выбранного сразу шлем пустой массив
                 if(!_is_dragging) { 
-                    log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+                    // log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
                     // EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
                 }
             }
@@ -828,23 +830,20 @@ function TreeControlCreate() {
         }
     }
 
-    function getIdentacalNames(list: string[]): string[] {
+    function getIdenticalNames(list: string[]): string[] {
         return list.filter((item, index) => list.indexOf(item) !== index);
     }
     
-    function paintIdentacal(): void {
+    function paintIdentical(): void {
         const listName: string[] = [];
         treeList.forEach((item) => listName.push(item?.name));
-        log({ listName });
-        const identacalNames = getIdentacalNames(listName);
-        log({ identacalNames });
-        if(identacalNames.length == 0) return;
-
+        const identicalNames = getIdenticalNames(listName);
+        if(identicalNames.length == 0) return;
         const itemsName: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item .tree__item_name');
         if(!itemsName) return;
 
         itemsName.forEach((item: any) => {
-            if (identacalNames.includes(item?.textContent)) {
+            if (identicalNames.includes(item?.textContent)) {
                 item.classList.add("color_red");
                 addClassActive(item.closest(".li_line"), item.closest(".tree__item")?.getAttribute("data-pid"));
             }
@@ -854,36 +853,49 @@ function TreeControlCreate() {
         });
     }
 
-    function paintIdentacalLive(fieldSelector: string, selectorAll: string, className: string, delay: number): void {
+
+    function paintSearchNode(className: string): void {
+        const input:any = document.querySelector(".searchInTree");
+        if (!input) return;
+        const name = input?.value?.trim();
+        if(!name) return;
+        
+        const spans = document.querySelectorAll('a.tree__item .tree__item_name');
+        if(!spans) return;
+        spans.forEach((s: any) => {
+            s.classList.remove(className);
+            if (name?.length > 0 && s.textContent.includes(name)) {
+                s.classList.add(className);
+            }
+        });
+    }
+
+    function paintIdenticalLive(fieldSelector: string, selectorAll: string, className: string, delay: number): void {
         const field = document.querySelector(fieldSelector);
         if(!field) return;
-
-        log({ field, selectorAll, className, delay });
-
-        let timer: any;
+        const idField = field.closest(".tree__item")?.getAttribute("data-id");
+        if(!idField) return;
         
+        let timer: any;
         field.addEventListener('keyup', (event: any) => {
-            // event.preventDefault();
 
-            clearTimeout(timer);
-            field.classList.remove(className);
+            const name = event.target?.value ? event.target?.value?.trim() : event.target?.textContent?.trim();
+            if(name == null || name == undefined) return;
             
+            clearTimeout(timer);
+
             timer = setTimeout(() => {
                 const spans = document.querySelectorAll(selectorAll);
-                if(spans?.length == 0) return;
-
-                const name = event.target?.value ? event.target?.value?.trim() : event.target?.textContent?.trim();
-                if(name == null || name == undefined) return;
-
                 spans.forEach((s: any) => {
                     s.classList.remove(className);
-                    if (s.textContent.includes(name)) {
-                        if (name?.length > 0 && event.target != s) {
-                            s.classList.add(className);
-                            addClassActive(s.closest(".li_line"), s.closest(".tree__item")?.getAttribute("data-pid"));
-                        }
+                    const id_s = s.closest(".tree__item")?.getAttribute("data-id");
+                    const rename = name?.length > 0 && s?.textContent == name && id_s != idField;
+                    const search = name?.length > 0 && s.textContent.includes(name);
+                    const is_paint = fieldSelector == ".searchInTree" ? search : rename;
+                    if (is_paint) {
+                        s.classList.add(className);
+                        addClassActive(s.closest(".li_line"), s.closest(".tree__item")?.getAttribute("data-pid"));
                     }
-                    
                 });
             }, delay); //  поиск с паузой
 
@@ -895,28 +907,30 @@ function TreeControlCreate() {
         if (!itemName && !id) return;
 
         // подсвечиваем имя если не уникальное
-        paintIdentacalLive(`.tree__item[data-id='${id}'] .tree__item_name`, "#wr_tree .tree__item_name", "color_red", 555);
+        paintIdenticalLive(`.tree__item[data-id='${id}'] .tree__item_name`, "#wr_tree .tree__item_name", "color_red", 555);
         
-        itemName.addEventListener('blur', (e: any) => { actionRename(e, 'blur') });
-        itemName.addEventListener('keypress', (e: any) => { actionRename(e, 'keypress') });
+        itemName.addEventListener('blur', fBlur);
+        itemName.addEventListener('keypress', fKeypress);
 
-        function actionRename(e: any, type: string) {
-            
-            const name = e.target?.value ? e.target?.value?.trim() : e.target?.textContent?.trim();
-            if(name == null || name == undefined || name?.length == 0) return;
-            
-            if (type === 'blur') {
-                log('SYS_GRAPH_CHANGE_NAME', { id, name });
-                EventBus.trigger('SYS_GRAPH_CHANGE_NAME', { id, name });
-                return;
-            }
-            
+        function fKeypress(e: any) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                log('SYS_GRAPH_CHANGE_NAME', { id, name });
-                EventBus.trigger('SYS_GRAPH_CHANGE_NAME', { id, name });
+                fBlur();
             }
+        }
 
+        function fBlur() {
+            itemName.removeEventListener('blur', fBlur);
+            itemName.removeEventListener('keypress', fKeypress);
+            itemName.removeAttribute('contenteditable');
+
+            const name = itemName?.value ? itemName?.value?.trim() : itemName?.textContent?.trim();
+            if(name == null || name == undefined) return;
+
+            if(name?.length == 0) {return;}
+            
+            log('SYS_GRAPH_CHANGE_NAME', { id, name });
+            EventBus.trigger('SYS_GRAPH_CHANGE_NAME', { id, name });
         }
 
     }
@@ -945,7 +959,9 @@ function TreeControlCreate() {
         treeBtnInit();
 
         // подсветка идентичных имен();
-        paintIdentacal(); 
+        paintIdentical(); 
+
+        paintSearchNode("color_green");
 
     }
 
