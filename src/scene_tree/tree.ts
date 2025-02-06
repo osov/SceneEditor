@@ -360,8 +360,8 @@ function TreeControlCreate() {
                     if(movedList) {
                         log(`SYS_GRAPH_MOVED_TO`, movedList);
                         EventBus.trigger("SYS_GRAPH_MOVED_TO", movedList);
-                        log(`SYS_GRAPH_SELECTED, {list: ${listSelected}}`);
-                        EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
+                        //log(`SYS_GRAPH_SELECTED, {list: ${listSelected}}`);
+                        //EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
                     }
                     // updateTreeList(posInItem);
                     // draw_graph(treeList);
@@ -726,7 +726,7 @@ function TreeControlCreate() {
         
         itemName.setAttribute("contenteditable", "true");
         itemName.focus();
-        document.execCommand('selectAll', false, null);
+        document.execCommand('selectAll', false, undefined);
 
         renameItem(currentId, itemName);
     }

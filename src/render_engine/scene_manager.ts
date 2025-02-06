@@ -269,6 +269,8 @@ export function SceneManagerModule() {
         if (!new_parent) return Log.error('new_parent is null');
         const old_pos = new Vector3();
         mesh.getWorldPosition(old_pos);
+        const old_scale= new Vector3();
+        mesh.getWorldScale(old_scale);
         const new_before = get_mesh_by_id(next_id);
         let new_index = -1;
         if (new_before != null)
@@ -285,6 +287,10 @@ export function SceneManagerModule() {
         mesh.parent = new_parent;
         const lp = mesh.parent.worldToLocal(old_pos);
         mesh.position.copy(lp);
+        const parent_scale =new Vector3();
+        mesh.parent.getWorldScale(parent_scale);
+        old_scale.divide(parent_scale);
+        mesh.scale.copy(old_scale);
     }
 
     function add(mesh: IBaseMeshDataAndThree, id_parent = -1, id_before = -1) {

@@ -47,6 +47,7 @@ function ControlManagerCreate() {
         EventBus.on('SYS_GRAPH_MOVED_TO', (e) => {
             // save history
             const saved_list: HistoryData['MESH_MOVE'][] = [];
+            const mesh_list: IBaseMeshDataAndThree[] = [];
             for (let i = 0; i < e.id_mesh_list.length; i++) {
                 const id = e.id_mesh_list[i];
                 const mesh = SceneManager.get_mesh_by_id(id);
@@ -58,18 +59,27 @@ function ControlManagerCreate() {
                 let pid = -1;
                 if (is_base_mesh(parent))
                     pid = (parent as any as IBaseMeshDataAndThree).mesh_data.id;
-
                 saved_list.push({ id_mesh: id, pid: pid, next_id: SceneManager.find_next_id_mesh(mesh) });
+                mesh_list.push(mesh);
             }
             HistoryControl.add('MESH_MOVE', saved_list);
             // move
             for (let i = 0; i < e.id_mesh_list.length; i++) {
                 const id = e.id_mesh_list[i];
-                let next_id = e.next_id;
-                if (i > 0)
-                    next_id = e.id_mesh_list[i - 1];
-                SceneManager.move_mesh_id(id, e.pid, next_id);
+                SceneManager.move_mesh_id(id, e.pid, e.next_id);
             }
+            SelectControl.set_selected_list(mesh_list);
+            update_graph();
+
+        });
+
+        EventBus.on('SYS_GRAPH_CHANGE_NAME', (e) => {
+            const mesh = SceneManager.get_mesh_by_id(e.id);
+            if (!mesh) return Log.error('mesh is null', e.id);
+            HistoryControl.add('MESH_NAME', [{ id_mesh: e.id, name: mesh.name }]);
+            mesh.name = e.name;
+            SelectControl.set_selected_list([mesh]);
+            update_graph();
         });
         set_active_control('size_transform_btn');
     }

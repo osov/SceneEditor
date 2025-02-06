@@ -21,6 +21,7 @@ export type HistoryData = {
     MESH_PIVOT: PivotEventData
     MESH_ANCHOR: AnchorEventData
     MESH_MOVE: MeshMoveEventData
+    MESH_NAME:{ id_mesh: number, name: string }
 }
 type HistoryDataKeys = keyof HistoryData;
 
@@ -132,15 +133,25 @@ function HistoryControlCreate() {
             }
         }
         else if (type == 'MESH_MOVE') {
-            for (let i = 0; i < last.data.length; i++) {
+            for (let i = last.data.length - 1; i >= 0; i--) {
                 const data = last.data[i] as HistoryData['MESH_MOVE'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
                 SceneManager.move_mesh(mesh, data.pid, data.next_id);
                 list_mesh.push(mesh);
             }
         }
-        if (list_mesh.length > 0)
+        else if (type == 'MESH_NAME') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_NAME'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                mesh.name = data.name;
+                list_mesh.push(mesh);
+            }
+        }
+        if (list_mesh.length > 0){
             SelectControl.set_selected_list(list_mesh);
+            ControlManager.update_graph();
+        }
 
     }
 
