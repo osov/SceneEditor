@@ -1,5 +1,6 @@
-import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, Vector3, } from 'three'
+import { BufferGeometry, Color, Line, LineDashedMaterial, NearestFilter, Vector2, Vector3, Vector4, } from 'three'
 import { IObjectTypes } from './render_engine/types';
+import { ObjectData, PropertyType } from './controls/InspectorControl';
 
 export async function run_debug_scene() {
   // sov width projection
@@ -9,7 +10,7 @@ export async function run_debug_scene() {
   await ResourceManager.preload_font('ShantellSans-Light11.ttf')
   const tex = await ResourceManager.preload_texture('./img/2.png');
   tex.magFilter = NearestFilter;
-  
+
   //const tex2 = await ResourceManager.preload_texture('/assets/textures/cir_b.png');
 
 
@@ -135,4 +136,68 @@ export async function run_debug_scene() {
   //log(SceneManager.make_graph());
 
   ControlManager.update_graph();
+
+
+  InspectorControl.setup_config([
+    {
+      name: 'base',
+      title: '',
+      property_list: [
+        { name: 'name', title: 'Название', type: PropertyType.STRING, },
+        { name: 'id', title: 'ID', type: PropertyType.NUMBER, readonly: true }
+      ]
+    },
+    {
+      name: 'transform',
+      title: 'Трансформ',
+      property_list: [
+        { name: 'position', title: 'Позиция', type: PropertyType.VECTOR_3 },
+        { name: 'rotation', title: 'Вращение', type: PropertyType.VECTOR_3 },
+        { name: 'scale', title: 'Маштаб', type: PropertyType.VECTOR_3 }
+      ]
+    },
+    {
+      name: 'test',
+      title: 'Тестовые',
+      property_list: [
+        { name: 'vec2', title: 'Вектор2', type: PropertyType.VECTOR_2 },
+        { name: 'vec4', title: 'Вектор4', type: PropertyType.VECTOR_4 },
+        { name: 'checkbox', title: 'Чек', type: PropertyType.BOOLEAN },
+        { name: 'color', title: 'Цвет', type: PropertyType.COLOR },
+      ]
+    }
+  ]);
+
+  InspectorControl.set_data([
+    {
+      id: 1, data: [
+        { name: 'id', data: 1 },
+        { name: 'name', data: 'test1' },
+        { name: 'position', data: new Vector3(0, 0, 0) },
+        { name: 'rotation', data: new Vector3(0, 0, 0) },
+        { name: 'scale', data: new Vector3(1, 1, 1) },
+        { name: 'vec2', data: new Vector2(134, 234) },
+        { name: 'vec4', data: new Vector4(1, 343, 1, 6565) },
+        { name: 'checkbox', data: true },
+        { name: 'color', data: "#ff0000" }
+      ]
+    },
+    {
+      id: 2, data: [
+        { name: 'id', data: 1 },
+        { name: 'name', data: 'test1' },
+        { name: 'position', data: new Vector3(0, 0, 0) },
+        { name: 'rotation', data: new Vector3(0, 0, 0) },
+        { name: 'scale', data: new Vector3(1, 1, 1) },
+        { name: 'vec2', data: new Vector2(134, 234) },
+        // { name: 'vec4', data: new Vector4(1, 343, 1, 6565) },
+        { name: 'checkbox', data: true },
+        { name: 'color', data: "#ff0000" }
+      ]
+    }
+  ]);
+
+  EventBus.on('SYS_INSPECTOR_UPDATED_VALUE', (data: ObjectData) => {
+    console.log(data);
+  });
 }

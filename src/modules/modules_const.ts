@@ -1,3 +1,4 @@
+import { ObjectData } from "../controls/InspectorControl";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
 
 export type VoidCallback = () => void;
@@ -23,7 +24,8 @@ export type _SystemMessages = {
     SYS_ON_UPDATE: { dt: number },
     SYS_GRAPH_SELECTED: { list: number[] },
     SYS_GRAPH_CHANGE_NAME: { id: number, name: string },
-    SYS_GRAPH_MOVED_TO: { pid: number, next_id: number, id_mesh_list: number[] }
+    SYS_GRAPH_MOVED_TO: { pid: number, next_id: number, id_mesh_list: number[] },
+    SYS_INSPECTOR_UPDATED_VALUE: ObjectData,
 };
 
 
