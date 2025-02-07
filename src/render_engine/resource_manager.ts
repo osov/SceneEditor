@@ -60,6 +60,7 @@ export function ResourceManagerModule() {
         if (!atlases[atlas])
             atlases[atlas] = {};
         atlases[atlas][name] = { path, data: texture };
+        log('Texture preloaded:', path);
         return texture;
     }
 
@@ -75,6 +76,7 @@ export function ResourceManagerModule() {
             },
                 () => {
                     fonts[name] = path;
+                    log('Font preloaded:', path);
                     resolve(true);
                 }
             )
@@ -87,7 +89,7 @@ export function ResourceManagerModule() {
 
     function get_texture(name: string, atlas = '') {
         if (!has_texture_name(name, atlas)) {
-            Log.error('texture not found', name, atlas);
+            Log.error('Texture not found', name, atlas);
             return bad_texture;
         };
         return atlases[atlas][name].data;
@@ -98,10 +100,10 @@ export function ResourceManagerModule() {
             const tex = atlases[atlas][name].data;
             delete atlases[atlas][name];
             tex.dispose();
-            log('free texture', name, atlas);
+            log('Texture free', name, atlas);
         }
         else
-            Log.error('texture not found', name, atlas);
+            Log.error('Texture not found', name, atlas);
     }
 
     init();

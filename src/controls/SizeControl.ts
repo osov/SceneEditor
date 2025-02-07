@@ -32,7 +32,7 @@ function SizeControlCreate() {
     let is_selected_anchor = false;
     let old_size: SizeEventData[] = [];
     let old_pos: PositionEventData[] = [];
-    let old_slice:SliceEventData[] = [];
+    let old_slice: SliceEventData[] = [];
     let old_anchor: AnchorEventData[] = [];
     let is_changed_size = false;
     let is_changed_pos = false;
@@ -228,13 +228,13 @@ function SizeControlCreate() {
                     const size = selected_list[0].get_slice();
                     const ws = new Vector3();
                     selected_list[0].getWorldScale(ws);
-                    const dx = size.x;
-                    const dy = size.y;
+                    const dx = size.x / ws.x;
+                    const dy = size.y / ws.y;
                     const bounds2 = get_bounds_from_list();
-                    bounds2[0] += dx;
-                    bounds2[1] -= dy;
-                    bounds2[2] -= dx;
-                    bounds2[3] += dy;
+                    bounds2[0] += dx * ws.x;
+                    bounds2[1] -= dy * ws.y;
+                    bounds2[2] -= dx * ws.y;
+                    bounds2[3] += dy * ws.x;
                     const tmp = get_cursor_dir(wp, bounds2);
                     dir[0] = tmp[0];
                     dir[1] = tmp[1];
@@ -463,8 +463,8 @@ function SizeControlCreate() {
 
                 slice_box_range.position.copy(slice_box.position);
                 slice_box_range.scale.copy(slice_box.scale);
-                slice_box_range.scale.x -= slice.x * ws.x;
-                slice_box_range.scale.y -= slice.y * ws.y;
+                slice_box_range.scale.x -= slice.x * 2;
+                slice_box_range.scale.y -= slice.y * 2;
                 const cp = Camera.screen_to_world(pointer.x, pointer.y);
                 const pp = Camera.screen_to_world(prev_point.x, prev_point.y);
                 const delta = cp.clone().sub(pp);
