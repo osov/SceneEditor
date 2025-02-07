@@ -1,4 +1,4 @@
-import { Object3D, Vector2, Vector3 } from "three";
+import { BufferGeometry, Object3D, Vector2, Vector3 } from "three";
 import { IBaseMeshDataAndThree } from "../types";
 
 export function get_basename(path: string) {
@@ -80,4 +80,12 @@ export function set_pivot_with_sync_pos(mesh: IBaseMeshDataAndThree, width: numb
             m.position.copy(l);
         }
     }
+}
+
+export function flip_geometry_y(geometry: BufferGeometry) {
+    const uv = geometry.attributes.uv;
+    for (let i = 0; i < uv.count; i++) {
+        uv.setY(i, 1 - uv.getY(i));
+    }
+    return geometry;
 }

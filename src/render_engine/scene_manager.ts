@@ -230,7 +230,7 @@ export function SceneManagerModule() {
     function get_next_base_mesh_id(mesh: IBaseMeshDataAndThree) {
         const parent = mesh.parent ? mesh.parent : scene;
         const index = parent.children.indexOf(mesh);
-        if (index == parent.children.length - 1) 
+        if (index == parent.children.length - 1)
             return -1;
         for (let i = index + 1; i < parent.children.length; i++) {
             const child = parent.children[i];
@@ -263,13 +263,14 @@ export function SceneManagerModule() {
     }
 
     function move_mesh_to(mesh: IBaseMeshDataAndThree, pid = -1, next_id = -1) {
+        const has_old_parent = mesh.parent != null;
         const old_parent = mesh.parent ? mesh.parent : scene;
         const old_index = old_parent.children.indexOf(mesh);
         const new_parent = (pid == -1) ? scene : get_mesh_by_id(pid);
         if (!new_parent) return Log.error('new_parent is null');
         const old_pos = new Vector3();
         mesh.getWorldPosition(old_pos);
-        const old_scale= new Vector3();
+        const old_scale = new Vector3();
         mesh.getWorldScale(old_scale);
         const new_before = get_mesh_by_id(next_id);
         let new_index = -1;
@@ -287,10 +288,12 @@ export function SceneManagerModule() {
         mesh.parent = new_parent;
         const lp = mesh.parent.worldToLocal(old_pos);
         mesh.position.copy(lp);
-        const parent_scale =new Vector3();
-        mesh.parent.getWorldScale(parent_scale);
-        old_scale.divide(parent_scale);
-        mesh.scale.copy(old_scale);
+        if (has_old_parent) {
+            const parent_scale = new Vector3();
+            mesh.parent.getWorldScale(parent_scale);
+            old_scale.divide(parent_scale);
+            mesh.scale.copy(old_scale);
+        }
     }
 
     function add(mesh: IBaseMeshDataAndThree, id_parent = -1, id_before = -1) {

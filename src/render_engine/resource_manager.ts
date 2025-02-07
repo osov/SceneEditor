@@ -1,10 +1,7 @@
-import { CanvasTexture, MeshBasicMaterial, RepeatWrapping, Texture, TextureLoader } from 'three';
+import { CanvasTexture, NoColorSpace, RepeatWrapping, Texture, TextureLoader } from 'three';
 import { preloadFont } from 'troika-three-text'
 import { get_file_name } from './helpers/utils';
-//import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
-
-//import * as THREE from 'three'
-//window.THREE = THREE
+import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -23,27 +20,10 @@ export function ResourceManagerModule() {
     const atlases: { [name: string]: AssetData<Texture> } = { '': {} };
     const fonts: { [name: string]: string } = {};
     let bad_texture: CanvasTexture;
-   // const ktx2Loader = new KTX2Loader();
+    const ktx2Loader = new KTX2Loader().setTranscoderPath('./libs/basis/').detectSupport(RenderEngine.renderer);
 
     function init() {
         gen_textures();
-     /*   ktx2Loader.setTranscoderPath('./libs/basis/');
-        ktx2Loader.detectSupport(RenderEngine.renderer);
-
-        ktx2Loader.load('/assets/textures/output.ktx2', function (texture) {
-
-            atlases['']['ktx'] = { path:'', data: texture };
-            SceneManager.get_mesh_by_id(1000)!.set_texture('ktx');
-
-        }, function () {
-
-            log('onProgress');
-
-        }, function (e) {
-
-            Log.error(e);
-
-        });*/
     }
 
     function gen_textures() {
@@ -72,7 +52,11 @@ export function ResourceManagerModule() {
         if (has_texture_name(name, atlas)) {
             return atlases[atlas][name].data;
         }
-        const texture = await texture_loader.loadAsync(path);
+        let texture: Texture;
+        if (path.endsWith('.ktx2'))
+            texture = await ktx2Loader.loadAsync(path);
+        else
+            texture = await texture_loader.loadAsync(path);
         if (!atlases[atlas])
             atlases[atlas] = {};
         atlases[atlas][name] = { path, data: texture };
@@ -109,6 +93,17 @@ export function ResourceManagerModule() {
         return atlases[atlas][name].data;
     }
 
+    function free_texture(name: string, atlas = '') {
+        if (has_texture_name(name, atlas)) {
+            const tex = atlases[atlas][name].data;
+            delete atlases[atlas][name];
+            tex.dispose();
+            log('free texture', name, atlas);
+        }
+        else
+            Log.error('texture not found', name, atlas);
+    }
+
     init();
-    return { preload_texture, preload_font, get_texture, get_font };
+    return { preload_texture, preload_font, get_texture, get_font, free_texture };
 };

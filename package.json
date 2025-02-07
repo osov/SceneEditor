@@ -17,8 +17,10 @@
     "vite-multiple-assets": "^2.2.5"
   },
   "dependencies": {
+    "@types/stats": "^0.16.30",
     "camera-controls": "^2.9.0",
     "protobufjs": "^7.4.0",
+    "stats.js": "^0.17.0",
     "three": "latest",
     "troika-three-text": "^0.52.3",
     "tweakpane": "3.0.5",

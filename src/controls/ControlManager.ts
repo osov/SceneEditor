@@ -2,6 +2,7 @@ import { is_base_mesh } from "../render_engine/helpers/utils";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
 import { TreeItem } from "../scene_tree/tree";
 import { HistoryData } from "./HistoryControl";
+import Stats from 'stats.js';
 
 declare global {
     const ControlManager: ReturnType<typeof ControlManagerCreate>;
@@ -82,9 +83,20 @@ function ControlManagerCreate() {
             update_graph();
         });
         set_active_control('size_transform_btn');
+        init_stats();
     }
 
-
+    function init_stats() {
+        let params = new URLSearchParams(document.location.search);
+        if (params.has("stats")) {
+            const stats = new Stats();
+            stats.dom.style.cssText = 'position:fixed;top:0;right:80px;cursor:pointer;opacity:0.9;z-index:10000';
+            stats.showPanel(2); // 0: fps, 1: ms, 2: mb, 3+: custom
+            document.body.appendChild(stats.dom);
+            EventBus.on('SYS_ON_UPDATE', () => stats.begin());
+            EventBus.on('SYS_ON_UPDATE_END', () => stats.end());
+        }
+    }
 
     function bind_btn(name: ButtonsList, callback: Function) {
         document.querySelector('.menu_min a.' + name)!.addEventListener('click', () => {
@@ -150,7 +162,6 @@ function ControlManagerCreate() {
             };
             list.push(item);
         }
-        //log(list)
         return list;
     }
 
