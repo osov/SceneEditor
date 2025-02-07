@@ -422,7 +422,7 @@ li:not(.active) > .tree__btn .use_trgl {display: none;}
   height: 16px;
   min-height: 16px;
   margin-right: 5px;
-  color: var(--min-color_red);
+  color: var(--color_red);
 }
 .drag_and_drop.active .drag_and_drop__status{
   color: var(--color_green);
