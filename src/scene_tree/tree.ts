@@ -977,11 +977,20 @@ function TreeControlCreate() {
         const btn_menu = event.target.closest(".btn_menu");
         if (btn_menu) {
             const menu_section = btn_menu.closest(".menu_section");
+            menu_section?.classList.remove("hide_menu");
             menu_section?.classList.toggle("active");
         }
     });
 
-
+    let params = new URLSearchParams(document.location.search);
+    let hide_menu = params.get("hide_menu"); 
+    if(hide_menu != null) {
+        const menu_section = document.querySelectorAll(".menu_section");
+        menu_section.forEach((ms: any) => {
+            ms?.classList.add("hide_menu");
+            ms?.classList.remove("active");
+        })
+    }
 
 
     return { draw_graph };

@@ -94,11 +94,13 @@ canvas {
   height: 100%;
   background-color: var(--menu_bg);
   transform: translateY(calc(100% - 32px));
-  transition: transform var(--transition_300);
   z-index: 2;
 }
 .menu_section.active {
   transform: translateY(0);
+}
+.menu_section:not(.hide_menu) {
+  transition: transform var(--transition_300);
 }
 .menu_left{
   width: auto;
