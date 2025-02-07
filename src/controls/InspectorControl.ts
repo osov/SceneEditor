@@ -97,7 +97,7 @@ class Inspector extends UI {
     protected _createUiContainer(): HTMLDivElement {
         const container = document.querySelector('.menu_right') as HTMLDivElement;
         this._root = new Pane({ container });
-        this._root.registerPlugin(TweakpaneThumbnailListPlugin);
+        this._root.registerPlugin(TweakpaneThumbnailListPlugin.plugin);
         // this._root.registerPlugin(TweakpaneSearchListPlugin); 
         return container;
     }
