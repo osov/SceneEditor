@@ -110,7 +110,7 @@ canvas {
   /* overflow-x: hidden; */
 }
 .menu_right{
-  width: 340px;
+  width: 300px;
   /* right: 0; */
   border-left: var(--menu_border);
   overflow-y: auto;
