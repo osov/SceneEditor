@@ -1,8 +1,8 @@
 import { UI } from 'uiconfig-tweakpane';
 import { Pane } from 'tweakpane';
-import { Vector3 } from 'three';
-import * as TweakpaneThumbnailListPlugin from 'tweakpane-plugin-thumbnail-list';
 import { ChangeEvent, UiObjectConfig } from 'uiconfig.js';
+import { OnClickReturnType } from 'uiconfig.js/dist/types';
+import * as TweakpaneThumbnailListPlugin from 'tweakpane-plugin-thumbnail-list';
 // import TweakpaneSearchListPlugin from 'tweakpane-plugin-search-list';
 
 
@@ -62,7 +62,7 @@ export type PropertyValues = {
     [PropertyType.SLIDER]: number;
     [PropertyType.LIST_TEXT]: string; //  selected key
     [PropertyType.LIST_TEXTURES]: string;// selected key;
-    [PropertyType.BUTTON]: null;
+    [PropertyType.BUTTON]: ((...args: any[]) => OnClickReturnType) | ((...args: any[]) => Promise<OnClickReturnType>);
     [PropertyType.POINT_2D]: { x: number, y: number };
     [PropertyType.LOG_DATA]: string;
 }
@@ -119,10 +119,9 @@ function InspectorControlCreate() {
         let fields: UiObjectConfig[] = [];
         const uneque_fields = [] as string[];
         for (const obj of list_data) {
+            // TODO: делать преобразование один раз, после выяснения общего набора полей
             fields = [];
             for (const field of obj.data) {
-
-                // TODO: figure out about grouping
 
                 // ищем информацию о поле в соответсвующем конфиге
                 const property: PropertyItem<PropertyType> | undefined = getPropertyItemByName(field.name);
@@ -136,38 +135,60 @@ function InspectorControlCreate() {
                     uneque_fields.push(property.name);
                 }
 
-                // добавляем поле в инспектор
+                // перобразование полей
+                let view = {} as UiObjectConfig;
                 switch (property.type) {
                     case PropertyType.STRING: case PropertyType.LOG_DATA:
-                        fields.push(string_view(obj, field, property));
+                        view = string_view(obj, field, property);
                         break;
                     case PropertyType.NUMBER:
-                        fields.push(view("number", obj, field, property));
+                        view = viewByType("number", obj, field, property);
                         break;
                     case PropertyType.BOOLEAN:
-                        fields.push(view("checkbox", obj, field, property));
+                        view = viewByType("checkbox", obj, field, property);
                         break;
                     case PropertyType.VECTOR_2:
-                        fields.push(view("vec2", obj, field, property));
+                        view = viewByType("vec2", obj, field, property);
                         break;
                     case PropertyType.VECTOR_3:
-                        fields.push(view("vec3", obj, field, property));
+                        view = viewByType("vec3", obj, field, property);
                         break;
                     case PropertyType.VECTOR_4:
-                        fields.push(view("vec4", obj, field, property));
+                        view = viewByType("vec4", obj, field, property);
                         break;
                     case PropertyType.COLOR:
                         // FIXME: type need to be 'color'
-                        fields.push(view("number", obj, field, property));
+                        view = viewByType("number", obj, field, property);
                         break;
                     case PropertyType.LIST_TEXTURES:
+                        view = textures_view(obj, field, property);
                         break;
                     case PropertyType.BUTTON:
+                        view = button_view(field, property);
                         break;
                 }
+
+                // формированик групп
+                const group = getInspectorGroupByName(field.name);
+                if (group && group.title != '') {
+                    let folder = fields.find((value: UiObjectConfig) => {
+                        return (value.type == "folder") && (value.label == group.title);
+                    });
+                    if (!folder) {
+                        folder = {
+                            type: "folder",
+                            label: group.title,
+                            children: [],
+                            expanded: true,
+                        };
+                    }
+                    folder.children?.push(view);
+                    fields.push(folder);
+                } else fields.push(view);
             }
         }
 
+        // добавляем поля в инспектор
         for (const field of fields) {
             _inspector.appendChild(field);
         }
@@ -184,7 +205,19 @@ function InspectorControlCreate() {
         return undefined;
     }
 
-    function view<T extends PropertyType>(type: string, obj: ObjectData, field: PropertyData<T>, property: PropertyItem<T>): UiObjectConfig {
+    function getInspectorGroupByName(name: string): InspectorGroup | undefined {
+        for (const group of _config) {
+            const result = group.property_list.find((property) => {
+                return property.name == name;
+            });
+            if (result)
+                return group;
+        }
+        return undefined;
+    }
+
+
+    function viewByType<T extends PropertyType>(type: string, obj: ObjectData, field: PropertyData<T>, property: PropertyItem<T>): UiObjectConfig {
         return {
             type,
             label: property.title,
@@ -206,7 +239,7 @@ function InspectorControlCreate() {
         };
     }
 
-    function string_view<T extends PropertyType>(obj: ObjectData, field: PropertyData<T>, property: PropertyItem<T>) {
+    function string_view<T extends PropertyType>(obj: ObjectData, field: PropertyData<T>, property: PropertyItem<T>): UiObjectConfig {
         return {
             type: "input",
             label: property.title,
@@ -224,6 +257,18 @@ function InspectorControlCreate() {
                     ]
                 })
             }
+        };
+    }
+
+    function textures_view<T extends PropertyType>(obj: ObjectData, field: PropertyData<T>, property: PropertyItem<T>): UiObjectConfig {
+        return {};
+    }
+
+    function button_view<T extends PropertyType>(field: PropertyData<T>, property: PropertyItem<T>): UiObjectConfig {
+        return {
+            type: "button",
+            label: property.title,
+            onClick: field.data as PropertyValues[PropertyType.BUTTON]
         };
     }
 

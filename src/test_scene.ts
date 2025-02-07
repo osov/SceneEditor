@@ -137,7 +137,10 @@ export async function run_debug_scene() {
 
   ControlManager.update_graph();
 
+  run_debug_inpector();
+}
 
+function run_debug_inpector() {
   InspectorControl.setup_config([
     {
       name: 'base',
@@ -164,6 +167,7 @@ export async function run_debug_scene() {
         { name: 'vec4', title: 'Вектор4', type: PropertyType.VECTOR_4 },
         { name: 'checkbox', title: 'Чек', type: PropertyType.BOOLEAN },
         { name: 'color', title: 'Цвет', type: PropertyType.COLOR },
+        { name: 'click', title: 'Кликнуть', type: PropertyType.BUTTON }
       ]
     }
   ]);
@@ -179,7 +183,8 @@ export async function run_debug_scene() {
         { name: 'vec2', data: new Vector2(134, 234) },
         { name: 'vec4', data: new Vector4(1, 343, 1, 6565) },
         { name: 'checkbox', data: true },
-        { name: 'color', data: "#ff0000" }
+        { name: 'color', data: "#ff0000" },
+        { name: 'click', data: () => log('click') }
       ]
     },
     {
@@ -190,9 +195,10 @@ export async function run_debug_scene() {
         { name: 'rotation', data: new Vector3(0, 0, 0) },
         { name: 'scale', data: new Vector3(1, 1, 1) },
         { name: 'vec2', data: new Vector2(134, 234) },
-        // { name: 'vec4', data: new Vector4(1, 343, 1, 6565) },
+        { name: 'vec4', data: new Vector4(1, 343, 1, 6565) },
         { name: 'checkbox', data: true },
-        { name: 'color', data: "#ff0000" }
+        { name: 'color', data: "#ff0000" },
+        { name: 'click', data: () => log('click') }
       ]
     }
   ]);
