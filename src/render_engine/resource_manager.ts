@@ -1,7 +1,7 @@
 import { CanvasTexture, MeshBasicMaterial, RepeatWrapping, Texture, TextureLoader } from 'three';
 import { preloadFont } from 'troika-three-text'
 import { get_file_name } from './helpers/utils';
-import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
+//import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
 
 //import * as THREE from 'three'
 //window.THREE = THREE
@@ -23,27 +23,27 @@ export function ResourceManagerModule() {
     const atlases: { [name: string]: AssetData<Texture> } = { '': {} };
     const fonts: { [name: string]: string } = {};
     let bad_texture: CanvasTexture;
-    const ktx2Loader = new KTX2Loader();
+   // const ktx2Loader = new KTX2Loader();
 
     function init() {
         gen_textures();
-        ktx2Loader.setTranscoderPath('./libs/basis/');
+     /*   ktx2Loader.setTranscoderPath('./libs/basis/');
         ktx2Loader.detectSupport(RenderEngine.renderer);
 
         ktx2Loader.load('/assets/textures/output.ktx2', function (texture) {
 
             atlases['']['ktx'] = { path:'', data: texture };
-          //  SceneManager.get_mesh_by_id(1000).set_texture('ktx');
+            SceneManager.get_mesh_by_id(1000)!.set_texture('ktx');
 
         }, function () {
 
-            console.log('onProgress');
+            log('onProgress');
 
         }, function (e) {
 
-            console.error(e);
+            Log.error(e);
 
-        });
+        });*/
     }
 
     function gen_textures() {
