@@ -12,6 +12,9 @@ export function register_size_control() {
     (window as any).SizeControl = SizeControlCreate();
 }
 
+// todo
+// модуль не умеет правильно работать если сделан scale в минус или rotation(точки не строит правильно)
+
 function SizeControlCreate() {
     const scene = RenderEngine.scene;
     const editor_z = 49;
@@ -233,8 +236,8 @@ function SizeControlCreate() {
                     const bounds2 = get_bounds_from_list();
                     bounds2[0] += dx * ws.x;
                     bounds2[1] -= dy * ws.y;
-                    bounds2[2] -= dx * ws.y;
-                    bounds2[3] += dy * ws.x;
+                    bounds2[2] -= dx * ws.x;
+                    bounds2[3] += dy * ws.y;
                     const tmp = get_cursor_dir(wp, bounds2);
                     dir[0] = tmp[0];
                     dir[1] = tmp[1];
