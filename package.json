@@ -21,6 +21,7 @@
     "protobufjs": "^7.4.0",
     "three": "latest",
     "troika-three-text": "^0.52.3",
+    "tweakpane": "3.0.5",
     "tweakpane-plugin-preview-select": "^1.0.6",
     "tweakpane-plugin-search-list": "^0.0.10",
     "tweakpane-plugin-thumbnail-list": "^0.3.0",
