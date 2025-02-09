@@ -65,6 +65,7 @@ function TreeControlCreate() {
 
     let startY: number;  
     let startX: number;   
+    let itemDragRenameId: number | null = null; // чтобы чекать DBLCLICK  или  при DELAY не выбрали ли другой элемент
 
     let boxDD: any = document.querySelector(".drag_and_drop"); // div таскания за мышью
     let ddVisible: boolean = false; //  видимость div перетаскивания 
@@ -295,6 +296,7 @@ function TreeControlCreate() {
             if (treeItem && _is_dragging) {
                 itemDrag = getItemObj(treeItem);
                 console.log({ itemDrag });
+                itemDragRenameId = itemDrag?.id || null;
 
                 if (itemDrag?.no_drag === true || itemDrag?.no_rename === true) {
                     treeItem = null;
@@ -338,6 +340,7 @@ function TreeControlCreate() {
         if (event.button === 0) {
             if (!event.target.closest('.tree_div')) {
                 if(itemDrag) myClear(); 
+                itemDragRenameId = null;
                 return;
             }
             _is_mousedown = false;
@@ -728,20 +731,23 @@ function TreeControlCreate() {
 
         if (!_is_editItem) return; // разрешено ли редактирование
 
-        const itemName = event.target.closest("a.tree__item.selected .tree__item_name");
-        if (!itemName) return;
-        
         const currentItem = event.target.closest("a.tree__item.selected");
         if (!currentItem) return;
         
         const currentId = +currentItem?.getAttribute("data-id");
         if (!currentId) return;
-        
-        itemName.setAttribute("contenteditable", "true");
-        itemName.focus();
-        document.execCommand('selectAll', false, undefined);
 
-        renameItem(currentId, itemName);
+        const itemName = event.target.closest("a.tree__item.selected .tree__item_name");
+        if (!itemName) return;
+                
+        setTimeout(() => { 
+            if (itemDragRenameId != currentId) return;
+            itemName.setAttribute("contenteditable", "true");
+            itemName.focus();
+            document.execCommand('selectAll', false, undefined);
+            renameItem(currentId, itemName);
+        }, 1200);
+
     }
     
     function toggleClassSelected(event: any) {
@@ -997,6 +1003,18 @@ function TreeControlCreate() {
     }
 
 
+    document.addEventListener('dblclick', (e: any) => {
+        const item = e.target.closest('.tree__item');
+        if (item) {
+            const itemId = item?.getAttribute('data-id');
+            if (itemId) {
+                itemDragRenameId = null;
+                log(`SYS_GRAPH_CLICKED, { id: ${itemId} }`);
+                EventBus.trigger("SYS_GRAPH_CLICKED", { id: itemId });
+            }
+        }
+    }, false);
+    
     // document.addEventListener('mousedown', onMouseDown, false);
     EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
     EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);

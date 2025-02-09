@@ -335,8 +335,8 @@ ul.tree li a.tree__item.selected span.tree__item_bg:not(:has(~ .tree__item_name[
 }
 .tree__item_name {
   position: relative;
-  /* min-width: calc(100% - 17px); */
-  min-width: 28px;
+  /* min-width: 28px; */
+  min-width: calc(100% - 17px);
   max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;

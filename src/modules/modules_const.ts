@@ -26,6 +26,7 @@ export type _SystemMessages = {
     SYS_GRAPH_SELECTED: { list: number[] },
     SYS_GRAPH_CHANGE_NAME: { id: number, name: string },
     SYS_GRAPH_MOVED_TO: { pid: number, next_id: number, id_mesh_list: number[] },
+    SYS_GRAPH_CLICKED: { id: number },
     SYS_INSPECTOR_UPDATED_VALUE: ObjectData,
 };
 
