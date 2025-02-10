@@ -150,6 +150,7 @@ function ControlManagerCreate() {
         const graph = SceneManager.make_graph();
         const sel_list_ids = SelectControl.get_selected_list().map(m => m.mesh_data.id);
         const list: TreeItem[] = [];
+        list.push({ id: -1, pid: -2, name: 'Сцена', icon: 'scene', selected: false, visible: true });
         for (let i = 0; i < graph.length; i++) {
             const g_item = graph[i];
             const item: TreeItem = {
