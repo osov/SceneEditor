@@ -1,7 +1,8 @@
-import { CanvasTexture, NoColorSpace, RepeatWrapping, Texture, TextureLoader } from 'three';
+import { CanvasTexture, NoColorSpace, RepeatWrapping, Texture, TextureLoader, Vector2 } from 'three';
 import { preloadFont } from 'troika-three-text'
 import { get_file_name } from './helpers/utils';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
+import { parse_tp_data_to_uv, parse_unity_tp_sheet } from './atlas_parser';
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -14,10 +15,17 @@ interface AssetData<T> {
     [k: string]: { path: string, data: T };
 }
 
+interface TextureData {
+    texture: Texture;
+    uvOffset: Vector2;
+    uvScale: Vector2;
+    size: Vector2;
+}
+
 export function ResourceManagerModule() {
     const font_characters = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~йцукенгшщзхфывапролджэячсмитьбюЙЦУКЕНГШЩЗХФЫВАПРОЛДЖЯЧСМИТЬБЮЭёЁäüÜöøæåéèêàôùëúíñçõ¿¡ÉãòáßóÇışİğĞ";
     const texture_loader = new TextureLoader();
-    const atlases: { [name: string]: AssetData<Texture> } = { '': {} };
+    const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
     let bad_texture: CanvasTexture;
     const ktx2Loader = new KTX2Loader().setTranscoderPath('./libs/basis/').detectSupport(RenderEngine.renderer);
@@ -59,8 +67,35 @@ export function ResourceManagerModule() {
             texture = await texture_loader.loadAsync(path);
         if (!atlases[atlas])
             atlases[atlas] = {};
-        atlases[atlas][name] = { path, data: texture };
+        atlases[atlas][name] = { path, data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
         log('Texture preloaded:', path);
+        return atlases[atlas][name].data;
+    }
+
+    async function preload_atlas(atlas_path: string, texture_path: string) {
+        const data = await (await fetch(atlas_path)).text();
+        let texture: Texture;
+        if (texture_path.endsWith('.ktx2'))
+            texture = await ktx2Loader.loadAsync(texture_path);
+        else
+            texture = await texture_loader.loadAsync(texture_path);
+        const texture_data = parse_tp_data_to_uv(data, texture.image.width, texture.image.height);
+
+        const name = get_file_name(atlas_path);
+        atlases[name] = {};
+        for (const texture_name in texture_data) {
+            const tex_data = texture_data[texture_name];
+            atlases[name][texture_name] = {
+                path: atlas_path,
+                data: {
+                    texture,
+                    size: new Vector2(texture.image.width * tex_data.uvScale[0], texture.image.width * tex_data.uvScale[1]),
+                    uvOffset: new Vector2(tex_data.uvOffset[0], tex_data.uvOffset[1]),
+                    uvScale: new Vector2(tex_data.uvScale[0], tex_data.uvScale[1])
+                }
+            };
+        }
+        log('Atlas preloaded:', atlas_path);
         return texture;
     }
 
@@ -87,19 +122,19 @@ export function ResourceManagerModule() {
         return fonts[name];
     }
 
-    function get_texture(name: string, atlas = '') {
+    function get_texture(name: string, atlas = ''): TextureData {
         if (!has_texture_name(name, atlas)) {
             Log.error('Texture not found', name, atlas);
-            return bad_texture;
+            return { texture: bad_texture, size: new Vector2(128, 128), uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1) };
         };
         return atlases[atlas][name].data;
     }
 
     function free_texture(name: string, atlas = '') {
         if (has_texture_name(name, atlas)) {
-            const tex = atlases[atlas][name].data;
+            const tex_data = atlases[atlas][name].data;
             delete atlases[atlas][name];
-            tex.dispose();
+            tex_data.texture.dispose();
             log('Texture free', name, atlas);
         }
         else
@@ -107,5 +142,5 @@ export function ResourceManagerModule() {
     }
 
     init();
-    return { preload_texture, preload_font, get_texture, get_font, free_texture };
+    return { preload_atlas, preload_texture, preload_font, get_texture, get_font, free_texture };
 };

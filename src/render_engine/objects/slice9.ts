@@ -1,58 +1,97 @@
-import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, Mesh } from "three";
+import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, Mesh, BufferAttribute } from "three";
 import { IBaseMesh, IObjectTypes } from "../types";
 import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
 
-// todo optimize material list + attributes color
+// todo optimize material list
 // todo set visible only mesh(visible+enabled)
 
 export const slice_9_shader = {
     vertexShader: `
-        varying vec2 texCoord;
+        attribute vec4 uvData; 
+        attribute vec3 color;  
+        
+        varying vec3 vColor; 
+        varying vec2 vUv;
+        varying vec4 vUvData;
+
             void main() {
-                texCoord = uv;
+                vColor = color;
+                vUv = uv; 
+                vUvData = uvData;
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }`,
 
     fragmentShader: `
-        varying vec2 texCoord;
+        varying vec2 vUv;
+        varying vec4 vUvData;
+        varying vec3 vColor; 
 
-        uniform sampler2D tex;
+        uniform sampler2D u_texture;
         uniform vec2 u_dimensions;
         uniform vec2 u_border;
-        uniform vec3 u_color;
 
         float map(float value, float originalMin, float originalMax, float newMin, float newMax) {
             return (value - originalMin) / (originalMax - originalMin) * (newMax - newMin) + newMin;
         }
 
-        float processAxis(float coord, float textureBorder, float windowBorder) {
-            if (coord < windowBorder)
-                return map(coord, 0., windowBorder, 0., textureBorder) ;
-            if (coord < 1. - windowBorder) 
-                return map(coord,  windowBorder, 1. - windowBorder, textureBorder, 1. - textureBorder);
-            return map(coord, 1. - windowBorder, 1., 1. - textureBorder, 1.);
-        } 
+        float processAxis(float coord, float texBorder, float winBorder) {
+            return (coord < winBorder) ? map(coord, 0.0, winBorder, 0.0, texBorder) :
+                (coord > (1.0 - winBorder)) ? map(coord, 1.0 - winBorder, 1.0, 1.0 - texBorder, 1.0) :
+                map(coord, winBorder, 1.0 - winBorder, texBorder, 1.0 - texBorder);
+        }
+
 
         void main(void) {
             vec2 newUV = vec2(
-                processAxis(texCoord.x, u_border.x, u_dimensions.x),
-                processAxis(texCoord.y, u_border.y, u_dimensions.y)
+                processAxis(vUv.x, u_border.x, u_dimensions.x),
+                processAxis(vUv.y, u_border.y, u_dimensions.y)
             );
+            newUV = vUvData.xy + newUV * vUvData.zw;
+            gl_FragColor = texture2D(u_texture, newUV) * vec4(vColor, 1.);
+        }`
+};
 
-            gl_FragColor = texture2D(tex, newUV) * vec4(u_color, 1.);
+export const simple_texture_shader = {
+    vertexShader: `
+        attribute vec4 uvData; 
+        attribute vec3 color;  
+        
+        varying vec3 vColor; 
+        varying vec2 vUv;
+
+        void main() {
+            vColor = color;
+            vUv = uvData.xy + uv * uvData.zw; 
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+
+    fragmentShader: `
+        uniform sampler2D u_texture;
+
+        varying vec3 vColor; 
+        varying vec2 vUv;
+
+        void main(void) {
+            gl_FragColor = texture2D(u_texture, vUv) * vec4(vColor, 1.);
         }`
 };
 
 export const simple_shader = {
     vertexShader: `
+            attribute vec3 color; 
+
+            varying vec3 vColor;
+
             void main() {
+                vColor = color;
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }`,
 
     fragmentShader: `
-        uniform vec3 u_color;
+        varying vec3 vColor;
+
         void main(void) {
-            gl_FragColor =  vec4(u_color, 1.);
+            gl_FragColor =  vec4(vColor, 1.);
         }`
 };
 
@@ -96,36 +135,20 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         atlas: ''
     }
     const geometry = new PlaneGeometry(width, height);
-
-    function update_parameters() {
-        if (material.uniforms && material.uniforms['u_dimensions']) {
-            material.uniforms['u_dimensions'].value.set(parameters.slice_width / parameters.width, parameters.slice_height / parameters.height);
-            material.uniforms['u_border'].value.set(parameters.slice_width / parameters.clip_width, parameters.slice_height / parameters.clip_height);
-        }
-    }
-
-    function set_texture(name: string, atlas = '') {
-        parameters.texture = name;
-        parameters.atlas = atlas;
-        let texture = name == '' ? null : ResourceManager.get_texture(name, atlas);
-        material.uniforms['tex'].value = texture;
-        if (texture) {
-            parameters.clip_width = texture.image.width;
-            parameters.clip_height = texture.image.height;
-            material.vertexShader = slice_9_shader.vertexShader;
-            material.fragmentShader = slice_9_shader.fragmentShader;
-        }
-        else {
-            parameters.clip_width = 1;
-            parameters.clip_height = 1;
-            material.vertexShader = simple_shader.vertexShader;
-            material.fragmentShader = simple_shader.fragmentShader;
-        }
-        material.needsUpdate = true;
-        update_parameters();
-    }
-
-
+    const uvData = new Float32Array([
+        0, 0, 1, 1,
+        0, 0, 1, 1,
+        0, 0, 1, 1,
+        0, 0, 1, 1,
+    ]);
+    const a_color = new Float32Array([
+        1, 1, 1,
+        1, 1, 1,
+        1, 1, 1,
+        1, 1, 1,
+    ]);
+    geometry.setAttribute("uvData", new BufferAttribute(uvData, 4));
+    geometry.setAttribute("color", new BufferAttribute(a_color, 3));
 
     function set_size(w: number, h: number) {
         const bb = convert_width_height_to_pivot_bb(w, h, parameters.pivot_x, parameters.pivot_y);
@@ -147,15 +170,76 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         update_parameters();
     }
 
+    function update_parameters(update_shader = false) {
+        if (update_shader) {
+            let vertex_shader = '';
+            let fragment_shader = '';
+            if (parameters.texture == '') {
+                vertex_shader = simple_shader.vertexShader;
+                fragment_shader = simple_shader.fragmentShader;
+            }
+            else {
+                if (parameters.slice_width > 0 || parameters.slice_height > 0) {
+                    vertex_shader = slice_9_shader.vertexShader;
+                    fragment_shader = slice_9_shader.fragmentShader;
+                }
+                else {
+                    vertex_shader = simple_texture_shader.vertexShader;
+                    fragment_shader = simple_texture_shader.fragmentShader;
+                }
+            }
+            if (material.vertexShader != vertex_shader || material.fragmentShader != fragment_shader) {
+                material.vertexShader = vertex_shader;
+                material.fragmentShader = fragment_shader;
+                material.needsUpdate = true;
+            }
+        }
+        if (material.uniforms && material.uniforms['u_dimensions']) {
+            material.uniforms['u_dimensions'].value.set(parameters.slice_width / parameters.width, parameters.slice_height / parameters.height);
+            material.uniforms['u_border'].value.set(parameters.slice_width / parameters.clip_width, parameters.slice_height / parameters.clip_height);
+        }
+    }
+
+
+    function set_texture(name: string, atlas = '') {
+        parameters.texture = name;
+        parameters.atlas = atlas;
+        if (name != '') {
+            const texture_data = ResourceManager.get_texture(name, atlas);
+            material.uniforms['u_texture'].value = texture_data.texture;
+            parameters.clip_width = texture_data.size.x;
+            parameters.clip_height = texture_data.size.y;
+            for (let i = 0; i < 4; i++) {
+                geometry.attributes['uvData'].array[4 * i] = texture_data.uvOffset.x;
+                geometry.attributes['uvData'].array[4 * i + 1] = texture_data.uvOffset.y;
+                geometry.attributes['uvData'].array[4 * i + 2] = texture_data.uvScale.x;
+                geometry.attributes['uvData'].array[4 * i + 3] = texture_data.uvScale.y;
+            }
+            geometry.attributes['uvData'].needsUpdate = true;
+        }
+        else {
+            material.uniforms['u_texture'].value = null;
+            parameters.clip_width = 1;
+            parameters.clip_height = 1;
+        }
+        update_parameters(true);
+    }
+
     function set_slice(width: number, height: number) {
         parameters.slice_width = width;
         parameters.slice_height = height;
-        update_parameters();
+        update_parameters(true);
     }
 
     function set_color(hex_color: string) {
         parameters.color = hex_color;
-        material.uniforms['u_color'].value.set(new Color(hex_color));
+        const clr = new Color(hex_color);
+        for (let i = 0; i < 4; i++) {
+            geometry.attributes['color'].array[3 * i] = clr.r;
+            geometry.attributes['color'].array[3 * i + 1] = clr.g;
+            geometry.attributes['color'].array[3 * i + 2] = clr.b;
+        }
+        geometry.attributes['color'].needsUpdate = true;
     }
 
     function get_bounds(wp: Vector3, ws: Vector3) {
@@ -206,10 +290,9 @@ export class Slice9Mesh extends Mesh implements IBaseMesh {
         super();
         const material = custom_material ? custom_material : new ShaderMaterial({
             uniforms: {
-                tex: { value: null },
+                u_texture: { value: null },
                 u_dimensions: { value: new Vector2(1, 1) },
                 u_border: { value: new Vector2(1, 1) },
-                u_color: { value: new Color('#fff') },
             },
             vertexShader: simple_shader.vertexShader,
             fragmentShader: simple_shader.fragmentShader,
