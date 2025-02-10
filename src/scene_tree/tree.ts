@@ -8,6 +8,15 @@ export function register_tree_control() {
     (window as any).TreeControl = TreeControlCreate();
 }
 
+export enum NodeAction {
+    CTRL_X,
+    CTRL_C,
+    CTRL_V,
+    CTRL_B,
+    CTRL_D,
+    rename,
+    remove
+}
 
 interface Item {
     id: number;
@@ -67,6 +76,8 @@ function TreeControlCreate() {
     let startX: number;   
     let itemDragRenameId: number | null = null; // чтобы чекать DBLCLICK  или  при DELAY не выбрали ли другой элемент
 
+    const menuPKM: any = document.querySelector('.menu__pkm');
+    let mpkmVisible: boolean = false;
     let boxDD: any = document.querySelector(".drag_and_drop"); // div таскания за мышью
     let ddVisible: boolean = false; //  видимость div перетаскивания 
 
@@ -281,10 +292,14 @@ function TreeControlCreate() {
     function onMouseDown(event: any) {
         if (!event.target.closest('.tree_div')) return;
 
+        if (mpkmVisible && !event.target.closest('.menu__pkm a')) {
+            menuPKMClear();
+        }
+
         // event.preventDefault();
-        if (event.button === 0) {
-            _is_mousedown = true;
-            
+        if (event.button === 0 || event.button === 2) {
+            if (event.button === 0) _is_mousedown = true; // ЛКМ
+
             const item = event.target.closest('a.tree__item.selected .tree__item_name[contenteditable="true"]');
             if(item) return;
             toggleClassSelected(event);
@@ -337,7 +352,12 @@ function TreeControlCreate() {
     function onMouseUp(event: any) {
         // event.preventDefault(); // иногда отключается плавное сворачивание ...
         
-        if (event.button === 0) {
+        if (mpkmVisible && event.target.closest('.menu__pkm a') && itemDrag && event.button === 0) {
+            menuPKMClick(event);
+        }
+
+        if (mpkmVisible == false && (event.button === 0 || event.button === 2)) {
+
             if (!event.target.closest('.tree_div')) {
                 if(itemDrag) myClear(); 
                 itemDragRenameId = null;
@@ -345,9 +365,14 @@ function TreeControlCreate() {
             }
             _is_mousedown = false;
             
-            setContendEditAble(event);
+            if (event.button === 0) setContendEditAble(event); // ЛКМ
             sendListSelected(event);
             
+            if (event.button === 2) {
+                openMenuPKM(event);
+                return;
+            }
+
             if (!itemDrag || !itemDrop) {
                 myClear();
                 return;
@@ -555,7 +580,7 @@ function TreeControlCreate() {
 
             currentDroppable = droppableBelow
 
-            if (currentDroppable) {
+            if (currentDroppable && _is_moveItemDrag) { // cursor in current
                 currentDroppable.classList.add('droppable');
             }
         }
@@ -741,13 +766,17 @@ function TreeControlCreate() {
         if (!itemName) return;
                 
         setTimeout(() => { 
-            if (itemDragRenameId != currentId) return;
-            itemName.setAttribute("contenteditable", "true");
-            itemName.focus();
-            document.execCommand('selectAll', false, undefined);
-            renameItem(currentId, itemName);
+            if (itemDragRenameId != currentId) return; // тк setTimeout сверяем, что это тот же элемент
+            preRename(currentId, itemName);
         }, 1200);
 
+    }
+
+    function preRename(currentId: number, itemName: any) {
+        itemName.setAttribute("contenteditable", "true");
+        itemName.focus();
+        document.execCommand('selectAll', false, undefined);
+        renameItem(currentId, itemName);
     }
     
     function toggleClassSelected(event: any) {
@@ -769,10 +798,16 @@ function TreeControlCreate() {
         if (Input.is_control()) {
 
             if (listSelected.includes(currentId)) { // если он уже выделен - исключаем его
+                const isOne = listSelected.length == 1 ? true : false;
                 _is_dragging = listSelected.length > 1 ? true : false; // отключаем, если единственный выбранный
                 currentItem.classList.remove("selected");
                 listSelected = listSelected.filter((item) => item != currentId);
                 _is_currentOnly = true; // текущий
+                
+                if(isOne) { // ctrl + 1 selected 
+                    log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${[]}})`);
+                    EventBus.trigger('SYS_GRAPH_SELECTED', {list: []});
+                }
             }
             else {
                 currentItem.classList.add("selected");
@@ -812,6 +847,7 @@ function TreeControlCreate() {
         if (btn) return;
         
         if (!itemDrag) return;
+        if (event.button === 2 && !event.target.closest("a.tree__item")) return;
         
         if (!_is_moveItemDrag) { // если движения Не было
             if(Input.is_control()) {
@@ -819,7 +855,7 @@ function TreeControlCreate() {
                 EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
                 return;
             }
-            if(listSelected?.length > 1) {
+            if(listSelected?.length > 1 && event.button === 0) {
                 listSelected = [itemDrag?.id];
                 log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
                 EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
@@ -952,6 +988,71 @@ function TreeControlCreate() {
 
     }
 
+    function openMenuPKM(event: any): void {
+        if (!itemDrag) return;
+        if (!event.target.closest(".tree__item")) return;
+
+        mpkmVisible = true;
+
+        menuPKM.classList.add("pos");
+        menuPKM.style.left = event.offset_x - 30 + 'px';
+
+        if (menuPKM.clientHeight + 30 > window.innerHeight) 
+            menuPKM.style.top = 15 + 'px';
+        else if (event.offset_y + menuPKM.clientHeight + 30 > window.innerHeight) 
+            menuPKM.style.top = menuPKM.clientHeight > event.offset_y ? menuPKM.style.top = 15 + 'px' : event.offset_y + 10 - menuPKM.clientHeight + 'px';
+        else 
+            menuPKM.style.top = event.offset_y - 5 + 'px';
+       
+    }
+
+
+
+    function menuPKMClick(event: any): void {
+        const itemPKM = event.target.closest(".menu__pkm a");
+        if (!itemPKM) return;
+        const dataAction = itemPKM?.getAttribute("data-action");
+        if (!dataAction) return;
+                
+        if (dataAction == NodeAction[0]) {
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, key: ${ NodeAction[0] } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED ', { id: itemDrag?.id, key: NodeAction[0] });
+        }
+        if (dataAction == NodeAction[1]) {
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, key: ${ NodeAction[1] } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED ', { id: itemDrag?.id, key: NodeAction[1] });
+        }
+        if (dataAction == NodeAction[2]) {
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, key: ${ NodeAction[2] } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED ', { id: itemDrag?.id, key: NodeAction[2] });
+        }
+        if (dataAction == NodeAction[3]) {
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, key: ${ NodeAction[3] } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED ', { id: itemDrag?.id, key: NodeAction[3] });
+        }
+        if (dataAction == NodeAction[4]) {
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, key: ${ NodeAction[4] } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED ', { id: itemDrag?.id, key: NodeAction[4] });
+        }
+        if (dataAction == NodeAction[5]) {
+            const itemName = document.querySelector(`.tree__item[data-id='${itemDrag?.id}'] .tree__item_name`);
+            if (!itemName) return;
+            preRename(itemDrag?.id, itemName);
+        }
+        if (dataAction == NodeAction[6]) {
+            log(`SYS_GRAPH_REMOVE, { id: ${itemDrag?.id} }`);
+            EventBus.trigger('SYS_GRAPH_REMOVE', { id: itemDrag?.id });
+        }
+
+        menuPKMClear();
+    }
+
+    function menuPKMClear(): void {
+        menuPKM.classList.remove('pos');
+        menuPKM.removeAttribute('style');
+        mpkmVisible = false;
+    }
+
     // вешаем обработчики
     function updateDaD(): void {
 
@@ -1014,6 +1115,10 @@ function TreeControlCreate() {
             }
         }
     }, false);
+
+    document.querySelector('#wr_tree, .menu__pkm')?.addEventListener('contextmenu', (event: any) => {
+        event.preventDefault();
+    });
     
     // document.addEventListener('mousedown', onMouseDown, false);
     EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);

@@ -107,6 +107,7 @@ canvas {
   border-right: var(--menu_border);
   min-width: 240px;
   max-width: 440px;
+  z-index: 3;
   /* overflow-x: hidden; */
 }
 .menu_right{
@@ -431,3 +432,36 @@ li:not(.active) > .tree__btn .use_trgl {display: none;}
 }
 .drag_and_drop.active .use_close,
 .drag_and_drop:not(.active) .use_check {display: none;}
+
+.menu__pkm {
+  position: fixed;
+  visibility: hidden;
+  width: auto;
+  min-width: 100px;
+  top: 0;
+  left: 0;
+  background-color: #2d3536;
+  max-height: calc(100vh - 28px);
+  overflow-y: auto;
+  z-index: 101;
+}
+.menu__pkm.pos {
+  visibility: visible;
+}
+.menu__pkm li a:first-child {
+  border-top: 1px solid #3a3a3a;
+}
+.menu__pkm li a {
+  display: block;
+  text-decoration: none;
+  text-wrap: nowrap;
+  color: #fff;
+  font-size: 14px;
+  padding: 5px 10px;
+  background-color: #2d3536;
+  border-bottom: 1px solid #3a3a3a;
+}
+.menu__pkm li a:hover {
+  background-color: #3a3a3a;
+  
+}
