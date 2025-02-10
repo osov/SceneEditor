@@ -92,7 +92,7 @@ function TreeControlCreate() {
         const tree: any = [];
         listSelected = []; // сбрасываем 
 
-        const rootList = [defaultList[0], ...list];
+        const rootList = deepClone(list);
         log({ rootList });
         
         rootList.forEach((node: any) => {
