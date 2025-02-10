@@ -1,8 +1,8 @@
-import { CanvasTexture, NoColorSpace, RepeatWrapping, Texture, TextureLoader, Vector2 } from 'three';
+import { CanvasTexture, RepeatWrapping, Texture, TextureLoader, Vector2 } from 'three';
 import { preloadFont } from 'troika-three-text'
 import { get_file_name } from './helpers/utils';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
-import { parse_tp_data_to_uv, parse_unity_tp_sheet } from './atlas_parser';
+import { parse_tp_data_to_uv } from './atlas_parser';
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -23,7 +23,7 @@ interface TextureData {
 }
 
 export function ResourceManagerModule() {
-    const font_characters = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~йцукенгшщзхфывапролджэячсмитьбюЙЦУКЕНГШЩЗХФЫВАПРОЛДЖЯЧСМИТЬБЮЭёЁäüÜöøæåéèêàôùëúíñçõ¿¡ÉãòáßóÇışİğĞ";
+    const font_characters = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~йцукенгшщзхфывапролджэячсмитьбюЙЦУКЕНГШЩЗХФЫВАПРОЛДЖЯЧСМИТЬБЮЭ";
     const texture_loader = new TextureLoader();
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
@@ -65,6 +65,7 @@ export function ResourceManagerModule() {
             texture = await ktx2Loader.loadAsync(path);
         else
             texture = await texture_loader.loadAsync(path);
+        (texture as any).path = path;
         if (!atlases[atlas])
             atlases[atlas] = {};
         atlases[atlas][name] = { path, data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
@@ -79,6 +80,7 @@ export function ResourceManagerModule() {
             texture = await ktx2Loader.loadAsync(texture_path);
         else
             texture = await texture_loader.loadAsync(texture_path);
+        (texture as any).path = texture_path;
         const texture_data = parse_tp_data_to_uv(data, texture.image.width, texture.image.height);
 
         const name = get_file_name(atlas_path);
@@ -104,7 +106,7 @@ export function ResourceManagerModule() {
         if (fonts[name]) {
             return true;
         }
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, _reject) => {
             preloadFont({
                 font: path,
                 characters: font_characters
@@ -130,6 +132,13 @@ export function ResourceManagerModule() {
         return atlases[atlas][name].data;
     }
 
+    function get_atlas(name: string) {
+        if (!atlases[name])
+            return null;
+        const values  = Object.values(atlases[name]);
+        return values[0].data.texture;
+    }
+
     function free_texture(name: string, atlas = '') {
         if (has_texture_name(name, atlas)) {
             const tex_data = atlases[atlas][name].data;
@@ -142,5 +151,5 @@ export function ResourceManagerModule() {
     }
 
     init();
-    return { preload_atlas, preload_texture, preload_font, get_texture, get_font, free_texture };
+    return { preload_atlas, preload_texture, preload_font, get_atlas, get_texture, get_font, free_texture };
 };
