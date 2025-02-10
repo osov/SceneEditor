@@ -64,7 +64,7 @@ function SizeControlCreate() {
         anchor_mesh = new Mesh(new CircleGeometry(15, 12), new MeshBasicMaterial({ color: 0xffff00, transparent: true }));
         anchor_mesh.position.set(300, -220, editor_z);
         ResourceManager.preload_texture('img/target.png', 'editor').then(() => {
-            anchor_mesh.material.map = ResourceManager.get_texture('target', 'editor');
+            anchor_mesh.material.map = ResourceManager.get_texture('target', 'editor').texture;
             anchor_mesh.material.needsUpdate = true;
         })
         anchor_mesh.visible = false;
@@ -108,7 +108,7 @@ function SizeControlCreate() {
 
         })
 
-        EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
+        EventBus.on('SYS_VIEW_INPUT_KEY_UP', (_e) => {
             if (!is_active) return;
             if (!Input.is_shift()) {
                 is_selected_anchor = false;

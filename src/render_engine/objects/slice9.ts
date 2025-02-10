@@ -9,26 +9,29 @@ export const slice_9_shader = {
     vertexShader: `
         attribute vec4 uvData; 
         attribute vec3 color;  
-        
-        varying vec3 vColor; 
+        attribute vec4 sliceData; 
+
         varying vec2 vUv;
         varying vec4 vUvData;
+        varying vec3 vColor; 
+        varying vec4 vSliceData; 
+        
 
-            void main() {
-                vColor = color;
-                vUv = uv; 
-                vUvData = uvData;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }`,
+        void main() {
+            vColor = color;
+            vUv = uv; 
+            vUvData = uvData;
+            vSliceData = sliceData;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
 
     fragmentShader: `
         varying vec2 vUv;
         varying vec4 vUvData;
         varying vec3 vColor; 
+        varying vec4 vSliceData; 
 
         uniform sampler2D u_texture;
-        uniform vec2 u_dimensions;
-        uniform vec2 u_border;
 
         float map(float value, float originalMin, float originalMax, float newMin, float newMax) {
             return (value - originalMin) / (originalMax - originalMin) * (newMax - newMin) + newMin;
@@ -43,8 +46,8 @@ export const slice_9_shader = {
 
         void main(void) {
             vec2 newUV = vec2(
-                processAxis(vUv.x, u_border.x, u_dimensions.x),
-                processAxis(vUv.y, u_border.y, u_dimensions.y)
+                processAxis(vUv.x, vSliceData.z, vSliceData.x),
+                processAxis(vUv.y, vSliceData.w, vSliceData.y)
             );
             newUV = vUvData.xy + newUV * vUvData.zw;
             gl_FragColor = texture2D(u_texture, newUV) * vec4(vColor, 1.);
@@ -147,8 +150,15 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         1, 1, 1,
         1, 1, 1,
     ]);
+    const slice_data = new Float32Array([
+        0, 0, 1, 1,
+        0, 0, 1, 1,
+        0, 0, 1, 1,
+        0, 0, 1, 1,
+    ]);
     geometry.setAttribute("uvData", new BufferAttribute(uvData, 4));
     geometry.setAttribute("color", new BufferAttribute(a_color, 3));
+    geometry.setAttribute("sliceData", new BufferAttribute(slice_data, 4));
 
     function set_size(w: number, h: number) {
         const bb = convert_width_height_to_pivot_bb(w, h, parameters.pivot_x, parameters.pivot_y);
@@ -171,6 +181,13 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
     }
 
     function update_parameters(update_shader = false) {
+        const u_dimensions_x = parameters.slice_width / parameters.width;
+        const u_dimensions_y = parameters.slice_height / parameters.height;
+        const u_border_x = parameters.slice_width / parameters.clip_width;
+        const u_border_y = parameters.slice_height / parameters.clip_height;
+        for (let i = 0; i < 4; i++)
+            geometry.attributes['sliceData'].setXYZW(i, u_dimensions_x, u_dimensions_y, u_border_x, u_border_y);
+        geometry.attributes['sliceData'].needsUpdate = true;
         if (update_shader) {
             let vertex_shader = '';
             let fragment_shader = '';
@@ -193,10 +210,6 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
                 material.fragmentShader = fragment_shader;
                 material.needsUpdate = true;
             }
-        }
-        if (material.uniforms && material.uniforms['u_dimensions']) {
-            material.uniforms['u_dimensions'].value.set(parameters.slice_width / parameters.width, parameters.slice_height / parameters.height);
-            material.uniforms['u_border'].value.set(parameters.slice_width / parameters.clip_width, parameters.slice_height / parameters.clip_height);
         }
     }
 
@@ -289,11 +302,7 @@ export class Slice9Mesh extends Mesh implements IBaseMesh {
     constructor(width = 1, height = 1, slice_width = 0, slice_height = 0, custom_material?: ShaderMaterial) {
         super();
         const material = custom_material ? custom_material : new ShaderMaterial({
-            uniforms: {
-                u_texture: { value: null },
-                u_dimensions: { value: new Vector2(1, 1) },
-                u_border: { value: new Vector2(1, 1) },
-            },
+            uniforms: { u_texture: { value: null }, },
             vertexShader: simple_shader.vertexShader,
             fragmentShader: simple_shader.fragmentShader,
             transparent: true

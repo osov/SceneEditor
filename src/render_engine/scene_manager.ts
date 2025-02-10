@@ -254,7 +254,7 @@ export function SceneManagerModule() {
     function move_mesh(mesh: IBaseMeshDataAndThree, pid = -1, next_id = -1) {
         let pid_is_child = false;
         mesh.traverse((child) => {
-            if (is_base_mesh(child) && (child as any).mesh_data.id == pid)
+            if (is_base_mesh(child) && (child as any).mesh_data.id == pid && pid != -1)
                 pid_is_child = true;
         });
         if (pid_is_child)
