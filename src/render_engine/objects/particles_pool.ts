@@ -1,4 +1,4 @@
-import { BufferGeometry, ShaderMaterial, Points, BufferAttribute, Vector3, Color, InterleavedBufferAttribute, PointsMaterial } from "three";
+import { BufferGeometry, ShaderMaterial, Points, BufferAttribute, Vector3, Color, InterleavedBufferAttribute } from "three";
 
 export const shader = {
     vertexShader: `
@@ -114,7 +114,7 @@ export function CreateParticlesPool(particleCount: number) {
         material.needsUpdate = true;
     }
 
-    function set_particle_texture(index: number, name: string,) {
+    function set_texture(index: number, name: string,) {
         const texture_data = ResourceManager.get_texture(name, current_atlas);
         attributes.uvOffset.setXY(index, texture_data.uvOffset.x, texture_data.uvOffset.y);
         attributes.uvScale.setXY(index, texture_data.uvScale.x, texture_data.uvScale.y);
@@ -122,35 +122,35 @@ export function CreateParticlesPool(particleCount: number) {
         attributes.uvScale.needsUpdate = true;
     }
 
-    function set_particle_position(index: number, pos: Vector3, need_update = true) {
+    function set_position(index: number, pos: Vector3, need_update = true) {
         attributes.position.setXYZ(index, pos.x, pos.y, pos.z);
         if (need_update)
             attributes.position.needsUpdate = true;
     }
 
-    function set_particle_size(index: number, size: number, need_update = true) {
+    function set_size(index: number, size: number, need_update = true) {
         attributes.size.setX(index, size);
         if (need_update)
             attributes.size.needsUpdate = true;
     }
 
-    function set_particle_color(index: number, hex_color: string, need_update = true) {
+    function set_color(index: number, hex_color: string, need_update = true) {
         const color = new Color(hex_color);
         attributes.color.setXYZ(index, color.r, color.g, color.b);
         if (need_update)
             attributes.color.needsUpdate = true;
     }
 
-    function set_particle_rotation(index: number, rotation_deg: number, need_update = true) {
+    function set_rotation(index: number, rotation_deg: number, need_update = true) {
         attributes.rotation.setX(index, rotation_deg * Math.PI / 180);
         if (need_update)
             attributes.rotation.needsUpdate = true;
     }
 
 
-    function update_particles() {
+    function updates() {
         mesh.geometry.attributes.position.needsUpdate = true;
     }
 
-    return { mesh, set_atlas, set_particle_texture, set_particle_position, set_particle_size, set_particle_color, set_particle_rotation, update_particles };
+    return { mesh, set_atlas, set_texture, set_position, set_size, set_color, set_rotation, updates };
 }

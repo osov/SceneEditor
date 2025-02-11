@@ -35,4 +35,4 @@ register_inspector_control();
 register_control_manager();
 register_history_control();
 
-await run_debug_scene();
+run_debug_scene();

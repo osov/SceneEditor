@@ -1,4 +1,4 @@
-import { Clock, Object3D, OrthographicCamera, Raycaster, Scene, Vector2, WebGLRenderer, } from 'three'
+import { Clock, Color, Object3D, OrthographicCamera, Raycaster, Scene, Vector2, WebGLRenderer, } from 'three'
 import { resize_renderer_to_display_size } from './helpers/window_utils'
 
 declare global {
@@ -14,6 +14,7 @@ export function RenderEngineModule() {
     const canvas = document.querySelector(`canvas#scene`)!;
     const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true })
     const scene = new Scene();
+    //scene.background = new Color('#faf');
     const clock = new Clock();
     const camera = new OrthographicCamera(-1, 1, -1, 1, 0, 100);
     const camera_gui = new OrthographicCamera(-1, 1, -1, 1, 0, 100);

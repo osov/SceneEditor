@@ -17,6 +17,7 @@
     "vite-multiple-assets": "^2.2.5"
   },
   "dependencies": {
+    "@three.ez/instanced-mesh": "^0.3.0-alpha.9",
     "@types/stats": "^0.16.30",
     "camera-controls": "^2.9.0",
     "protobufjs": "^7.4.0",
