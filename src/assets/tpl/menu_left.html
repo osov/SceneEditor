@@ -24,14 +24,48 @@
     <span class="tree__item_name"></span>
   </div>
   
-  <ul class="menu__pkm my_scroll">
-    <li><a href="javascript:void(0)" data-action="CTRL_X">Вырезать</a></li>
-    <li><a href="javascript:void(0)" data-action="CTRL_C">Копировать</a></li>
-    <li><a href="javascript:void(0)" data-action="CTRL_V">Вставить</a></li>
-    <li><a href="javascript:void(0)" data-action="CTRL_B">Вставить дочерним</a></li>
-    <li><a href="javascript:void(0)" data-action="CTRL_D">Дублировать</a></li>
-    <li><a href="javascript:void(0)" data-action="rename">Переименовать</a></li>
-    <li><a href="javascript:void(0)" data-action="remove">Удалить</a></li>
+  <div class="wr_menu__context my_scroll">
+    <ul class="menu__context">
+      <li><a href="javascript:void(0)" data-action="CTRL_X">Вырезать</a></li>
+      <li><a href="javascript:void(0)" data-action="CTRL_C">Копировать</a></li>
+      <li><a href="javascript:void(0)" data-action="CTRL_V">Вставить</a></li>
+      <li><a href="javascript:void(0)" data-action="CTRL_B">Вставить дочерним</a></li>
+      <li><a href="javascript:void(0)" data-action="CTRL_D">Дублировать</a></li>
+      <li><a href="javascript:void(0)" data-action="rename">Переименовать</a></li>
+      <li><a href="javascript:void(0)" data-action="remove">Удалить</a></li>
+      <li>
+        <a href="javascript:void(0)">
+          <span>Создать UI</span>
+          <span class="menu__context_arrow"><svg class="svg_icon"><use href="./img/sprite.svg#chevron_right"></use></svg></span>
+        </a>
+        <ul class="menu__context_sub">
+          <li><a href="javascript:void(0)" data-action="add_box_empty">Добавить контейнер</a></li>
+          <li><a href="javascript:void(0)" data-action="add_box">Добавить блок</a></li>
+          <li><a href="javascript:void(0)" data-action="add_text">Добавить текст</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="javascript:void(0)">
+          <span>Расширенные</span>
+          <span class="menu__context_arrow"><svg class="svg_icon"><use href="./img/sprite.svg#chevron_right"></use></svg></span>
+        </a>
+        <ul class="menu__context_sub">
+          <li><a href="javascript:void(0)" data-action="add_button">Добавить кнопку</a></li>
+          <li><a href="javascript:void(0)" data-action="add_bar">Добавить прогресс бар</a></li>
+          <li><a href="javascript:void(0)" data-action="add_scroll">Добавить скрол</a></li>
+        </ul>  
+      </li>
+      <li>
+        <a href="javascript:void(0)">
+          <span>Game</span>
+          <span class="menu__context_arrow"><svg class="svg_icon"><use href="./img/sprite.svg#chevron_right"></use></svg></span>
+        </a>
+        <ul class="menu__context_sub">
+          <li><a href="javascript:void(0)" data-action="add_sprite">Добавить спрайт</a></li>
+          <li><a href="javascript:void(0)" data-action="add_label">Добавить надпись</a></li>
+        </ul>  
+      </li>
   </ul>
+</div>
 
 </section>

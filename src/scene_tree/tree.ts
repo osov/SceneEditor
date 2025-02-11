@@ -15,7 +15,15 @@ export enum NodeAction {
     CTRL_B,
     CTRL_D,
     rename,
-    remove
+    remove,
+    add_box_empty,
+    add_box,
+    add_text,
+    add_button,
+    add_bar,
+    add_scroll,
+    add_sprite,
+    add_label
 }
 
 interface Item {
@@ -76,18 +84,16 @@ function TreeControlCreate() {
     let startX: number;   
     let itemDragRenameId: number | null = null; // чтобы чекать DBLCLICK  или  при DELAY не выбрали ли другой элемент
 
-    const menuPKM: any = document.querySelector('.menu__pkm');
-    let mpkmVisible: boolean = false;
+    const menuContext: any = document.querySelector('.wr_menu__context');
+    let mContextVisible: boolean = false;
     let boxDD: any = document.querySelector(".drag_and_drop"); // div таскания за мышью
     let ddVisible: boolean = false; //  видимость div перетаскивания 
-
-    // поиск по дереву, вешаем обработчик  1 раз
-    paintIdenticalLive(".searchInTree", "#wr_tree .tree__item_name", "color_green", 777);
 
 
     function draw_graph(getList: Item[], scene_name?: string, is_clear_state = false) {
         currentSceneName = scene_name ? scene_name : currentSceneName;
         // treeList = treeList.length ? treeList : deepClone(getList);
+        log({getList})
         treeList = deepClone(getList);
         contexts[currentSceneName] = contexts[currentSceneName] ? contexts[currentSceneName] : {};
 
@@ -290,11 +296,11 @@ function TreeControlCreate() {
     }
 
     function onMouseDown(event: any) {
-        if (!event.target.closest('.tree_div')) return;
 
-        if (mpkmVisible && !event.target.closest('.menu__pkm a')) {
-            menuPKMClear();
+        if (mContextVisible && !event.target.closest('.menu__context a')) {
+            menuContextClear();
         }
+        if (!event.target.closest('.tree_div')) return;
 
         // event.preventDefault();
         if (event.button === 0 || event.button === 2) {
@@ -352,11 +358,11 @@ function TreeControlCreate() {
     function onMouseUp(event: any) {
         // event.preventDefault(); // иногда отключается плавное сворачивание ...
         
-        if (mpkmVisible && event.target.closest('.menu__pkm a') && itemDrag && event.button === 0) {
-            menuPKMClick(event);
+        if (mContextVisible && event.target.closest('.menu__context a') && itemDrag && event.button === 0) {
+            menuContextClick(event);
         }
 
-        if (mpkmVisible == false && (event.button === 0 || event.button === 2)) {
+        if (mContextVisible == false && (event.button === 0 || event.button === 2)) {
 
             if (!event.target.closest('.tree_div')) {
                 if(itemDrag) myClear(); 
@@ -369,7 +375,7 @@ function TreeControlCreate() {
             sendListSelected(event);
             
             if (event.button === 2) {
-                openMenuPKM(event);
+                openMenuContext(event);
                 return;
             }
 
@@ -926,7 +932,7 @@ function TreeControlCreate() {
     function paintIdenticalLive(fieldSelector: string, selectorAll: string, className: string, delay: number): void {
         const field = document.querySelector(fieldSelector);
         if(!field) return;
-        const idField = field.closest(".tree__item")?.getAttribute("data-id");
+        const idField = fieldSelector == ".searchInTree" ? -20 : field.closest(".tree__item")?.getAttribute("data-id");
         if(!idField) return;
         
         let timer: any;
@@ -988,51 +994,51 @@ function TreeControlCreate() {
 
     }
 
-    function openMenuPKM(event: any): void {
+    function openMenuContext(event: any): void {
         if (!itemDrag) return;
         if (!event.target.closest(".tree__item")) return;
 
-        mpkmVisible = true;
+        mContextVisible = true;
 
-        menuPKM.classList.add("pos");
-        menuPKM.style.left = event.offset_x - 30 + 'px';
+        menuContext.classList.add("active");
+        menuContext.style.left = event.offset_x - 30 + 'px';
 
-        if (menuPKM.clientHeight + 30 > window.innerHeight) 
-            menuPKM.style.top = 15 + 'px';
-        else if (event.offset_y + menuPKM.clientHeight + 30 > window.innerHeight) 
-            menuPKM.style.top = menuPKM.clientHeight > event.offset_y ? menuPKM.style.top = 15 + 'px' : event.offset_y + 10 - menuPKM.clientHeight + 'px';
+        if (menuContext.clientHeight + 30 > window.innerHeight) 
+            menuContext.style.top = 15 + 'px';
+        else if (event.offset_y + menuContext.clientHeight + 30 > window.innerHeight) 
+            menuContext.style.top = menuContext.clientHeight > event.offset_y ? '15px' : event.offset_y + 50 - menuContext.clientHeight + 'px';
         else 
-            menuPKM.style.top = event.offset_y - 5 + 'px';
+            menuContext.style.top = event.offset_y - 5 + 'px';
        
     }
 
 
 
-    function menuPKMClick(event: any): void {
-        const itemPKM = event.target.closest(".menu__pkm a");
-        if (!itemPKM) return;
-        const dataAction = itemPKM?.getAttribute("data-action");
+    function menuContextClick(event: any): void {
+        const itemContext = event.target.closest(".menu__context a");
+        if (!itemContext) return;
+        const dataAction = itemContext?.getAttribute("data-action");
         if (!dataAction) return;
                 
         if (dataAction == NodeAction[0]) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, key: ${ NodeAction[0] } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED ', { id: itemDrag?.id, key: NodeAction[0] });
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_X } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: itemDrag?.id, list: listSelected, key: NodeAction.CTRL_X });
         }
         if (dataAction == NodeAction[1]) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, key: ${ NodeAction[1] } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED ', { id: itemDrag?.id, key: NodeAction[1] });
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_C } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: itemDrag?.id, list: listSelected, key: NodeAction.CTRL_C });
         }
         if (dataAction == NodeAction[2]) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, key: ${ NodeAction[2] } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED ', { id: itemDrag?.id, key: NodeAction[2] });
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_V } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: itemDrag?.id, list: listSelected, key: NodeAction.CTRL_V });
         }
         if (dataAction == NodeAction[3]) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, key: ${ NodeAction[3] } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED ', { id: itemDrag?.id, key: NodeAction[3] });
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_B } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: itemDrag?.id, list: listSelected, key: NodeAction.CTRL_B });
         }
         if (dataAction == NodeAction[4]) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, key: ${ NodeAction[4] } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED ', { id: itemDrag?.id, key: NodeAction[4] });
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_D } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: itemDrag?.id, list: listSelected, key: NodeAction.CTRL_D });
         }
         if (dataAction == NodeAction[5]) {
             const itemName = document.querySelector(`.tree__item[data-id='${itemDrag?.id}'] .tree__item_name`);
@@ -1040,20 +1046,51 @@ function TreeControlCreate() {
             preRename(itemDrag?.id, itemName);
         }
         if (dataAction == NodeAction[6]) {
-            log(`SYS_GRAPH_REMOVE, { id: ${itemDrag?.id} }`);
-            EventBus.trigger('SYS_GRAPH_REMOVE', { id: itemDrag?.id });
+            log(`SYS_GRAPH_REMOVE, { id: ${itemDrag?.id}, list: ${listSelected} }`);
+            EventBus.trigger('SYS_GRAPH_REMOVE', { id: itemDrag?.id, list: listSelected });
+        }
+        if (dataAction == NodeAction[7]) {
+            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_box_empty} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_box_empty });
+        }
+        if (dataAction == NodeAction[8]) {
+            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_box} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_box });
+        }
+        if (dataAction == NodeAction[9]) {
+            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_text} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_text });
+        }
+        if (dataAction == NodeAction[10]) {
+            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_button} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_button });
+        }
+        if (dataAction == NodeAction[11]) {
+            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_bar} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_bar });
+        }
+        if (dataAction == NodeAction[12]) {
+            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_scroll} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_scroll });
+        }
+        if (dataAction == NodeAction[13]) {
+            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_sprite} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_sprite });
+        }
+        if (dataAction == NodeAction[14]) {
+            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_label} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_label });
         }
 
-        menuPKMClear();
+        menuContextClear();
     }
 
-    function menuPKMClear(): void {
-        menuPKM.classList.remove('pos');
-        menuPKM.removeAttribute('style');
-        mpkmVisible = false;
+    function menuContextClear(): void {
+        menuContext.classList.remove('active');
+        menuContext.removeAttribute('style');
+        mContextVisible = false;
     }
 
-    // вешаем обработчики
     function updateDaD(): void {
 
         // устанавливаем ширину для span.tree__item_bg
@@ -1082,6 +1119,11 @@ function TreeControlCreate() {
         paintSearchNode("color_green");
 
     }
+
+    // ВЕШАЕМ ОБРАБОТЧИКИ
+    
+    // поиск по дереву, вешаем обработчик  1 раз
+    paintIdenticalLive(".searchInTree", "#wr_tree .tree__item_name", "color_green", 777);
 
     EventBus.on('SYS_INPUT_POINTER_UP', (event: any) => {
         // show/hide block menu
@@ -1116,7 +1158,7 @@ function TreeControlCreate() {
         }
     }, false);
 
-    document.querySelector('#wr_tree, .menu__pkm')?.addEventListener('contextmenu', (event: any) => {
+    document.querySelector('#wr_tree, .menu__context')?.addEventListener('contextmenu', (event: any) => {
         event.preventDefault();
     });
     
