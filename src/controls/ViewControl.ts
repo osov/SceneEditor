@@ -22,6 +22,11 @@ function ViewControlCreate() {
         //RenderEngine.scene.add(mesh);
 
         EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
+            if (
+                e.target?.closest("input") || 
+                e.target?.closest('.tree__item_name[contenteditable="true"]')
+            ) { return; }
+            
             if (Input.is_control() && (e.key == 'c' || e.key == 'с')) {
                 const list = format_list_without_children(SelectControl.get_selected_list());
                 if (list.length == 0) return;
