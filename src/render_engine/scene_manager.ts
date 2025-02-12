@@ -5,6 +5,7 @@ import { IBaseMeshData, IBaseMeshDataAndThree, IObjectTypes } from "./types";
 import { TextMesh } from "./objects/text";
 import { GoContainer } from "./objects/container";
 import { deepClone } from "../modules/utils";
+import { EntityContainer } from "./objects/entity_container";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -15,6 +16,7 @@ export function register_scene_manager() {
 }
 
 type IMeshTypes = {
+    [IObjectTypes.EMPTY]: EntityContainer,
     [IObjectTypes.SLICE9_PLANE]: Slice9Mesh,
     [IObjectTypes.TEXT]: TextMesh,
     [IObjectTypes.GO_CONTAINER]: GoContainer,

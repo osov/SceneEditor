@@ -1,6 +1,7 @@
 import { Vector2 } from "three";
 import { AnchorEventData, MeshMoveEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
+import { IBaseMeshDataAndThree } from "../render_engine/types";
 
 declare global {
     const HistoryControl: ReturnType<typeof HistoryControlCreate>;
@@ -51,7 +52,7 @@ function HistoryControlCreate() {
             return;
         const last = ctx.pop()!;
         const type = last.type;
-        const list_mesh = [];
+        const list_mesh:IBaseMeshDataAndThree[] = [];
         if (type == 'MESH_TRANSLATE') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_TRANSLATE'];
@@ -149,6 +150,8 @@ function HistoryControlCreate() {
             }
         }
         if (list_mesh.length > 0){
+            for (let i = 0; i < list_mesh.length; i++) 
+                 list_mesh[i].transform_changed();
             SelectControl.set_selected_list(list_mesh);
             ControlManager.update_graph();
         }

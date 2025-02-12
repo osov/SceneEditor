@@ -47,6 +47,23 @@ export class TextMesh extends Text implements IBaseMesh {
         this.set_text(text);
     }
 
+    set_position(x: number, y: number, z?: number) {
+        this.position.set(x, y, z == undefined ? this.position.z : z);
+        this.transform_changed();
+    }
+
+    get_position() {
+        return this.position.clone();
+    }
+
+    set_scale(x: number, y: number): void {
+        this.scale.set(x, y, this.scale.z);
+    }
+
+    get_scale(): Vector2 {
+        return new Vector2(this.scale.x, this.scale.y);
+    }
+
     set_size(w: number, h: number, is_sync = true) {
         this.parameters.width = w;
         this.parameters.height = h;
@@ -151,5 +168,9 @@ export class TextMesh extends Text implements IBaseMesh {
         this.fontSize = data.font_size;
         this.set_font(data.font, false);
         this.set_text(data.text);
+    }
+
+    transform_changed(){
+        
     }
 }

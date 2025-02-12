@@ -73,19 +73,20 @@ export function set_pivot_with_sync_pos(mesh: IBaseMeshDataAndThree, width: numb
     mesh.set_size(width, height);
     mesh.position.x += - np[0].x + op[0].x;
     mesh.position.y += - np[1].y + op[1].y;
+    mesh.transform_changed();
     for (let i = 0; i < mesh.children.length; i++) {
         const m = mesh.children[i];
         if (is_base_mesh(m)) {
             const l = m.parent!.worldToLocal(old_positions[i]);
             m.position.copy(l);
+            (m as any).transform_changed();
         }
     }
 }
 
 export function flip_geometry_y(geometry: BufferGeometry) {
     const uv = geometry.attributes.uv;
-    for (let i = 0; i < uv.count; i++) {
+    for (let i = 0; i < uv.count; i++) 
         uv.setY(i, 1 - uv.getY(i));
-    }
     return geometry;
 }

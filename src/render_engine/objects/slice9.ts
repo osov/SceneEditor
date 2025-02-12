@@ -1,6 +1,7 @@
 import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, Mesh, BufferAttribute } from "three";
-import { IBaseMesh, IObjectTypes } from "../types";
+import { IBaseMesh, IBaseParametersEntity, IObjectTypes } from "../types";
 import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
+import { EntityContainer } from "./entity_container";
 
 // todo optimize material list
 // todo set visible only mesh(visible+enabled)
@@ -98,21 +99,6 @@ export const simple_shader = {
         }`
 };
 
-interface IParameters {
-    width: number;
-    height: number;
-    pivot_x: number;
-    pivot_y: number;
-    anchor_x: number;
-    anchor_y: number;
-    slice_width: number;
-    slice_height: number;
-    color: string;
-    clip_width: number;
-    clip_height: number;
-    texture: string;
-    atlas: string
-}
 
 interface SerializeData {
     slice_width: number;
@@ -122,7 +108,7 @@ interface SerializeData {
 }
 
 export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, slice_width = 0, slice_height = 0) {
-    const parameters: IParameters = {
+    const parameters: IBaseParametersEntity = {
         pivot_x: 0.5,
         pivot_y: 0.5,
         anchor_x: -1,
@@ -294,19 +280,19 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
 }
 
 
-export class Slice9Mesh extends Mesh implements IBaseMesh {
+export class Slice9Mesh extends EntityContainer {
     public type = IObjectTypes.SLICE9_PLANE;
     public mesh_data = { id: -1 };
     private template: ReturnType<typeof CreateSlice9>;
 
     constructor(width = 1, height = 1, slice_width = 0, slice_height = 0, custom_material?: ShaderMaterial) {
         super();
+        this.matrixAutoUpdate = true;
         const material = custom_material ? custom_material : new ShaderMaterial({
             uniforms: { u_texture: { value: null }, },
             vertexShader: simple_shader.vertexShader,
             fragmentShader: simple_shader.fragmentShader,
             transparent: true
-
         });
         this.template = CreateSlice9(material, width, height, slice_width, slice_height);
         this.material = material;
@@ -316,6 +302,7 @@ export class Slice9Mesh extends Mesh implements IBaseMesh {
 
     set_size(w: number, h: number) {
         this.template.set_size(w, h);
+        this.transform_changed();
     }
 
     get_size() {
@@ -358,6 +345,7 @@ export class Slice9Mesh extends Mesh implements IBaseMesh {
         else
             this.template.set_pivot(x, y);
         this.template.set_size(this.get_size().x, this.get_size().y);
+        this.transform_changed();
     }
 
     get_pivot() {

@@ -42,7 +42,9 @@ function TransformControlCreate() {
                 _position.copy(proxy.position);
                 for (let i = 0; i < selectedObjects.length; i++) {
                     const element = selectedObjects[i] as any;
+                    // todo если объект родителя отскейлен и вращался то здесь будут ошибки
                     element.position.copy(element._position).add(_position);
+                    element.transform_changed();
                 }
                 break;
             case 'rotate':
@@ -50,6 +52,7 @@ function TransformControlCreate() {
                 for (let i = 0; i < selectedObjects.length; i++) {
                     const element = selectedObjects[i] as any;
                     element.rotation.copy(_rotation);
+                    element.transform_changed();
                 }
                 break;
             case 'scale':
@@ -58,6 +61,7 @@ function TransformControlCreate() {
                 for (let i = 0; i < selectedObjects.length; i++) {
                     const element = selectedObjects[i] as any;
                     element.scale.add(dt_scale);
+                    element.transform_changed();
                 }
                 break;
             default:

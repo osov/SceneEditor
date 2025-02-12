@@ -1,6 +1,7 @@
-import { Object3D, Vector2, Vector3Tuple, Vector4Tuple } from "three";
+import { Object3D, Vector2, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 
 export enum IObjectTypes {
+    EMPTY = '',
     SLICE9_PLANE = 'box',
     TEXT = 'text',
     GO_CONTAINER = 'go_empty',
@@ -19,11 +20,17 @@ export enum PivotY{
     BOTTOM = 0
 }
 
+export type OnTransformChanged = (e:IBaseMeshDataAndThree) => void;
+
 export interface IBaseMesh {
     type: IObjectTypes;
     mesh_data: { id: number };
+    set_position(x: number, y: number, z?: number): void
+    get_position(): Vector3
     set_size(w: number, h: number): void
     get_size(): Vector2
+    set_scale(x: number, y: number): void
+    get_scale(): Vector2
     get_bounds(): number[]
     get_color(): string
     set_color(hex_color: string): void
@@ -31,6 +38,8 @@ export interface IBaseMesh {
     set_pivot(x: PivotX, y: PivotY, is_sync?: boolean): void
     get_anchor(): Vector2
     set_anchor(x: number, y: number): void
+    transform_changed(): void
+    on_transform_changed?: OnTransformChanged;
     serialize(): any;
     deserialize(data: any): void
 }
@@ -50,6 +59,22 @@ export interface IBaseMeshData {
     color: string;
     children?: IBaseMeshData[];
     other_data: any;
+}
+
+export interface IBaseParametersEntity {
+    width: number;
+    height: number;
+    pivot_x: number;
+    pivot_y: number;
+    anchor_x: number;
+    anchor_y: number;
+    slice_width: number;
+    slice_height: number;
+    color: string;
+    clip_width: number;
+    clip_height: number;
+    texture: string;
+    atlas: string
 }
 
 export type IBaseMeshDataAndThree = IBaseMesh & Object3D;

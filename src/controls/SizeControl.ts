@@ -293,8 +293,7 @@ function SizeControlCreate() {
                         }
                         selected_go.set_size(old_size.x + diff_size.x, old_size.y + diff_size.y);
                         const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + diff_pos.x, old_pos.y + diff_pos.y, 0));
-                        selected_go.position.x = lp.x;
-                        selected_go.position.y = lp.y;
+                        selected_go.set_position(lp.x, lp.y);
                         is_changed_size = true;
                     }
                 }
@@ -323,7 +322,7 @@ function SizeControlCreate() {
                         selected_go.getWorldScale(ws);
                         const delta = wp.clone().sub(cp).divide(ws);
                         const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * ws.x, old_pos.y + delta.y * ws.y, old_pos.z));
-                        selected_go.position.copy(lp);
+                        selected_go.set_position(lp.x, lp.y, lp.z);
                         is_changed_pos = true;
                     }
                 }
@@ -590,8 +589,6 @@ function SizeControlCreate() {
         if (!is_active) return;
         selected_list = list;
         draw_debug_bb(get_bounds_from_list());
-        if (list.length == 0)
-            return;
     }
 
     function set_active(val: boolean) {
