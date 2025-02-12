@@ -1000,14 +1000,31 @@ function TreeControlCreate() {
 
         mContextVisible = true;
 
+        if (divTree.scrollHeight > divTree.clientHeight) {
+            divTree.classList.add('no_scrolling');
+        }
+
+        menuContext.classList.remove('bottom');
         menuContext.classList.add("active");
         menuContext.style.left = event.offset_x - 30 + 'px';
 
-        if (menuContext.clientHeight + 30 > window.innerHeight) 
-            menuContext.style.top = 15 + 'px';
-        else if (event.offset_y + menuContext.clientHeight + 30 > window.innerHeight) 
-            menuContext.style.top = menuContext.clientHeight > event.offset_y ? '15px' : event.offset_y + 50 - menuContext.clientHeight + 'px';
-        else 
+        if (menuContext.clientHeight + 30 > window.innerHeight) {
+            menuContext.classList.add('bottom'); // делаем маленьким
+        }
+
+        if (menuContext.clientHeight + 30 > window.innerHeight) { // проверяем маленькое
+            menuContext.style.top = '15px';
+        }
+        else if (event.offset_y + menuContext.clientHeight + 30 > window.innerHeight) {
+            menuContext.classList.add('bottom');
+            if (menuContext.clientHeight > event.offset_y) {
+                menuContext.style.top = '15px';
+            }
+            else {
+                menuContext.style.top = event.offset_y + 18 - menuContext.clientHeight + 'px';
+            }
+        } 
+        else
             menuContext.style.top = event.offset_y - 5 + 'px';
        
     }
@@ -1086,6 +1103,7 @@ function TreeControlCreate() {
     }
 
     function menuContextClear(): void {
+        divTree.classList.remove('no_scrolling');
         menuContext.classList.remove('active');
         menuContext.removeAttribute('style');
         mContextVisible = false;
