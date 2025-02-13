@@ -1,6 +1,6 @@
 import { ShaderMaterial, BufferAttribute, Vector3, Color, InterleavedBufferAttribute, InstancedMesh, PlaneGeometry, Vector2, Object3D, InstancedBufferAttribute, Matrix4, Quaternion, Euler } from "three";
 
-export const shader = {
+const shader = {
     vertexShader: `
         attribute vec4 uvData; 
         attribute vec2 instancePivot; 
@@ -211,15 +211,15 @@ export function CreateInstanceMeshPool(count: number) {
             const u_border_y = height / textures_size[index].y;
             attributes.sliceData.setXYZW(index, u_dimensions_x, u_dimensions_y, u_border_x, u_border_y);
             attributes.sliceData.needsUpdate = true;
-            if (!mesh.material.defines['USE_SLICE']) {
-                mesh.material.defines['USE_SLICE'] = '';
-                mesh.material.needsUpdate = true;
+            if (material.defines['USE_SLICE'] == undefined) {
+                material.defines['USE_SLICE'] = '';
+                material.needsUpdate = true;
             }
         }
         else {
-            if (mesh.material.defines['USE_SLICE']) {
-                delete mesh.material.defines['USE_SLICE'];
-                mesh.material.needsUpdate = true;
+            if (material.defines['USE_SLICE'] != undefined) {
+                delete material.defines['USE_SLICE'];
+                material.needsUpdate = true;
             }
         }
     }

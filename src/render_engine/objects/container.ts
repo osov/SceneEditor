@@ -1,6 +1,8 @@
 import { ShaderMaterial, Vector2, Color } from "three";
 import { IBaseMesh, IObjectTypes } from "../types";
-import { simple_shader, Slice9Mesh } from "./slice9";
+import { shader } from "./entity_container";
+import { Slice9Mesh } from "./slice9";
+
 
 const empty_shader = new ShaderMaterial({
     uniforms: {
@@ -9,13 +11,13 @@ const empty_shader = new ShaderMaterial({
         u_border: { value: new Vector2(1, 1) },
         u_color: { value: new Color('#fff') },
     },
-    vertexShader: simple_shader.vertexShader,
-    fragmentShader: simple_shader.fragmentShader,
+    vertexShader: shader.vertexShader,
+    fragmentShader: shader.fragmentShader,
     transparent: false
 
 })
 
-export class GoContainer extends Slice9Mesh implements IBaseMesh {
+export class GoContainer extends Slice9Mesh {
     public type = IObjectTypes.GO_CONTAINER;
 
     constructor(width = 1, height = 1, slice_width = 0, slice_height = 0) {

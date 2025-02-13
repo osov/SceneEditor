@@ -1,28 +1,31 @@
-import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, Mesh, BufferAttribute } from "three";
-import { IBaseMesh, IBaseParametersEntity, IObjectTypes } from "../types";
+import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute } from "three";
+import { IBaseParametersEntity, IObjectTypes } from "../types";
 import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
 import { EntityContainer } from "./entity_container";
 
 // todo optimize material list
 // todo set visible only mesh(visible+enabled)
 
-export const slice_9_shader = {
+const shader = {
     vertexShader: `
         attribute vec4 uvData; 
         attribute vec3 color;  
+#ifdef USE_SLICE
         attribute vec4 sliceData; 
-
+        varying vec4 vSliceData; 
+#endif
         varying vec2 vUv;
         varying vec4 vUvData;
         varying vec3 vColor; 
-        varying vec4 vSliceData; 
         
 
         void main() {
             vColor = color;
             vUv = uv; 
             vUvData = uvData;
+#ifdef USE_SLICE
             vSliceData = sliceData;
+#endif
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }`,
 
@@ -30,9 +33,9 @@ export const slice_9_shader = {
         varying vec2 vUv;
         varying vec4 vUvData;
         varying vec3 vColor; 
-        varying vec4 vSliceData; 
-
         uniform sampler2D u_texture;
+#ifdef USE_SLICE
+        varying vec4 vSliceData; 
 
         float map(float value, float originalMin, float originalMax, float newMin, float newMax) {
             return (value - originalMin) / (originalMax - originalMin) * (newMax - newMin) + newMin;
@@ -44,61 +47,23 @@ export const slice_9_shader = {
                 map(coord, winBorder, 1.0 - winBorder, texBorder, 1.0 - texBorder);
         }
 
+#endif
 
         void main(void) {
+#ifdef USE_SLICE
             vec2 newUV = vec2(
                 processAxis(vUv.x, vSliceData.z, vSliceData.x),
                 processAxis(vUv.y, vSliceData.w, vSliceData.y)
             );
+#else
+            vec2 newUV = vUv;
+#endif
             newUV = vUvData.xy + newUV * vUvData.zw;
-            gl_FragColor = texture2D(u_texture, newUV) * vec4(vColor, 1.);
+            vec4 color = texture2D(u_texture, newUV);
+            //  if (color.a < 0.5) discard;
+            gl_FragColor = color * vec4(vColor, 1.);
         }`
 };
-
-export const simple_texture_shader = {
-    vertexShader: `
-        attribute vec4 uvData; 
-        attribute vec3 color;  
-        
-        varying vec3 vColor; 
-        varying vec2 vUv;
-
-        void main() {
-            vColor = color;
-            vUv = uvData.xy + uv * uvData.zw; 
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }`,
-
-    fragmentShader: `
-        uniform sampler2D u_texture;
-
-        varying vec3 vColor; 
-        varying vec2 vUv;
-
-        void main(void) {
-            gl_FragColor = texture2D(u_texture, vUv) * vec4(vColor, 1.);
-        }`
-};
-
-export const simple_shader = {
-    vertexShader: `
-            attribute vec3 color; 
-
-            varying vec3 vColor;
-
-            void main() {
-                vColor = color;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }`,
-
-    fragmentShader: `
-        varying vec3 vColor;
-
-        void main(void) {
-            gl_FragColor =  vec4(vColor, 1.);
-        }`
-};
-
 
 interface SerializeData {
     slice_width: number;
@@ -166,7 +131,7 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         update_parameters();
     }
 
-    function update_parameters(update_shader = false) {
+    function update_parameters() {
         const u_dimensions_x = parameters.slice_width / parameters.width;
         const u_dimensions_y = parameters.slice_height / parameters.height;
         const u_border_x = parameters.slice_width / parameters.clip_width;
@@ -174,29 +139,19 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         for (let i = 0; i < 4; i++)
             geometry.attributes['sliceData'].setXYZW(i, u_dimensions_x, u_dimensions_y, u_border_x, u_border_y);
         geometry.attributes['sliceData'].needsUpdate = true;
-        if (update_shader) {
-            let vertex_shader = '';
-            let fragment_shader = '';
-            if (parameters.texture == '') {
-                vertex_shader = simple_shader.vertexShader;
-                fragment_shader = simple_shader.fragmentShader;
-            }
-            else {
-                if (parameters.slice_width > 0 || parameters.slice_height > 0) {
-                    vertex_shader = slice_9_shader.vertexShader;
-                    fragment_shader = slice_9_shader.fragmentShader;
-                }
-                else {
-                    vertex_shader = simple_texture_shader.vertexShader;
-                    fragment_shader = simple_texture_shader.fragmentShader;
-                }
-            }
-            if (material.vertexShader != vertex_shader || material.fragmentShader != fragment_shader) {
-                material.vertexShader = vertex_shader;
-                material.fragmentShader = fragment_shader;
+        if (parameters.slice_width > 0 || parameters.slice_height > 0) {
+            if (material.defines['USE_SLICE'] == undefined) {
+                material.defines['USE_SLICE'] = '';
                 material.needsUpdate = true;
             }
         }
+        else {
+            if (material.defines['USE_SLICE'] != undefined) {
+                delete material.defines['USE_SLICE'];
+                material.needsUpdate = true;
+            }
+        }
+
     }
 
 
@@ -221,13 +176,13 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
             parameters.clip_width = 1;
             parameters.clip_height = 1;
         }
-        update_parameters(true);
+        update_parameters();
     }
 
     function set_slice(width: number, height: number) {
         parameters.slice_width = width;
         parameters.slice_height = height;
-        update_parameters(true);
+        update_parameters();
     }
 
     function set_color(hex_color: string) {
@@ -290,8 +245,8 @@ export class Slice9Mesh extends EntityContainer {
         this.matrixAutoUpdate = true;
         const material = custom_material ? custom_material : new ShaderMaterial({
             uniforms: { u_texture: { value: null }, },
-            vertexShader: simple_shader.vertexShader,
-            fragmentShader: simple_shader.fragmentShader,
+            vertexShader: shader.vertexShader,
+            fragmentShader: shader.fragmentShader,
             transparent: true
         });
         this.template = CreateSlice9(material, width, height, slice_width, slice_height);

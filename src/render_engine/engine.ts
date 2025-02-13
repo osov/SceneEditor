@@ -1,10 +1,13 @@
 /* 
+TODO:
+на старом телефоне не работает движок, тк WebGL2 недоступен, а он последний раз был в версии 0.162
 
+инфа по пулам:
 ParticlePool - нельзя задать прямоугольный размер, при вращении захватывает края чужих текстур если из атласа
- InstanceBufferPool - нет Z сортировки
- InstanceMesh2Pool - при кастомных атрибутах на объект неверно сортирует их для скрытия и поэтому атрибуты назначаются другим, надо отключать куллинг для каждого и тогда теряется смысл
+InstanceBufferPool - нет Z сортировки
+InstanceMesh2Pool - при кастомных атрибутах на объект неверно сортирует их для скрытия и поэтому атрибуты назначаются другим, надо отключать куллинг для каждого и тогда теряется смысл
 https://stackoverflow.com/questions/76514035/how-to-render-1000-2d-text-labels-using-three-js - хороший пример InstancedBufferGeometry для создания текста из атлас текстуры
- */
+*/
 import { Clock, Color, Object3D, OrthographicCamera, Raycaster, Scene, Vector2, WebGLRenderer, } from 'three'
 import { resize_renderer_to_display_size } from './helpers/window_utils'
 declare global {
@@ -18,7 +21,7 @@ export function register_engine() {
 
 export function RenderEngineModule() {
     const canvas = document.querySelector(`canvas#scene`)!;
-    const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true })
+    const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false,  })
     const scene = new Scene();
     scene.background = new Color('#222');
     const clock = new Clock();

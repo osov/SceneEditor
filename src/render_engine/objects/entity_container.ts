@@ -2,7 +2,7 @@ import { Mesh, PlaneGeometry, ShaderMaterial, Vector2, Vector3 } from "three";
 import { IBaseMesh, IBaseParametersEntity, IObjectTypes, OnTransformChanged } from "../types";
 import { convert_width_height_to_pivot_bb, is_base_mesh, set_pivot_with_sync_pos } from "../helpers/utils";
 
-const tmp_shader = new ShaderMaterial({
+export const shader = new ShaderMaterial({
     vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);}',
     fragmentShader: 'void main() { gl_FragColor = vec4(1.0); }'
 });
@@ -29,7 +29,7 @@ export class EntityContainer extends Mesh implements IBaseMesh {
     };
 
     constructor() {
-        super(new PlaneGeometry(1, 1), tmp_shader);
+        super(new PlaneGeometry(1, 1), shader);
     }
 
     set_position(x: number, y: number, z?: number) {

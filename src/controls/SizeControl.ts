@@ -292,7 +292,10 @@ function SizeControlCreate() {
                             }
                         }
                         selected_go.set_size(old_size.x + diff_size.x, old_size.y + diff_size.y);
-                        const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + diff_pos.x, old_pos.y + diff_pos.y, 0));
+                        let lp = new Vector3(old_pos.x + diff_pos.x, old_pos.y + diff_pos.y, 0);
+                        if (selected_go.parent != null)
+                            lp = selected_go.parent.worldToLocal(new Vector3(old_pos.x + diff_pos.x, old_pos.y + diff_pos.y, 0));
+
                         selected_go.set_position(lp.x, lp.y);
                         is_changed_size = true;
                     }
@@ -321,7 +324,9 @@ function SizeControlCreate() {
                         const ws = new Vector3();
                         selected_go.getWorldScale(ws);
                         const delta = wp.clone().sub(cp).divide(ws);
-                        const lp = selected_go.parent!.worldToLocal(new Vector3(old_pos.x + delta.x * ws.x, old_pos.y + delta.y * ws.y, old_pos.z));
+                        let lp = new Vector3(old_pos.x + delta.x * ws.x, old_pos.y + delta.y * ws.y, old_pos.z);
+                        if (selected_go.parent != null)
+                            lp = selected_go.parent.worldToLocal(lp);
                         selected_go.set_position(lp.x, lp.y, lp.z);
                         is_changed_pos = true;
                     }
@@ -507,10 +512,11 @@ function SizeControlCreate() {
     }
 
     function get_parent_bb(mesh: IBaseMeshDataAndThree) {
+        if (mesh.parent == null) return [0, 0, 0, 0];
         if (mesh.parent instanceof Scene) {
             return [0, 0, 540, -960];
         }
-        else if (is_base_mesh(mesh.parent!)) {
+        else if (is_base_mesh(mesh.parent)) {
             const parent = mesh.parent as IBaseMeshDataAndThree;
             return parent.get_bounds();
         }
