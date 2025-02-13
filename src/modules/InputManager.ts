@@ -16,25 +16,27 @@ function InputModule() {
     const mouse_pos = new Vector2();
     const mouse_pos_normalized = new Vector2();
 
+    function update_state_ext_keys(e:KeyboardEvent|MouseEvent) {
+        _is_control = e.ctrlKey;
+        _is_shift = e.shiftKey;
+        _is_alt = e.altKey;
+    }
+
     function bind_events() {
         const canvas = RenderEngine.renderer.domElement;
         const body = document.body;
 
         body.addEventListener('keydown', (e) => {
-            if (e.repeat) return;
-            _is_control = e.ctrlKey;
-            _is_shift = e.shiftKey;
-            _is_alt = e.altKey;
+            update_state_ext_keys(e);
             keys_state[e.key] = true;
+            if (e.repeat) return;
             EventBus.trigger('SYS_VIEW_INPUT_KEY_DOWN', { key: e.key, target: e.target }, false);
             if (_is_alt)
                 e.preventDefault(); // alt перехватывал браузер
         });
 
         body.addEventListener('keyup', (e) => {
-            _is_control = e.ctrlKey;
-            _is_shift = e.shiftKey;
-            _is_alt = e.altKey;
+            update_state_ext_keys(e);
             keys_state[e.key] = false;
             EventBus.trigger('SYS_VIEW_INPUT_KEY_UP', { key: e.key, target: e.target }, false);
             if (e.ctrlKey && (e.key == 'z' || e.key == 'я'))
@@ -42,16 +44,19 @@ function InputModule() {
         });
 
         body.addEventListener('pointermove', (e) => {
+            update_state_ext_keys(e);
             mouse_pos.set(e.pageX, e.pageY);
             mouse_pos_normalized.set((e.pageX / canvas.clientWidth) * 2 - 1, - (e.pageY / canvas.clientHeight) * 2 + 1);
             EventBus.trigger('SYS_INPUT_POINTER_MOVE', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, target: e.target  }, false);
         });
 
         body.addEventListener('mousedown', (e) => {
+            update_state_ext_keys(e);
             EventBus.trigger('SYS_INPUT_POINTER_DOWN', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, button: e.button, target: e.target  }, false);
         });
 
         body.addEventListener('mouseup', (e) => {
+            update_state_ext_keys(e);
             EventBus.trigger('SYS_INPUT_POINTER_UP', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, button: e.button, target: e.target }, false);
         });
     }
