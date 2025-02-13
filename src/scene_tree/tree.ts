@@ -1118,7 +1118,23 @@ function TreeControlCreate() {
     EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
+    
+    function setPopup(selector: string, type: string = 'open') {
+        const popup = document.querySelector(selector);
+        if (popup) {
+            if(type == 'close') {
+                popup.querySelector('.bgpopup')?.classList.remove('active');
+                popup.querySelector('.popup')?.classList.remove('active');
+            }
+            if(type == 'open') {
+                popup.querySelector('.bgpopup')?.classList.add('active');
+                popup.querySelector('.popup')?.classList.add('active');
+            }
+        }
+    }
 
-    return { draw_graph };
+    // setPopup('main_menu');
+
+    return { draw_graph, setPopup };
 
 }
