@@ -114,11 +114,10 @@ body {
 
 
 .menu_section {
-  /* bottom: 0; */
   position: relative;
   height: 100%;
   background-color: var(--menu_bg);
-  transform: translateY(calc(100% - 32px));
+  transform: translateY(calc(100% - 30px));
   z-index: 2;
 }
 .menu_section.active {
@@ -162,6 +161,7 @@ body {
   width: 45px;
   height: 45px;
   color: var(--color_blue);
+  user-select: none;
 }
 .menu_min a:hover {
   background-color: #3a7fbd;
@@ -184,6 +184,7 @@ body {
   font-weight: 400;
   font-size: 16px;
   padding-left: 7px;
+  user-select: none;
 }
 .btn_menu {
   width: 20px;
@@ -225,6 +226,7 @@ textarea {
 input.searchInTree{
   height: 30px;
   padding: 0 10px;
+  user-select: none;
 }
 
 .color_blue { color: var(--color_blue); }
@@ -442,10 +444,14 @@ li:not(.active) > .tree__btn .use_trgl {display: none;}
   text-overflow: ellipsis;
   max-width: 200px;
   font-size: 14px;
+  left: -500px;
+  top: -500px;
+  height: 0;
   z-index: 2;
 }
 .drag_and_drop.pos {
   visibility: visible;
+  height: auto;
 }
 .drag_and_drop__status {
   display: block;
@@ -498,13 +504,13 @@ li:not(.active) > .tree__btn .use_trgl {display: none;}
   border-bottom: 1px solid var(--border_color);
   max-width: 170px;
 }
-.menu__context li:hover {
+.menu__context li:hover:not(:has(a.not_active)) {
   background-color: var(--border_color);
 }
 .menu__context li:first-child {
   border-top: 1px solid var(--border_color);
 }
-.menu__context li a {
+.menu__context li:not(.menu__context_separator) a {
   position: relative;
   display: flex;
   align-items: center;
@@ -514,6 +520,10 @@ li:not(.active) > .tree__btn .use_trgl {display: none;}
   color: #fff;
   font-size: 14px;
   padding: 5px 10px;
+}
+.menu__context li:not(.menu__context_separator) a.not_active {
+  cursor: default;
+  color: var(--color_gray);
 }
 li.menu__context_separator {
   border-top: 0;
