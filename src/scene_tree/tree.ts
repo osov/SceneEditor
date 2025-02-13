@@ -93,8 +93,8 @@ function TreeControlCreate() {
     function draw_graph(getList: Item[], scene_name?: string, is_clear_state = false) {
         currentSceneName = scene_name ? scene_name : currentSceneName;
         // treeList = treeList.length ? treeList : deepClone(getList);
-        log({getList})
         treeList = deepClone(getList);
+        contexts[currentSceneName] = is_clear_state ? {} : contexts[currentSceneName];
         contexts[currentSceneName] = contexts[currentSceneName] ? contexts[currentSceneName] : {};
 
         const renderList = buildTree(treeList);
