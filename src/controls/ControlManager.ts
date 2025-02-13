@@ -93,7 +93,7 @@ function ControlManagerCreate() {
         if (params.has("stats")) {
             const stats = new Stats();
             stats.dom.style.cssText = 'position:fixed;top:0;right:80px;cursor:pointer;opacity:0.9;z-index:10000';
-            stats.showPanel(1); // 0: fps, 1: ms, 2: mb, 3+: custom
+            stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
             document.body.appendChild(stats.dom);
             EventBus.on('SYS_ON_UPDATE', () => stats.begin());
             EventBus.on('SYS_ON_UPDATE_END', () => stats.end());

@@ -5,7 +5,6 @@ TODO:
 инфа по пулам:
 ParticlePool - нельзя задать прямоугольный размер, при вращении захватывает края чужих текстур если из атласа
 InstanceBufferPool - нет Z сортировки
-InstanceMesh2Pool - при кастомных атрибутах на объект неверно сортирует их для скрытия и поэтому атрибуты назначаются другим, надо отключать куллинг для каждого и тогда теряется смысл
 https://stackoverflow.com/questions/76514035/how-to-render-1000-2d-text-labels-using-three-js - хороший пример InstancedBufferGeometry для создания текста из атлас текстуры
 */
 import { Clock, Color, Object3D, OrthographicCamera, Raycaster, Scene, Vector2, WebGLRenderer, } from 'three'
