@@ -1,6 +1,7 @@
 import { Pane, TpChangeEvent } from 'tweakpane';
 import { BindingApi, BindingParams, ButtonParams, FolderApi } from '@tweakpane/core';
-// import * as TweakpaneImagePlugin from 'tweakpane-image-plugin';
+import * as TweakpaneImagePlugin from 'tweakpane4-image-plugin';
+import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 // import * as TemplatePlugin from 'tweakpane-plugin-template';
 
 
@@ -97,12 +98,6 @@ export interface ChangeInfo {
 
 export type ChangeEvent = TpChangeEvent<unknown, BindingApi<unknown, unknown>>;
 
-export enum EntityType {
-    FOLDER,
-    BUTTON,
-    COMON
-}
-
 export interface EntityData {
     obj: any;
     key: string;
@@ -138,7 +133,8 @@ function InspectorControlCreate() {
         _inspector = new Pane({
             container: document.querySelector('.menu_right') as HTMLDivElement
         });
-        // _inspector.registerPlugin(TweakpaneImagePlugin);
+        _inspector.registerPlugin(TweakpaneImagePlugin);
+        _inspector.registerPlugin(TextareaPlugin);
         // _inspector.registerPlugin(TemplatePlugin);
     }
 
@@ -241,12 +237,14 @@ function InspectorControlCreate() {
     function castProperty<T extends PropertyType>(ids: number[], field: PropertyData<T>, property: PropertyItem<T>): Entities | undefined {
         switch (property.type) {
             case PropertyType.STRING:
-            case PropertyType.LOG_DATA:
             case PropertyType.NUMBER:
             case PropertyType.BOOLEAN:
             case PropertyType.VECTOR_3:
             case PropertyType.VECTOR_4:
                 return createEntity(ids, field, property, { label: property.title, readonly: property.readonly });
+            case PropertyType.LOG_DATA:
+                const multiline_params = { label: property.title, view: 'textarea', rows: 6, placeholder: 'Type here...' };
+                return createEntity(ids, field, property, multiline_params as BindingParams);
             case PropertyType.VECTOR_2:
                 const vec2_params = { label: property.title, readonly: property.readonly, picker: 'inline', expanded: false };
                 return createEntity(ids, field, property, vec2_params as BindingParams);
@@ -258,7 +256,9 @@ function InspectorControlCreate() {
                 return createEntity(ids, field, property, color_params as BindingParams);
             case PropertyType.BUTTON:
                 return createButton(field as PropertyData<PropertyType.BUTTON>, property as PropertyItem<PropertyType.BUTTON>, { title: property.title });
-            // case PropertyType.LIST_TEXTURES: // Пока не поддерживается
+            case PropertyType.LIST_TEXTURES:
+                const textures_params = { label: property.title, view: 'input-image', imageFit: 'contain' };
+                return createEntity(ids, field, property, textures_params as BindingParams);
             default:
                 Log.error(`Unable to cast ${field.name}`)
                 return undefined;
@@ -318,7 +318,7 @@ function InspectorControlCreate() {
         }
     }
 
-    function createEntity<T extends PropertyType>(ids: number[], field: PropertyData<T>, property: PropertyItem<T>, params?: BindingParams, type = EntityType.COMON): Entity {
+    function createEntity<T extends PropertyType>(ids: number[], field: PropertyData<T>, property: PropertyItem<T>, params?: BindingParams): Entity {
         const entity: Entity = {
             obj: field,
             key: 'data',

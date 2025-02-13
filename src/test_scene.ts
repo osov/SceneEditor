@@ -169,7 +169,8 @@ function run_debug_inpector() {
         { name: 'checkbox', title: 'Чек', type: PropertyType.BOOLEAN },
         { name: 'color', title: 'Цвет', type: PropertyType.COLOR },
         { name: 'click', title: 'Кликнуть', type: PropertyType.BUTTON },
-        // { name: 'textures', title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: [{ key: 'test', text: 'Тест', src: './test.png' }] }
+        { name: 'textures', title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: [{ key: 'test', text: 'Тест', src: './test.png' }] },
+        { name: 'mult', title: 'Текст', type: PropertyType.LOG_DATA }
       ]
     }
   ]);
@@ -188,7 +189,8 @@ function run_debug_inpector() {
         { name: 'checkbox', data: true },
         { name: 'color', data: "#ff0000" },
         { name: 'click', data: () => log('click') },
-        // { name: 'textures', data: 'test' }
+        { name: 'textures', data: './img/2.png' },
+        { name: 'mult', data: 'text1\ntext2' }
       ]
     },
     {
@@ -204,7 +206,8 @@ function run_debug_inpector() {
         { name: 'checkbox', data: true },
         { name: 'color', data: "#ff0000" },
         { name: 'click', data: () => log('click') },
-        // { name: 'textures', data: 'test' }
+        { name: 'textures', data: 'placeholder' },
+        { name: 'mult', data: 'text1\ntext2' }
       ]
     }
   ]);
