@@ -1,9 +1,7 @@
-import { UI } from 'uiconfig-tweakpane';
-import { Pane } from 'tweakpane';
-import { ChangeEvent, UiObjectConfig } from 'uiconfig.js';
-import { OnClickReturnType } from 'uiconfig.js/dist/types';
-import * as TweakpaneThumbnailListPlugin from 'tweakpane-plugin-thumbnail-list';
-// import TweakpaneSearchListPlugin from 'tweakpane-plugin-search-list';
+import { Pane, TpChangeEvent } from 'tweakpane';
+import { BindingApi, BindingParams, ButtonParams, FolderApi } from '@tweakpane/core';
+// import * as TweakpaneImagePlugin from 'tweakpane-image-plugin';
+// import * as TemplatePlugin from 'tweakpane-plugin-template';
 
 
 declare global {
@@ -62,7 +60,7 @@ export type PropertyValues = {
     [PropertyType.SLIDER]: number;
     [PropertyType.LIST_TEXT]: string; //  selected key
     [PropertyType.LIST_TEXTURES]: string;// selected key;
-    [PropertyType.BUTTON]: ((...args: any[]) => OnClickReturnType) | ((...args: any[]) => Promise<OnClickReturnType>);
+    [PropertyType.BUTTON]: (...args: any[]) => void;
     [PropertyType.POINT_2D]: { x: number, y: number };
     [PropertyType.LOG_DATA]: string;
 }
@@ -89,109 +87,196 @@ export interface PropertyData<T extends PropertyType> {
 
 export interface ObjectData {
     id: number;
-    data: PropertyData<PropertyType>[]
+    data: PropertyData<PropertyType>[];
 }
 
-// для установки своего контейнера и плагинов
-class Inspector extends UI {
-    protected _createUiContainer(): HTMLDivElement {
-        const container = document.querySelector('.menu_right') as HTMLDivElement;
-        this._root = new Pane({ container });
-        this._root.registerPlugin(TweakpaneThumbnailListPlugin.plugin);
-        // this._root.registerPlugin(TweakpaneSearchListPlugin); 
-        return container;
-    }
+export interface ChangeInfo {
+    ids: number[];
+    data: PropertyData<PropertyType>;
 }
+
+export type ChangeEvent = TpChangeEvent<unknown, BindingApi<unknown, unknown>>;
+
+export enum EntityType {
+    FOLDER,
+    BUTTON,
+    COMON
+}
+
+export interface EntityData {
+    obj: any;
+    key: string;
+    params?: BindingParams | ButtonParams;
+}
+
+export interface Folder {
+    title: string;
+    childrens: Entities[];
+}
+
+export interface Button {
+    title: string;
+    params: ButtonParams;
+    onClick: (...args: any[]) => void;
+}
+
+export interface Entity {
+    obj: any;
+    key: string;
+    params?: BindingParams;
+    onChange?: (event: ChangeEvent) => void;
+}
+
+export type Entities = Folder | Button | Entity;
 
 function InspectorControlCreate() {
-    let _inspector: Inspector;
     let _config: InspectorGroup[];
+    let _inspector: Pane;
+    let _unique_fields: { field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }[];
 
     function init() {
-        _inspector = new Inspector();
+        _inspector = new Pane({
+            container: document.querySelector('.menu_right') as HTMLDivElement
+        });
+        // _inspector.registerPlugin(TweakpaneImagePlugin);
+        // _inspector.registerPlugin(TemplatePlugin);
     }
 
-    function setup_config(config: InspectorGroup[]) { //, type: ComponentType) {
+    function setupConfig(config: InspectorGroup[]) { //, type: ComponentType) {
         _config = config;
     }
 
-    function set_data(list_data: ObjectData[]) {
-        let fields: UiObjectConfig[] = [];
-        const uneque_fields = [] as string[];
-        for (const obj of list_data) {
-            // TODO: делать преобразование один раз, после выяснения общего набора полей
-            fields = [];
-            for (const field of obj.data) {
+    function setData(list_data: ObjectData[]) {
+        _unique_fields = [];
 
+        let i = 0;
+        const ids: number[] = [];
+        for (const obj of list_data) {
+            for (const field of obj.data) {
                 // ищем информацию о поле в соответсвующем конфиге
                 const property: PropertyItem<PropertyType> | undefined = getPropertyItemByName(field.name);
-                if (!property) {
-                    Log.error(`Not found ${field.name}`);
-                    continue;
-                }
+                if (!property) continue; // пропускаем в случае ошибки
 
-                // проверка на то что все поля одинаковые (без учета содержимого)
-                if (!uneque_fields.includes(property.name)) {
-                    uneque_fields.push(property.name);
-                }
+                // запоминаем поле с проверкой на то что все поля между объектами одинаковые
+                tryAddToUniqueField(i, field, property);
 
-                // перобразование полей
-                let view = {} as UiObjectConfig;
-                switch (property.type) {
-                    case PropertyType.STRING: case PropertyType.LOG_DATA:
-                        view = string_view(obj, field, property);
-                        break;
-                    case PropertyType.NUMBER:
-                        view = viewByType("number", obj, field, property);
-                        break;
-                    case PropertyType.BOOLEAN:
-                        view = viewByType("checkbox", obj, field, property);
-                        break;
-                    case PropertyType.VECTOR_2:
-                        view = viewByType("vec2", obj, field, property);
-                        break;
-                    case PropertyType.VECTOR_3:
-                        view = viewByType("vec3", obj, field, property);
-                        break;
-                    case PropertyType.VECTOR_4:
-                        view = viewByType("vec4", obj, field, property);
-                        break;
-                    case PropertyType.COLOR:
-                        // FIXME: type need to be 'color'
-                        view = viewByType("number", obj, field, property);
-                        break;
-                    case PropertyType.LIST_TEXTURES:
-                        view = textures_view(obj, field, property);
-                        break;
-                    case PropertyType.BUTTON:
-                        view = button_view(field, property);
-                        break;
-                }
-
-                // формированик групп
-                const group = getInspectorGroupByName(field.name);
-                if (group && group.title != '') {
-                    let folder = fields.find((value: UiObjectConfig) => {
-                        return (value.type == "folder") && (value.label == group.title);
-                    });
-                    if (!folder) {
-                        folder = {
-                            type: "folder",
-                            label: group.title,
-                            children: [],
-                            expanded: true,
-                        };
-                    }
-                    folder.children?.push(view);
-                    fields.push(folder);
-                } else fields.push(view);
+                //TODO: добавлять нужные id
             }
+            ++i;
+        }
+
+        const entities: Entities[] = [];
+        for (const unique_field of _unique_fields) {
+            // перобразование полей
+            const entity = castProperty(ids, unique_field.field, unique_field.property);
+            if (!entity) continue; // пропускаем в случае ошибки
+
+            // формирование групп
+            addToFolder(unique_field.field, entity, entities);
         }
 
         // добавляем поля в инспектор
-        for (const field of fields) {
-            _inspector.appendChild(field);
+        renderEntities(entities);
+    }
+
+    function tryAddToUniqueField(obj_index: number, field: PropertyData<PropertyType>, property: PropertyItem<PropertyType>): boolean {
+        const index = _unique_fields.findIndex((value) => {
+            return value.property.name == property.name;
+        });
+
+        if (index == -1) {
+            if (obj_index != 0) {
+                return false;
+            }
+            _unique_fields.push({ field, property });
         }
+
+        return true;
+
+        // FIXME: проверять поля по значению
+
+        // if (_unique_fields[index].field == field) {
+        //     return true;
+        // }
+
+        // _unique_fields.splice(index, 1);
+        // return false;
+    }
+
+    function isFolder(obj: Entities): obj is Folder {
+        const has_title = (obj as Folder).title !== undefined;
+        const has_childrens = (obj as Folder).childrens !== undefined;
+        return (has_title && has_childrens);
+    }
+
+    function isButton(obj: Entities): obj is Button {
+        const has_title = (obj as Button).title !== undefined;
+        const has_onClick = (obj as Button).onClick !== undefined;
+        return (has_title && has_onClick);
+    }
+
+    function renderEntities(entities: Entities[], place: FolderApi = _inspector) {
+        for (const entity of entities) {
+            // папка
+            if (isFolder(entity)) {
+                // рекурсивно добавляем дочерние entities
+                const folder = place.addFolder({ title: entity.title });
+                renderEntities(entity.childrens!, folder);
+                continue;
+            }
+
+            // кнопка
+            if (isButton(entity)) {
+                place.addButton(entity.params as ButtonParams).on('click', entity.onClick);
+                continue;
+            }
+
+            // обычное поле
+            const binding = place.addBinding(entity.obj, entity.key, entity.params);
+            if (entity.onChange) binding.on('change', entity.onChange);
+        }
+    }
+
+    // TODO: add/cast params from property
+    function castProperty<T extends PropertyType>(ids: number[], field: PropertyData<T>, property: PropertyItem<T>): Entities | undefined {
+        switch (property.type) {
+            case PropertyType.STRING:
+            case PropertyType.LOG_DATA:
+            case PropertyType.NUMBER:
+            case PropertyType.BOOLEAN:
+            case PropertyType.VECTOR_3:
+            case PropertyType.VECTOR_4:
+                return createEntity(ids, field, property, { label: property.title, readonly: property.readonly });
+            case PropertyType.VECTOR_2:
+                const vec2_params = { label: property.title, readonly: property.readonly, picker: 'inline', expanded: false };
+                return createEntity(ids, field, property, vec2_params as BindingParams);
+            case PropertyType.POINT_2D:
+                const point2d_params = { label: property.title, readonly: property.readonly, y: { inverted: true }, picker: 'inline', expanded: false };
+                return createEntity(ids, field, property, point2d_params as BindingParams);
+            case PropertyType.COLOR:
+                const color_params = { label: property.title, readonly: property.readonly, picker: 'inline', expanded: false };
+                return createEntity(ids, field, property, color_params as BindingParams);
+            case PropertyType.BUTTON:
+                return createButton(field as PropertyData<PropertyType.BUTTON>, property as PropertyItem<PropertyType.BUTTON>, { title: property.title });
+            // case PropertyType.LIST_TEXTURES: // Пока не поддерживается
+            default:
+                Log.error(`Unable to cast ${field.name}`)
+                return undefined;
+        }
+    }
+
+    function addToFolder<T extends PropertyType>(field: PropertyData<T>, entity: Entities, entities: Entities[]) {
+        const group = getInspectorGroupByName(field.name);
+        if (group && group.title != '') {
+            let folder = entities.find((value) => {
+                return (isFolder(value)) && (value.title == group.title);
+            }) as Folder | undefined;
+            if (!folder) {
+                folder = createFolder(group.title, []);
+                entities.push(folder);
+            }
+            folder.childrens.push(entity);
+        } else entities.push(entity);
     }
 
     function getPropertyItemByName(name: string): PropertyItem<PropertyType> | undefined {
@@ -202,6 +287,8 @@ function InspectorControlCreate() {
             if (result)
                 return result;
         }
+
+        Log.error(`Not found ${name}`);
         return undefined;
     }
 
@@ -216,64 +303,47 @@ function InspectorControlCreate() {
         return undefined;
     }
 
-
-    function viewByType<T extends PropertyType>(type: string, obj: ObjectData, field: PropertyData<T>, property: PropertyItem<T>): UiObjectConfig {
+    function createFolder(title: string, childrens: Entities[]) {
         return {
-            type,
-            label: property.title,
-            value: field.data,
-            readOnly: property.readonly,
-            onChange: (data: ChangeEvent) => {
-                if (!data.last)
+            title,
+            childrens
+        };
+    }
+
+    function createButton(field: PropertyData<PropertyType.BUTTON>, property: PropertyItem<PropertyType.BUTTON>, params: ButtonParams): Button {
+        return {
+            title: property.title,
+            onClick: field.data,
+            params
+        }
+    }
+
+    function createEntity<T extends PropertyType>(ids: number[], field: PropertyData<T>, property: PropertyItem<T>, params?: BindingParams, type = EntityType.COMON): Entity {
+        const entity: Entity = {
+            obj: field,
+            key: 'data',
+            params,
+        };
+
+        if (!property.readonly) {
+            entity.onChange = (event: ChangeEvent) => {
+                if (!event.last)
                     return;
                 EventBus.send('SYS_INSPECTOR_UPDATED_VALUE', {
-                    id: obj.id,
-                    data: [
-                        {
-                            name: field.name,
-                            data: data.value
-                        }
-                    ]
-                })
-            }
-        };
-    }
+                    ids,
+                    data: {
+                        name: field.name,
+                        data: event.value as PropertyValues[T]
+                    }
+                });
+            };
+        }
 
-    function string_view<T extends PropertyType>(obj: ObjectData, field: PropertyData<T>, property: PropertyItem<T>): UiObjectConfig {
-        return {
-            type: "input",
-            label: property.title,
-            property: [field, 'data'],
-            readOnly: property.readonly,
-            onChange: (data: ChangeEvent) => {
-                console.log(data);
-                EventBus.send('SYS_INSPECTOR_UPDATED_VALUE', {
-                    id: obj.id,
-                    data: [
-                        {
-                            name: field.name,
-                            data: data.value
-                        }
-                    ]
-                })
-            }
-        };
-    }
-
-    function textures_view<T extends PropertyType>(obj: ObjectData, field: PropertyData<T>, property: PropertyItem<T>): UiObjectConfig {
-        return {};
-    }
-
-    function button_view<T extends PropertyType>(field: PropertyData<T>, property: PropertyItem<T>): UiObjectConfig {
-        return {
-            type: "button",
-            label: property.title,
-            onClick: field.data as PropertyValues[PropertyType.BUTTON]
-        };
+        return entity;
     }
 
     init();
-    return { setup_config, set_data }
+    return { setup_config: setupConfig, set_data: setData }
 }
 
 /*

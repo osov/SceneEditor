@@ -1,6 +1,6 @@
-import { BufferGeometry, Color, Line, LineDashedMaterial, NearestFilter, Vector2, Vector3, Vector4, } from 'three'
+import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, Vector2, Vector3, Vector4, } from 'three'
 import { IObjectTypes } from './render_engine/types';
-import { ObjectData, PropertyType } from './controls/InspectorControl';
+import { ChangeInfo, PropertyType } from './controls/InspectorControl';
 
 export async function run_debug_scene() {
   // sov width projection
@@ -9,7 +9,7 @@ export async function run_debug_scene() {
   (window as any).scene = RenderEngine.scene;
   await ResourceManager.preload_font('ShantellSans-Light11.ttf')
   const tex = await ResourceManager.preload_texture('./img/2.png');
-  tex.magFilter = NearestFilter;
+  // tex.magFilter = NearestFilter;
 
   //const tex2 = await ResourceManager.preload_texture('/assets/textures/cir_b.png');
 
@@ -146,8 +146,8 @@ function run_debug_inpector() {
       name: 'base',
       title: '',
       property_list: [
-        { name: 'name', title: 'Название', type: PropertyType.STRING, },
-        { name: 'id', title: 'ID', type: PropertyType.NUMBER, readonly: true }
+        { name: 'id', title: 'ID', type: PropertyType.NUMBER, readonly: true },
+        { name: 'name', title: 'Название', type: PropertyType.STRING, }
       ]
     },
     {
@@ -163,11 +163,13 @@ function run_debug_inpector() {
       name: 'test',
       title: 'Тестовые',
       property_list: [
+        { name: 'point', title: 'Поинт', type: PropertyType.POINT_2D },
         { name: 'vec2', title: 'Вектор2', type: PropertyType.VECTOR_2 },
         { name: 'vec4', title: 'Вектор4', type: PropertyType.VECTOR_4 },
         { name: 'checkbox', title: 'Чек', type: PropertyType.BOOLEAN },
         { name: 'color', title: 'Цвет', type: PropertyType.COLOR },
-        { name: 'click', title: 'Кликнуть', type: PropertyType.BUTTON }
+        { name: 'click', title: 'Кликнуть', type: PropertyType.BUTTON },
+        // { name: 'textures', title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: [{ key: 'test', text: 'Тест', src: './test.png' }] }
       ]
     }
   ]);
@@ -177,33 +179,37 @@ function run_debug_inpector() {
       id: 1, data: [
         { name: 'id', data: 1 },
         { name: 'name', data: 'test1' },
-        { name: 'position', data: new Vector3(0, 0, 0) },
+        { name: 'position', data: new Vector3(0, 5, 0) },
         { name: 'rotation', data: new Vector3(0, 0, 0) },
         { name: 'scale', data: new Vector3(1, 1, 1) },
+        { name: 'point', data: new Vector2(134, 234) },
         { name: 'vec2', data: new Vector2(134, 234) },
         { name: 'vec4', data: new Vector4(1, 343, 1, 6565) },
         { name: 'checkbox', data: true },
         { name: 'color', data: "#ff0000" },
-        { name: 'click', data: () => log('click') }
+        { name: 'click', data: () => log('click') },
+        // { name: 'textures', data: 'test' }
       ]
     },
     {
       id: 2, data: [
         { name: 'id', data: 1 },
         { name: 'name', data: 'test1' },
-        { name: 'position', data: new Vector3(0, 0, 0) },
+        { name: 'position', data: new Vector3(0, 10, 0) },
         { name: 'rotation', data: new Vector3(0, 0, 0) },
         { name: 'scale', data: new Vector3(1, 1, 1) },
+        { name: 'point', data: new Vector2(134, 234) },
         { name: 'vec2', data: new Vector2(134, 234) },
         { name: 'vec4', data: new Vector4(1, 343, 1, 6565) },
         { name: 'checkbox', data: true },
         { name: 'color', data: "#ff0000" },
-        { name: 'click', data: () => log('click') }
+        { name: 'click', data: () => log('click') },
+        // { name: 'textures', data: 'test' }
       ]
     }
   ]);
 
-  EventBus.on('SYS_INSPECTOR_UPDATED_VALUE', (data: ObjectData) => {
+  EventBus.on('SYS_INSPECTOR_UPDATED_VALUE', (data: ChangeInfo) => {
     console.log(data);
   });
 }

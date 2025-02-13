@@ -1,5 +1,5 @@
-import { ObjectData } from "../controls/InspectorControl";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
+import { ChangeInfo } from "../controls/InspectorControl";
 
 export type VoidCallback = () => void;
 export type Messages = UserMessages & SystemMessages;
@@ -29,8 +29,8 @@ export type _SystemMessages = {
     SYS_GRAPH_CLICKED: { id: number },
     SYS_GRAPH_REMOVE: { id: number, list: number[] },
     SYS_GRAPH_KEY_COM_PRESSED: { id: number, list: number[], key: string | number },
-    SYS_GRAPH_ADD : { id: number, list: number[], type: string | number },
-    SYS_INSPECTOR_UPDATED_VALUE: ObjectData,
+    SYS_GRAPH_ADD: { id: number, list: number[], type: string | number },
+    SYS_INSPECTOR_UPDATED_VALUE: ChangeInfo,
 };
 
 

@@ -1,1 +1,0 @@
-declare module "tweakpane-plugin-search-list";
