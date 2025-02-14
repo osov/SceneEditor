@@ -1,6 +1,7 @@
 import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, Vector2, Vector3, Vector4, } from 'three'
 import { IObjectTypes } from './render_engine/types';
 import { ChangeInfo, PropertyType } from './controls/InspectorControl';
+import { CreateInstanceMesh2Pool } from './render_engine/objects/pools/instance_mesh_2_pool';
 
 export async function run_debug_scene() {
   // sov width projection
@@ -9,7 +10,7 @@ export async function run_debug_scene() {
   (window as any).scene = RenderEngine.scene;
   await ResourceManager.preload_font('ShantellSans-Light11.ttf')
   const tex = await ResourceManager.preload_texture('./img/2.png');
-  // tex.magFilter = NearestFilter;
+  tex.texture.magFilter = NearestFilter;
 
   //const tex2 = await ResourceManager.preload_texture('/assets/textures/cir_b.png');
 
@@ -138,6 +139,37 @@ export async function run_debug_scene() {
   ControlManager.update_graph();
 
   run_debug_inpector();
+
+
+  await ResourceManager.preload_atlas('./img/example_atlas.tpsheet', './img/example_atlas.png');
+  const count = 400;
+  const pool = CreateInstanceMesh2Pool(count);
+  pool.set_atlas('example_atlas');
+  scene.add(pool.mesh);
+  (window as any).pool = pool;
+  let id = 0;
+
+  const dc = ['b2', 'b3', 'b4', 'b5', 'b6', 'b7', 'b8', 'b9', 'b10', 'bt'];
+  for (let i = 0; i < 20; i++) {
+    for (let j = 0; j < 10; j++) {
+      pool.set_position(id, new Vector3(j * 35 - 250, - i * 35 - 150, (i + j) * 0.001));
+      pool.set_texture(id, dc[i % dc.length])
+      pool.set_rotation(id, -i * 10)
+      pool.set_size(id, 32, 50)
+      id++;
+    }
+  }
+
+   for (let i = 0; i < 10; i++) {
+     for (let j = 0; j < 10; j++) {
+       pool.set_texture(id, 'Rectangle 207')
+       pool.set_slice(id, 15, 20)
+       pool.set_size(id, 30 * (i + 2), 30 * (j + 2))
+       pool.set_position(id, new Vector3(i * 40+450, - j * 55-150 , (i + j) * 0.001));
+       pool.set_rotation(id, i * 10)
+       id++;
+     }
+   }
 }
 
 function run_debug_inpector() {

@@ -135,8 +135,18 @@ export function ResourceManagerModule() {
     function get_atlas(name: string) {
         if (!atlases[name])
             return null;
-        const values  = Object.values(atlases[name]);
+        const values = Object.values(atlases[name]);
         return values[0].data.texture;
+    }
+
+    function get_all_textures() {
+        const list: { name: string, atlas: string, data: TextureData }[] = [];
+        for (const k in atlases) {
+            for (const k2 in atlases[k]) {
+                list.push({ name: k2, atlas: k, data: atlases[k][k2].data });
+            }
+        }
+        return list;
     }
 
     function free_texture(name: string, atlas = '') {
@@ -151,5 +161,5 @@ export function ResourceManagerModule() {
     }
 
     init();
-    return { preload_atlas, preload_texture, preload_font, get_atlas, get_texture, get_font, free_texture };
+    return { preload_atlas, preload_texture, preload_font, get_atlas, get_texture, get_font, free_texture, get_all_textures };
 };

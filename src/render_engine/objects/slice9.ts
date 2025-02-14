@@ -33,7 +33,9 @@ const shader = {
         varying vec2 vUv;
         varying vec4 vUvData;
         varying vec3 vColor; 
+#ifdef USE_TEXTURE
         uniform sampler2D u_texture;
+#endif
 #ifdef USE_SLICE
         varying vec4 vSliceData; 
 
@@ -59,9 +61,13 @@ const shader = {
             vec2 newUV = vUv;
 #endif
             newUV = vUvData.xy + newUV * vUvData.zw;
+#ifdef USE_TEXTURE
             vec4 color = texture2D(u_texture, newUV);
             //  if (color.a < 0.5) discard;
             gl_FragColor = color * vec4(vColor, 1.);
+#else
+            gl_FragColor = vec4(vColor, 1.);
+#endif
         }`
 };
 
@@ -151,7 +157,16 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
                 material.needsUpdate = true;
             }
         }
-
+        if (parameters.texture == '') {
+            if (material.defines['USE_TEXTURE'] != undefined) {
+                delete material.defines['USE_TEXTURE'];
+                material.needsUpdate = true;
+            }
+        }
+        else if (material.defines['USE_TEXTURE'] == undefined) {
+            material.defines['USE_TEXTURE'] = '';
+            material.needsUpdate = true;
+        }
     }
 
 

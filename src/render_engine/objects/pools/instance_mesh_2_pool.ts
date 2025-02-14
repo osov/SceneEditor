@@ -1,6 +1,7 @@
 // https://github.com/agargaro/instanced-mesh/tree/master
+// todo используется хак двойного размера для того чтобы BB считались верно при разном Pivot, а в шейдере уменьшаю размер в 2 раза 
 import { InstancedMesh2 } from "@three.ez/instanced-mesh";
-import { ShaderMaterial, Vector3, Color, PlaneGeometry, Vector2, Object3D, Matrix4, Vector4 } from "three";
+import { ShaderMaterial, Vector3, Color, PlaneGeometry, Vector2, Object3D, Vector4 } from "three";
 
 
 export const slice9_shader = {
@@ -21,7 +22,9 @@ export const slice9_shader = {
 #ifdef USE_SLICE
        vSliceData = sliceData;
 #endif
-       gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position,1.0);
+       vec3 localPosition = position / vec3(vec2(2.), 1.0);
+       vec4 offset = vec4(size_xy * (pivot - vec2(0.5, 0.5)), 0., 0.);
+       gl_Position = projectionMatrix * modelViewMatrix * (instanceMatrix * vec4(localPosition,1.0) - offset);
     }  
     `,
 
@@ -57,34 +60,42 @@ export const slice9_shader = {
 #endif
         newUV = vUvData.xy + newUV * vUvData.zw;
         vec4 color = texture2D(u_texture, newUV);
-        //if (color.a < 0.5) discard; 
+      //  if (color.a < 0.5) discard; 
         gl_FragColor = color * vec4(vColor, 1.);
     }`
 };
 
+const Z_AXIS = new Vector3(0, 0, 1);
+const tmp_vec3 = new Vector3();
 
-export function CreateInstanceMesh2Pool(count: number, is_slice_9 = true) {
+export function CreateInstanceMesh2Pool(count: number) {
     let current_atlas = '';
-    const textures_size: Vector2[] = [];
-    const slices_data: Vector2[] = [];
-    const size_data: Vector2[] = [];
-    const geometry = new PlaneGeometry(1, 1);
-    const uvData = new Float32Array(count * 4);
-    const slice_data = new Float32Array(count * 4);
+    const mesh_data: {
+        position: Vector3,
+        scale: Vector3,
+        rotation: number,
+        size: Vector2,
+        pivot: Vector2,
+        textures_size: Vector2,
+        slice: Vector2,
+        color: string,
+        texture: string
+    }[] = [];
+    const geometry = new PlaneGeometry(2, 2);
 
 
     for (let i = 0; i < count; i++) {
-        uvData[i * 4] = 0;
-        uvData[i * 4 + 1] = 0;
-        uvData[i * 4 + 2] = 1;
-        uvData[i * 4 + 3] = 1;
-        slice_data[i * 4] = 0;
-        slice_data[i * 4 + 1] = 0;
-        slice_data[i * 4 + 2] = 1;
-        slice_data[i * 4 + 3] = 1;
-        textures_size.push(new Vector2(1, 1));
-        slices_data.push(new Vector2(0, 0));
-        size_data.push(new Vector2(1, 1));
+        mesh_data.push({
+            position: new Vector3(0, 0, 0),
+            scale: new Vector3(1, 1, 1),
+            rotation: 0,
+            size: new Vector2(1, 1),
+            pivot: new Vector2(0.5, 0.5),
+            textures_size: new Vector2(1, 1),
+            slice: new Vector2(0, 0),
+            color: '#fff',
+            texture: '',
+        });
     }
 
 
@@ -97,13 +108,14 @@ export function CreateInstanceMesh2Pool(count: number, is_slice_9 = true) {
         defines: { USE_SLICE: '' }
     });
     const mesh = new InstancedMesh2(geometry, material, { createEntities: !true, capacity: count });
-    mesh.initUniformsPerInstance({ vertex: { uvData: 'vec4', sliceData: 'vec4' } });
+    mesh.initUniformsPerInstance({ vertex: { uvData: 'vec4', sliceData: 'vec4', pivot: 'vec2', size_xy: 'vec2' } });
 
     mesh.addInstances(count, (e) => { });
 
-    const clr = new Color(1, 1, 1);
-    for (let i = 0; i < count; i++)
-        mesh.setColorAt(i, clr);
+    for (let i = 0; i < count; i++) {
+        mesh.setColorAt(i, new Color(mesh_data[0].color));
+        set_pivot(i, mesh_data[0].pivot.x, mesh_data[0].pivot.y);
+    }
 
     const dummy = new Object3D();
 
@@ -114,28 +126,60 @@ export function CreateInstanceMesh2Pool(count: number, is_slice_9 = true) {
         material.needsUpdate = true;
     }
 
-    function set_texture(index: number, name: string,) {
+    function set_texture(index: number, name: string) {
         const texture_data = ResourceManager.get_texture(name, current_atlas);
-        textures_size[index].set(texture_data.size.x, texture_data.size.y);
+        mesh_data[index].textures_size.set(texture_data.size.x, texture_data.size.y);
+        mesh_data[index].texture = name;
         mesh.setUniformAt(index, 'uvData', new Vector4(texture_data.uvOffset.x, texture_data.uvOffset.y, texture_data.uvScale.x, texture_data.uvScale.y));
     }
 
-    function set_position(index: number, pos: Vector3) {
-        const mtx4 = new Matrix4();
-        mesh.getMatrixAt(index, mtx4);
-        dummy.position.copy(pos);
+    function make_matrix(index: number) {
+        dummy.setRotationFromAxisAngle(Z_AXIS, mesh_data[index].rotation * Math.PI / 180);
+        tmp_vec3.copy(mesh_data[index].scale);
+        tmp_vec3.x *= mesh_data[index].size.x;
+        tmp_vec3.y *= mesh_data[index].size.y;
+        dummy.scale.copy(tmp_vec3);
+        dummy.position.copy(mesh_data[index].position);
         dummy.updateMatrix();
-        mesh.setMatrixAt(index, dummy.matrix);
+        return dummy.matrix;
+    }
+
+    function set_pivot(index: number, x: number, y: number) {
+        mesh_data[index].pivot.set(x, y);
+        mesh.setUniformAt(index, 'pivot', new Vector2(x, y));
+    }
+
+    function set_position(index: number, pos: Vector3) {
+        mesh_data[index].position.copy(pos);
+        mesh.setMatrixAt(index, make_matrix(index));
+        mesh.computeBoundingSphere()
+    }
+
+    function set_scale(index: number, scale_x: number, scale_y: number) {
+        mesh_data[index].scale.set(scale_x, scale_y, 1);
+        mesh.setMatrixAt(index, make_matrix(index));
+        set_size(index, mesh_data[index].size.x, mesh_data[index].size.y);
+        mesh.setUniformAt(index, 'size_xy', new Vector2(mesh_data[index].scale.x * mesh_data[index].size.x, mesh_data[index].scale.y * mesh_data[index].size.y));
+        mesh.computeBoundingSphere()
     }
 
     function set_size(index: number, size_x: number, size_y: number) {
-        size_data[index].set(size_x, size_y);
-        const mtx4 = new Matrix4();
-        mesh.getMatrixAt(index, mtx4);
-        dummy.scale.set(size_x, size_y, 1);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(index, dummy.matrix);
+        //set_scale(index, size_x, size_y);
+        if (size_x < 1)
+            size_x = 1;
+        if (size_y < 1)
+            size_y = 1;
+        mesh_data[index].size.set(size_x, size_y);
+        mesh.setMatrixAt(index, make_matrix(index));
+        mesh.setUniformAt(index, 'size_xy', new Vector2(mesh_data[index].scale.x * mesh_data[index].size.x, mesh_data[index].scale.y * mesh_data[index].size.y));
+       // mesh.setUniformAt(index, 'size_xy', new Vector2(size_x, size_y));
         update_slice(index);
+        mesh.computeBoundingSphere()
+    }
+
+    function set_rotation(index: number, rotation_deg: number) {
+        mesh_data[index].rotation = rotation_deg;
+        mesh.setMatrixAt(index, make_matrix(index));
     }
 
     function set_color(index: number, hex_color: string) {
@@ -143,30 +187,23 @@ export function CreateInstanceMesh2Pool(count: number, is_slice_9 = true) {
         mesh.setColorAt(index, color);
     }
 
-    function set_rotation(index: number, rotation_deg: number) {
-        const mtx4 = new Matrix4();
-        mesh.getMatrixAt(index, mtx4);
-        dummy.rotation.z = rotation_deg * Math.PI / 180;
-        dummy.updateMatrix();
-        mesh.setMatrixAt(index, dummy.matrix);
-    }
-
     function set_slice(index: number, width: number, height: number) {
-        slices_data[index].set(width, height);
+        mesh_data[index].slice.set(width, height);
         update_slice(index);
     }
 
     function update_slice(index: number) {
-        const width = slices_data[index].x;
-        const height = slices_data[index].y;
-        const size_x = size_data[index].x;
-        const size_y = size_data[index].y;
+        const m = mesh_data[index];
+        const width = m.slice.x;
+        const height = m.slice.y;
+        const size_x = m.size.x;
+        const size_y = m.size.y;
         const u_dimensions_x = width / size_x;
         const u_dimensions_y = height / size_y;
-        const u_border_x = width / textures_size[index].x;
-        const u_border_y = height / textures_size[index].y;
+        const u_border_x = width / m.textures_size.x;
+        const u_border_y = height / m.textures_size.y;
         mesh.setUniformAt(index, 'sliceData', new Vector4(u_dimensions_x, u_dimensions_y, u_border_x, u_border_y));
     }
 
-    return { mesh, set_atlas, set_texture, set_position, set_size, set_color, set_rotation, set_slice };
+    return { mesh, set_atlas, set_texture, set_position, set_size, set_color, set_rotation, set_slice , set_scale};
 }
