@@ -663,3 +663,43 @@ li.menu__context_separator span {
   color: var(--color_red);
 }
 /* end popups */
+
+#popupLayers .popup {
+  width: 380px;
+}
+.LayersList{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  border: 1px solid #ccc;
+  margin-top: 20px;
+  border-radius: 3px;
+  padding: 10px 5px;
+}
+.LayersList__item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none;
+  text-wrap: nowrap;
+  color: #fff;
+  font-size: 14px;
+  padding: 5px 5px 5px 10px;
+  user-select: none;
+  column-gap: 12px;
+  background-color: var(--head_bg);
+  border-radius: 3px;
+}
+.LayersList__item_remove {
+  display: block;
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  color: #fff;
+  opacity: 0.6;
+  transition: opacity var(--transition_150);
+}
+.LayersList__item_remove:hover{
+  color: var(--color_red);
+}
