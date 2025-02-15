@@ -1,6 +1,6 @@
 import { Pane, TpChangeEvent } from 'tweakpane';
 import { BindingApi, BindingParams, ButtonParams, FolderApi } from '@tweakpane/core';
-import * as TweakpaneImagePlugin from 'tweakpane4-image-plugin';
+import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 // import * as TemplatePlugin from 'tweakpane-plugin-template';
 
@@ -123,6 +123,7 @@ export interface Entity {
 }
 
 export type Entities = Folder | Button | Entity;
+
 
 function InspectorControlCreate() {
     let _config: InspectorGroup[];
@@ -257,7 +258,7 @@ function InspectorControlCreate() {
             case PropertyType.BUTTON:
                 return createButton(field as PropertyData<PropertyType.BUTTON>, property as PropertyItem<PropertyType.BUTTON>, { title: property.title });
             case PropertyType.LIST_TEXTURES:
-                const textures_params = { label: property.title, view: 'input-image', imageFit: 'contain' };
+                const textures_params = { label: property.title, view: 'thumbnail-list', options: property.params };
                 return createEntity(ids, field, property, textures_params as BindingParams);
             default:
                 Log.error(`Unable to cast ${field.name}`)

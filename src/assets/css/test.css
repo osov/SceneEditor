@@ -1,0 +1,9 @@
+#file-container {
+    display: flex;
+}
+
+#sprite-file {
+    width: 100px;
+    height: 100px;
+    margin: 5px;
+}

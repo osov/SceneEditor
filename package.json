@@ -29,7 +29,7 @@
     "ts-browser-helpers": "^0.16.2",
     "tweakpane": "4.0.5",
     "tweakpane-plugin-template": "latest",
-    "tweakpane4-image-plugin": "^2.0.0",
+    "tweakpane4-image-list-plugin": "^1.0.0",
     "uiconfig.js": "^0.1.3"
   }
 }

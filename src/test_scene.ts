@@ -201,7 +201,13 @@ function run_debug_inpector() {
         { name: 'checkbox', title: 'Чек', type: PropertyType.BOOLEAN },
         { name: 'color', title: 'Цвет', type: PropertyType.COLOR },
         { name: 'click', title: 'Кликнуть', type: PropertyType.BUTTON },
-        { name: 'textures', title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: [{ key: 'test', text: 'Тест', src: './test.png' }] },
+        {
+          name: 'textures', title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: [
+            { value: 'test', src: './img/2.png' },
+            { value: 'img_1', src: 'https://images.freeimages.com/image/previews/b48/nature-stroke-png-design-5690476.png?fmt=webp&w=500' },
+            { value: 'img_2', src: 'https://images.freeimages.com/image/previews/50b/japanese-bonsai-nature-hand-png-5692400.png?fmt=webp&w=500' }
+          ]
+        },
         { name: 'mult', title: 'Текст', type: PropertyType.LOG_DATA }
       ]
     }
@@ -221,7 +227,7 @@ function run_debug_inpector() {
         { name: 'checkbox', data: true },
         { name: 'color', data: "#ff0000" },
         { name: 'click', data: () => log('click') },
-        { name: 'textures', data: './img/2.png' },
+        { name: 'textures', data: '' },
         { name: 'mult', data: 'text1\ntext2' }
       ]
     },
@@ -238,7 +244,7 @@ function run_debug_inpector() {
         { name: 'checkbox', data: true },
         { name: 'color', data: "#ff0000" },
         { name: 'click', data: () => log('click') },
-        { name: 'textures', data: 'placeholder' },
+        { name: 'textures', data: '' },
         { name: 'mult', data: 'text1\ntext2' }
       ]
     }
