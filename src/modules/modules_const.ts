@@ -4,6 +4,9 @@ import { ChangeInfo } from "../controls/InspectorControl";
 export type VoidCallback = () => void;
 export type Messages = UserMessages & SystemMessages;
 export type MessageId = keyof Messages;
+export type ServerCommands = AssetsCommands;
+export type ServerResponses = AssetsResponses;
+export type CommandId = keyof ServerCommands;
 
 export interface VoidMessage { }
 
@@ -36,3 +39,62 @@ export type _SystemMessages = {
 
 export const _ID_MESSAGES = {
 };
+
+export type AssetsCommands = {
+    [GET_PROJECTS_CMD]: VoidMessage,
+    [NEW_PROJECT_CMD]: { project: string },
+    [NEW_FOLDER_CMD]: { name: string, path: string, project: string },
+    [GET_FOLDER_CMD]: { name: string, path: string, project: string },
+    [SEARCH_CMD]: { name: string, project: string },
+    [LOAD_PROJECT_CMD]: { project: string }
+    [RENAME_CMD]: { name: string, new_name: string, path: string, project: string },
+    [COPY_CMD]: { path: string, new_path: string, project: string },
+    [DELETE_CMD]: { name: string, path: string, project: string },
+    // [NEW_MATERIAL]: {name: string, path: string, data: IDictionary<string>},
+    // [GET_MATERIAL]: {name: string, path: string},
+    // [SET_INFO]: {name: string, path: string, data: IDictionary<string>},
+    // [GET_INFO]: {name: string, path: string},
+}
+
+export type BaseResp<T> = {
+    result: number,
+    data?: T,
+    message?: string,
+    error_code?: number,
+}
+
+export type AssetsResponses = {
+    [GET_PROJECTS_CMD]: BaseResp<FSObject[]>,
+    [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
+    [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
+    [GET_FOLDER_CMD]: BaseResp<VoidMessage>,
+    [SEARCH_CMD]: BaseResp<string>,
+    [LOAD_PROJECT_CMD]: BaseResp<FSObject[]>,
+    [RENAME_CMD]: BaseResp<VoidMessage>,
+    [COPY_CMD]: BaseResp<VoidMessage>,
+    [DELETE_CMD]: BaseResp<VoidMessage>,
+}
+
+export const GET_PROJECTS_CMD = '/get_projects';
+export const NEW_PROJECT_CMD = '/new_project';
+export const NEW_FOLDER_CMD = '/new_folder';
+export const GET_FOLDER_CMD = '/get_folder';
+export const LOAD_PROJECT_CMD = '/load_project';
+export const SEARCH_CMD = '/search';
+export const RENAME_CMD = '/rename';
+export const COPY_CMD = '/copy';
+export const DELETE_CMD = '/delete';
+
+export const URL_PATHS = {
+    TEST: '/test',
+    ASSETS: '/assets',
+    API: '/api',
+}
+
+export enum FSObjectType {
+    FOLDER,
+    FILE
+}
+
+export interface FSObject { name: string, type: FSObjectType, size: number, path: string, ext?: string, num_files?: number, src?: string };
+

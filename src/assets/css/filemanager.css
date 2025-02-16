@@ -1,0 +1,303 @@
+.filemanager {
+}
+
+.filemanager .breadcrumbs {
+	color: #ffffff;
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 35px;
+}
+
+.filemanager .breadcrumbs a:link, .breadcrumbs a:visited {
+	color: #ffffff;
+	text-decoration: none;
+}
+
+.filemanager .breadcrumbs a:hover {
+	text-decoration: underline;
+}
+
+.filemanager .breadcrumbs .arrow {
+	color:  #6a6a72;
+	font-size: 24px;
+	font-weight: 700;
+	line-height: 20px;
+}
+
+.filemanager .data {
+}
+
+
+.filemanager .data li {
+	border-radius: 3px;
+	width: 190px;
+	height: 60px;
+	list-style-type: none;
+	margin: 5px;
+	display: inline-block;
+	position: relative;
+	overflow: hidden;
+	padding: 0.3em;
+	z-index: 1;
+	cursor: pointer;
+	box-sizing: border-box;
+	transition: 0.3s background-color;
+}
+
+.filemanager .data li:hover,.filemanager .data li.active {
+	background-color: #2c393c;
+
+}
+
+.filemanager .data li a {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.filemanager .data li .name {
+	color: #ffffff;
+	font-size: 15px;
+	font-weight: 700;
+	line-height: 20px;
+	width: 150px;
+	white-space: nowrap;
+	display: inline-block;
+	position: absolute;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	top: 10px;
+}
+
+.filemanager .data li .details {
+	color: #b6c1c9;
+	font-size: 13px;
+	font-weight: 400;
+	width: 55px;
+	height: 10px;
+	top: 33px;
+	white-space: nowrap;
+	position: absolute;
+	display: inline-block;
+}
+
+.icon {
+	font-size: 16px;
+}
+.icon.folder {
+	display: inline-block;
+	margin: 0.5em;
+	background-color: transparent;
+	overflow: hidden;
+}
+.icon.folder:before {
+	content: '';
+	float: left;
+	background-color: #7ba1ad;
+
+	width: 1.5em;
+	height: 0.45em;
+
+	margin-left: 0.07em;
+	margin-bottom: -0.07em;
+
+	border-top-left-radius: 0.1em;
+	border-top-right-radius: 0.1em;
+
+	box-shadow: 1.25em 0.25em 0 0em #7ba1ad;
+}
+.icon.folder:after {
+	content: '';
+	float: left;
+	clear: left;
+
+	background-color: #a0d4e4;
+	width: 3em;
+	height: 2.25em;
+
+	border-radius: 0.1em;
+}
+.icon.folder.full:before {
+	height: 0.55em;
+}
+.icon.folder.full:after {
+	height: 2.15em;
+	box-shadow: 0 -0.12em 0 0 #ffffff;
+}
+
+.icon.img {
+    width: 2.5em;
+    height: 2.5em;
+    border-radius: 0.25em;
+    display: inline-block;
+    margin: 2.5px 1.0em 0.8em 1.3em;
+    background-size: 100%!important;
+    background-repeat: no-repeat!important;
+    background-position: 100% 100%!important;
+}
+
+.mat_drop{
+	    background-size: 100%!important;
+    background-repeat: no-repeat!important;
+    background-position: 100% 100%!important;
+}
+
+.icon.file {
+	width: 2.5em;
+	height: 2.5em;
+	line-height: 3em;
+	text-align: center;
+	border-radius: 0.25em;
+	color: #FFF;
+	display: inline-block;
+	margin: 0.5em 1.0em 0.8em 1.3em;
+	position: relative;
+	overflow: hidden;
+	box-shadow: 1.74em -2.1em 0 0 #A4A7AC inset;
+}
+.icon.file:first-line {
+	font-size: 13px;
+	font-weight: 700;
+}
+.icon.file:after {
+	content: '';
+	position: absolute;
+	z-index: -1;
+	border-width: 0;
+	border-bottom: 2.6em solid #DADDE1;
+	border-right: 2.22em solid rgba(0, 0, 0, 0);
+	top: -34.5px;
+	right: -1px;
+}
+
+.icon.file.f-avi,
+.icon.file.f-wmv {
+	box-shadow: 1.74em -2.1em 0 0 #7e70ee inset;
+}
+.icon.file.f-avi:after,
+.icon.file.f-wmv:after {
+	border-bottom-color: #5649c1;
+}
+
+.icon.file.f-xls,
+.icon.file.f-xlsx {
+	box-shadow: 1.74em -2.1em 0 0 #5bab6e inset;
+}
+.icon.file.f-mp2:after,
+.icon.file.f-xls:after,
+.icon.file.f-xlsx:after {
+	border-bottom-color: #448353;
+}
+
+.icon.file.f-doc,
+.icon.file.f-docx,
+.icon.file.f-psd{
+	box-shadow: 1.74em -2.1em 0 0 #03689b inset;
+}
+
+.icon.file.f-doc:after,
+.icon.file.f-docx:after,
+.icon.file.f-psd:after {
+	border-bottom-color: #2980b9;
+}
+
+.icon.file.f-gif,
+.icon.file.f-jpg,
+.icon.file.f-jpeg,
+.icon.file.f-png {
+	box-shadow: 1.74em -2.1em 0 0 #e15955 inset;
+}
+.icon.file.f-gif:after,
+.icon.file.f-jpg:after,
+.icon.file.f-jpeg:after,
+.icon.file.f-png:after {
+	border-bottom-color: #c6393f;
+}
+
+.icon.file.f-rar,
+.icon.file.f-zip,
+.icon.file.f-7z {
+	box-shadow: 1.74em -2.1em 0 0 #867c75 inset;
+}
+.icon.file.f-rar:after,
+.icon.file.f-zip:after,
+.icon.file.f-7z:after {
+	border-bottom-color: #685f58;
+}
+
+.icon.file.f-html,
+.icon.file.f-xml,
+.icon.file.f-xhtml {
+	box-shadow: 1.74em -2.1em 0 0 #a94bb7 inset;
+}
+.icon.file.f-html:after,
+.icon.file.f-rtf:after,
+.icon.file.f-xml:after,
+.icon.file.f-xhtml:after {
+	border-bottom-color: #d65de8;
+}
+
+.icon.file.f-js {
+	box-shadow: 1.74em -2.1em 0 0 #d0c54d inset;
+}
+.icon.file.f-js:after {
+	border-bottom-color: #a69f4e;
+}
+
+.icon.file.f-css,
+.icon.file.f-saas,
+.icon.file.f-scss {
+	box-shadow: 1.74em -2.1em 0 0 #44afa6 inset;
+}
+.icon.file.f-css:after,
+.icon.file.f-saas:after,
+.icon.file.f-scss:after {
+	border-bottom-color: #30837c;
+}
+
+.mini_form{
+	border: 1px solid #253033;
+	width: 500px;
+	top: 40px;
+	position: absolute;
+	left: 50%;
+	margin-left: -250px;
+	z-index: 10;
+	background: #3c4b4e;
+}
+
+.data_container{
+	user-select: none;
+}
+
+.btn_del_texture, .btn_del_texture_p{
+    position: absolute;
+    right: 75px;
+}
+
+.w200{
+	width: 200px!important;
+}
+
+.mesh_list{
+	width: 300px;
+    height: 400px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    background: #2c393c;
+    border: 1px solid #151515;
+    padding: 10px;
+}
+
+
+.mesh_item{
+	user-select: none;
+	cursor: pointer;
+}
+
+.mesh_item.active{
+	    background: #000000;
+    width: 300px;
+}

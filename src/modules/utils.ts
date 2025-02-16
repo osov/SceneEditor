@@ -65,3 +65,12 @@ export function eulerToQuaternion(euler: Vector3) {
 
     return new Vector4(qx, qy, qz, qw);
 }
+
+export function json_parsable(str: string) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
+}

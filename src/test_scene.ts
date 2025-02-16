@@ -2,6 +2,7 @@ import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, Vector2, Vecto
 import { IObjectTypes } from './render_engine/types';
 import { ChangeInfo, PropertyType } from './controls/InspectorControl';
 import { CreateInstanceMesh2Pool } from './render_engine/objects/pools/instance_mesh_2_pool';
+import { run_debug_filemanager } from './controls/AssetControl';
 
 export async function run_debug_scene() {
   // sov width projection
@@ -139,7 +140,7 @@ export async function run_debug_scene() {
   ControlManager.update_graph();
 
   run_debug_inpector();
-
+  run_debug_filemanager();
 
   await ResourceManager.preload_atlas('./img/example_atlas.tpsheet', './img/example_atlas.png');
   const count = 400;

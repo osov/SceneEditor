@@ -1,23 +1,42 @@
 <section class="menu_footer menu_section active">
+  <div class="filemanager">
+    <div class="menu_head flex aic jcsb">
+      <div class="breadcrumbs"><h3>Файлы</h3></div>
+      <div id="upl_info">
+      </div>
+      <a href="javascript:void(0)" class="btn_menu" data-menu="menu_footer" title="Скрыть">
+        <svg class="svg_icon">
+          <use href="./img/sprite.svg#circle_arrow_down"></use>
+        </svg>
+      </a>
+    </div>
 
-  <div class="menu_head flex aic jcsb">
-    <h3>Файлы</h3>
-    <a href="javascript:void(0)" class="btn_menu" data-menu="menu_footer" title="Скрыть" draggable="false">
-      <svg class="svg_icon">
-        <use href="./img/sprite.svg#circle_arrow_down"></use>
-      </svg>
-    </a>
+    <div class="st_mm iz_003 p5 data_container" id="drop_zone">
+      <div class="flex p10 fww">
+      <!-- Для теста -->
+        <div id="file-container" class="data">
+          <img id="sprite-file" src="./img/2.png">
+          <img id="sprite-file"
+            src="https://images.freeimages.com/image/previews/b48/nature-stroke-png-design-5690476.png?fmt=webp&w=500">
+          <img id="sprite-file"
+            src="https://images.freeimages.com/image/previews/50b/japanese-bonsai-nature-hand-png-5692400.png?fmt=webp&w=500">
+          <img id="sprite-file"
+            src="https://images.freeimages.com/image/previews/d15/fallen-faces-halloween-png-5691343.png?fmt=webp&w=500">
+        </div>
+        <div class="mini_form modal_min modal_make_fiel" style="display: none;">
+          <div class="m1" style="width: 100%;">Укажите название</div>
+          <div class="flex jcsa mt5 p10">
+            <div class="iz_bk">
+              <input class="modal_title_file" type="text" >
+            </div>
+          </div>
+          <div class="flex jcc mb5">
+            <div class="iz_bk">
+              <div class="button rename_btn">ок</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-
-  <!-- Для теста -->
-  <div id="file-container">
-    <img id="sprite-file" src="./img/2.png">
-    <img id="sprite-file"
-      src="https://images.freeimages.com/image/previews/b48/nature-stroke-png-design-5690476.png?fmt=webp&w=500">
-    <img id="sprite-file"
-      src="https://images.freeimages.com/image/previews/50b/japanese-bonsai-nature-hand-png-5692400.png?fmt=webp&w=500">
-    <img id="sprite-file"
-      src="https://images.freeimages.com/image/previews/d15/fallen-faces-halloween-png-5691343.png?fmt=webp&w=500">
-  </div>
-
 </section>
