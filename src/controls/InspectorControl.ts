@@ -1,6 +1,7 @@
 import { Pane, TpChangeEvent } from 'tweakpane';
 import { BindingApi, BindingParams, ButtonParams, FolderApi } from '@tweakpane/core';
 import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
+import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 // import * as TemplatePlugin from 'tweakpane-plugin-template';
 
@@ -43,7 +44,7 @@ export type PropertyParams = {
     [PropertyType.COLOR]: {};
     [PropertyType.STRING]: {};
     [PropertyType.SLIDER]: { min: number, max: number, step: number };
-    [PropertyType.LIST_TEXT]: { key: string; text: string }[];
+    [PropertyType.LIST_TEXT]: { [key in string]: string };
     [PropertyType.LIST_TEXTURES]: { key: string; text: string, src: string }[];
     [PropertyType.BUTTON]: {};
     [PropertyType.POINT_2D]: { x: { min?: number, max?: number, step?: number }, y: { min?: number, max?: number, step?: number } };
@@ -135,6 +136,7 @@ function InspectorControlCreate() {
             container: document.querySelector('.menu_right') as HTMLDivElement
         });
         _inspector.registerPlugin(TweakpaneImagePlugin);
+        _inspector.registerPlugin(TweakpaneSearchListPlugin);
         _inspector.registerPlugin(TextareaPlugin);
         // _inspector.registerPlugin(TemplatePlugin);
     }
@@ -260,6 +262,9 @@ function InspectorControlCreate() {
             case PropertyType.LIST_TEXTURES:
                 const textures_params = { label: property.title, view: 'thumbnail-list', options: property.params };
                 return createEntity(ids, field, property, textures_params as BindingParams);
+            case PropertyType.LIST_TEXT:
+                const lsit_params = { label: property.title, view: 'search-list', options: property.params };
+                return createEntity(ids, field, property, lsit_params as BindingParams);
             default:
                 Log.error(`Unable to cast ${field.name}`)
                 return undefined;

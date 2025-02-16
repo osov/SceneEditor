@@ -160,16 +160,16 @@ export async function run_debug_scene() {
     }
   }
 
-   for (let i = 0; i < 10; i++) {
-     for (let j = 0; j < 10; j++) {
-       pool.set_texture(id, 'Rectangle 207')
-       pool.set_slice(id, 15, 20)
-       pool.set_size(id, 30 * (i + 2), 30 * (j + 2))
-       pool.set_position(id, new Vector3(i * 40+450, - j * 55-150 , (i + j) * 0.001));
-       pool.set_rotation(id, i * 10)
-       id++;
-     }
-   }
+  for (let i = 0; i < 10; i++) {
+    for (let j = 0; j < 10; j++) {
+      pool.set_texture(id, 'Rectangle 207')
+      pool.set_slice(id, 15, 20)
+      pool.set_size(id, 30 * (i + 2), 30 * (j + 2))
+      pool.set_position(id, new Vector3(i * 40 + 450, - j * 55 - 150, (i + j) * 0.001));
+      pool.set_rotation(id, i * 10)
+      id++;
+    }
+  }
 }
 
 function run_debug_inpector() {
@@ -208,6 +208,13 @@ function run_debug_inpector() {
             { value: 'img_2', src: 'https://images.freeimages.com/image/previews/50b/japanese-bonsai-nature-hand-png-5692400.png?fmt=webp&w=500' }
           ]
         },
+        {
+          name: 'list', title: 'Лист', type: PropertyType.LIST_TEXT, params: {
+            'C++': 'C++',
+            Test: 'Test',
+            Key: 'Key'
+          }
+        },
         { name: 'mult', title: 'Текст', type: PropertyType.LOG_DATA }
       ]
     }
@@ -228,7 +235,8 @@ function run_debug_inpector() {
         { name: 'color', data: "#ff0000" },
         { name: 'click', data: () => log('click') },
         { name: 'textures', data: '' },
-        { name: 'mult', data: 'text1\ntext2' }
+        { name: 'mult', data: 'text1\ntext2' },
+        { name: 'list', data: '' },
       ]
     },
     {
@@ -245,7 +253,8 @@ function run_debug_inpector() {
         { name: 'color', data: "#ff0000" },
         { name: 'click', data: () => log('click') },
         { name: 'textures', data: '' },
-        { name: 'mult', data: 'text1\ntext2' }
+        { name: 'mult', data: 'text1\ntext2' },
+        { name: 'list', data: '' },
       ]
     }
   ]);
