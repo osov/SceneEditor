@@ -30,9 +30,10 @@
   --scroll_border: 1px solid rgba(0, 255, 224, 0.5);
 
   --tp-plugin-thumbnail-list-height: 500px;
-  --tp-plugin-thumbnail-list-width: 200px;
+  --tp-plugin-thumbnail-list-width: 160px;
   --tp-plugin-thumbnail-list-thumb-size: 40px;
   --tp-plugin-thumbnail-list-dragging-color: lightgreen;
+
 
   /* INSPECTOR THEME
   --tp-base-background-color: hsla(0, 0%, 10%, 0.8);
@@ -253,6 +254,7 @@ body {
   transform: rotate(180deg);
 }
 
+/* распространяется на input в tweakpane и смещает его не по центру */
 input,
 select,
 option,

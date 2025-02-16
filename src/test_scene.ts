@@ -236,7 +236,7 @@ function run_debug_inpector() {
         { name: 'click', data: () => log('click') },
         { name: 'textures', data: '' },
         { name: 'mult', data: 'text1\ntext2' },
-        { name: 'list', data: '' },
+        { name: 'list', data: 'C++' },
       ]
     },
     {
@@ -254,7 +254,7 @@ function run_debug_inpector() {
         { name: 'click', data: () => log('click') },
         { name: 'textures', data: '' },
         { name: 'mult', data: 'text1\ntext2' },
-        { name: 'list', data: '' },
+        { name: 'list', data: 'C++' },
       ]
     }
   ]);
