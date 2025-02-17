@@ -174,6 +174,16 @@ export async function run_debug_scene() {
 }
 
 function run_debug_inpector() {
+  const spriteFiles = document.querySelectorAll<HTMLElement>("#sprite-file");
+  spriteFiles.forEach((file) => {
+    file.addEventListener("dragstart", (event: DragEvent) => {
+      if (!event.dataTransfer)
+        return;
+      event.dataTransfer.clearData();
+      event.dataTransfer.setData("text/plain", file.getAttribute("data-value") || '');
+    });
+  });
+
   InspectorControl.setup_config([
     {
       name: 'base',
