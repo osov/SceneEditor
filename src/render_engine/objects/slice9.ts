@@ -4,7 +4,6 @@ import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../he
 import { EntityContainer } from "./entity_container";
 
 // todo optimize material list
-// todo set visible only mesh(visible+enabled)
 
 const shader = {
     vertexShader: `

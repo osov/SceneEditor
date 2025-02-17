@@ -38,6 +38,10 @@ export interface IBaseMesh {
     set_pivot(x: PivotX, y: PivotY, is_sync?: boolean): void
     get_anchor(): Vector2
     set_anchor(x: number, y: number): void
+    get_active(): boolean
+    set_active(active: boolean): void
+    get_visible(): boolean
+    set_visible(visible: boolean): void
     transform_changed(): void
     on_transform_changed?: OnTransformChanged;
     serialize(): any;

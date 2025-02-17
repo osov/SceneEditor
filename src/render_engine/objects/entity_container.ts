@@ -134,6 +134,22 @@ export class EntityContainer extends Mesh implements IBaseMesh {
         this.parameters.anchor_y = y;
     }
 
+    set_active(val: boolean) {
+        this.visible = val;
+    }
+
+    get_active() {
+        return this.visible;
+    }
+
+    set_visible(val: boolean) {
+        this.geometry.setDrawRange(0,val ? Infinity : 0);
+    }
+
+    get_visible() {
+        return this.geometry.drawRange.count != 0;
+    }
+
     transform_changed() {
         if (!this.matrixAutoUpdate)
             this.updateMatrixWorld(true);

@@ -160,6 +160,22 @@ export class TextMesh extends Text implements IBaseMesh {
             this.sync();
     }
 
+    set_active(val: boolean) {
+        this.visible = val;
+    }
+
+    get_active() {
+        return this.visible;
+    }
+
+    set_visible(val: boolean) {
+        this.geometry.setDrawRange(0,val ? Infinity : 0);
+    }
+
+    get_visible() {
+        return this.geometry.drawRange.count != 0;
+    }
+
     serialize(): SerializeData {
         return { text: this.text, font: this.parameters.font, font_size: this.fontSize };
     }

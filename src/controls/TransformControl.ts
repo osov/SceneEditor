@@ -41,8 +41,14 @@ function TransformControlCreate() {
             case 'translate':
                 _position.copy(proxy.position);
                 for (let i = 0; i < selectedObjects.length; i++) {
-                    const element = selectedObjects[i] as any;
+                    const element = selectedObjects[i] as  IBaseMeshDataAndThree & { _position: Vector3 };
                     // todo если объект родителя отскейлен и вращался то здесь будут ошибки
+                    //const ws = new Vector3();
+                    //const wp = new Vector3();
+                    //if (element.parent){
+                    //    element.parent.getWorldScale(ws);
+                    //    element.parent.getWorldPosition(wp);
+                    //}
                     element.position.copy(element._position).add(_position);
                     element.transform_changed();
                 }
