@@ -120,6 +120,10 @@ export function ResourceManagerModule() {
         })
     }
 
+    function get_all_fonts(){
+        return fonts;
+    }
+
     function get_font(name: string) {
         return fonts[name];
     }
@@ -161,5 +165,5 @@ export function ResourceManagerModule() {
     }
 
     init();
-    return { preload_atlas, preload_texture, preload_font, get_atlas, get_texture, get_font, free_texture, get_all_textures };
+    return { preload_atlas, preload_texture, preload_font, get_all_fonts, get_atlas, get_texture, get_font, free_texture, get_all_textures };
 };
