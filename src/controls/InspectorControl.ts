@@ -3,7 +3,7 @@ import { BindingApi, BindingParams, ButtonParams, FolderApi } from '@tweakpane/c
 import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
-// import * as TemplatePlugin from 'tweakpane-plugin-template';
+import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 
 
 declare global {
@@ -138,7 +138,7 @@ function InspectorControlCreate() {
         _inspector.registerPlugin(TweakpaneImagePlugin);
         _inspector.registerPlugin(TweakpaneSearchListPlugin);
         _inspector.registerPlugin(TextareaPlugin);
-        // _inspector.registerPlugin(TemplatePlugin);
+        _inspector.registerPlugin(ExtendedPointNdInputPlugin);
     }
 
     function setupConfig(config: InspectorGroup[]) { //, type: ComponentType) {
