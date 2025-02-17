@@ -291,6 +291,10 @@ export class Slice9Mesh extends EntityContainer {
         return new Vector2(this.template.parameters.slice_width, this.template.parameters.slice_height);
     }
 
+    get_texture(){
+        return [this.template.parameters.texture, this.template.parameters.atlas];
+    }
+
     set_texture(name: string, atlas = '') {
         this.template.set_texture(name, atlas);
     }
