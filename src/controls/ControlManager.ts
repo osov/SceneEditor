@@ -23,12 +23,14 @@ function ControlManagerCreate() {
         bind_btn('size_transform_btn', () => set_active_control('size_transform_btn'));
 
         EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
+            (window as any).selected = e.list[0];
             TransformControl.set_selected_list(e.list);
             SizeControl.set_selected_list(e.list);
             update_graph();
         });
 
         EventBus.on('SYS_UNSELECTED_MESH_LIST', () => {
+            (window as any).selected = null;
             TransformControl.detach();
             SizeControl.detach();
             update_graph();

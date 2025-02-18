@@ -2,10 +2,16 @@ import { Object3D, Vector2, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 
 export enum IObjectTypes {
     EMPTY = '',
-    SLICE9_PLANE = 'box',
+    SLICE9_PLANE = 'slice9',
     TEXT = 'text',
-    GO_CONTAINER = 'go_empty',
-    GUI_CONTAINER = 'gui_empty',
+
+    GO_CONTAINER = 'go_container',
+    GO_SPRITE = 'go_sprite',
+    GO_TEXT = 'go_text',
+
+    GUI_CONTAINER = 'gui_container',
+    GUI_BOX = 'gui_box',
+    GUI_TEXT = 'gui_text',
 };
 
 export enum PivotX {

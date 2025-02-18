@@ -14,7 +14,9 @@ export function register_transform_control() {
 
 function TransformControlCreate() {
     const scene = RenderEngine.scene;
-    const _position = new Vector3();
+    const tmp_vec3 = new Vector3();
+    const _start_position = new Vector3();
+    const _delta_position = new Vector3();
     const _rotation = new Euler();
     const _scale = new Vector3();
     const _sum = new Vector3();
@@ -39,18 +41,17 @@ function TransformControlCreate() {
     control.addEventListener('objectChange', () => {
         switch (control.getMode()) {
             case 'translate':
-                _position.copy(proxy.position);
+                _delta_position.copy(proxy.position.clone().sub(_start_position));
+                log(_delta_position)
                 for (let i = 0; i < selectedObjects.length; i++) {
                     const element = selectedObjects[i] as  IBaseMeshDataAndThree & { _position: Vector3 };
                     // todo если объект родителя отскейлен и вращался то здесь будут ошибки
-                    //const ws = new Vector3();
-                    //const wp = new Vector3();
-                    //if (element.parent){
-                    //    element.parent.getWorldScale(ws);
-                    //    element.parent.getWorldPosition(wp);
-                    //}
-                    element.position.copy(element._position).add(_position);
-                    element.transform_changed();
+                    const ws = new Vector3(1,1,1);
+                    if (element.parent)
+                        element.parent.getWorldScale(ws);
+                    const tmp = _delta_position.clone();
+                    tmp.divide(ws)
+                    element.set_position(element._position.x + tmp.x ,  element._position.y + tmp.y);
                 }
                 break;
             case 'rotate':
@@ -147,6 +148,7 @@ function TransformControlCreate() {
             proxy.rotation.copy(mesh.rotation);
             proxy.scale.copy(mesh.scale);
             _scale.copy(mesh.scale);
+            _start_position.copy(_averagePoint);
         }
         (mesh as any)._position = mesh.position.clone();
         selectedObjects.push(mesh);
@@ -182,16 +184,17 @@ function TransformControlCreate() {
 
         for (let i = 0; i < selectedObjects.length; i++) {
             const object = selectedObjects[i];
-            object.getWorldPosition(_position);
-            _sum.add(_position);
+            object.getWorldPosition(tmp_vec3);
+            _sum.add(tmp_vec3);
         }
         _averagePoint.copy(_sum.divideScalar(selectedObjects.length));
 
         for (let i = 0; i < selectedObjects.length; i++) {
             const object = selectedObjects[i] as any;
-            object._position = object.position.clone().sub(_averagePoint);
+            object._position = object.position.clone();
         }
         proxy.position.copy(_averagePoint);
+        _start_position.copy(_averagePoint);
     }
 
     function set_active(val: boolean) {

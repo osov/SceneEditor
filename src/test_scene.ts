@@ -132,10 +132,8 @@ export async function run_debug_scene() {
   plane_3.set_size(50, 50);
   SceneManager.move_mesh_id(plane_3.mesh_data.id, plane_4.mesh_data.id, 0);
 
-  //log('source:', SceneManager.debug_graph(scene));
-  //SceneManager.move_mesh_id(21, 10, 13);
-  //log('new:', SceneManager.debug_graph(scene));
-  //log(SceneManager.make_graph());
+  const container = SceneManager.create(IObjectTypes.GUI_CONTAINER, {});
+  SceneManager.add(container);
 
   ControlManager.update_graph();
 

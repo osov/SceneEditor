@@ -1,11 +1,17 @@
+/*
+Layers:
+ 0 - Го камера
+ 1 - Гуи камера
+ 31 - можно рейкастить
+*/
 import { Object3D, Quaternion, Vector3 } from "three";
 import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
 import { IBaseMeshData, IBaseMeshDataAndThree, IObjectTypes } from "./types";
 import { TextMesh } from "./objects/text";
-import { GoContainer } from "./objects/container";
 import { deepClone } from "../modules/utils";
 import { EntityContainer } from "./objects/entity_container";
+import {  GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -19,8 +25,14 @@ type IMeshTypes = {
     [IObjectTypes.EMPTY]: EntityContainer,
     [IObjectTypes.SLICE9_PLANE]: Slice9Mesh,
     [IObjectTypes.TEXT]: TextMesh,
+
     [IObjectTypes.GO_CONTAINER]: GoContainer,
-    [IObjectTypes.GUI_CONTAINER]: GoContainer,
+    [IObjectTypes.GO_SPRITE]: GoSprite,
+    [IObjectTypes.GO_TEXT]: GoText,
+
+    [IObjectTypes.GUI_CONTAINER]: GuiContainer,
+    [IObjectTypes.GUI_BOX]: GuiBox,
+    [IObjectTypes.GUI_TEXT]: GuiText
 }
 
 export function SceneManagerModule() {
@@ -44,10 +56,10 @@ export function SceneManagerModule() {
             mesh = new TextMesh(params.text || '', params.width || 1, params.height || 1);
         }
         else if (type == IObjectTypes.GO_CONTAINER) {
-            mesh = new GoContainer(params.width || 1, params.height || 1, params.slice_width || 0, params.slice_height || 0);
+            mesh = new GoContainer();
         }
         else if (type == IObjectTypes.GUI_CONTAINER) {
-            mesh = new GoContainer(params.width || 1, params.height || 1, params.slice_width || 0, params.slice_height || 0);
+            mesh = new GuiContainer();
         }
         else {
             Log.error('Unknown mesh type', type);

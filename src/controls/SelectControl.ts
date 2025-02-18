@@ -55,7 +55,6 @@ function SelectControlCreate() {
 
 
         EventBus.on('SYS_SELECTED_MESH', (e) => {
-            (window as any).selected = e.mesh;
             if (Input.is_control()) {
                 if (!is_selected(e.mesh))
                     selected_list.push(e.mesh);
