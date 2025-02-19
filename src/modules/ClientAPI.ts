@@ -1,5 +1,6 @@
-import { SERVER_URL } from "../config";
-import { CommandId, URL_PATHS, AssetsResponses, FSObject, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD } from "./modules_const";
+import { PING_INTERVAL, SERVER_URL, WS_SERVER_URL } from "../config";
+import { ProtocolWrapper } from "../render_engine/types";
+import { CommandId, URL_PATHS, AssetsResponses, FSObject, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, NetMessages } from "./modules_const";
 
 
 declare global {
@@ -10,6 +11,8 @@ export function register_client_api() {
     (window as any).ClientAPI = ClientAPIModule();
 }
 function ClientAPIModule() {
+    let id_session = System.now();
+
     async function get_projects(): Promise<FSObject[]> {
         const command_id = GET_PROJECTS_CMD;
         const resp = await api.command<typeof command_id>(URL_PATHS.API, command_id, {});
@@ -34,9 +37,9 @@ function ClientAPIModule() {
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path, name});
     }
 
-    async function get_folder(project: string, path: string, name: string): Promise<AssetsResponses[typeof GET_FOLDER_CMD]> {
+    async function get_folder(project: string, path: string): Promise<AssetsResponses[typeof GET_FOLDER_CMD]> {
         const command_id = GET_FOLDER_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path, name});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path});
     }
 
     async function copy(project: string, path: string, new_path: string): Promise<AssetsResponses[typeof COPY_CMD]> {
@@ -58,7 +61,34 @@ function ClientAPIModule() {
         return await api.GET(URL_PATHS.TEST, {});
     }
 
-    return {get_projects, load_project, new_project, new_folder, get_folder, copy, rename, remove, test_server_ok}
+    function connect() {
+        WsClient.connect(WS_SERVER_URL);
+        ping();
+    }
+
+    function ping() {
+        if (WsClient.is_connected()) {
+            WsClient.send_message('CS_PING', {client_time: System.now()});
+        }
+        return setTimeout(() => ping(), PING_INTERVAL);
+    }
+    
+    EventBus.on('ON_WS_CONNECTED', (m) => {
+        WsClient.send_message('CS_CONNECT', { id_session });
+    });
+    EventBus.on('ON_WS_DATA', (m) => {
+        const data = JSON.parse(m.data) as ProtocolWrapper;
+        on_message_socket(data.id as keyof NetMessages, data.message);
+    });
+
+    function on_message_socket<T extends keyof NetMessages>(id_message: T, _message: NetMessages[T]) {
+        if (id_message == 'SC_DIR_CHANGED') {
+            const message = _message as NetMessages['SC_DIR_CHANGED'];
+            EventBus.trigger('SC_DIR_CHANGED', message)
+        }
+    }
+
+    return {get_projects, load_project, new_project, new_folder, get_folder, copy, rename, remove, test_server_ok, connect}
 }
 
 

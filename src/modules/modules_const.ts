@@ -34,8 +34,14 @@ export type _SystemMessages = {
     SYS_GRAPH_KEY_COM_PRESSED: { id: number, list: number[], key: string | number },
     SYS_GRAPH_ADD: { id: number, list: number[], type: string | number },
     SYS_INSPECTOR_UPDATED_VALUE: ChangeInfo,
-};
 
+    ON_WS_CONNECTED: VoidMessage,
+    ON_WS_DISCONNECTED: VoidMessage,
+    ON_WS_DATA: { data: string },
+    TRY_WS_CONNECT: VoidMessage,
+    TRY_WS_DISCONNECT: VoidMessage,
+    SC_DIR_CHANGED: { project_name: string, dir: string },
+};
 
 export const _ID_MESSAGES = {
 };
@@ -44,7 +50,7 @@ export type AssetsCommands = {
     [GET_PROJECTS_CMD]: VoidMessage,
     [NEW_PROJECT_CMD]: { project: string },
     [NEW_FOLDER_CMD]: { name: string, path: string, project: string },
-    [GET_FOLDER_CMD]: { name: string, path: string, project: string },
+    [GET_FOLDER_CMD]: { path: string, project: string },
     [SEARCH_CMD]: { name: string, project: string },
     [LOAD_PROJECT_CMD]: { project: string }
     [RENAME_CMD]: { name: string, new_name: string, path: string, project: string },
@@ -67,12 +73,19 @@ export type AssetsResponses = {
     [GET_PROJECTS_CMD]: BaseResp<FSObject[]>,
     [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
     [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
-    [GET_FOLDER_CMD]: BaseResp<VoidMessage>,
+    [GET_FOLDER_CMD]: BaseResp<FSObject[]>,
     [SEARCH_CMD]: BaseResp<string>,
     [LOAD_PROJECT_CMD]: BaseResp<FSObject[]>,
     [RENAME_CMD]: BaseResp<VoidMessage>,
     [COPY_CMD]: BaseResp<VoidMessage>,
     [DELETE_CMD]: BaseResp<VoidMessage>,
+}
+
+export type NetMessages = {
+    CS_CONNECT: { id_session: number },
+    CS_PING: { client_time: number },
+    SC_PONG: { client_time: number, server_time: number },
+    SC_DIR_CHANGED: { project_name: string, dir: string },
 }
 
 export const GET_PROJECTS_CMD = '/get_projects';

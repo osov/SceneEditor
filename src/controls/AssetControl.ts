@@ -1,5 +1,5 @@
 import { SERVER_URL } from "../config";
-import { FSObject, FSObjectType } from "../modules/modules_const";
+import { FSObject, FSObjectType, Messages } from "../modules/modules_const";
 
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
@@ -13,16 +13,37 @@ export function register_asset_control() {
 function AssetControlCreate() {
     const filemanager = document.querySelector('.filemanager') as HTMLDivElement;
     const breadcrumbs = filemanager.querySelector('.breadcrumbs') as HTMLDivElement;
-    const file_list = filemanager.querySelector('.data') as HTMLDivElement;
-    let current_path = '/';
+    const file_list = document.getElementById('file-container') as HTMLDivElement;
+    let current_path = '';
+    let current_project: string | undefined = undefined;
 
     async function load_project(name: string) {
-        const resp = await ClientAPI.load_project(name);
+        const load_project_resp = await ClientAPI.load_project(name);
+        if (load_project_resp.result !== 1) return;
+        current_project = name;
+        current_path = '';
+        go_to_dir(current_path);
+    }
+
+    async function go_to_dir(path: string) {
+        if (!current_project) return;
+        const resp = await ClientAPI.get_folder(current_project, path);
         if (resp.result === 1 && resp.data != undefined) {
-            const root_folder_content = resp.data;
-            const path = '';
-            draw_assets(path, root_folder_content);
-            generate_breadcrumbs(path);
+            const folder_content = resp.data;
+            current_path = path;
+            draw_assets(current_path, folder_content);
+            generate_breadcrumbs(current_path);
+        }
+        else Log.warn('cannot go to dir:', path)
+    }
+
+    async function renew_current_dir() {
+        if (!current_project) return;
+        const resp = await ClientAPI.get_folder(current_project, current_path);
+        if (resp.result === 1 && resp.data != undefined) {
+            const folder_content = resp.data;
+            draw_assets(current_path, folder_content);
+            generate_breadcrumbs(current_path);
         }
     }
 
@@ -66,7 +87,7 @@ function AssetControlCreate() {
 					itemsLength = `${num_files} Файлов`;
 				else
 					itemsLength = 'Пусто';
-				const folder = '<li class="folders" data-info="'+ f.path +'"><a href="'+ f.path +'" title="'+ f.name +'" class="folders" >'+ icon +'<span class="name">' + name + '</span> <span class="details">' + itemsLength + '</span></a></li>';
+				const folder = '<li class="folders" data-info="'+ f.path +'"><a href="javascript:void(0);" title="'+ f.name +'" class="folders" >'+ icon +'<span class="name">' + name + '</span> <span class="details">' + itemsLength + '</span></a></li>';
 				file_list.innerHTML += folder;
 			});
 		}
@@ -129,8 +150,7 @@ function AssetControlCreate() {
 			{
 				var name = u.split("/");
 				if (i !== path.length - 1) {
-                    const ref = 
-					url += '<a href="'+u+'"><span class="folderName">' + name[name.length-1] + '</span></a> <span class="arrow">→</span> ';                    
+					url += `<a href="javascript:void(0);"><span class="folderName" data-info="${u}>' + ${name[name.length-1]} + '</span></a> <span class="arrow">→</span>`;                    
                 }
 				else
 					url += '<span class="folderName">' + name[name.length-1] + '</span>';
@@ -153,13 +173,33 @@ function AssetControlCreate() {
         
     }
 
-    function onMouseUp(event: any) {
-        
+    async function onMouseUp(event: any) {
+        const folder_elem = event.target.closest('.folders');
+        if (folder_elem !== null) {
+            const path = folder_elem.getAttribute('data-info');
+            await go_to_dir(path);
+            return;
+        }
+        const breadcrumbs_elem = event.target.closest('.folderName');
+        if (breadcrumbs_elem !== null) {
+            const path = breadcrumbs_elem.getAttribute('data-info');
+            log('breadcrumbs_elem', path)
+            // await go_to_dir(path);
+            return;
+        }
+    }
+
+    function on_dir_change(message: Messages['SC_DIR_CHANGED']) {
+        if (message.project_name === current_project && message.dir === current_path) {
+            renew_current_dir();
+        }
     }
 
     EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
     EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
+    
+    EventBus.on('SC_DIR_CHANGED', on_dir_change);
 
     return { load_project, draw_assets, get_file_data, save_file_data, save_meta_file_info, get_meta_file_info, draw_empty_project };
 }
@@ -198,6 +238,7 @@ function fileIsImg(path: string) {
 export async function run_debug_filemanager() {
     const resp = await ClientAPI.test_server_ok();
     if (resp && resp.result === 1) {
+        ClientAPI.connect();
         await AssetControl.load_project('test');
     }
     else {

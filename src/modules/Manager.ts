@@ -6,6 +6,7 @@ import { _ID_MESSAGES, _SystemMessages } from "./modules_const";
 import { register_camera } from "./Camera";
 import { register_input } from "./InputManager";
 import { register_client_api } from "./ClientAPI";
+import { register_ws_client } from "./WsClient";
 
 /*
     Основной модуль для подгрузки остальных, доступен по объекту Manager
@@ -34,6 +35,7 @@ function ManagerModule() {
         register_event_bus();
         register_input();
         register_camera();
+        register_ws_client();
         register_client_api();
     }
     return { init };

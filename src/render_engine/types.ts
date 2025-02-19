@@ -89,3 +89,7 @@ export interface IBaseParametersEntity {
 
 export type IBaseMeshDataAndThree = IBaseMesh & Object3D;
 
+export interface ProtocolWrapper {
+    id: string;
+    message: any;
+}
