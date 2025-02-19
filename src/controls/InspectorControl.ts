@@ -5,6 +5,9 @@ import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 
+// TODO: add slider
+// TODO: add params to entities
+// TODO: check all property emmit change event
 
 declare global {
     const InspectorControl: ReturnType<typeof InspectorControlCreate>;
@@ -37,9 +40,9 @@ export enum PropertyType {
 
 export type PropertyParams = {
     [PropertyType.NUMBER]: { min?: number, max?: number, step?: number };
-    [PropertyType.VECTOR_2]: { x: { min?: number, max?: number, step?: number }, y: { min?: number, max?: number, step?: number } };
-    [PropertyType.VECTOR_3]: { x: { min?: number, max?: number, step?: number }, y: { min?: number, max?: number, step?: number }, z: { min?: number, max?: number, step?: number } };
-    [PropertyType.VECTOR_4]: { x: { min?: number, max?: number, step?: number }, y: { min?: number, max?: number, step?: number }, z: { min?: number, max?: number, step?: number }, w: { min?: number, max?: number, step?: number } };
+    [PropertyType.VECTOR_2]: { x: { disabled?: boolean, min?: number, max?: number, step?: number }, y: { disabled?: boolean, min?: number, max?: number, step?: number } };
+    [PropertyType.VECTOR_3]: { x: { disabled?: boolean, min?: number, max?: number, step?: number }, y: { disabled?: boolean, min?: number, max?: number, step?: number }, z: { disabled?: boolean, min?: number, max?: number, step?: number } };
+    [PropertyType.VECTOR_4]: { x: { disabled?: boolean, min?: number, max?: number, step?: number }, y: { disabled?: boolean, min?: number, max?: number, step?: number }, z: { disabled?: boolean, min?: number, max?: number, step?: number }, w: { disabled?: boolean, min?: number, max?: number, step?: number } };
     [PropertyType.BOOLEAN]: {};
     [PropertyType.COLOR]: {};
     [PropertyType.STRING]: {};
@@ -61,7 +64,7 @@ export type PropertyValues = {
     [PropertyType.STRING]: string;
     [PropertyType.SLIDER]: number;
     [PropertyType.LIST_TEXT]: string; //  selected key
-    [PropertyType.LIST_TEXTURES]: string;// selected key;
+    [PropertyType.LIST_TEXTURES]: string; // selected key;
     [PropertyType.BUTTON]: (...args: any[]) => void;
     [PropertyType.POINT_2D]: { x: number, y: number };
     [PropertyType.LOG_DATA]: string;
@@ -99,37 +102,36 @@ export interface ChangeInfo {
 
 export type ChangeEvent = TpChangeEvent<unknown, BindingApi<unknown, unknown>>;
 
-export interface EntityData {
-    obj: any;
-    key: string;
-    params?: BindingParams | ButtonParams;
-}
-
-export interface Folder {
+interface Folder {
     title: string;
     childrens: Entities[];
 }
 
-export interface Button {
+interface Button {
     title: string;
     params: ButtonParams;
     onClick: (...args: any[]) => void;
 }
 
-export interface Entity {
+interface Entity {
     obj: any;
     key: string;
     params?: BindingParams;
     onChange?: (event: ChangeEvent) => void;
 }
 
-export type Entities = Folder | Button | Entity;
+type Entities = Folder | Button | Entity;
+
+interface ObjectInfo {
+    field: PropertyData<PropertyType>;
+    property: PropertyItem<PropertyType>;
+}
 
 
 function InspectorControlCreate() {
     let _config: InspectorGroup[];
     let _inspector: Pane;
-    let _unique_fields: { field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }[];
+    let _unique_fields: { ids: number[], field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }[];
 
     function init() {
         _inspector = new Pane({
@@ -147,27 +149,29 @@ function InspectorControlCreate() {
 
     function setData(list_data: ObjectData[]) {
         _unique_fields = [];
-
-        let i = 0;
-        const ids: number[] = [];
-        for (const obj of list_data) {
+        list_data.forEach((obj, index) => {
+            const info: ObjectInfo[] = [];
             for (const field of obj.data) {
                 // ищем информацию о поле в соответсвующем конфиге
                 const property: PropertyItem<PropertyType> | undefined = getPropertyItemByName(field.name);
                 if (!property) continue; // пропускаем в случае ошибки
 
-                // запоминаем поле с проверкой на то что все поля между объектами одинаковые
-                tryAddToUniqueField(i, field, property);
-
-                //TODO: добавлять нужные id
+                info.push({ field, property });
             }
-            ++i;
-        }
+
+            // удаляем предыдущие поля если их нету в текущем обьекте
+            filterUniqueFields(info);
+
+            info.forEach((data) => {
+                // запоминаем поле с проверкой на то что все поля между объектами одинаковые
+                tryAddToUniqueField(index, obj, data.field, data.property);
+            });
+        });
 
         const entities: Entities[] = [];
         for (const unique_field of _unique_fields) {
             // перобразование полей
-            const entity = castProperty(ids, unique_field.field, unique_field.property);
+            const entity = castProperty(unique_field.ids, unique_field.field, unique_field.property);
             if (!entity) continue; // пропускаем в случае ошибки
 
             // формирование групп
@@ -178,7 +182,25 @@ function InspectorControlCreate() {
         renderEntities(entities);
     }
 
-    function tryAddToUniqueField(obj_index: number, field: PropertyData<PropertyType>, property: PropertyItem<PropertyType>): boolean {
+    function filterUniqueFields(info: ObjectInfo[]) {
+        const buffer: number[] = [];
+        _unique_fields.forEach((unique_field, index) => {
+            const result = info.findIndex((data) => {
+                return data.property.name == unique_field.property.name;
+            });
+            if (result == -1) {
+                buffer.push(index);
+            }
+        });
+
+        for (let i = buffer.length - 1; i >= 0; i--) {
+            const index = buffer[i];
+            _unique_fields.splice(index, 1);
+        }
+    }
+
+    // TODO: refactoring
+    function tryAddToUniqueField(obj_index: number, obj: ObjectData, field: PropertyData<PropertyType>, property: PropertyItem<PropertyType>): boolean {
         const index = _unique_fields.findIndex((value) => {
             return value.property.name == property.name;
         });
@@ -187,19 +209,61 @@ function InspectorControlCreate() {
             if (obj_index != 0) {
                 return false;
             }
-            _unique_fields.push({ field, property });
+            // добавляем если это первый обьект
+            _unique_fields.push({
+                ids: [obj.id],
+                field,
+                property
+            });
+            return true;
+        } else _unique_fields[index].ids.push(obj.id);
+
+
+        if (property.type === PropertyType.VECTOR_2 || property.type === PropertyType.VECTOR_3 || property.type === PropertyType.VECTOR_4) {
+            type T = PropertyValues[PropertyType.VECTOR_2];
+            const field_data = field.data as T;
+            const unique_field_data = _unique_fields[index].field.data as T;
+
+            if (field_data.x !== unique_field_data.x) {
+                const params = _unique_fields[index].property.params;
+                if (params) (params as PropertyParams[PropertyType.VECTOR_2]).x.disabled = true;
+                else _unique_fields[index].property.params = { x: { disabled: true } };
+            }
+
+            if (field_data.y !== unique_field_data.y) {
+                const params = _unique_fields[index].property.params;
+                if (params) (params as PropertyParams[PropertyType.VECTOR_2]).y.disabled = true;
+                else _unique_fields[index].property.params = { y: { disabled: true } };
+            }
+
+            if (property.type === PropertyType.VECTOR_3 || property.type === PropertyType.VECTOR_4) {
+                type T = PropertyValues[PropertyType.VECTOR_3];
+                const field_data = field.data as T;
+                const unique_field_data = _unique_fields[index].field.data as T;
+
+                if (field_data.z !== unique_field_data.z) {
+                    const params = _unique_fields[index].property.params;
+                    if (params) (params as PropertyParams[PropertyType.VECTOR_3]).z.disabled = true;
+                    else _unique_fields[index].property.params = { z: { disabled: true } };
+                }
+            }
+
+            if (property.type === PropertyType.VECTOR_4) {
+                type T = PropertyValues[PropertyType.VECTOR_4];
+                const field_data = field.data as T;
+                const unique_field_data = _unique_fields[index].field.data as T;
+
+                if (field_data.w !== unique_field_data.w) {
+                    const params = _unique_fields[index].property.params;
+                    if (params) (params as PropertyParams[PropertyType.VECTOR_4]).w.disabled = true;
+                    else _unique_fields[index].property.params = { w: { disabled: true } };
+                }
+            }
+        } else if (field.data != _unique_fields[index].field.data) {
+            _unique_fields.splice(index, 1);
         }
 
         return true;
-
-        // FIXME: проверять поля по значению
-
-        // if (_unique_fields[index].field == field) {
-        //     return true;
-        // }
-
-        // _unique_fields.splice(index, 1);
-        // return false;
     }
 
     function isFolder(obj: Entities): obj is Folder {
@@ -226,7 +290,7 @@ function InspectorControlCreate() {
 
             // кнопка
             if (isButton(entity)) {
-                place.addButton(entity.params as ButtonParams).on('click', entity.onClick);
+                place.addButton(entity.params).on('click', entity.onClick);
                 continue;
             }
 
@@ -242,29 +306,79 @@ function InspectorControlCreate() {
             case PropertyType.STRING:
             case PropertyType.NUMBER:
             case PropertyType.BOOLEAN:
-            case PropertyType.VECTOR_3:
-            case PropertyType.VECTOR_4:
-                return createEntity(ids, field, property, { label: property.title, readonly: property.readonly });
-            case PropertyType.LOG_DATA:
-                const multiline_params = { label: property.title, view: 'textarea', rows: 6, placeholder: 'Type here...' };
-                return createEntity(ids, field, property, multiline_params as BindingParams);
+                return createEntity(ids, field, property);
             case PropertyType.VECTOR_2:
-                const vec2_params = { label: property.title, readonly: property.readonly, picker: 'inline', expanded: false };
-                return createEntity(ids, field, property, vec2_params as BindingParams);
+                const vec2_params = property?.params;
+                const vec2_x_params = vec2_params ? (vec2_params as PropertyParams[PropertyType.VECTOR_2]).x : undefined;
+                const vec2_y_params = vec2_params ? (vec2_params as PropertyParams[PropertyType.VECTOR_2]).y : undefined;
+                return createEntity(ids, field, property, {
+                    picker: 'inline',
+                    expanded: false,
+                    x: vec2_x_params,
+                    y: vec2_y_params,
+                });
+            case PropertyType.VECTOR_3:
+                const vec3_params = property?.params;
+                const vec3_x_params = vec3_params ? (vec3_params as PropertyParams[PropertyType.VECTOR_3]).x : undefined;
+                const vec3_y_params = vec3_params ? (vec3_params as PropertyParams[PropertyType.VECTOR_3]).y : undefined;
+                const vec3_z_params = vec3_params ? (vec3_params as PropertyParams[PropertyType.VECTOR_3]).z : undefined;
+                return createEntity(ids, field, property, {
+                    x: vec3_x_params,
+                    y: vec3_y_params,
+                    z: vec3_z_params,
+                });
+            case PropertyType.VECTOR_4:
+                const vec4_params = property?.params;
+                const vec4_x_params = vec4_params ? (vec4_params as PropertyParams[PropertyType.VECTOR_4]).x : undefined;
+                const vec4_y_params = vec4_params ? (vec4_params as PropertyParams[PropertyType.VECTOR_4]).y : undefined;
+                const vec4_z_params = vec4_params ? (vec4_params as PropertyParams[PropertyType.VECTOR_4]).z : undefined;
+                const vec4_w_params = vec4_params ? (vec4_params as PropertyParams[PropertyType.VECTOR_4]).w : undefined;
+                return createEntity(ids, field, property, {
+                    x: vec4_x_params,
+                    y: vec4_y_params,
+                    z: vec4_z_params,
+                    w: vec4_w_params,
+                });
             case PropertyType.POINT_2D:
-                const point2d_params = { label: property.title, readonly: property.readonly, y: { inverted: true }, picker: 'inline', expanded: false };
-                return createEntity(ids, field, property, point2d_params as BindingParams);
+                return createEntity(ids, field, property, {
+                    y: { inverted: true },
+                    picker: 'inline',
+                    expanded: false
+                });
             case PropertyType.COLOR:
-                const color_params = { label: property.title, readonly: property.readonly, picker: 'inline', expanded: false };
-                return createEntity(ids, field, property, color_params as BindingParams);
+                return createEntity(ids, field, property, {
+                    picker: 'inline',
+                    expanded: false
+                });
+            case PropertyType.LIST_TEXTURES:
+                return createEntity(ids, field, property, {
+                    view: 'thumbnail-list',
+                    options: property.params
+                });
+            case PropertyType.LIST_TEXT:
+                return createEntity(ids, field, property, {
+                    view: 'search-list',
+                    options: property.params
+                });
+            case PropertyType.LOG_DATA:
+                return createEntity(ids, field, property, {
+                    view: 'textarea',
+                    rows: 6,
+                    placeholder: 'Type here...'
+                });
+            case PropertyType.SLIDER:
+                const slider_params = property.params;
+                const step = slider_params ? (slider_params as PropertyParams[PropertyType.SLIDER]).step : undefined;
+                const min = slider_params ? (slider_params as PropertyParams[PropertyType.SLIDER]).min : undefined;
+                const max = slider_params ? (slider_params as PropertyParams[PropertyType.SLIDER]).max : undefined;
+                return createEntity(ids, field, property, {
+                    label: property.title,
+                    step,
+                    min,
+                    max
+                });
             case PropertyType.BUTTON:
                 return createButton(field as PropertyData<PropertyType.BUTTON>, property as PropertyItem<PropertyType.BUTTON>, { title: property.title });
-            case PropertyType.LIST_TEXTURES:
-                const textures_params = { label: property.title, view: 'thumbnail-list', options: property.params };
-                return createEntity(ids, field, property, textures_params as BindingParams);
-            case PropertyType.LIST_TEXT:
-                const lsit_params = { label: property.title, view: 'search-list', options: property.params };
-                return createEntity(ids, field, property, lsit_params as BindingParams);
             default:
                 Log.error(`Unable to cast ${field.name}`)
                 return undefined;
@@ -324,11 +438,15 @@ function InspectorControlCreate() {
         }
     }
 
-    function createEntity<T extends PropertyType>(ids: number[], field: PropertyData<T>, property: PropertyItem<T>, params?: BindingParams): Entity {
+    function createEntity<T extends PropertyType>(ids: number[], field: PropertyData<T>, property: PropertyItem<T>, params?: any): Entity {
         const entity: Entity = {
             obj: field,
             key: 'data',
-            params,
+            params: {
+                label: property.title,
+                readonly: property.readonly,
+                ...params
+            }
         };
 
         if (!property.readonly) {
@@ -418,3 +536,115 @@ InspectorControl.set_data([
 ]);
 
 */
+
+import { Vector2, Vector3, Vector4, } from 'three';
+
+export function run_debug_inpector() {
+    const spriteFiles = document.querySelectorAll<HTMLElement>("#sprite-file");
+    spriteFiles.forEach((file) => {
+        file.addEventListener("dragstart", (event: DragEvent) => {
+            if (!event.dataTransfer)
+                return;
+            event.dataTransfer.clearData();
+            event.dataTransfer.setData("text/plain", file.getAttribute("data-value") || '');
+        });
+    });
+
+    InspectorControl.setup_config([
+        {
+            name: 'base',
+            title: '',
+            property_list: [
+                { name: 'id', title: 'ID', type: PropertyType.NUMBER, readonly: true },
+                { name: 'name', title: 'Название', type: PropertyType.STRING, }
+            ]
+        },
+        {
+            name: 'transform',
+            title: 'Трансформ',
+            property_list: [
+                { name: 'position', title: 'Позиция', type: PropertyType.VECTOR_3 },
+                { name: 'rotation', title: 'Вращение', type: PropertyType.VECTOR_3 },
+                { name: 'scale', title: 'Маштаб', type: PropertyType.VECTOR_3 }
+            ]
+        },
+        {
+            name: 'test',
+            title: 'Тестовые',
+            property_list: [
+                { name: 'point', title: 'Поинт', type: PropertyType.POINT_2D },
+                { name: 'vec2', title: 'Вектор2', type: PropertyType.VECTOR_2 },
+                { name: 'vec4', title: 'Вектор4', type: PropertyType.VECTOR_4 },
+                { name: 'checkbox', title: 'Чек', type: PropertyType.BOOLEAN },
+                { name: 'color', title: 'Цвет', type: PropertyType.COLOR },
+                { name: 'click', title: 'Кликнуть', type: PropertyType.BUTTON },
+                {
+                    name: 'textures', title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: [
+                        { value: 'test', src: './img/2.png' },
+                        { value: 'img_1', src: 'https://images.freeimages.com/image/previews/b48/nature-stroke-png-design-5690476.png?fmt=webp&w=500' },
+                        { value: 'img_2', src: 'https://images.freeimages.com/image/previews/50b/japanese-bonsai-nature-hand-png-5692400.png?fmt=webp&w=500' }
+                    ]
+                },
+                {
+                    name: 'list', title: 'Лист', type: PropertyType.LIST_TEXT, params: {
+                        'C++': 'C++',
+                        Test: 'Test',
+                        Key: 'Key'
+                    }
+                },
+                { name: 'mult', title: 'Текст', type: PropertyType.LOG_DATA },
+                { name: 'slider', title: 'Слайдер', type: PropertyType.SLIDER, params: { min: 0, max: 1, step: 0.1 } }
+            ]
+        }
+    ]);
+
+    InspectorControl.set_data([
+        {
+            id: 1, data: [
+                { name: 'id', data: 1 },
+                { name: 'name', data: 'test1' },
+                { name: 'position', data: new Vector3(0, 5, 0) },
+                { name: 'rotation', data: new Vector3(0, 0, 0) },
+                { name: 'scale', data: new Vector3(1, 1, 1) },
+                { name: 'point', data: new Vector2(134, 234) },
+                { name: 'vec2', data: new Vector2(134, 234) },
+                { name: 'vec4', data: new Vector4(1, 343, 1, 6565) },
+                { name: 'checkbox', data: true },
+                { name: 'color', data: "#ff0000" },
+                { name: 'click', data: () => log('click') },
+                { name: 'textures', data: '' },
+                { name: 'mult', data: 'text1\ntext2' },
+                { name: 'list', data: 'C++' },
+                { name: 'slider', data: 0.5 }
+            ]
+        },
+        {
+            id: 2, data: [
+                { name: 'id', data: 1 },
+                { name: 'name', data: 'test1' },
+                { name: 'position', data: new Vector3(0, 10, 0) },
+                { name: 'rotation', data: new Vector3(1, 0, 0) },
+                { name: 'scale', data: new Vector3(1, 1, 1) },
+                { name: 'point', data: new Vector2(134, 234) },
+                { name: 'vec2', data: new Vector2(134, 234) },
+                { name: 'vec4', data: new Vector4(1, 343, 0, 6565) },
+                { name: 'checkbox', data: true },
+                { name: 'color', data: "#ff0000" },
+                { name: 'click', data: () => log('click') },
+                { name: 'textures', data: '' },
+                { name: 'mult', data: 'text1\ntext2' },
+                { name: 'list', data: 'C++' },
+                { name: 'slider', data: 0.5 }
+            ]
+        },
+        // {
+        //     id: 5, data: [
+        //         { name: 'textures', data: '' }
+        //     ]
+        // }
+    ]);
+
+    EventBus.on('SYS_INSPECTOR_UPDATED_VALUE', (data: ChangeInfo) => {
+        console.log('UPDATED VALUE: ', data);
+    });
+}

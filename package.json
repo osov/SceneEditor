@@ -26,11 +26,11 @@
     "stats.js": "^0.17.0",
     "three": "latest",
     "troika-three-text": "^0.52.3",
-    "ts-browser-helpers": "^0.16.2",
+    "ts-browser-helpers": "^0.16.3",
     "tweakpane": "4.0.5",
-    "tweakpane4-extended-vector-plugin": "^0.0.1",
-    "tweakpane4-image-list-plugin": "1.0.6",
-    "tweakpane4-search-list-plugin": "1.0.3",
-    "uiconfig.js": "^0.1.3"
+    "tweakpane4-extended-vector-plugin": "^0.0.2",
+    "tweakpane4-image-list-plugin": "1.0.7",
+    "tweakpane4-search-list-plugin": "1.0.4",
+    "uiconfig.js": "^0.1.4"
   }
 }
