@@ -28,7 +28,7 @@
     "troika-three-text": "^0.52.3",
     "ts-browser-helpers": "^0.16.3",
     "tweakpane": "4.0.5",
-    "tweakpane4-extended-vector-plugin": "^0.0.2",
+    "tweakpane4-extended-vector-plugin": "^0.0.3",
     "tweakpane4-image-list-plugin": "1.0.7",
     "tweakpane4-search-list-plugin": "1.0.4",
     "uiconfig.js": "^0.1.4"
