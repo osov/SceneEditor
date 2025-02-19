@@ -3,6 +3,7 @@ import { IBaseMeshDataAndThree } from "../render_engine/types";
 import { TreeItem } from "../scene_tree/tree";
 import { HistoryData } from "./HistoryControl";
 import Stats from 'stats.js';
+import { getDefaultInspectorConfig } from "./InspectorControl";
 
 declare global {
     const ControlManager: ReturnType<typeof ControlManagerCreate>;
@@ -22,10 +23,13 @@ function ControlManagerCreate() {
         bind_btn('rotate_transform_btn', () => set_active_control('rotate_transform_btn'));
         bind_btn('size_transform_btn', () => set_active_control('size_transform_btn'));
 
+        InspectorControl.setupConfig(getDefaultInspectorConfig());
+
         EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
             (window as any).selected = e.list[0];
             TransformControl.set_selected_list(e.list);
             SizeControl.set_selected_list(e.list);
+            InspectorControl.set_selected_list(e.list);
             update_graph();
         });
 
@@ -33,6 +37,7 @@ function ControlManagerCreate() {
             (window as any).selected = null;
             TransformControl.detach();
             SizeControl.detach();
+            InspectorControl.detach();
             update_graph();
         });
 
@@ -45,7 +50,7 @@ function ControlManagerCreate() {
                     list.push(m);
             }
             SelectControl.set_selected_list(list);
-            if (list.length == 0) 
+            if (list.length == 0)
                 EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
         })
 

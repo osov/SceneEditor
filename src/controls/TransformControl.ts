@@ -44,14 +44,14 @@ function TransformControlCreate() {
                 _delta_position.copy(proxy.position.clone().sub(_start_position));
                 log(_delta_position)
                 for (let i = 0; i < selectedObjects.length; i++) {
-                    const element = selectedObjects[i] as  IBaseMeshDataAndThree & { _position: Vector3 };
+                    const element = selectedObjects[i] as IBaseMeshDataAndThree & { _position: Vector3 };
                     // todo если объект родителя отскейлен и вращался то здесь будут ошибки
-                    const ws = new Vector3(1,1,1);
+                    const ws = new Vector3(1, 1, 1);
                     if (element.parent)
                         element.parent.getWorldScale(ws);
                     const tmp = _delta_position.clone();
                     tmp.divide(ws)
-                    element.set_position(element._position.x + tmp.x ,  element._position.y + tmp.y);
+                    element.set_position(element._position.x + tmp.x, element._position.y + tmp.y);
                 }
                 break;
             case 'rotate':
