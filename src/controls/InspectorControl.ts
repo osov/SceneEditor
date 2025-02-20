@@ -361,8 +361,6 @@ function InspectorControlCreate() {
             case PropertyType.VECTOR_2:
                 const vec2_property = property as PropertyItem<PropertyType.VECTOR_2>;
                 return createEntity(ids, field, property, {
-                    picker: 'inline',
-                    expanded: false,
                     x: vec2_property.params?.x,
                     y: vec2_property.params?.y,
                 });
@@ -390,7 +388,7 @@ function InspectorControlCreate() {
                 const point2_x_params = point2_params ? (point2_params as PropertyParams[PropertyType.POINT_2D]).x : undefined;
                 const point2_y_params = point2_params ? (point2_params as PropertyParams[PropertyType.POINT_2D]).y : undefined;
                 return createEntity(ids, field, property, {
-                    picker: 'inline',
+                    picker: 'popup',
                     expanded: false,
                     x: point2_x_params,
                     y: { ...point2_y_params, inverted: true }
@@ -761,7 +759,7 @@ export function getDefaultInspectorConfig() {
                     name: Property.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: ResourceManager.get_all_textures() // FIXME: here textures not loaded yet
                 },
                 {
-                    name: Property.SLICE9, title: 'Slice9', type: PropertyType.POINT_2D, params: {
+                    name: Property.SLICE9, title: 'Slice9', type: PropertyType.VECTOR_2, params: {
                         x: { min: 0, max: 0xffffffff },
                         y: { min: 0, max: 0xffffffff }
                     }
