@@ -6,6 +6,8 @@ import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 import { Vector2 } from 'three';
+import { TextMesh } from '../render_engine/objects/text';
+import { Slice9Mesh } from '../render_engine/objects/slice9';
 
 // TODO: add slider
 // TODO: add params to entities
@@ -42,9 +44,9 @@ export enum PropertyType {
 
 export type PropertyParams = {
     [PropertyType.NUMBER]: { min?: number, max?: number, step?: number }; // formater for symbols after comma
-    [PropertyType.VECTOR_2]: { x: { disabled?: boolean, min?: number, max?: number, step?: number }, y: { disabled?: boolean, min?: number, max?: number, step?: number } };
-    [PropertyType.VECTOR_3]: { x: { disabled?: boolean, min?: number, max?: number, step?: number }, y: { disabled?: boolean, min?: number, max?: number, step?: number }, z: { disabled?: boolean, min?: number, max?: number, step?: number } };
-    [PropertyType.VECTOR_4]: { x: { disabled?: boolean, min?: number, max?: number, step?: number }, y: { disabled?: boolean, min?: number, max?: number, step?: number }, z: { disabled?: boolean, min?: number, max?: number, step?: number }, w: { disabled?: boolean, min?: number, max?: number, step?: number } };
+    [PropertyType.VECTOR_2]: { x: { min: number, max: number, step?: number, disabled?: boolean }, y: { min: number, max: number, step?: number, disabled?: boolean } };
+    [PropertyType.VECTOR_3]: { x: { min: number, max: number, step?: number, disabled?: boolean }, y: { min: number, max: number, step?: number, disabled?: boolean }, z: { min: number, max: number, step?: number, disabled?: boolean } };
+    [PropertyType.VECTOR_4]: { x: { min: number, max: number, step?: number, disabled?: boolean }, y: { min: number, max: number, step?: number, disabled?: boolean }, z: { min: number, max: number, step?: number, disabled?: boolean }, w: { min: number, max: number, step?: number, disabled?: boolean } };
     [PropertyType.BOOLEAN]: {};
     [PropertyType.COLOR]: {};
     [PropertyType.STRING]: {};
@@ -52,7 +54,7 @@ export type PropertyParams = {
     [PropertyType.LIST_TEXT]: { [key in string]: string };
     [PropertyType.LIST_TEXTURES]: { key: string; text: string, src: string }[];
     [PropertyType.BUTTON]: {};
-    [PropertyType.POINT_2D]: { x: { min?: number, max?: number, step?: number }, y: { min?: number, max?: number, step?: number } };
+    [PropertyType.POINT_2D]: { x: { min: number, max: number, step?: number, disabled?: boolean }, y: { min: number, max: number, step?: number, disabled?: boolean } };
     [PropertyType.LOG_DATA]: {};
 }
 
@@ -348,10 +350,14 @@ function InspectorControlCreate() {
                     w: vec4_w_params,
                 });
             case PropertyType.POINT_2D:
+                const point2_params = property?.params;
+                const point2_x_params = point2_params ? (point2_params as PropertyParams[PropertyType.POINT_2D]).x : undefined;
+                const point2_y_params = point2_params ? (point2_params as PropertyParams[PropertyType.POINT_2D]).y : undefined;
                 return createEntity(ids, field, property, {
-                    y: { inverted: true },
                     picker: 'inline',
-                    expanded: false
+                    expanded: false,
+                    x: point2_x_params,
+                    y: { ...point2_y_params, inverted: true }
                 });
             case PropertyType.COLOR:
                 return createEntity(ids, field, property, {
@@ -475,10 +481,11 @@ function InspectorControlCreate() {
     }
 
     function set_selected_list(list: IBaseMeshDataAndThree[]) {
-        clear();
-        setData(list.map((value) => {
+        const data = list.map((value) => {
+            console.log(value);
             const fields = [
                 { name: 'id', data: value.mesh_data.id },
+                { name: 'type', data: value.type },
                 { name: 'name', data: value.name },
                 { name: 'visible', data: value.get_visible() },
                 { name: 'active', data: value.get_active() },
@@ -493,19 +500,23 @@ function InspectorControlCreate() {
 
             switch (value.type) {
                 case IObjectTypes.SLICE9_PLANE:
-                    fields.push({ name: 'texture', data: '' });
+                    fields.push({ name: 'texture', data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
                     fields.push({ name: 'slice9', data: new Vector2(0, 0) });
                     break;
                 case IObjectTypes.GO_TEXT: case IObjectTypes.TEXT:
-                    fields.push({ name: 'text', data: 'Hello world' });
-                    fields.push({ name: 'font', data: 'Default' });
-                    fields.push({ name: 'font_size', data: 8 });
-                    fields.push({ name: 'text_align', data: 'center' });
+                    fields.push({ name: 'text', data: (value as TextMesh).text });
+                    fields.push({ name: 'font', data: (value as TextMesh).font || '' });
+                    fields.push({ name: 'font_size', data: (value as TextMesh).fontSize });
+                    fields.push({ name: 'text_align', data: (value as TextMesh).textAlign });
                     break;
             }
 
             return { id: value.mesh_data.id, data: fields };
-        }));
+        })
+
+
+        clear();
+        setData(data);
     }
 
     function detach() {
@@ -535,18 +546,18 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 { name: 'position', title: 'Позиция', type: PropertyType.VECTOR_3 },
                 { name: 'rotation', title: 'Вращение', type: PropertyType.VECTOR_3 },
-                { name: 'scale', title: 'Маштаб', type: PropertyType.VECTOR_3 },
+                { name: 'scale', title: 'Маштаб', type: PropertyType.VECTOR_2 },
                 { name: 'size', title: 'Размер', type: PropertyType.VECTOR_2 },
                 {
-                    name: 'pivot', title: 'Точка опоры', type: PropertyType.VECTOR_2, params: {
+                    name: 'pivot', title: 'Точка опоры', type: PropertyType.POINT_2D, params: {
                         x: { min: 0, max: 1, step: 0.5 },
                         y: { min: 0, max: 1, step: 0.5 }
                     }
                 },
                 {
-                    name: 'anchor', title: 'Якорь', type: PropertyType.VECTOR_2, params: {
-                        x: { min: 0, max: 1 },
-                        y: { min: 0, max: 1 }
+                    name: 'anchor', title: 'Якорь', type: PropertyType.POINT_2D, params: {
+                        x: { min: -1, max: 1 },
+                        y: { min: -1, max: 1 }
                     }
                 }
             ]
@@ -557,14 +568,12 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 { name: 'color', title: 'Цвет', type: PropertyType.COLOR },
                 {
-                    name: 'texture', title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: [
-                        // TODO: add real textures from get_textures
-                    ]
+                    name: 'texture', title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: ResourceManager.get_all_textures()
                 },
                 {
-                    name: 'slice9', title: 'Slice9', type: PropertyType.VECTOR_2, params: {
-                        x: { min: 0 },
-                        y: { min: 0 }
+                    name: 'slice9', title: 'Slice9', type: PropertyType.POINT_2D, params: {
+                        x: { min: 0, max: 0xffffffff },
+                        y: { min: 0, max: 0xffffffff }
                     }
                 },
             ]
@@ -575,10 +584,7 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 { name: 'text', title: 'Текст', type: PropertyType.LOG_DATA },
                 {
-                    name: 'font', title: 'Шрифт', type: PropertyType.LIST_TEXT, params: {
-                        'Стандартный': 'Default'
-                        // TODO: add real keys from get_all_fonts
-                    }
+                    name: 'font', title: 'Шрифт', type: PropertyType.LIST_TEXT, params: ResourceManager.get_all_fonts()
                 },
                 {
                     name: 'font_size', title: 'Размер шрифта', type: PropertyType.NUMBER, params: {
