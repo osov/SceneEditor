@@ -699,7 +699,7 @@ li.menu__context_separator span {
   visibility: visible;
 }
 
-.popup__head {
+.popup__title {
   padding: 5px 5px 5px 12px;
   display: flex;
   align-items: center;

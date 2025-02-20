@@ -1,26 +1,27 @@
 <section class="wr_popup" id="popupRename">
-    <a href="javascript:void(0);" class="bgpopup " onclick="TreeControl.setPopup('#popupRename', 'close');" draggable="false"></a>
+    <a href="javascript:void(0);" class="bgpopup " draggable="false"></a>
     <div class="popup ">
-        <div class="popup__head">
+        <div class="popup__title">
             <span>Rename</span>
-            <a href="javascript:void(0);" class="popup__close" onclick="TreeControl.setPopup('#popupRename', 'close');" draggable="false">
+            <a href="javascript:void(0);" class="popup__close" draggable="false">
                 <svg class="svg_icon"><use href="./img/sprite.svg#circle_close"></use></svg>
             </a>
         </div>
 
-        <input type="text" class="popup__input" placeholder="name ..." autocomplete="off" tabindex="-1">
+        <input type="text" id="RenameInput" class="popup__input" placeholder="name ..." autocomplete="off" tabindex="-1">
+
         <div class="tar pt15">
-            <a href="javascript:void(0);" class="btn">Ok</a>
+            <a href="javascript:void(0);" class="btn popup__okBtn" id="RenameBtnOk">Ok</a>
         </div>
     </div>
 </section>
 
 <section class="wr_popup" id="popupLayers">
-    <a href="javascript:void(0);" class="bgpopup" onclick="TreeControl.setPopup('#popupLayers', 'close');" draggable="false"></a>
+    <a href="javascript:void(0);" class="bgpopup" draggable="false" data-test="bgpopup"></a>
     <div class="popup">
-        <div class="popup__head">
+        <div class="popup__title">
             <span>Layers</span>
-            <a href="javascript:void(0);" class="popup__close" onclick="TreeControl.setPopup('#popupLayers', 'close');" draggable="false">
+            <a href="javascript:void(0);" class="popup__close" draggable="false">
                 <svg class="svg_icon"><use href="./img/sprite.svg#circle_close"></use></svg>
             </a>
         </div>
@@ -30,7 +31,7 @@
             <input type="text" id="LayersInput" class="popup__input xl_80" placeholder="name ..." autocomplete="off" tabindex="-1">
         </div>
         <div class="tar pt15">
-            <a href="javascript:void(0);" class="btn" id="LayersBtnAdd">add</a>
+            <a href="javascript:void(0);" class="btn popup__okBtn" id="LayersBtnAdd">add</a>
         </div>
 
         <div class="LayersList" id="LayersList">
@@ -65,17 +66,17 @@
     const list = document.querySelector('#LayersList');
     const btn_remove = document.querySelectorAll('.LayersList__item_remove');
 
-    btn.addEventListener('click', () => {
-        if (input.value.trim().length == 0) return;
-        const item = document.createElement('div');
-        item.classList.add('LayersList__item');
-        item.innerHTML = `<span>${input.value}</span>
-                            <a href="javascript:void(0);" class="LayersList__item_remove" tabindex="-1"  draggable="false">
-                                <svg class="svg_icon"><use href="./img/sprite.svg#circle_close"></use></svg>
-                            </a>`;
-        list.appendChild(item);
-        input.value = '';
-    });
+    // btn.addEventListener('click', () => {
+    //     if (input.value.trim().length == 0) return;
+    //     const item = document.createElement('div');
+    //     item.classList.add('LayersList__item');
+    //     item.innerHTML = `<span>${input.value}</span>
+    //                         <a href="javascript:void(0);" class="LayersList__item_remove" tabindex="-1"  draggable="false">
+    //                             <svg class="svg_icon"><use href="./img/sprite.svg#circle_close"></use></svg>
+    //                         </a>`;
+    //     list.appendChild(item);
+    //     input.value = '';
+    // });
 
     list.addEventListener('click', (e) => {
         const btnRemove = e.target.closest('.LayersList__item_remove');
