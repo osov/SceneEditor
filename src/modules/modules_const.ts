@@ -20,10 +20,11 @@ export type _SystemMessages = {
     SYS_INPUT_POINTER_UP: { x: number, y: number, offset_x: number, offset_y: number, button: number, target: HTMLElementOrNull },
     SYS_VIEW_INPUT_KEY_DOWN: { key: string, target: HTMLElementOrNull },
     SYS_VIEW_INPUT_KEY_UP: { key: string, target: HTMLElementOrNull },
-    SYS_INPUT_UNDO: {}
-    SYS_SELECTED_MESH: { mesh: IBaseMeshDataAndThree }
-    SYS_SELECTED_MESH_LIST: { list: IBaseMeshDataAndThree[] }
-    SYS_UNSELECTED_MESH_LIST: {}
+    SYS_INPUT_UNDO: {},
+    SYS_SELECTED_MESH: { mesh: IBaseMeshDataAndThree },
+    SYS_SELECTED_MESH_LIST: { list: IBaseMeshDataAndThree[] },
+    SYS_UNSELECTED_MESH_LIST: {},
+    SYS_TRANSFORM_CHANGED: VoidMessage,
     SYS_ON_UPDATE: { dt: number },
     SYS_ON_UPDATE_END: { dt: number },
     SYS_GRAPH_SELECTED: { list: number[] },

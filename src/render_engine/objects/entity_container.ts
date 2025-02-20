@@ -143,7 +143,7 @@ export class EntityContainer extends Mesh implements IBaseMesh {
     }
 
     set_visible(val: boolean) {
-        this.geometry.setDrawRange(0,val ? Infinity : 0);
+        this.geometry.setDrawRange(0, val ? Infinity : 0);
     }
 
     get_visible() {

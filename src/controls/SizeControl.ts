@@ -102,7 +102,7 @@ function SizeControlCreate() {
             if (Input.is_alt() && selected_list.length == 1 && (selected_list[0] instanceof Slice9Mesh)) {
                 if (!slice_box.visible) {
                     set_slice_visible(true);
-                    draw_debug_bb(get_bounds_from_list());
+                    draw();
                 }
             }
 
@@ -332,6 +332,9 @@ function SizeControlCreate() {
                     }
                 }
                 draw_debug_bb(bounds);
+
+                TransformControl.set_proxy_in_average_point(selected_list);
+                EventBus.send('SYS_TRANSFORM_CHANGED');
             }
         });
     }
@@ -594,7 +597,7 @@ function SizeControlCreate() {
     function set_selected_list(list: IBaseMeshDataAndThree[]) {
         if (!is_active) return;
         selected_list = list;
-        draw_debug_bb(get_bounds_from_list());
+        draw();
     }
 
     function set_active(val: boolean) {
@@ -606,6 +609,11 @@ function SizeControlCreate() {
         }
     }
 
+    function draw() {
+        if (!is_active) return;
+        draw_debug_bb(get_bounds_from_list());
+    }
+
     init();
-    return { set_selected_list, detach, set_active };
+    return { set_selected_list, detach, set_active, draw };
 }

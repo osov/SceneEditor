@@ -5,13 +5,10 @@ import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
-import { Vector2 } from 'three';
+import { Vector2, Vector3 } from 'three';
 import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 
-// TODO: add slider
-// TODO: add params to entities
-// TODO: check all property emmit change event
 
 declare global {
     const InspectorControl: ReturnType<typeof InspectorControlCreate>;
@@ -19,6 +16,27 @@ declare global {
 
 export function register_inspector_control() {
     (window as any).InspectorControl = InspectorControlCreate();
+}
+
+export enum Property {
+    ID = 'id',
+    TYPE = 'type',
+    NAME = 'name',
+    VISIBLE = 'visible',
+    ACTIVE = 'active',
+    POSITION = 'position',
+    ROTATION = 'rotation',
+    SCALE = 'scale',
+    SIZE = 'size',
+    PIVOT = 'pivot',
+    ANCHOR = 'anchor',
+    COLOR = 'color',
+    TEXTURE = 'texture',
+    SLICE9 = 'slice9',
+    TEXT = 'text',
+    FONT = 'font',
+    FONT_SIZE = 'font_size',
+    TEXT_ALIGN = 'text_align'
 }
 
 export enum ComponentType {
@@ -101,7 +119,11 @@ export interface ObjectData {
 
 export interface ChangeInfo {
     ids: number[];
-    data: PropertyData<PropertyType>;
+    data: {
+        field: PropertyData<PropertyType>;
+        property: PropertyItem<PropertyType>;
+        event: ChangeEvent;
+    }
 }
 
 export type ChangeEvent = TpChangeEvent<unknown, BindingApi<unknown, unknown>>;
@@ -124,18 +146,22 @@ interface Entity {
     onChange?: (event: ChangeEvent) => void;
 }
 
-type Entities = Folder | Button | Entity;
-
 interface ObjectInfo {
     field: PropertyData<PropertyType>;
     property: PropertyItem<PropertyType>;
 }
+
+type Entities = Folder | Button | Entity;
 
 
 function InspectorControlCreate() {
     let _config: InspectorGroup[];
     let _inspector: Pane;
     let _unique_fields: { ids: number[], field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }[];
+    let _selected_list: IBaseMeshDataAndThree[];
+
+    let _refreshed = false;
+    let _is_first = true;
 
     function init() {
         _inspector = new Pane({
@@ -145,6 +171,13 @@ function InspectorControlCreate() {
         _inspector.registerPlugin(TweakpaneSearchListPlugin);
         _inspector.registerPlugin(TextareaPlugin);
         _inspector.registerPlugin(ExtendedPointNdInputPlugin);
+
+        EventBus.on('SYS_TRANSFORM_CHANGED', on_transform_changed);
+    }
+
+    function refresh() {
+        _inspector.refresh();
+        _refreshed = true;
     }
 
     function clear() {
@@ -236,14 +269,18 @@ function InspectorControlCreate() {
 
             if (field_data.x !== unique_field_data.x) {
                 const params = _unique_fields[index].property.params;
-                if (params) (params as PropertyParams[PropertyType.VECTOR_2]).x.disabled = true;
-                else _unique_fields[index].property.params = { x: { disabled: true } };
+                if (params) {
+                    const v2p = (params as PropertyParams[PropertyType.VECTOR_2]);
+                    if (v2p.x) v2p.x.disabled = true;
+                } else _unique_fields[index].property.params = { x: { disabled: true } };
             }
 
             if (field_data.y !== unique_field_data.y) {
                 const params = _unique_fields[index].property.params;
-                if (params) (params as PropertyParams[PropertyType.VECTOR_2]).y.disabled = true;
-                else _unique_fields[index].property.params = { y: { disabled: true } };
+                if (params) {
+                    const v2p = (params as PropertyParams[PropertyType.VECTOR_2]);
+                    if (v2p.y) v2p.y.disabled = true;
+                } else _unique_fields[index].property.params = { y: { disabled: true } };
             }
 
             if (property.type === PropertyType.VECTOR_3 || property.type === PropertyType.VECTOR_4) {
@@ -253,8 +290,10 @@ function InspectorControlCreate() {
 
                 if (field_data.z !== unique_field_data.z) {
                     const params = _unique_fields[index].property.params;
-                    if (params) (params as PropertyParams[PropertyType.VECTOR_3]).z.disabled = true;
-                    else _unique_fields[index].property.params = { z: { disabled: true } };
+                    if (params) {
+                        const v3p = (params as PropertyParams[PropertyType.VECTOR_3]);
+                        if (v3p.z) v3p.z.disabled = true;
+                    } else _unique_fields[index].property.params = { z: { disabled: true } };
                 }
             }
 
@@ -265,8 +304,10 @@ function InspectorControlCreate() {
 
                 if (field_data.w !== unique_field_data.w) {
                     const params = _unique_fields[index].property.params;
-                    if (params) (params as PropertyParams[PropertyType.VECTOR_4]).w.disabled = true;
-                    else _unique_fields[index].property.params = { w: { disabled: true } };
+                    if (params) {
+                        const v4p = (params as PropertyParams[PropertyType.VECTOR_4]);
+                        if (v4p.w) v4p.w.disabled = true;
+                    } else _unique_fields[index].property.params = { w: { disabled: true } };
                 }
             }
         } else if (field.data != _unique_fields[index].field.data) {
@@ -310,7 +351,7 @@ function InspectorControlCreate() {
         }
     }
 
-    // TODO: add/cast params from property
+    // TODO: refactoring
     function castProperty<T extends PropertyType>(ids: number[], field: PropertyData<T>, property: PropertyItem<T>): Entities | undefined {
         switch (property.type) {
             case PropertyType.STRING:
@@ -318,24 +359,19 @@ function InspectorControlCreate() {
             case PropertyType.BOOLEAN:
                 return createEntity(ids, field, property);
             case PropertyType.VECTOR_2:
-                const vec2_params = property?.params;
-                const vec2_x_params = vec2_params ? (vec2_params as PropertyParams[PropertyType.VECTOR_2]).x : undefined;
-                const vec2_y_params = vec2_params ? (vec2_params as PropertyParams[PropertyType.VECTOR_2]).y : undefined;
+                const vec2_property = property as PropertyItem<PropertyType.VECTOR_2>;
                 return createEntity(ids, field, property, {
                     picker: 'inline',
                     expanded: false,
-                    x: vec2_x_params,
-                    y: vec2_y_params,
+                    x: vec2_property.params?.x,
+                    y: vec2_property.params?.y,
                 });
             case PropertyType.VECTOR_3:
-                const vec3_params = property?.params;
-                const vec3_x_params = vec3_params ? (vec3_params as PropertyParams[PropertyType.VECTOR_3]).x : undefined;
-                const vec3_y_params = vec3_params ? (vec3_params as PropertyParams[PropertyType.VECTOR_3]).y : undefined;
-                const vec3_z_params = vec3_params ? (vec3_params as PropertyParams[PropertyType.VECTOR_3]).z : undefined;
+                const vec3_property = property as PropertyItem<PropertyType.VECTOR_3>;
                 return createEntity(ids, field, property, {
-                    x: vec3_x_params,
-                    y: vec3_y_params,
-                    z: vec3_z_params,
+                    x: vec3_property.params?.x,
+                    y: vec3_property.params?.y,
+                    z: vec3_property.params?.z,
                 });
             case PropertyType.VECTOR_4:
                 const vec4_params = property?.params;
@@ -419,7 +455,7 @@ function InspectorControlCreate() {
                 return property.name == name;
             });
             if (result)
-                return result;
+                return Object.assign({}, result);
         }
 
         Log.error(`Not found ${name}`);
@@ -465,13 +501,12 @@ function InspectorControlCreate() {
 
         if (!property.readonly) {
             entity.onChange = (event: ChangeEvent) => {
-                if (!event.last)
-                    return;
-                EventBus.send('SYS_INSPECTOR_UPDATED_VALUE', {
+                onUpdatedValue({
                     ids,
                     data: {
-                        name: field.name,
-                        data: event.value as PropertyValues[T]
+                        field,
+                        property,
+                        event
                     }
                 });
             };
@@ -481,33 +516,34 @@ function InspectorControlCreate() {
     }
 
     function set_selected_list(list: IBaseMeshDataAndThree[]) {
+        _selected_list = list;
+        TransformControl.set_proxy_in_average_point(list);
         const data = list.map((value) => {
-            console.log(value);
             const fields = [
-                { name: 'id', data: value.mesh_data.id },
-                { name: 'type', data: value.type },
-                { name: 'name', data: value.name },
-                { name: 'visible', data: value.get_visible() },
-                { name: 'active', data: value.get_active() },
-                { name: 'position', data: value.get_position() },
-                { name: 'rotation', data: value.rotation },
-                { name: 'scale', data: value.get_scale() },
-                { name: 'size', data: value.get_size() },
-                { name: 'pivot', data: value.get_pivot() },
-                { name: 'anchor', data: value.get_anchor() },
-                { name: 'color', data: value.get_color() },
+                { name: Property.ID, data: value.mesh_data.id },
+                { name: Property.TYPE, data: value.type },
+                { name: Property.NAME, data: value.name },
+                { name: Property.VISIBLE, data: value.get_visible() },
+                { name: Property.ACTIVE, data: value.get_active() },
+                { name: Property.POSITION, data: TransformControl.get_proxy().position },
+                { name: Property.ROTATION, data: TransformControl.get_proxy().rotation },
+                { name: Property.SCALE, data: TransformControl.get_proxy().scale },
+                { name: Property.SIZE, data: value.get_size() },
+                { name: Property.PIVOT, data: value.get_pivot() },
+                { name: Property.ANCHOR, data: value.get_anchor() },
+                { name: Property.COLOR, data: value.get_color() },
             ];
 
             switch (value.type) {
                 case IObjectTypes.SLICE9_PLANE:
-                    fields.push({ name: 'texture', data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
-                    fields.push({ name: 'slice9', data: new Vector2(0, 0) });
+                    fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
+                    fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
                     break;
                 case IObjectTypes.GO_TEXT: case IObjectTypes.TEXT:
-                    fields.push({ name: 'text', data: (value as TextMesh).text });
-                    fields.push({ name: 'font', data: (value as TextMesh).font || '' });
-                    fields.push({ name: 'font_size', data: (value as TextMesh).fontSize });
-                    fields.push({ name: 'text_align', data: (value as TextMesh).textAlign });
+                    fields.push({ name: Property.TEXT, data: (value as TextMesh).text });
+                    fields.push({ name: Property.FONT, data: (value as TextMesh).font || '' });
+                    fields.push({ name: Property.FONT_SIZE, data: (value as TextMesh).fontSize });
+                    fields.push({ name: Property.TEXT_ALIGN, data: (value as TextMesh).textAlign });
                     break;
             }
 
@@ -523,6 +559,160 @@ function InspectorControlCreate() {
         clear();
     }
 
+    function onUpdatedValue(value: ChangeInfo) {
+        if (_refreshed) {
+            _refreshed = false;
+            return;
+        }
+
+        switch (value.data.field.name) {
+            case Property.NAME:
+                value.ids.forEach((id) => {
+                    const mesh = _selected_list.find((item) => {
+                        return item.mesh_data.id == id;
+                    });
+                    if (!mesh) return;
+                    mesh.name = value.data.event.value as string;
+                    ControlManager.update_graph();
+                });
+                break;
+            case Property.ACTIVE:
+                value.ids.forEach((id) => {
+                    const mesh = _selected_list.find((item) => {
+                        return item.mesh_data.id == id;
+                    });
+                    if (!mesh) return;
+                    mesh.set_active(value.data.event.value as boolean);
+                });
+                break;
+            case Property.VISIBLE:
+                value.ids.forEach((id) => {
+                    const mesh = _selected_list.find((item) => {
+                        return item.mesh_data.id == id;
+                    });
+                    if (!mesh) return;
+                    mesh.set_visible(value.data.event.value as boolean);
+                });
+                break;
+            case Property.POSITION:
+                if (_is_first) {
+                    _is_first = false;
+                    TransformControl.save_previous_positions(_selected_list);
+                }
+                const position = value.data.event.value as Vector3;
+                TransformControl.set_proxy_position(position.x, position.y, position.z, _selected_list);
+                SizeControl.draw();
+                if (value.data.event.last) {
+                    _is_first = true;
+                    TransformControl.write_previous_positions_in_historty(_selected_list);
+                }
+                break;
+            case Property.ROTATION:
+                if (_is_first) {
+                    _is_first = false;
+                    TransformControl.save_previous_rotations(_selected_list);
+                }
+                const rotation = value.data.event.value as Vector3;
+                TransformControl.set_proxy_rotation(rotation.x, rotation.y, rotation.z, _selected_list);
+                if (value.data.event.last) {
+                    _is_first = true;
+                    TransformControl.write_previous_rotations_in_historty(_selected_list);
+                }
+                break;
+            case Property.SCALE:
+                if (_is_first) {
+                    _is_first = false;
+                    TransformControl.save_previous_scales(_selected_list);
+                }
+                const scale = value.data.event.value as Vector3;
+                TransformControl.set_proxy_scale(scale.x, scale.y, scale.z, _selected_list);
+                if (value.data.event.last) {
+                    _is_first = true;
+                    TransformControl.write_previous_scales_in_historty(_selected_list);
+                }
+                break;
+            case Property.SIZE:
+                // TODO: set value for SIZE from SizeControl
+                break;
+                break;
+            case Property.PIVOT:
+                // TODO: set value for PIVOT from SizeControl
+                break;
+            case Property.ANCHOR:
+                // TODO: set value for ANCHOR from SizeControl
+                break;
+            case Property.COLOR:
+                value.ids.forEach((id) => {
+                    const mesh = _selected_list.find((item) => {
+                        return item.mesh_data.id == id;
+                    });
+                    if (!mesh) return;
+                    (mesh as Slice9Mesh).set_color(value.data.event.value as string);
+                });
+                break;
+            case Property.TEXTURE:
+                value.ids.forEach((id) => {
+                    const mesh = _selected_list.find((item) => {
+                        return item.mesh_data.id == id;
+                    });
+                    if (!mesh) return;
+                    (mesh as Slice9Mesh).set_texture(value.data.event.value as string);
+                });
+                break;
+            case Property.SLICE9:
+                value.ids.forEach((id) => {
+                    const mesh = _selected_list.find((item) => {
+                        return item.mesh_data.id == id;
+                    });
+                    if (!mesh) return;
+                    const slice = value.data.event.value as Vector2;
+                    (mesh as Slice9Mesh).set_slice(slice.x, slice.y);
+                });
+                break;
+            case Property.TEXT:
+                value.ids.forEach((id) => {
+                    const mesh = _selected_list.find((item) => {
+                        return item.mesh_data.id == id;
+                    });
+                    if (!mesh) return;
+                    (mesh as TextMesh).text = value.data.event.value as string;
+                });
+                break;
+            case Property.FONT:
+                value.ids.forEach((id) => {
+                    const mesh = _selected_list.find((item) => {
+                        return item.mesh_data.id == id;
+                    });
+                    if (!mesh) return;
+                    (mesh as TextMesh).font = value.data.event.value as string;
+                });
+                break;
+            case Property.FONT_SIZE:
+                value.ids.forEach((id) => {
+                    const mesh = _selected_list.find((item) => {
+                        return item.mesh_data.id == id;
+                    });
+                    if (!mesh) return;
+                    // TODO: change scale instead of change fontSize
+                    (mesh as TextMesh).fontSize = value.data.event.value as number;
+                });
+                break;
+            case Property.TEXT_ALIGN:
+                value.ids.forEach((id) => {
+                    const mesh = _selected_list.find((item) => {
+                        return item.mesh_data.id == id;
+                    });
+                    if (!mesh) return;
+                    (mesh as TextMesh).textAlign = value.data.event.value as any;
+                });
+                break;
+        }
+    }
+
+    function on_transform_changed() {
+        refresh();
+    }
+
     init();
     return { setupConfig, setData, set_selected_list, detach }
 }
@@ -533,29 +723,29 @@ export function getDefaultInspectorConfig() {
             name: 'base',
             title: '',
             property_list: [
-                { name: 'id', title: 'ID', type: PropertyType.NUMBER, readonly: true },
-                { name: 'type', title: 'Тип', type: PropertyType.STRING, readonly: true },
-                { name: 'name', title: 'Название', type: PropertyType.STRING },
-                { name: 'visible', title: 'Видимый', type: PropertyType.BOOLEAN },
-                { name: 'active', title: 'Активный', type: PropertyType.BOOLEAN }
+                { name: Property.ID, title: 'ID', type: PropertyType.NUMBER, readonly: true },
+                { name: Property.TYPE, title: 'Тип', type: PropertyType.STRING, readonly: true },
+                { name: Property.NAME, title: 'Название', type: PropertyType.STRING },
+                { name: Property.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN },
+                { name: Property.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN }
             ]
         },
         {
             name: 'transform',
             title: 'Трансформ',
             property_list: [
-                { name: 'position', title: 'Позиция', type: PropertyType.VECTOR_3 },
-                { name: 'rotation', title: 'Вращение', type: PropertyType.VECTOR_3 },
-                { name: 'scale', title: 'Маштаб', type: PropertyType.VECTOR_2 },
-                { name: 'size', title: 'Размер', type: PropertyType.VECTOR_2 },
+                { name: Property.POSITION, title: 'Позиция', type: PropertyType.VECTOR_3 },
+                { name: Property.ROTATION, title: 'Вращение', type: PropertyType.VECTOR_3 },
+                { name: Property.SCALE, title: 'Маштаб', type: PropertyType.VECTOR_2 },
+                { name: Property.SIZE, title: 'Размер', type: PropertyType.VECTOR_2 },
                 {
-                    name: 'pivot', title: 'Точка опоры', type: PropertyType.POINT_2D, params: {
+                    name: Property.PIVOT, title: 'Точка опоры', type: PropertyType.POINT_2D, params: {
                         x: { min: 0, max: 1, step: 0.5 },
                         y: { min: 0, max: 1, step: 0.5 }
                     }
                 },
                 {
-                    name: 'anchor', title: 'Якорь', type: PropertyType.POINT_2D, params: {
+                    name: Property.ANCHOR, title: 'Якорь', type: PropertyType.POINT_2D, params: {
                         x: { min: -1, max: 1 },
                         y: { min: -1, max: 1 }
                     }
@@ -566,12 +756,12 @@ export function getDefaultInspectorConfig() {
             name: 'graphics',
             title: 'Настройки визуала',
             property_list: [
-                { name: 'color', title: 'Цвет', type: PropertyType.COLOR },
+                { name: Property.COLOR, title: 'Цвет', type: PropertyType.COLOR },
                 {
-                    name: 'texture', title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: ResourceManager.get_all_textures()
+                    name: Property.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: ResourceManager.get_all_textures() // FIXME: here textures not loaded yet
                 },
                 {
-                    name: 'slice9', title: 'Slice9', type: PropertyType.POINT_2D, params: {
+                    name: Property.SLICE9, title: 'Slice9', type: PropertyType.POINT_2D, params: {
                         x: { min: 0, max: 0xffffffff },
                         y: { min: 0, max: 0xffffffff }
                     }
@@ -582,17 +772,17 @@ export function getDefaultInspectorConfig() {
             name: 'text',
             title: 'Настройки текста',
             property_list: [
-                { name: 'text', title: 'Текст', type: PropertyType.LOG_DATA },
+                { name: Property.TEXT, title: 'Текст', type: PropertyType.LOG_DATA },
                 {
-                    name: 'font', title: 'Шрифт', type: PropertyType.LIST_TEXT, params: ResourceManager.get_all_fonts()
+                    name: Property.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: ResourceManager.get_all_fonts()
                 },
                 {
-                    name: 'font_size', title: 'Размер шрифта', type: PropertyType.NUMBER, params: {
+                    name: Property.FONT_SIZE, title: 'Размер шрифта', type: PropertyType.NUMBER, params: {
                         min: 8, step: 1
                     }
                 },
                 {
-                    name: 'text_align', title: 'Выравнивание', type: PropertyType.LIST_TEXT, params: {
+                    name: Property.TEXT_ALIGN, title: 'Выравнивание', type: PropertyType.LIST_TEXT, params: {
                         'Центр': 'center',
                         'Слева': 'left',
                         'Справа': 'right',
@@ -663,16 +853,6 @@ Slice9* vec2 | метод get_slice/set_slice, минимум 0
 
 
 export function run_debug_inpector() {
-    // const spriteFiles = document.querySelectorAll<HTMLElement>("#sprite-file");
-    // spriteFiles.forEach((file) => {
-    //     file.addEventListener("dragstart", (event: DragEvent) => {
-    //         if (!event.dataTransfer)
-    //             return;
-    //         event.dataTransfer.clearData();
-    //         event.dataTransfer.setData("text/plain", file.getAttribute("data-value") || '');
-    //     });
-    // });
-
     // InspectorControl.setupConfig([
     //     {
     //         name: 'base',
@@ -766,8 +946,4 @@ export function run_debug_inpector() {
     //     //     ]
     //     // }
     // ]);
-
-    EventBus.on('SYS_INSPECTOR_UPDATED_VALUE', (data: ChangeInfo) => {
-        console.log('UPDATED VALUE: ', data);
-    });
 }
