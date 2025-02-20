@@ -102,23 +102,21 @@ function PopupsCreate() {
 
             if (data?.type == 'Layers' && wrLayersList && inputField && inputField.value.trim().length > 0) {
                 log('Layers')
-                data?.callback(true, inputField?.value.trim());
                 const newItem: LayerItem = { id: Date.now().toString(), title: inputField?.value.trim(), can_delete: true };
+                data?.callback(true, { action: 'add', item: newItem });
                 layer_list.push(newItem);
                 wrLayersList.innerHTML = getLayersHtml(layer_list);
                 log(layer_list)
                 inputField.value = '';
                 wrLayersList.addEventListener('click', layerListClick);
-                // if (params?.auto_close == true) {
-                    // hidePopup(popup);
-                    // if (okBtn) okBtn.removeEventListener('click', fClick);  
-                // }
             }
         }
 
         function removeItemLayer(id: string) {
             layer_list.splice(layer_list.findIndex((item: LayerItem) => item.id == id), 1);
+            data?.callback(true, { action: 'delete', id: id });
             if (wrLayersList) wrLayersList.innerHTML = getLayersHtml(layer_list);
+            log({layer_list, id})
         }
 
         function layerListClick(e: any) {
