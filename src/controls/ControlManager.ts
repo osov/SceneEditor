@@ -1,6 +1,6 @@
 import { is_base_mesh } from "../render_engine/helpers/utils";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
-import { TreeItem } from "../scene_tree/tree";
+import { TreeItem } from "./TreeControl";
 import { HistoryData } from "./HistoryControl";
 import Stats from 'stats.js';
 import { getDefaultInspectorConfig } from "./InspectorControl";
