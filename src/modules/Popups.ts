@@ -48,15 +48,43 @@ interface LayerItem {
     can_delete?: boolean
 }
 
+/*
+Popups.open({
+    type: "Select", 
+    params: { 
+        title: "SelectList",
+        button: "", 
+        list: [{id: "1", title: "Option 1"}, {id: "2", title: "Option 2", selected: true }],
+        auto_close: true
+    }, 
+    callback: () => {}
+});
+*/
+interface Select {
+    type: "Select",
+    params: {
+        title: string,
+        button: string,
+        list: SelectItem [],
+        auto_close?: boolean
+    },
+    callback: Function
+}
+
+interface SelectItem {
+    id: string,
+    title: string,
+    selected?: boolean
+}
+
 function PopupsCreate() {
 
-    function open(data: Rename | Layers) { 
-
+    function open(data: Rename | Layers | Select) {
         const popup = document.querySelector(`#popup${data?.type}`) as HTMLInputElement | null;
         if (!popup) return;
 
         const okBtn = popup.querySelector('.popup__okBtn') as HTMLInputElement | null;
-        if (okBtn) { okBtn.textContent = data?.params?.button || 'Ok'; }
+        if (okBtn) { okBtn.textContent = data?.params?.button || okBtn.textContent; }
         
         const popupTitle = popup.querySelector('.popup__title span') as HTMLInputElement | null;
         if (popupTitle) { popupTitle.textContent = data?.params?.title; }
@@ -67,6 +95,12 @@ function PopupsCreate() {
             const layer_list: LayerItem [] = (data?.type == 'Layers' && data?.params?.list) ? deepClone(data?.params?.list) : [];
             const wrLayersList = popup.querySelector('#LayersList') as HTMLElement | null;
             if (wrLayersList && data?.type == 'Layers') wrLayersList.innerHTML = getLayersHtml(layer_list);
+        // }
+
+        // if (data?.type == 'Select') {
+            const select_list: SelectItem [] = (data?.type == 'Select' && data?.params?.list) ? data?.params?.list : [];
+            const wrSelectList = popup.querySelector('#popupSelectList') as HTMLInputElement | null;
+            if (wrSelectList && data?.type == 'Select') wrSelectList.innerHTML = getSelectHtml(select_list);
         // }
 
         const closeBg = popup.querySelector('.bgpopup') as HTMLElement | null;
@@ -110,11 +144,24 @@ function PopupsCreate() {
                 inputField.value = '';
                 wrLayersList.addEventListener('click', layerListClick);
             }
+
+            if (data?.type == 'Select' && wrSelectList) {
+                log('Select', wrSelectList, wrSelectList?.value)
+                const itemSelected = select_list.findIndex((item: SelectItem) => item.id == wrSelectList?.value);
+                if (wrSelectList?.value && itemSelected > -1) {
+                    data?.callback(true, { action: 'selected', itemId: select_list[itemSelected]?.id });
+                    if (data.params?.auto_close == true) {
+                        hidePopup(popup);
+                        if (okBtn) okBtn.removeEventListener('click', fClick);  
+                    }
+                }
+            }
+
         }
 
         function removeItemLayer(id: string) {
             layer_list.splice(layer_list.findIndex((item: LayerItem) => item.id == id), 1);
-            data?.callback(true, { action: 'delete', id: id });
+            data?.callback(true, { action: 'delete', itemId: id });
             if (wrLayersList) wrLayersList.innerHTML = getLayersHtml(layer_list);
             log({layer_list, id})
         }
@@ -135,16 +182,24 @@ function PopupsCreate() {
         list.forEach((item: LayerItem) => {
             result += `<div class="LayersList__item">
                             <span>${item.title}</span>
-                            ${item?.can_delete ? getDeleteLayerItemHtml(item?.id) : ``}
+                            ${item?.can_delete ? getDeleteLayerItemHtml(item?.id) : ''}
                         </div>`;
         });
         return result;
     }
-
+    
     function getDeleteLayerItemHtml(id: string): string {
         return `<a href="javascript:void(0);" class="LayersList__item_remove" tabindex="-1"  draggable="false" data-id="${id}">
                     <svg class="svg_icon"><use href="./img/sprite.svg#circle_close"></use></svg>
                 </a>`;
+    }
+    
+    function getSelectHtml(list: SelectItem []): string {
+        let result = `<option value="" selected disabled hidden>Choose here</option>`;
+        list.forEach((item: SelectItem) => {
+            result += `<option value="${item?.id}" ${item?.selected == true ? 'selected' : ''}>${item.title}</option>`;
+        });
+        return result;
     }
 
     function showPopup(popup: any): void {
