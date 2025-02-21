@@ -149,6 +149,7 @@ function SizeControlCreate() {
                             // draw_debug_bb(get_bounds_from_list());
                         }
                     }
+                    EventBus.send('SYS_DATA_UPDATED');
                 }
             }
         })
@@ -243,6 +244,7 @@ function SizeControlCreate() {
                     dir[1] = tmp[1];
                 }
                 draw_debug_bb(bounds);
+                EventBus.send('SYS_DATA_UPDATED');
                 return;
             }
             if (Input.is_shift() || Input.is_alt())
@@ -334,7 +336,7 @@ function SizeControlCreate() {
                 draw_debug_bb(bounds);
 
                 TransformControl.set_proxy_in_average_point(selected_list);
-                EventBus.send('SYS_TRANSFORM_CHANGED');
+                EventBus.send('SYS_DATA_UPDATED');
             }
         });
     }

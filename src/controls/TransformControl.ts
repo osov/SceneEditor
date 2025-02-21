@@ -54,21 +54,12 @@ function TransformControlCreate() {
 
     control.addEventListener('objectChange', () => {
         switch (control.getMode()) {
-            case 'translate':
-                translate();
-                EventBus.send('SYS_TRANSFORM_CHANGED');
-                break;
-            case 'rotate':
-                rotate();
-                EventBus.send('SYS_TRANSFORM_CHANGED');
-                break;
-            case 'scale':
-                scale();
-                EventBus.send('SYS_TRANSFORM_CHANGED');
-                break;
-            default:
-                break;
+            case 'translate': translate(); break;
+            case 'rotate': rotate(); break;
+            case 'scale': scale(); break;
         }
+
+        EventBus.send('SYS_DATA_UPDATED');
     });
 
     function set_proxy_position(x: number, y: number, z: number, objects = selectedObjects) {

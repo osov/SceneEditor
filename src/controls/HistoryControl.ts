@@ -2,6 +2,7 @@ import { Vector2 } from "three";
 import { AnchorEventData, MeshMoveEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
+import { TextMesh } from "../render_engine/objects/text";
 
 declare global {
     const HistoryControl: ReturnType<typeof HistoryControlCreate>;
@@ -22,7 +23,15 @@ export type HistoryData = {
     MESH_PIVOT: PivotEventData
     MESH_ANCHOR: AnchorEventData
     MESH_MOVE: MeshMoveEventData
-    MESH_NAME:{ id_mesh: number, name: string }
+    MESH_NAME: { id_mesh: number, name: string }
+    MESH_ACTIVE: { id_mesh: number, state: boolean }
+    MESH_VISIBLE: { id_mesh: number, state: boolean }
+    MESH_COLOR: { id_mesh: number, color: string }
+    MESH_TEXTURE: { id_mesh: number, texture: string }
+    MESH_TEXT: { id_mesh: number, text: string }
+    MESH_FONT: { id_mesh: number, font: string }
+    MESH_FONT_SIZE: { id_mesh: number, font_size: number }
+    MESH_TEXT_ALIGN: { id_mesh: number, text_align: 'left' | 'right' | 'center' | 'justify' }
 }
 type HistoryDataKeys = keyof HistoryData;
 
@@ -52,7 +61,7 @@ function HistoryControlCreate() {
             return;
         const last = ctx.pop()!;
         const type = last.type;
-        const list_mesh:IBaseMeshDataAndThree[] = [];
+        const list_mesh: IBaseMeshDataAndThree[] = [];
         if (type == 'MESH_TRANSLATE') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_TRANSLATE'];
@@ -148,10 +157,66 @@ function HistoryControlCreate() {
                 mesh.name = data.name;
                 list_mesh.push(mesh);
             }
+        } else if (type == 'MESH_VISIBLE') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_VISIBLE'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                mesh.set_visible(data.state);
+                list_mesh.push(mesh);
+            }
+        } else if (type == 'MESH_ACTIVE') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_ACTIVE'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                mesh.set_active(data.state);
+                list_mesh.push(mesh);
+            }
+        } else if (type == 'MESH_COLOR') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_COLOR'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                mesh.set_color(data.color);
+                list_mesh.push(mesh);
+            }
+        } else if (type == 'MESH_TEXTURE') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_TEXTURE'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                (mesh as Slice9Mesh).set_texture(data.texture);
+                list_mesh.push(mesh);
+            }
+        } else if (type == 'MESH_TEXT') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_TEXT'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                (mesh as TextMesh).set_text(data.text);
+                list_mesh.push(mesh);
+            }
+        } else if (type == 'MESH_FONT') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_FONT'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                (mesh as TextMesh).set_font(data.font);
+                list_mesh.push(mesh);
+            }
+        } else if (type == 'MESH_FONT_SIZE') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_FONT_SIZE'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                (mesh as TextMesh).fontSize = data.font_size;
+                list_mesh.push(mesh);
+            }
+        } else if (type == 'MESH_TEXT_ALIGN') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_TEXT_ALIGN'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                (mesh as TextMesh).textAlign = data.text_align;
+                list_mesh.push(mesh);
+            }
         }
-        if (list_mesh.length > 0){
-            for (let i = 0; i < list_mesh.length; i++) 
-                 list_mesh[i].transform_changed();
+        if (list_mesh.length > 0) {
+            for (let i = 0; i < list_mesh.length; i++)
+                list_mesh[i].transform_changed();
             SelectControl.set_selected_list(list_mesh);
             ControlManager.update_graph();
         }
