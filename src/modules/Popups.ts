@@ -14,19 +14,19 @@ export function register_popups() {
 Popups.open({
     type: "Notify",
     params: {title: "Notify", text: "lorem inpsum dolor....", button: "Ok", auto_close: true},
-    callback: () => {}
+    callback: nameFunction   // (success: boolean) => void
 });
 
 Popups.open({
     type: "Confirm",
     params: {title: "Confirm", text: "lorem inpsum dolor?", button: "Yes", buttonNo: "No", auto_close: true},
-    callback: () => {}
+    callback: nameFunction   // (success: boolean) => void
 });
 
 Popups.open({
     type: "Rename",
     params: {title: "Rename", button: "Ok", auto_close: true},
-    callback: () => {}
+    callback: nameFunction   // (success: boolean, name?: string) => void
 });
 
 Popups.open({
@@ -36,7 +36,9 @@ Popups.open({
         button: "Add", 
         list: [{id: "1", title: "Layer 1"}, {id: "2", title: "Layer 2", can_delete: true}]
     }, 
-    callback: () => {}
+    callback: nameFunction   
+    //  action: 'add'   (success: boolean, data?: {action: string, item: { id: string, title: string }) => void
+    //  action: 'delete'   (success: boolean, data?: {action: string, itemId: string | number }) => void
 });
 
 Popups.open({
@@ -47,7 +49,8 @@ Popups.open({
         list: [{id: "1", title: "Option 1"}, {id: "2", title: "Option 2", selected: true }],
         auto_close: true
     }, 
-    callback: () => {}
+    callback: nameFunction   
+    //  action: 'selected'   (success: boolean, data?: {action: string, itemId: string | number }) => void
 });
 
 */
@@ -56,19 +59,19 @@ Popups.open({
 interface Notify {
     type: "Notify",
     params: { title: string, text: string, button: string, auto_close?: boolean },
-    callback: Function
+    callback: (success: boolean) => void
 }
 
 interface Confirm {
     type: "Confirm",
     params: { title: string, text: string, button: string, buttonNo: string, auto_close?: boolean },
-    callback: Function
+    callback: (success: boolean) => void
 }
 
 interface Rename {
     type: "Rename",
     params: { title: string, button: string, auto_close?: boolean },
-    callback: Function
+    callback: (success: boolean, name?: string) => void
 }
 
 interface Layers {
@@ -78,7 +81,7 @@ interface Layers {
         button: string,
         list: LayerItem [],
     },
-    callback: Function
+    callback: (success: boolean, data?: cbDataItem | cbDataId) => void
 }
 
 interface LayerItem {
@@ -95,13 +98,23 @@ interface Select {
         list: SelectItem [],
         auto_close?: boolean
     },
-    callback: Function
+    callback: (success: boolean, data?: cbDataId) => void
 }
 
 interface SelectItem {
     id: string,
     title: string,
     selected?: boolean
+}
+
+interface cbDataId {
+    action: string,
+    itemId: string | number
+}
+
+interface cbDataItem {
+    action: string,
+    item: LayerItem 
 }
 
 function PopupsCreate() {
@@ -127,7 +140,10 @@ function PopupsCreate() {
         // if (data?.type == 'Layers') {
             const layer_list: LayerItem [] = (data?.type == 'Layers' && data?.params?.list) ? deepClone(data?.params?.list) : [];
             const wrLayersList = popup.querySelector('#LayersList') as HTMLElement | null;
-            if (wrLayersList && data?.type == 'Layers') wrLayersList.innerHTML = getLayersHtml(layer_list);
+            if (wrLayersList && data?.type == 'Layers') { 
+                wrLayersList.innerHTML = getLayersHtml(layer_list);
+                wrLayersList.addEventListener('click', layerListClick);
+            }
         // }
 
         // if (data?.type == 'Select') {
@@ -147,9 +163,15 @@ function PopupsCreate() {
         function closePopup() {
             data?.callback(false);
             hidePopup(popup);
+            clearClickBtn()
+        }
+
+        function clearClickBtn() {
             if (okBtn) okBtn.removeEventListener('click', fClick);
+            if (noBtn) noBtn.removeEventListener('click', closePopup);
             if (closeBg) closeBg.removeEventListener('click', closePopup);
             if (closeBtn) closeBtn.removeEventListener('click', closePopup);
+            if (wrLayersList) wrLayersList.removeEventListener('click', layerListClick);
         }
         
         if (okBtn) {
@@ -163,7 +185,7 @@ function PopupsCreate() {
                 data?.callback(true);
                 if (data.params?.auto_close == true) {
                     hidePopup(popup);
-                    if (okBtn) okBtn.removeEventListener('click', fClick);  
+                    clearClickBtn();  
                 }
             }
 
@@ -171,7 +193,7 @@ function PopupsCreate() {
                 data?.callback(true);
                 if (data.params?.auto_close == true) {
                     hidePopup(popup);
-                    if (okBtn) okBtn.removeEventListener('click', fClick);  
+                    clearClickBtn();
                 }
             }
 
@@ -180,7 +202,7 @@ function PopupsCreate() {
                 inputField.value = '';
                 if (data.params?.auto_close == true) {
                     hidePopup(popup);
-                    if (okBtn) okBtn.removeEventListener('click', fClick);  
+                    clearClickBtn();  
                 }
             }
 
@@ -190,7 +212,6 @@ function PopupsCreate() {
                 layer_list.push(newItem);
                 wrLayersList.innerHTML = getLayersHtml(layer_list);
                 inputField.value = '';
-                wrLayersList.addEventListener('click', layerListClick);
             }
 
             if (data?.type == 'Select' && wrSelectList) {
@@ -199,7 +220,7 @@ function PopupsCreate() {
                     data?.callback(true, { action: 'selected', itemId: select_list[itemSelected]?.id });
                     if (data.params?.auto_close == true) {
                         hidePopup(popup);
-                        if (okBtn) okBtn.removeEventListener('click', fClick);  
+                        clearClickBtn();  
                     }
                 }
             }
@@ -208,7 +229,7 @@ function PopupsCreate() {
 
         function removeItemLayer(id: string) {
             layer_list.splice(layer_list.findIndex((item: LayerItem) => item.id == id), 1);
-            data?.callback(true, { action: 'delete', itemId: id });
+            if (data?.type == 'Layers') data?.callback(true, { action: 'delete', itemId: id });
             if (wrLayersList) wrLayersList.innerHTML = getLayersHtml(layer_list);
         }
 
@@ -216,7 +237,6 @@ function PopupsCreate() {
             const btnRemove = e.target.closest('.LayersList__item_remove');
             const btnId = btnRemove?.getAttribute('data-id');
             if (btnId) removeItemLayer(btnId);
-            if (wrLayersList) wrLayersList.removeEventListener('click', fClick);
         }
         
 
