@@ -8,20 +8,27 @@ export function register_popups() {
     (window as any).Popups = PopupsCreate();
 }
 
+//  ****** Api Popups ******
 /* 
+
+Popups.open({
+    type: "Notify",
+    params: {title: "Notify", text: "lorem inpsum dolor....", button: "Ok", auto_close: true},
+    callback: () => {}
+});
+
+Popups.open({
+    type: "Confirm",
+    params: {title: "Confirm", text: "lorem inpsum dolor?", button: "Yes", buttonNo: "No", auto_close: true},
+    callback: () => {}
+});
+
 Popups.open({
     type: "Rename",
     params: {title: "Rename", button: "Ok", auto_close: true},
     callback: () => {}
 });
-*/
-interface Rename {
-    type: "Rename",
-    params: { title: string, button: string, auto_close?: boolean },
-    callback: Function
-}
 
-/* 
 Popups.open({
     type: "Layers", 
     params: { 
@@ -31,7 +38,39 @@ Popups.open({
     }, 
     callback: () => {}
 });
+
+Popups.open({
+    type: "Select", 
+    params: { 
+        title: "SelectList",
+        button: "", 
+        list: [{id: "1", title: "Option 1"}, {id: "2", title: "Option 2", selected: true }],
+        auto_close: true
+    }, 
+    callback: () => {}
+});
+
 */
+
+
+interface Notify {
+    type: "Notify",
+    params: { title: string, text: string, button: string, auto_close?: boolean },
+    callback: Function
+}
+
+interface Confirm {
+    type: "Confirm",
+    params: { title: string, text: string, button: string, buttonNo: string, auto_close?: boolean },
+    callback: Function
+}
+
+interface Rename {
+    type: "Rename",
+    params: { title: string, button: string, auto_close?: boolean },
+    callback: Function
+}
+
 interface Layers {
     type: "Layers",
     params: {
@@ -48,18 +87,6 @@ interface LayerItem {
     can_delete?: boolean
 }
 
-/*
-Popups.open({
-    type: "Select", 
-    params: { 
-        title: "SelectList",
-        button: "", 
-        list: [{id: "1", title: "Option 1"}, {id: "2", title: "Option 2", selected: true }],
-        auto_close: true
-    }, 
-    callback: () => {}
-});
-*/
 interface Select {
     type: "Select",
     params: {
@@ -79,15 +106,21 @@ interface SelectItem {
 
 function PopupsCreate() {
 
-    function open(data: Rename | Layers | Select) {
+    function open(data: Notify | Confirm | Rename | Layers | Select) {
         const popup = document.querySelector(`#popup${data?.type}`) as HTMLInputElement | null;
         if (!popup) return;
 
         const okBtn = popup.querySelector('.popup__okBtn') as HTMLInputElement | null;
         if (okBtn) { okBtn.textContent = data?.params?.button || okBtn.textContent; }
+
+        const noBtn = popup.querySelector('.popup__noBtn') as HTMLInputElement | null;
+        if (noBtn && data?.type == 'Confirm') { noBtn.textContent = data?.params?.buttonNo || noBtn.textContent; }
         
         const popupTitle = popup.querySelector('.popup__title span') as HTMLInputElement | null;
         if (popupTitle) { popupTitle.textContent = data?.params?.title; }
+
+        const popupText = popup.querySelector('.popup__text') as HTMLInputElement | null;
+        if (popupText && data?.type == 'Notify') { popupText.textContent = data?.params?.text || popupText.textContent; }
         
         const inputField = popup.querySelector('.popup__input') as HTMLInputElement | null;
 
@@ -106,7 +139,8 @@ function PopupsCreate() {
         const closeBg = popup.querySelector('.bgpopup') as HTMLElement | null;
         const closeBtn = popup.querySelector('.popup__close') as HTMLElement | null;
         
-        [closeBtn, closeBg].forEach((elem: any) => {
+        const closeListBtns = data?.type == 'Confirm' ? [closeBg, closeBtn, noBtn] : [closeBg, closeBtn];
+        closeListBtns.forEach((elem: any) => {
             if (elem) elem.addEventListener('click', closePopup);
         });
         
@@ -125,6 +159,22 @@ function PopupsCreate() {
         function fClick() {
             if(!popup) return;
 
+            if (data?.type == "Notify") {
+                data?.callback(true);
+                if (data.params?.auto_close == true) {
+                    hidePopup(popup);
+                    if (okBtn) okBtn.removeEventListener('click', fClick);  
+                }
+            }
+
+            if (data?.type == "Confirm") {
+                data?.callback(true);
+                if (data.params?.auto_close == true) {
+                    hidePopup(popup);
+                    if (okBtn) okBtn.removeEventListener('click', fClick);  
+                }
+            }
+
             if (data?.type == "Rename" && inputField && inputField.value.trim().length > 0) {
                 data?.callback(true, inputField?.value.trim());
                 inputField.value = '';
@@ -135,18 +185,15 @@ function PopupsCreate() {
             }
 
             if (data?.type == 'Layers' && wrLayersList && inputField && inputField.value.trim().length > 0) {
-                log('Layers')
                 const newItem: LayerItem = { id: Date.now().toString(), title: inputField?.value.trim(), can_delete: true };
                 data?.callback(true, { action: 'add', item: newItem });
                 layer_list.push(newItem);
                 wrLayersList.innerHTML = getLayersHtml(layer_list);
-                log(layer_list)
                 inputField.value = '';
                 wrLayersList.addEventListener('click', layerListClick);
             }
 
             if (data?.type == 'Select' && wrSelectList) {
-                log('Select', wrSelectList, wrSelectList?.value)
                 const itemSelected = select_list.findIndex((item: SelectItem) => item.id == wrSelectList?.value);
                 if (wrSelectList?.value && itemSelected > -1) {
                     data?.callback(true, { action: 'selected', itemId: select_list[itemSelected]?.id });
@@ -163,7 +210,6 @@ function PopupsCreate() {
             layer_list.splice(layer_list.findIndex((item: LayerItem) => item.id == id), 1);
             data?.callback(true, { action: 'delete', itemId: id });
             if (wrLayersList) wrLayersList.innerHTML = getLayersHtml(layer_list);
-            log({layer_list, id})
         }
 
         function layerListClick(e: any) {
