@@ -1,6 +1,6 @@
-import { PING_INTERVAL, SERVER_URL, WS_SERVER_URL } from "../config";
+import { SERVER_URL } from "../config";
 import { ProtocolWrapper } from "../render_engine/types";
-import { CommandId, URL_PATHS, AssetsResponses, FSObject, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, NetMessages } from "./modules_const";
+import { CommandId, URL_PATHS, AssetsResponses, FSObject, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, NetMessages, SAVE_INFO_CMD as SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD } from "./modules_const";
 
 
 declare global {
@@ -52,25 +52,34 @@ function ClientAPIModule() {
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path, name, new_name});
     }
 
-    async function remove(project: string, path: string, name: string): Promise<AssetsResponses[typeof DELETE_CMD]> {
+    async function remove(project: string, path: string): Promise<AssetsResponses[typeof DELETE_CMD]> {
         const command_id = DELETE_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path, name});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path});
+    }
+
+    async function save_data(project: string, path: string, data: string): Promise<AssetsResponses[typeof SAVE_DATA_CMD]> {
+        const command_id = SAVE_DATA_CMD;
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path, data});
+    }
+    
+    async function get_data(project: string, path: string): Promise<AssetsResponses[typeof GET_DATA_CMD]> {
+        const command_id = GET_DATA_CMD;
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path});
+    }
+
+    async function save_info(project: string, path: string, data: string): Promise<AssetsResponses[typeof SAVE_INFO_CMD]> {
+        const command_id = SAVE_INFO_CMD;
+        const data_json = JSON.parse(data);
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path, data: data_json});
+    }
+    
+    async function get_info(project: string, path: string): Promise<AssetsResponses[typeof GET_INFO_CMD]> {
+        const command_id = GET_INFO_CMD;
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path});
     }
 
     async function test_server_ok() {
         return await api.GET(URL_PATHS.TEST, {});
-    }
-
-    function connect() {
-        WsClient.connect(WS_SERVER_URL);
-        ping();
-    }
-
-    function ping() {
-        if (WsClient.is_connected()) {
-            WsClient.send_message('CS_PING', {client_time: System.now()});
-        }
-        return setTimeout(() => ping(), PING_INTERVAL);
     }
     
     EventBus.on('ON_WS_CONNECTED', (m) => {
@@ -84,11 +93,11 @@ function ClientAPIModule() {
     function on_message_socket<T extends keyof NetMessages>(id_message: T, _message: NetMessages[T]) {
         if (id_message == 'SC_DIR_CHANGED') {
             const message = _message as NetMessages['SC_DIR_CHANGED'];
-            EventBus.trigger('SC_DIR_CHANGED', message)
+            EventBus.trigger('SC_DIR_CHANGED', message);
         }
     }
 
-    return {get_projects, load_project, new_project, new_folder, get_folder, copy, rename, remove, test_server_ok, connect}
+    return {get_projects, load_project, new_project, new_folder, get_folder, copy, rename, remove, test_server_ok, save_info, get_info, save_data, get_data}
 }
 
 

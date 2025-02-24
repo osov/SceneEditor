@@ -1,4 +1,4 @@
-import { IBaseMeshDataAndThree } from "../render_engine/types";
+import { IBaseMeshDataAndThree, TRecursiveDict } from "../render_engine/types";
 import { ChangeInfo } from "../controls/InspectorControl";
 
 export type VoidCallback = () => void;
@@ -56,7 +56,11 @@ export type AssetsCommands = {
     [LOAD_PROJECT_CMD]: { project: string }
     [RENAME_CMD]: { name: string, new_name: string, path: string, project: string },
     [COPY_CMD]: { path: string, new_path: string, project: string },
-    [DELETE_CMD]: { name: string, path: string, project: string },
+    [DELETE_CMD]: { path: string, project: string },
+    [SAVE_INFO_CMD]: { path: string, project: string, data: TRecursiveDict },
+    [GET_INFO_CMD]: { path: string, project: string },
+    [SAVE_DATA_CMD]: { path: string, project: string, data: string },
+    [GET_DATA_CMD]: { path: string, project: string },
     // [NEW_MATERIAL]: {name: string, path: string, data: IDictionary<string>},
     // [GET_MATERIAL]: {name: string, path: string},
     // [SET_INFO]: {name: string, path: string, data: IDictionary<string>},
@@ -76,10 +80,14 @@ export type AssetsResponses = {
     [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
     [GET_FOLDER_CMD]: BaseResp<FSObject[]>,
     [SEARCH_CMD]: BaseResp<string>,
-    [LOAD_PROJECT_CMD]: BaseResp<FSObject[]>,
+    [LOAD_PROJECT_CMD]: BaseResp<{assets: FSObject[], data_files: FSObject[], name: string}>,
     [RENAME_CMD]: BaseResp<VoidMessage>,
     [COPY_CMD]: BaseResp<VoidMessage>,
     [DELETE_CMD]: BaseResp<VoidMessage>,
+    [SAVE_INFO_CMD]: BaseResp<VoidMessage>,
+    [GET_INFO_CMD]: BaseResp<TRecursiveDict>,
+    [SAVE_DATA_CMD]: BaseResp<VoidMessage>,
+    [GET_DATA_CMD]: BaseResp<string>,
 }
 
 export type NetMessages = {
@@ -98,9 +106,16 @@ export const SEARCH_CMD = '/search';
 export const RENAME_CMD = '/rename';
 export const COPY_CMD = '/copy';
 export const DELETE_CMD = '/delete';
+export const SAVE_DATA_CMD = '/save_data';
+export const GET_DATA_CMD = '/get_data';
+export const SAVE_INFO_CMD = '/save_info';
+export const GET_INFO_CMD = '/get_info';
+export const METADATA = '/metadata.txt'
 
 export const URL_PATHS = {
     TEST: '/test',
+    DOWNLOAD: '/download',
+    UPLOAD: '/upload',
     ASSETS: '/assets',
     API: '/api',
 }

@@ -1,5 +1,6 @@
-import { SERVER_URL } from "../config";
-import { FSObject, FSObjectType, Messages } from "../modules/modules_const";
+import { SERVER_URL, WS_SERVER_URL } from "../config";
+import { FSObject, FSObjectType, Messages, URL_PATHS } from "../modules/modules_const";
+import { _span_elem } from "../modules/utils";
 
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
@@ -13,16 +14,23 @@ export function register_asset_control() {
 function AssetControlCreate() {
     const filemanager = document.querySelector('.filemanager') as HTMLDivElement;
     const breadcrumbs = filemanager.querySelector('.breadcrumbs') as HTMLDivElement;
-    const file_list = document.getElementById('file-container') as HTMLDivElement;
+    const assets_list = filemanager.querySelector('.assets_list') as HTMLDivElement;
+    const menu: any = document.querySelector('.fm_wr_menu') as HTMLDivElement;
+    let selected_asset: string | undefined = undefined;
+    let menu_visible = false;
     let current_path = '';
     let current_project: string | undefined = undefined;
 
-    async function load_project(name: string) {
-        const load_project_resp = await ClientAPI.load_project(name);
-        if (load_project_resp.result !== 1) return;
+    async function set_current_project(name: string, folder_content?: FSObject[]) {
         current_project = name;
         current_path = '';
-        go_to_dir(current_path);
+        if (folder_content) {
+            draw_assets(current_path, folder_content);
+            generate_breadcrumbs(current_path);
+        }
+        else {
+            go_to_dir(current_path);
+        }
     }
 
     async function go_to_dir(path: string) {
@@ -47,20 +55,19 @@ function AssetControlCreate() {
         }
     }
 
-    // отрисовываем файлы
     function draw_assets(path: string, list: FSObject[]) {
-		const scannedFolders: FSObject[] = [];
-		const scannedFiles: FSObject[] = [];
+		const scanned_folders: FSObject[] = [];
+		const scanned_files: FSObject[] = [];
 		list.forEach(function (d)
 		{
 			if (d.type === FSObjectType.FOLDER)
-				scannedFolders.push(d);
+				scanned_folders.push(d);
 			else if (d.type === FSObjectType.FILE)
-				scannedFiles.push(d);
+				scanned_files.push(d);
 		});
 
-		file_list.innerHTML = "";
-        file_list.hidden = true;
+		assets_list.innerHTML = "";
+        assets_list.hidden = true;
 
         // const nothing_found_elem = filemanager.querySelector('.nothingfound') as HTMLDivElement;
 		// if(!scannedFolders.length && !scannedFiles.length)
@@ -68,125 +75,204 @@ function AssetControlCreate() {
 		// else
         //     nothing_found_elem.hidden = true;
 
-		if(scannedFolders.length)
+		if(scanned_folders.length)
 		{
-			scannedFolders.forEach(function(f)
+			scanned_folders.forEach(function(f)
 			{   
                 const num_files = f.num_files as number;
-				let itemsLength = '';
+				const _path = f.path.replaceAll('\\', '/');
+				let items_length = '';
                 let name = escapeHTML(f.name);
-                let icon = '<span class="icon folder"></span>';
-
+                const icon_elem = _span_elem("", ["icon", "folder"]);
 				if(num_files) {
-					icon = '<span class="icon folder full"></span>';
+                    icon_elem.classList.add("full");
 				}
-
 				if(num_files == 1)
-					itemsLength = `${num_files} Файл`;
+					items_length = `${num_files} Файл`;
 				else if(num_files > 1)
-					itemsLength = `${num_files} Файлов`;
+					items_length = `${num_files} Файлов`;
 				else
-					itemsLength = 'Пусто';
-				const folder = '<li class="folders" data-info="'+ f.path +'"><a href="javascript:void(0);" title="'+ f.name +'" class="folders" >'+ icon +'<span class="name">' + name + '</span> <span class="details">' + itemsLength + '</span></a></li>';
-				file_list.innerHTML += folder;
+					items_length = 'Пусто';
+                const details_elem = _span_elem(items_length, ["details"]);
+                const name_elem = _span_elem(name, ["name"]);
+				const folder_elem = document.createElement("li");
+                folder_elem.classList.add("folder", "asset");
+                folder_elem.setAttribute("data-info", _path);
+                folder_elem.appendChild(icon_elem);
+                folder_elem.appendChild(name_elem);
+                folder_elem.appendChild(details_elem);
+                
+                assets_list.appendChild(folder_elem);
 			});
 		}
 
-		if(scannedFiles.length)
+		if(scanned_files.length)
 		{
-			scannedFiles.forEach(function(f)
+			scanned_files.forEach(function(f)
 			{
 				const file_size = bytesToSize(f.size);
                 const name = escapeHTML(f.name);
                 let file_type = getFileExt(name);
-				let icon = '<span class="icon file"></span>';
-				const _path = f.path;
-				const src = f.src ? f.src.replace('\\', '/') : '';
+                let icon_elem = _span_elem("", ["icon", "file"]);
+                const details_elem = _span_elem(file_size, ["details"]);
+                const name_elem = _span_elem(name, ["name"]);
+				const _path = f.path.replaceAll('\\', '/');
+				const src = f.src ? f.src.replaceAll('\\', '/') : '';
                 const src_url = new URL(src, SERVER_URL);
-				let wtype = "none";
-				if (file_type == 'mtr')
-					wtype = "material";
-				icon = '<span data-id="'+ _path +'" class="icon drag file f-'+ file_type +'" data-type="'+ wtype +'" draggable="true">.'+ file_type +'</span>';
-				if (fileIsImg(_path))
-				{
-					const img_path = _path.split("/").join("/");
-					icon = `<img src="${src_url}" data-id="${_path}" class="icon img drag" data-type="texture" draggable="true"/>`;
+				if (file_type == "mtr") {
+                    icon_elem.setAttribute("data-id", _path);
+                    icon_elem.setAttribute("data-type", "material");
+                    icon_elem.setAttribute("draggable", "true");
+                    icon_elem.classList.add("icon", "drag", "f-mtr");
+                }
+				else if (fileIsImg(_path)) {	
+                    icon_elem = document.createElement("img");
+                    icon_elem.setAttribute("src", src_url.toString());
+                    icon_elem.setAttribute("data-id", _path);
+                    icon_elem.setAttribute("data-type", "texture");
+                    icon_elem.setAttribute("draggable", "true");
+                    icon_elem.classList.add("icon", "img", "drag");
 				}
-				const file = '<li class="files" data-info="'+ _path +'"><a href="javascript:void(0);" title="'+ f.name +'" class="files" >'+ icon +'<span class="name">'+ name +'</span> <span class="details">'+ file_size +'</span></a></li>';
-				file_list.innerHTML += file;
+				const file_elem = document.createElement("li");
+                file_elem.classList.add("file", "asset");
+                file_elem.setAttribute("data-info", _path);
+                file_elem.appendChild(icon_elem);
+                file_elem.appendChild(name_elem);
+                file_elem.appendChild(details_elem);
+                
+                assets_list.appendChild(file_elem);
 			});
 		}
+        assets_list.hidden = false;
     }
 
-    // выдает информацию о содержимом файла, обычно для текстоподобных нужно будет
-    // текстуры/модели сюда не будут относиться
-    function get_file_data(path: string) {
-        return '';
+    async function get_file_data(path: string) {
+        if (!current_project) return;
+        return await ClientAPI.get_data(current_project, path);
     }
 
-    // Запись непосредственно в файл
-    function save_file_data(path: string, data: string) {
-
+    async function save_file_data(path: string, data: string) {
+        if (!current_project) return;
+        await ClientAPI.save_data(current_project, path, data);
     }
 
-    // информация о файле(храним в 1 общем файле с мета информацией обо всех файлах(если были изменены))
-    // для примера можем каждой текстуре задать свойства в каком она атласе
-    function save_meta_file_info(path: string, data: string) {
+    async function save_meta_file_info(path: string, data: string) {
+        if (!current_project) return;
+        await ClientAPI.save_info(current_project, path, data);
     }
 
-    // извлекает информация о каком-то файле
-    function get_meta_file_info(path: string) {
-        return '';
+    async function get_meta_file_info(path: string) {
+        if (!current_project) return;
+        return await ClientAPI.get_info(current_project, path);
     }
 
     function generate_breadcrumbs(dir: string) {
-		let path = dir.split('/').slice(0);
+        breadcrumbs.innerHTML = "";
+        let path = [""];
+        if (dir !== "") path = ("/" + dir.replaceAll("\\", "/")).split("/");
 		for(let i=1; i < path.length; i++)
-			path[i] = path[i-1]+ '/' +path[i];
-		if (path[0] == "")
-			path[0] = 'Файлы';
-		let url = '';
-        path.forEach(function (u, i)
-			{
-				var name = u.split("/");
-				if (i !== path.length - 1) {
-					url += `<a href="javascript:void(0);"><span class="folderName" data-info="${u}>' + ${name[name.length-1]} + '</span></a> <span class="arrow">→</span>`;                    
-                }
-				else
-					url += '<span class="folderName">' + name[name.length-1] + '</span>';
-			});
-        breadcrumbs.innerHTML = url;
+			path[i] = path[i-1] + "/" + path[i];
+        path.forEach(function (u, i) {
+            const temp = u.split("/");
+            let name = temp[temp.length-1];
+            name = (name === "") ? "Файлы" : name;
+            if (i === 0 || i !== path.length - 1) {
+                const arrow = _span_elem("→", ["arrow"]);
+                const a_elem = document.createElement("a");
+                const span_elem = _span_elem(name, ["folderName"]);
+                span_elem.setAttribute("data-info", u.replace("/", ""));
+                a_elem.setAttribute("href", "javascript:void(0);");
+                a_elem.appendChild(span_elem);
+                breadcrumbs.appendChild(a_elem);
+                breadcrumbs.appendChild(arrow);                  
+            }
+            else {
+                const span_elem = _span_elem(name, ["folderName"]);
+                breadcrumbs.appendChild(span_elem);
+            }
+        });
 	}
 
-    async function draw_empty_project() {
-        // draw_assets();
-        generate_breadcrumbs('')
-    }
+    async function getFileAsync(dataTranfer: DataTransfer) {
+        const files = [];
+        log('length', dataTranfer.items.length)
+        for (var i = 0; i < dataTranfer.items.length; i++) {
+            const item = dataTranfer.items[i];
+            if (item.kind === 'file') {
+                if (typeof item.webkitGetAsEntry === 'function'){
+                    const entry = item.webkitGetAsEntry();
+                    if (entry != null) {
+                        const entryContent = await readEntryContentAsync(entry);
+                        files.push(...entryContent);
+                        continue;
+                    }
+                }
 
-    function onMouseDown(event: any) {
-        const folder_item = event.target.closest('.folders');
-        const file_item = event.target.closest('.files');
-        log(folder_item, file_item)
-    }
-
-    function onMouseMove(event: any) {
-        
-    }
-
-    async function onMouseUp(event: any) {
-        const folder_elem = event.target.closest('.folders');
-        if (folder_elem !== null) {
-            const path = folder_elem.getAttribute('data-info');
-            await go_to_dir(path);
-            return;
+                const file = item.getAsFile();
+                if (file) { files.push(file); }
+            }
         }
-        const breadcrumbs_elem = event.target.closest('.folderName');
-        if (breadcrumbs_elem !== null) {
-            const path = breadcrumbs_elem.getAttribute('data-info');
-            log('breadcrumbs_elem', path)
-            // await go_to_dir(path);
-            return;
-        }
+        return files;
+    };
+
+    function readEntryContentAsync(entry: FileSystemEntry): Promise<File[]> {
+        return new Promise((resolve, reject) => {
+            let reading = 0;
+            const contents: File[] = [];
+    
+            readEntry(entry);
+    
+            function readEntry(entry: FileSystemEntry) {
+                if (entry.isFile) {
+                    const file_entry = entry as FileSystemFileEntry;
+                    reading++;
+                    file_entry.file(file => {
+                        reading--;
+                        contents.push(file);
+    
+                        if (reading === 0) {
+                            resolve(contents);
+                        }
+                    });
+                } else if (entry.isDirectory) {
+                    const dir_entry = entry as FileSystemDirectoryEntry;
+                    readReaderContent(dir_entry.createReader());
+                }
+            };
+          
+            function readReaderContent(reader: FileSystemDirectoryReader) {
+                reading++;
+                reader.readEntries(function(entries) {
+                    reading--;
+                    for (const entry of entries) {
+                        readEntry(entry);
+                    }
+                    if (reading === 0) {
+                        resolve(contents);
+                    }
+                });
+            };
+        });
+    };
+    
+    function menu_click(event: any): void {
+        const menu_elem = event.target.closest(".fs_menu a");
+        if (!menu_elem) return;
+        const action = menu_elem.getAttribute("data-action");
+        if (!action) return;
+
+    }
+
+    function open_menu(event: any) {
+        if (!selected_asset) return;
+        if (!event.target.closest(".asset")) return;
+        menu_visible = true;
+    }
+
+    function close_menu() {
+        menu.classList.remove('active');
+        menu.removeAttribute('style');
+        menu_visible = false;
     }
 
     function on_dir_change(message: Messages['SC_DIR_CHANGED']) {
@@ -195,13 +281,107 @@ function AssetControlCreate() {
         }
     }
 
+    async function draw_empty_project() {
+        // draw_assets();
+        generate_breadcrumbs('')
+    }
+
+    function onMouseDown(event: any) {
+        if (menu_visible && !event.target.closest('.menu__context a')) {
+            close_menu();
+        }
+    }
+
+    function onMouseMove(event: any) {
+        
+    }
+
+    async function onMouseUp(event: any) {
+        
+        if (menu_visible && event.target.closest('.menu__context a') && selected_asset && event.button === 0) {
+            menu_click(event);
+        }
+        if (menu_visible == false && (event.button === 0 || event.button === 2)) {
+            if (!event.target.closest('.filemanager')) {
+                return;
+            }
+            if (event.button === 0) {
+                const folder_elem = event.target.closest('.folder.asset');
+                if (folder_elem !== null) {
+                    const path = folder_elem.getAttribute('data-info');
+                    log('path', path)
+                    await go_to_dir(path);
+                    return;
+                }
+                const breadcrumbs_elem = event.target.closest('a .folderName');
+                if (breadcrumbs_elem !== null) {
+                    const path = breadcrumbs_elem.getAttribute('data-info');
+                    log('path', path)
+                    await go_to_dir(path);
+                    return;
+                }
+            }
+            if (event.button === 2) {
+                open_menu(event);
+                return;
+            }
+        }
+    }
+
+    const dropZone = document.getElementById("drop_zone");
+    if (dropZone) {
+        let hoverClassName = 'hover';
+      
+        dropZone.addEventListener("dragenter", function(e) {
+            e.preventDefault();
+            dropZone.classList.add(hoverClassName);
+        });
+      
+        dropZone.addEventListener("dragover", function(e) {
+            e.preventDefault();
+            dropZone.classList.add(hoverClassName);
+        });
+      
+        dropZone.addEventListener("dragleave", function(e) {
+            e.preventDefault();
+            dropZone.classList.remove(hoverClassName);
+        });
+      
+        dropZone.addEventListener("drop", async function(e) {
+            e.preventDefault();
+            dropZone.classList.remove(hoverClassName);
+            if (!current_project) {
+                Log.warn('Попытка загрузить файл на сервер, но никакой проект не загружен');
+                return;
+            }
+            if (e.dataTransfer != null) {
+                // const files = await getFileAsync(e.dataTransfer);
+                const files = Array.from(e.dataTransfer.files);
+                if (files.length > 0) {
+                    const data = new FormData();
+                    for (const file of files) {
+                        data.append('file', file, file.name);
+                        data.append('path', current_path);
+                        data.append('project', current_project);
+                    }
+                    fetch(`${SERVER_URL}${URL_PATHS.UPLOAD}`, {
+                        method: 'POST',
+                        body: data
+                    })
+                    .then(() => console.log("file uploaded"))
+                    .catch(reason => console.error(reason));
+                }
+            }
+        });
+    }
+
     EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
     EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
     
     EventBus.on('SC_DIR_CHANGED', on_dir_change);
 
-    return { load_project, draw_assets, get_file_data, save_file_data, save_meta_file_info, get_meta_file_info, draw_empty_project };
+    return { set_current_project, draw_assets, get_file_data, save_file_data, save_meta_file_info, get_meta_file_info, draw_empty_project };
 }
 
 function escapeHTML(text: string) {
@@ -236,10 +416,27 @@ function fileIsImg(path: string) {
 }
 
 export async function run_debug_filemanager() {
+    // Подключаемся к серверу
     const resp = await ClientAPI.test_server_ok();
     if (resp && resp.result === 1) {
-        ClientAPI.connect();
-        await AssetControl.load_project('test');
+        
+        WsClient.connect(WS_SERVER_URL);
+        WsClient.ping();
+        // Загружаем список существующих проектов
+        const projects = await ClientAPI.get_projects();
+        if (projects.length > 0) {
+            // Загружаем первый проект из доступных
+            const load_project_resp = await ClientAPI.load_project(projects[0].name);
+            if (load_project_resp.result !== 1) 
+                log(`Failed to load project ${projects[0].name}`);
+            else {
+                const data = load_project_resp.data as {assets: FSObject[], data_files: FSObject[], name: string};
+                // Устанавливаем текущий проект для ассет менеждера
+                AssetControl.set_current_project(data.name, data.assets);
+
+                // Прочие действия при открытии проекта в редакторе
+            }
+        }
     }
     else {
         log('Server does not respond, cannot run debug filemanager');
