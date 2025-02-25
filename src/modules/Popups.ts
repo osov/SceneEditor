@@ -8,7 +8,7 @@ export function register_popups() {
     (window as any).Popups = PopupsCreate();
 }
 
-//  ****** Api Popups ******
+//  ****** Popups examples:  ******
 /* 
 
 Popups.open({

@@ -1,4 +1,5 @@
 import { deepClone } from "../modules/utils";
+import { contextMenuItem } from "../modules/ContextMenu";
 
 declare global {
     const TreeControl: ReturnType<typeof TreeControlCreate>;
@@ -23,7 +24,9 @@ export enum NodeAction {
     add_bar,
     add_scroll,
     add_sprite,
-    add_label
+    add_label,
+    add_gui_container,
+    add_go_container
 }
 
 interface Item {
@@ -89,6 +92,33 @@ function TreeControlCreate() {
     let boxDD: any = document.querySelector(".drag_and_drop"); // div таскания за мышью
     let ddVisible: boolean = false; //  видимость div перетаскивания 
 
+    const treeContextMenu: contextMenuItem [] = [
+        { text: 'Переименовать', action: NodeAction.rename },
+        { text: 'Вырезать', action: NodeAction.CTRL_X },
+        { text: 'Копировать', action: NodeAction.CTRL_C },
+        { text: 'Вставить', action: NodeAction.CTRL_V },
+        { text: 'Вставить дочерним', action: NodeAction.CTRL_B },
+        { text: 'Дублировать', action: NodeAction.CTRL_D },
+        { text: 'Удалить', action: NodeAction.remove },
+        { text: 'line' },
+        { text: 'Создать UI', children: [
+            { text: 'Добавить контейнер', action: NodeAction.add_gui_container },
+            { text: 'Добавить блок', action: NodeAction.add_box },
+            { text: 'Добавить текст', action: NodeAction.add_text },
+            { text: 'line' },
+            { text: 'Расширенные', children: [
+                { text: 'Добавить кнопку', action: NodeAction.add_button },
+                { text: 'Добавить прогресс бар', action: NodeAction.add_bar },
+                { text: 'Добавить скрол', action: NodeAction.add_scroll },
+            ] },
+        ] },
+        { text: 'line' },
+        { text: 'Game', children: [
+            { text: 'Добавить контейнер', action: NodeAction.add_go_container },
+            { text: 'Добавить спрайт', action: NodeAction.add_sprite },
+            { text: 'Добавить надпись', action: NodeAction.add_label },
+        ] },
+    ];
 
     function draw_graph(getList: Item[], scene_name?: string, is_clear_state = false) {
         currentSceneName = scene_name ? scene_name : currentSceneName;
@@ -277,7 +307,8 @@ function TreeControlCreate() {
         // event.preventDefault(); // иногда отключается плавное сворачивание ...
         
         if (mContextVisible && event.target.closest('.menu__context a') && itemDrag && event.button === 0) {
-            menuContextClick(event);
+            // menuContextClick(event);
+            log('menuContextClick')
         }
 
         if (mContextVisible == false && (event.button === 0 || event.button === 2)) {
@@ -925,51 +956,31 @@ function TreeControlCreate() {
         });
     }
 
+
     function openMenuContext(event: any): void {
         if (!itemDrag) return;
         if (!event.target.closest(".tree__item")) return;
 
         mContextVisible = true;
 
+        // запрет скроллинга при контекстном меню
         if (divTree.scrollHeight > divTree.clientHeight) {
             divTree.classList.add('no_scrolling');
         }
 
-        toggleMenuContextItem();
-
-        menuContext.classList.remove('bottom');
-        menuContext.classList.add("active");
-        menuContext.style.left = event.offset_x - 30 + 'px';
-
-        if (menuContext.clientHeight + 30 > window.innerHeight) {
-            menuContext.classList.add('bottom'); // делаем маленьким
-        }
-
-        if (menuContext.clientHeight + 30 > window.innerHeight) { // проверяем маленькое
-            menuContext.style.top = '15px';
-        }
-        else if (event.offset_y + menuContext.clientHeight + 30 > window.innerHeight) {
-            menuContext.classList.add('bottom');
-            if (menuContext.clientHeight > event.offset_y) {
-                menuContext.style.top = '15px';
-            }
-            else {
-                menuContext.style.top = event.offset_y + 18 - menuContext.clientHeight + 'px';
-            }
-        } 
-        else
-            menuContext.style.top = event.offset_y - 5 + 'px';
+        // ContextMenu.open(treeContextMenu, event, (tt, action) => {console.log('cM: ', tt, action)});
+        ContextMenu.open(treeContextMenu, event, menuContextClick);
        
     }
 
 
 
-    function menuContextClick(event: any): void {
-        const itemContext = event.target.closest(".menu__context a");
-        if (!itemContext) return;
-        const dataAction = itemContext?.getAttribute("data-action");
-        if (!dataAction || itemContext.classList.contains('not_active')) return;
-                
+    function menuContextClick(success: boolean, action?: number | string): void {
+        log('menuContextClick:: ', success, action);        
+        if(!success || action == undefined || action == null) return;
+        
+        const dataAction = action; 
+        
         if (dataAction == NodeAction[0]) {
             log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_X } }`);
             EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: itemDrag?.id, list: listSelected, key: NodeAction.CTRL_X });
@@ -1037,8 +1048,8 @@ function TreeControlCreate() {
 
     function menuContextClear(): void {
         divTree.classList.remove('no_scrolling');
-        menuContext.classList.remove('active');
-        menuContext.removeAttribute('style');
+        // menuContext.classList.remove('active');
+        // menuContext.removeAttribute('style');
         mContextVisible = false;
     }
 
@@ -1109,7 +1120,7 @@ function TreeControlCreate() {
         }
     }, false);
 
-    document.querySelector('#wr_tree, .menu__context')?.addEventListener('contextmenu', (event: any) => {
+    document.querySelector('#wr_tree')?.addEventListener('contextmenu', (event: any) => {
         event.preventDefault();
     });
     
