@@ -58,6 +58,7 @@ export function ResourceManagerModule() {
     async function preload_texture(path: string, atlas = '') {
         const name = get_file_name(path);
         if (has_texture_name(name, atlas)) {
+            Log.warn('texture exists', name, atlas);
             return atlases[atlas][name].data;
         }
         let texture: Texture;
@@ -68,6 +69,8 @@ export function ResourceManagerModule() {
         (texture as any).path = path;
         if (!atlases[atlas])
             atlases[atlas] = {};
+        if (atlases[atlas][name])
+            Log.warn('texture exists', name, atlas);
         atlases[atlas][name] = { path, data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
         log('Texture preloaded:', path);
         return atlases[atlas][name].data;
@@ -120,7 +123,7 @@ export function ResourceManagerModule() {
         })
     }
 
-    function get_all_fonts(){
+    function get_all_fonts() {
         return fonts;
     }
 
