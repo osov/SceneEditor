@@ -211,7 +211,7 @@ function InspectorControlCreate() {
 
     function init() {
         _inspector = new Pane({
-            container: document.querySelector('.menu_right') as HTMLDivElement
+            container: document.querySelector('.menu_right .inspector__body') as HTMLDivElement
         });
         _inspector.registerPlugin(TweakpaneImagePlugin);
         _inspector.registerPlugin(TweakpaneSearchListPlugin);
@@ -307,6 +307,11 @@ function InspectorControlCreate() {
 
         // добавляем поля в инспектор
         renderEntities(entities);
+
+        const tp_slo = document.querySelector('.tp-search-listv_options') as HTMLDivElement;
+        if (tp_slo) tp_slo.classList.add('my_scroll');
+        const tp_to = document.querySelector('.tp-thumbv_ovl') as HTMLDivElement;
+        if (tp_to) tp_to.classList.add('my_scroll');
     }
 
     function filterUniqueFields(info: ObjectInfo[]) {

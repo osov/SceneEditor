@@ -25,6 +25,7 @@
 }
 
 .filemanager .assets_list {
+	max-height: 250px;
 }
 
 
@@ -318,7 +319,7 @@
 
 .fm_wr_menu {
 	position: fixed;
-	visibility: hidden;
+	display: none;
 	width: auto;
 	min-width: 505px;
 	top: -0px;
@@ -339,7 +340,7 @@
   }
   
   .fm_wr_menu.active {
-	visibility: visible;
+	display: block;
   }
   
   .fm_menu {

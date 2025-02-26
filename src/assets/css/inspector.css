@@ -33,6 +33,15 @@
     display: unset;
 }
 
+.menu_right .inspector__body {
+    --inspector__body-height: calc(100vh - 32px);
+    height: var(--inspector__body-height);
+    max-height: var(--inspector__body-height);
+}
+.tp-thumbv_ovl {
+    max-height: var(--tp-plugin-thumbnail-list-height);
+}
+
 /* для теста */
 
 #file-container {

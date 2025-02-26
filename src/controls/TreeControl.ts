@@ -241,13 +241,23 @@ function TreeControlCreate() {
         return "cube";
     }
 
+    function scrollToElemInParent(parentBlock: HTMLElement, elem: any) {
+        if (!parentBlock || !elem) return;
+        
+        if (parentBlock.scrollHeight + 52 > window.innerHeight) { 
+            elem.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }
+    
     function scrollToLastSelected() {
+        
         const idLastSelected = listSelected.find((i: number) => !prevListSelected.includes(i));
         if (idLastSelected == undefined) return;
-
+        
         const lastSelected = document.querySelector(`.tree__item[data-id="${idLastSelected}"]`);
-        if (lastSelected) lastSelected.scrollIntoView({ behavior: "smooth", block: "center" });
-    } 
+        if (!lastSelected) return;
+        scrollToElemInParent(divTree, lastSelected);
+    }
 
     function findNextIdItemByPid(id: number, pid: number): number | undefined {
         const listPid = treeList.filter(e => e.pid === pid);
@@ -898,7 +908,7 @@ function TreeControlCreate() {
                     if (is_paint) {
                         s.classList.add(className);
                         addClassActive(s.closest(".li_line"), s.closest(".tree__item")?.getAttribute("data-pid"));
-                        s.scrollIntoView({ behavior: "smooth", block: "center" }); // скролим до элемента
+                        scrollToElemInParent(divTree, s); // скролим до элемента
                     }
                 });
             }, delay); //  поиск с паузой

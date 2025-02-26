@@ -148,7 +148,9 @@ body {
 }
 
 .menu_right {
-  width: 300px;
+  --menu_right_width: 300px;
+  width: var(--menu_right_width);
+  min-width: var(--menu_right_width);
   /* right: 0; */
   border-left: var(--menu_border);
   overflow-y: auto;
@@ -498,10 +500,10 @@ li:not(.active)>.tree__btn .use_trgl {
 
 .drag_and_drop {
   display: flex;
+  display: none;
   justify-content: flex-start;
   align-items: center;
   position: fixed;
-  visibility: hidden;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -514,7 +516,7 @@ li:not(.active)>.tree__btn .use_trgl {
 }
 
 .drag_and_drop.pos {
-  visibility: visible;
+  display: flex;
   height: auto;
 }
 
@@ -539,7 +541,7 @@ li:not(.active)>.tree__btn .use_trgl {
 
 .wr_menu__context {
   position: fixed;
-  visibility: hidden;
+  display: none;
   width: auto;
   min-width: 505px;
   top: -500px;
@@ -554,7 +556,7 @@ li:not(.active)>.tree__btn .use_trgl {
   --border_color: #3a3a3a;
   /* top: 100px;
   left: 10px;
-  visibility: visible;
+  display: block;
   border: 1px solid; */
 }
 
@@ -564,7 +566,7 @@ li:not(.active)>.tree__btn .use_trgl {
 }
 
 .wr_menu__context.active {
-  visibility: visible;
+  display: block;
 }
 
 .menu__context {
@@ -665,9 +667,9 @@ li.menu__context_separator span {
   bottom: 0%;
   opacity: 0;
   cursor: default;
-  visibility: hidden;
+  display: none;
   background: rgba(0, 0, 0, 0.8);
-  transition: opacity .4s, visibility .4s;
+  transition: opacity .4s;
   z-index: 99;
 }
 
@@ -682,10 +684,10 @@ li.menu__context_separator span {
   padding: 0 12px 12px 12px;
   border-radius: 3px;
   opacity: 0;
-  visibility: hidden;
+  display: none;
   background-color: var(--menu_bg);
   transform: translate(-50%, -50%);
-  transition: opacity .4s, visibility .4s;
+  transition: opacity .4s;
   z-index: 100;
 }
 
@@ -696,7 +698,7 @@ li.menu__context_separator span {
 .bgpopup.active,
 .popup.active {
   opacity: 1;
-  visibility: visible;
+  display: block;
 }
 
 .popup__title {
