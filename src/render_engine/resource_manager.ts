@@ -2,7 +2,7 @@ import { CanvasTexture, RepeatWrapping, Texture, TextureLoader, Vector2 } from '
 import { preloadFont } from 'troika-three-text'
 import { get_file_name } from './helpers/utils';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
-import { parse_tp_data_to_uv } from './atlas_parser';
+import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;

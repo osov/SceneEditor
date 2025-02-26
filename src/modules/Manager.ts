@@ -16,8 +16,8 @@ import { register_editor_modules } from "../modules_editor/Manager_editor";
 declare global {
     const Manager: ReturnType<typeof ManagerModule>;
     const GAME_CONFIG: typeof _GAME_CONFIG;
-    type UserMessages = _UserMessages & SystemMessagesEditor;
-    type SystemMessages = _SystemMessages ;
+    type UserMessages = _UserMessages;
+    type SystemMessages = _SystemMessages  & SystemMessagesEditor;
 }
 
 

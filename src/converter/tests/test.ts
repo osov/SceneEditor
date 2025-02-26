@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import { Vector3 } from "three";
-import { ExtDependenceType, NodeType, PrefabComponentType } from "../../render_engine/convert_types";
+import { ExtDependenceType, NodeType, PrefabComponentType } from "../convert_types";
 import { DefoldType, parseAtlas, parseFont, parsePrefab, parseScene, parseSpineScene } from "../scene_parser";
 
 const result = parseScene({

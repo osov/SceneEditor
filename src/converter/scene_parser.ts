@@ -20,7 +20,7 @@ import {
     NodeData,
     NodeType,
     PrefabComponentType
-} from "../render_engine/convert_types";
+} from "./convert_types";
 
 import {
     encodeCollection,
