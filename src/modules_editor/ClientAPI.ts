@@ -1,6 +1,7 @@
 import { SERVER_URL } from "../config";
+import { FSObject } from "../controls/AssetControl";
 import { ProtocolWrapper } from "../render_engine/types";
-import { CommandId, URL_PATHS, AssetsResponses, FSObject, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, NetMessages, SAVE_INFO_CMD as SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD } from "./modules_editor_const";
+import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD as SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor } from "./modules_editor_const";
 
 
 declare global {
@@ -83,17 +84,17 @@ function ClientAPIModule() {
     }
     
     EventBus.on('ON_WS_CONNECTED', (m) => {
-        WsClient.send_message('CS_CONNECT', { id_session });
+        WsClient.send_message('CLIENT_CONNECT', { id_session });
     });
     EventBus.on('ON_WS_DATA', (m) => {
         const data = JSON.parse(m.data) as ProtocolWrapper;
-        on_message_socket(data.id as keyof NetMessages, data.message);
+        on_message_socket(data.id as keyof NetMessagesEditor, data.message);
     });
 
-    function on_message_socket<T extends keyof NetMessages>(id_message: T, _message: NetMessages[T]) {
-        if (id_message == 'SC_DIR_CHANGED') {
-            const message = _message as NetMessages['SC_DIR_CHANGED'];
-            EventBus.trigger('SC_DIR_CHANGED', message);
+    function on_message_socket<T extends keyof NetMessagesEditor>(id_message: T, _message: NetMessagesEditor[T]) {
+        if (id_message == 'SERVER_FILE_SYSTEM_EVENT') {
+            const message = _message as NetMessagesEditor['SERVER_FILE_SYSTEM_EVENT'];
+            EventBus.trigger('SERVER_FILE_SYSTEM_EVENT', message);
         }
     }
 

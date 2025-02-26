@@ -1,6 +1,6 @@
 import { PING_INTERVAL } from "../config";
 import { NetMessages as NetMessagesBase } from "./modules_const";
-import { NetMessages as NetMessagesEditor } from "../modules_editor/modules_editor_const";
+import { NetMessagesEditor } from "../modules_editor/modules_editor_const";
 
 type NetMessages = NetMessagesBase & NetMessagesEditor;
 
@@ -77,16 +77,9 @@ function WsClientModule() {
         send_raw(JSON.stringify({ id: id_message, message }));
     }
 
-    function ping() {
-        if (WsClient.is_connected()) {
-            WsClient.send_message('CS_PING', {client_time: System.now()});
-        }
-        return setTimeout(() => ping(), PING_INTERVAL);
-    }
-
     // const send_command = function <T extends keyof Messages>(id_message: T, message?: Messages[T]) {
     //     WsClient.send_message('CS_Command', {id: id_message, message});
     // };
 
-    return {connect, disconnect, send_message, send_raw, is_connected, ping}
+    return {connect, disconnect, send_message, send_raw, is_connected}
 }

@@ -1,6 +1,7 @@
+import { WatchEventType } from "fs";
 import { SERVER_URL, WS_SERVER_URL } from "../config";
-import { FSObject, FSObjectType,  URL_PATHS } from "../modules_editor/modules_editor_const";
-import { _span_elem } from "../modules/utils";
+import { FILE_UPLOAD_CMD, ServerResponses, URL_PATHS } from "../modules_editor/modules_editor_const";
+import { _span_elem, json_parsable } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 
 declare global {
@@ -11,6 +12,13 @@ export function register_asset_control() {
     (window as any).AssetControl = AssetControlCreate();
 }
 
+export type FileUploadedData = { size: number, path: string, name: string, project: string };
+
+export type FSObjectType = "folder" | "file" | "null";
+
+export type FSEventType = WatchEventType | "removed";
+
+export interface FSObject { name: string, type: FSObjectType, size: number, path: string, ext?: string, num_files?: number, src?: string };
 
 function AssetControlCreate() {
     const filemanager = document.querySelector('.filemanager') as HTMLDivElement;
@@ -61,9 +69,9 @@ function AssetControlCreate() {
 		const scanned_files: FSObject[] = [];
 		list.forEach(function (d)
 		{
-			if (d.type === FSObjectType.FOLDER)
+			if (d.type === "folder")
 				scanned_folders.push(d);
-			else if (d.type === FSObjectType.FILE)
+			else if (d.type === "file")
 				scanned_files.push(d);
 		});
 
@@ -76,10 +84,8 @@ function AssetControlCreate() {
 		// else
         //     nothing_found_elem.hidden = true;
 
-		if(scanned_folders.length)
-		{
-			scanned_folders.forEach(function(f)
-			{   
+		if(scanned_folders.length) {
+			scanned_folders.forEach(function(f) {   
                 const num_files = f.num_files as number;
 				const _path = f.path.replaceAll('\\', '/');
 				let items_length = '';
@@ -98,7 +104,9 @@ function AssetControlCreate() {
                 const name_elem = _span_elem(name, ["name"]);
 				const folder_elem = document.createElement("li");
                 folder_elem.classList.add("folder", "asset");
-                folder_elem.setAttribute("data-info", _path);
+                folder_elem.setAttribute("data-name", name);
+                folder_elem.setAttribute("data-path", _path);
+                folder_elem.setAttribute("data-type", "folder");
                 folder_elem.appendChild(icon_elem);
                 folder_elem.appendChild(name_elem);
                 folder_elem.appendChild(details_elem);
@@ -109,8 +117,7 @@ function AssetControlCreate() {
 
 		if(scanned_files.length)
 		{
-			scanned_files.forEach(function(f)
-			{
+			scanned_files.forEach(function(f) {
 				const file_size = bytesToSize(f.size);
                 const name = escapeHTML(f.name);
                 let file_type = getFileExt(name);
@@ -120,23 +127,22 @@ function AssetControlCreate() {
 				const _path = f.path.replaceAll('\\', '/');
 				const src = f.src ? f.src.replaceAll('\\', '/') : '';
                 const src_url = new URL(src, SERVER_URL);
+				const file_elem = document.createElement("li");
 				if (file_type == "mtr") {
-                    icon_elem.setAttribute("data-id", _path);
-                    icon_elem.setAttribute("data-type", "material");
-                    icon_elem.setAttribute("draggable", "true");
+                    file_elem.setAttribute("data-type", "material");
+                    file_elem.setAttribute("draggable", "true");
                     icon_elem.classList.add("icon", "drag", "f-mtr");
                 }
 				else if (fileIsImg(_path)) {	
                     icon_elem = document.createElement("img");
                     icon_elem.setAttribute("src", src_url.toString());
-                    icon_elem.setAttribute("data-id", _path);
-                    icon_elem.setAttribute("data-type", "texture");
-                    icon_elem.setAttribute("draggable", "true");
+                    file_elem.setAttribute("data-type", "texture");
+                    file_elem.setAttribute("draggable", "true");
                     icon_elem.classList.add("icon", "img", "drag");
 				}
-				const file_elem = document.createElement("li");
                 file_elem.classList.add("file", "asset");
-                file_elem.setAttribute("data-info", _path);
+                file_elem.setAttribute("data-name", name);
+                file_elem.setAttribute("data-path", _path);
                 file_elem.appendChild(icon_elem);
                 file_elem.appendChild(name_elem);
                 file_elem.appendChild(details_elem);
@@ -181,7 +187,7 @@ function AssetControlCreate() {
                 const arrow = _span_elem("→", ["arrow"]);
                 const a_elem = document.createElement("a");
                 const span_elem = _span_elem(name, ["folderName"]);
-                span_elem.setAttribute("data-info", u.replace("/", ""));
+                span_elem.setAttribute("data-path", u.replace("/", ""));
                 a_elem.setAttribute("href", "javascript:void(0);");
                 a_elem.appendChild(span_elem);
                 breadcrumbs.appendChild(a_elem);
@@ -268,6 +274,29 @@ function AssetControlCreate() {
         if (!selected_asset) return;
         if (!event.target.closest(".asset")) return;
         menu_visible = true;
+        menu.classList.remove('bottom');
+        menu.classList.add("active");
+        menu.style.left = event.offset_x - 30 + 'px';
+
+        toggle_menu_options();
+        if (menu.clientHeight + 30 > window.innerHeight) {
+            menu.classList.add('bottom');
+        }
+
+        if (menu.clientHeight + 30 > window.innerHeight) {
+            menu.style.top = '15px';
+        }
+        else if (event.offset_y + menu.clientHeight + 30 > window.innerHeight) {
+            menu.classList.add('bottom');
+            if (menu.clientHeight > event.offset_y) {
+                menu.style.top = '15px';
+            }
+            else {
+                menu.style.top = event.offset_y + 18 - menu.clientHeight + 'px';
+            }
+        } 
+        else
+            menu.style.top = event.offset_y - 5 + 'px';
     }
 
     function close_menu() {
@@ -275,9 +304,24 @@ function AssetControlCreate() {
         menu.removeAttribute('style');
         menu_visible = false;
     }
+    
+    function toggle_menu_options() {
 
-    function on_dir_change(message: Messages['SC_DIR_CHANGED']) {
-        if (message.project_name === current_project && message.dir === current_path) {
+    }
+
+    async function on_file_upload(resp: Response) {
+        const resp_text = await resp.text();
+        if (!json_parsable(resp_text)) 
+            return;
+        const resp_json = JSON.parse(resp_text) as ServerResponses[typeof FILE_UPLOAD_CMD];
+        if (resp_json.result && resp_json.result === 1) {
+            const data = resp_json.data;
+            EventBus.trigger("SYS_FILE_UPLOADED", data)
+        }
+    }
+
+    function on_dir_change(message: Messages['SERVER_FILE_SYSTEM_EVENT']) {
+        if (message.project === current_project && message.path === current_path) {
             renew_current_dir();
         }
     }
@@ -298,7 +342,8 @@ function AssetControlCreate() {
     }
 
     async function onMouseUp(event: any) {
-        
+        if (!current_project) return;
+
         if (menu_visible && event.target.closest('.menu__context a') && selected_asset && event.button === 0) {
             menu_click(event);
         }
@@ -309,17 +354,22 @@ function AssetControlCreate() {
             if (event.button === 0) {
                 const folder_elem = event.target.closest('.folder.asset');
                 if (folder_elem !== null) {
-                    const path = folder_elem.getAttribute('data-info');
-                    log('path', path)
+                    const path = folder_elem.getAttribute('data-path');
                     await go_to_dir(path);
                     return;
                 }
                 const breadcrumbs_elem = event.target.closest('a .folderName');
                 if (breadcrumbs_elem !== null) {
-                    const path = breadcrumbs_elem.getAttribute('data-info');
-                    log('path', path)
+                    const path = breadcrumbs_elem.getAttribute('data-path');
                     await go_to_dir(path);
                     return;
+                }
+                const file_elem = event.target.closest('.file.asset');
+                if (file_elem !== null) {
+                    const path = file_elem.getAttribute('data-path');
+                    const name = file_elem.getAttribute('data-name');
+                    log(`Клик на ассет файл ${name}, путь ${path}, проект ${current_project}`)
+                    EventBus.trigger("SYS_CLICK_ON_FILE_ASSET", {name, path, project: current_project})
                 }
             }
             if (event.button === 2) {
@@ -380,7 +430,7 @@ function AssetControlCreate() {
     EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
     
-    EventBus.on('SC_DIR_CHANGED', on_dir_change);
+    EventBus.on('SERVER_FILE_SYSTEM_EVENT', on_dir_change);
 
     return { set_current_project, draw_assets, get_file_data, save_file_data, save_meta_file_info, get_meta_file_info, draw_empty_project };
 }
@@ -422,21 +472,26 @@ export async function run_debug_filemanager() {
     if (resp && resp.result === 1) {
         
         WsClient.connect(WS_SERVER_URL);
-        WsClient.ping();
         // Загружаем список существующих проектов
         const projects = await ClientAPI.get_projects();
+        let project_to_load = 'test';
         if (projects.length > 0) {
-            // Загружаем первый проект из доступных
-            const load_project_resp = await ClientAPI.load_project(projects[0].name);
-            if (load_project_resp.result !== 1) 
-                log(`Failed to load project ${projects[0].name}`);
-            else {
-                const data = load_project_resp.data as {assets: FSObject[], data_files: FSObject[], name: string};
-                // Устанавливаем текущий проект для ассет менеждера
-                AssetControl.set_current_project(data.name, data.assets);
+            // Будем загружать первый проект из доступных
+            project_to_load = projects[0].name;
+        }
+        else {
+            // Иначе создаём новый 
+            await ClientAPI.new_project(project_to_load);
+        }
+        const load_project_resp = await ClientAPI.load_project(project_to_load);
+        if (load_project_resp.result !== 1) 
+            log(`Failed to load project ${project_to_load}`);
+        else {
+            const data = load_project_resp.data as {assets: FSObject[], name: string};
+            // Устанавливаем текущий проект для ассет менеждера
+            AssetControl.set_current_project(data.name, data.assets);
 
-                // Прочие действия при открытии проекта в редакторе
-            }
+            // Прочие действия при открытии проекта в редакторе
         }
     }
     else {

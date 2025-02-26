@@ -26,5 +26,5 @@ export type _SystemMessages = {
 };
 
 export type NetMessages = {
-    CS_CONNECT: { id_session: number },
+    CLIENT_CONNECT: { id_session: number },
 }

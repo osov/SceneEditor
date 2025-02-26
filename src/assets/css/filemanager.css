@@ -321,8 +321,8 @@
 	visibility: hidden;
 	width: auto;
 	min-width: 505px;
-	top: -500px;
-	left: -500px;
+	top: -0px;
+	left: -0px;
 	min-height: min(385px, calc(100vh - 28px));
 	max-height: min(385px, calc(100vh - 28px));
 	overflow-y: auto;

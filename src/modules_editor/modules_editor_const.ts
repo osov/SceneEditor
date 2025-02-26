@@ -1,12 +1,14 @@
+import { WatchEventType } from "fs";
 import { IBaseMeshDataAndThree, TRecursiveDict } from "../render_engine/types";
 import { ChangeInfo } from "../controls/InspectorControl";
 import { VoidMessage } from "../modules/modules_const";
+import { FileUploadedData, FSObject, FSObjectType } from "../controls/AssetControl";
 
 export type ServerCommands = AssetsCommands;
 export type ServerResponses = AssetsResponses;
 export type CommandId = keyof ServerCommands;
 
-export type _SystemMessages_Editor = {
+export type _SystemMessagesEditor = {
     SYS_INPUT_UNDO: {},
     SYS_SELECTED_MESH: { mesh: IBaseMeshDataAndThree },
     SYS_SELECTED_MESH_LIST: { list: IBaseMeshDataAndThree[] },
@@ -20,7 +22,8 @@ export type _SystemMessages_Editor = {
     SYS_GRAPH_KEY_COM_PRESSED: { id: number, list: number[], key: string | number },
     SYS_GRAPH_ADD: { id: number, list: number[], type: string | number },
     SYS_INSPECTOR_UPDATED_VALUE: ChangeInfo,
-    SC_DIR_CHANGED: { project_name: string, dir: string },
+    SYS_FILE_UPLOADED: FileUploadedData,
+    SYS_CLICK_ON_FILE_ASSET: { name: string, path: string, project: string },
 };
 
 
@@ -57,7 +60,7 @@ export type AssetsResponses = {
     [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
     [GET_FOLDER_CMD]: BaseResp<FSObject[]>,
     [SEARCH_CMD]: BaseResp<string>,
-    [LOAD_PROJECT_CMD]: BaseResp<{ assets: FSObject[], data_files: FSObject[], name: string }>,
+    [LOAD_PROJECT_CMD]: BaseResp<{ assets: FSObject[], name: string }>,
     [RENAME_CMD]: BaseResp<VoidMessage>,
     [COPY_CMD]: BaseResp<VoidMessage>,
     [DELETE_CMD]: BaseResp<VoidMessage>,
@@ -65,12 +68,12 @@ export type AssetsResponses = {
     [GET_INFO_CMD]: BaseResp<TRecursiveDict>,
     [SAVE_DATA_CMD]: BaseResp<VoidMessage>,
     [GET_DATA_CMD]: BaseResp<string>,
+    [FILE_UPLOAD_CMD]: BaseResp<FileUploadedData>
 }
 
-export type NetMessages = {
-    CS_PING: { client_time: number },
-    SC_PONG: { client_time: number, server_time: number },
-    SC_DIR_CHANGED: { project_name: string, dir: string },
+export type NetMessagesEditor = {
+    CLIENT_CONNECT: { id_session: number },
+    SERVER_FILE_SYSTEM_EVENT: { path: string, project: string, obj_type: FSObjectType, event_type: WatchEventType },
 }
 
 export const GET_PROJECTS_CMD = '/get_projects';
@@ -86,6 +89,7 @@ export const SAVE_DATA_CMD = '/save_data';
 export const GET_DATA_CMD = '/get_data';
 export const SAVE_INFO_CMD = '/save_info';
 export const GET_INFO_CMD = '/get_info';
+export const FILE_UPLOAD_CMD = '/upload';
 export const METADATA = '/metadata.txt'
 
 export const URL_PATHS = {
@@ -95,11 +99,3 @@ export const URL_PATHS = {
     ASSETS: '/assets',
     API: '/api',
 }
-
-export enum FSObjectType {
-    FOLDER,
-    FILE
-}
-
-export interface FSObject { name: string, type: FSObjectType, size: number, path: string, ext?: string, num_files?: number, src?: string };
-

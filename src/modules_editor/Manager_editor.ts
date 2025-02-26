@@ -1,9 +1,9 @@
 import { register_client_api } from "./ClientAPI";
 
-import { _SystemMessages_Editor } from "../modules_editor/modules_editor_const";
+import { _SystemMessagesEditor, NetMessagesEditor } from "../modules_editor/modules_editor_const";
 
 declare global {
-    type SystemMessagesEditor = _SystemMessages_Editor;
+    type SystemMessagesEditor = _SystemMessagesEditor & NetMessagesEditor;
 }
 
 export function register_editor_modules(){

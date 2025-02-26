@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bunx --bun vite --config vite.config.js",
     "build": "vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "server-watch": "bun --watch server/main.ts"
   },
   "devDependencies": {
     "@types/three": "latest",
@@ -21,6 +22,7 @@
     "@three.ez/instanced-mesh": "^0.3.0-alpha.9",
     "@tweakpane/core": "^2.0.5",
     "@types/stats": "^0.16.30",
+    "@types/cookie": "^0.6.0",
     "camera-controls": "^2.9.0",
     "protobufjs": "^7.4.0",
     "stats.js": "^0.17.0",
@@ -30,6 +32,8 @@
     "tweakpane": "4.0.5",
     "tweakpane4-extended-vector-plugin": "^0.0.5",
     "tweakpane4-image-list-plugin": "1.0.7",
-    "tweakpane4-search-list-plugin": "1.0.4"
+    "tweakpane4-search-list-plugin": "1.0.4",
+    "bun-serve-router": "^0.0.3",
+    "cookie": "^1.0.2"
   }
 }
