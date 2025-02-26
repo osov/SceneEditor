@@ -64,6 +64,7 @@ function TreeControlCreate() {
     ];
     const contexts: Contexts = {};
     let currentSceneName: string = defaultList[0]?.name ? defaultList[0]?.name : "root";
+    let prevListSelected: number[] = [];
     let listSelected: number[] = [];
 
     let _is_mousedown: boolean = false; // зажата ли при mousemove
@@ -129,13 +130,14 @@ function TreeControlCreate() {
         const renderList = buildTree(treeList);
         const html = getTreeHtml(renderList);
         divTree.innerHTML = html;
-
+        scrollToLastSelected();
         updateDaD();
     }
 
     function buildTree(list: any) {
         const treeMap: any = {};
         const tree: any = [];
+        prevListSelected = deepClone(listSelected);
         listSelected = []; // сбрасываем 
 
         const rootList = deepClone(list);
@@ -238,6 +240,14 @@ function TreeControlCreate() {
         if (icon === "box") return "cube";
         return "cube";
     }
+
+    function scrollToLastSelected() {
+        const idLastSelected = listSelected.find((i: number) => !prevListSelected.includes(i));
+        if (idLastSelected == undefined) return;
+
+        const lastSelected = document.querySelector(`.tree__item[data-id="${idLastSelected}"]`);
+        if (lastSelected) lastSelected.scrollIntoView({ behavior: "smooth", block: "center" });
+    } 
 
     function findNextIdItemByPid(id: number, pid: number): number | undefined {
         const listPid = treeList.filter(e => e.pid === pid);
@@ -888,6 +898,7 @@ function TreeControlCreate() {
                     if (is_paint) {
                         s.classList.add(className);
                         addClassActive(s.closest(".li_line"), s.closest(".tree__item")?.getAttribute("data-pid"));
+                        s.scrollIntoView({ behavior: "smooth", block: "center" }); // скролим до элемента
                     }
                 });
             }, delay); //  поиск с паузой

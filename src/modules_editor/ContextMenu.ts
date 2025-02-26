@@ -35,12 +35,13 @@ const list: contextMenuItem [] = [
             { text: 'Добавить кнопку', action: NodeAction.add_button },
             { text: 'Добавить скрол', action: NodeAction.add_scroll },
         ] },
+    ] }
 ];
 
 ContextMenu.open(
     list,
-    event,                      // event.offset_x   event.offset_y
-    callback: nameFunction     // (success: boolean, action?: number | string) => void
+    event,           // event.offset_x   event.offset_y
+    nameFunction     // (success: boolean, action?: number | string) => void
 );
 
 ContextMenu.open(treeContextMenu, event, menuContextClick);
