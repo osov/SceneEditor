@@ -1,8 +1,9 @@
-import { CanvasTexture, RepeatWrapping, Texture, TextureLoader, Vector2 } from 'three';
-import { preloadFont } from 'troika-three-text'
+import { CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Texture, TextureLoader, Vector2 } from 'three';
 import { get_file_name } from './helpers/utils';
-import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
+import { preloadFont } from 'troika-three-text'
+import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -27,11 +28,18 @@ export function ResourceManagerModule() {
     const texture_loader = new TextureLoader();
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
+    const models: { [name: string]: Object3D } = {};
+    const manager = new LoadingManager();
     let bad_texture: CanvasTexture;
+    let project_path = '';
     const ktx2Loader = new KTX2Loader().setTranscoderPath('./libs/basis/').detectSupport(RenderEngine.renderer);
 
     function init() {
         gen_textures();
+    }
+
+    function set_project_path(path: string) {
+        project_path = path;
     }
 
     function gen_textures() {
@@ -56,6 +64,7 @@ export function ResourceManagerModule() {
     }
 
     async function load_texture(path: string) {
+        path = project_path + path;
         let texture: Texture;
         if (path.endsWith('.ktx2'))
             texture = await ktx2Loader.loadAsync(path);
@@ -88,7 +97,7 @@ export function ResourceManagerModule() {
             const vals = Object.values(atlases[name]);
             return vals[0].data.texture;
         }
-        const data = await (await fetch(atlas_path)).text();
+        const data = await (await fetch(project_path + atlas_path)).text();
         const texture = await load_texture(texture_path);
         const texture_data = parse_tp_data_to_uv(data, texture.image.width, texture.image.height);
 
@@ -112,6 +121,7 @@ export function ResourceManagerModule() {
     }
 
     async function preload_font(path: string, override = false) {
+        path = project_path + path;
         const name = get_file_name(path);
         if (!override && fonts[name]) {
             Log.warn('font exists', name, path);
@@ -164,6 +174,30 @@ export function ResourceManagerModule() {
         return list;
     }
 
+    async function preload_model(path: string) {
+        path = project_path + path;
+        if (path.endsWith('.fbx')) {
+            return new Promise<Group>(async (resolve, _) => {
+                const loader = new FBXLoader(manager);
+                loader.load(path, (object) => {
+                    models[get_file_name(path)] = object;
+                    resolve(object);
+                });
+            })
+        }
+        Log.error('Model not supported', path);
+        return null;
+    }
+
+    function get_model(name: string) {
+        return models[name];
+    }
+
+    async function load_asset(path: string) {
+        path = project_path + path;
+        return await (await fetch(path)).json();
+    }
+
     function free_texture(name: string, atlas = '') {
         if (has_texture_name(name, atlas)) {
             const tex_data = atlases[atlas][name].data;
@@ -176,5 +210,5 @@ export function ResourceManagerModule() {
     }
 
     init();
-    return { load_texture, preload_atlas, preload_texture, preload_font, get_all_fonts, get_atlas, get_texture, get_font, free_texture, get_all_textures };
+    return { load_asset, load_texture, preload_atlas, preload_texture, preload_font, get_all_fonts, get_atlas, get_texture, get_font, free_texture, get_all_textures, set_project_path, preload_model, get_model };
 };

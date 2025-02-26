@@ -12,6 +12,8 @@ export enum IObjectTypes {
     GUI_CONTAINER = 'gui_container',
     GUI_BOX = 'gui_box',
     GUI_TEXT = 'gui_text',
+    
+    ANIMATED_MESH = 'animated_mesh'
 };
 
 export enum PivotX {
@@ -40,6 +42,8 @@ export interface IBaseMesh {
     get_bounds(): number[]
     get_color(): string
     set_color(hex_color: string): void
+    set_texture(name: string, atlas?: string): void
+    get_texture(): string[]
     get_pivot(): Vector2
     set_pivot(x: PivotX, y: PivotY, is_sync?: boolean): void
     get_anchor(): Vector2

@@ -1,4 +1,4 @@
-import { Mesh, PlaneGeometry, ShaderMaterial, Vector2, Vector3 } from "three";
+import { BufferGeometry, Mesh,  Object3DEventMap, PlaneGeometry, ShaderMaterial, Vector2, Vector3 } from "three";
 import { IBaseMesh, IBaseParametersEntity, IObjectTypes, OnTransformChanged } from "../types";
 import { convert_width_height_to_pivot_bb, is_base_mesh, set_pivot_with_sync_pos } from "../helpers/utils";
 
@@ -7,7 +7,7 @@ export const shader = new ShaderMaterial({
     fragmentShader: 'void main() { gl_FragColor = vec4(1.0); }'
 });
 
-export class EntityContainer extends Mesh implements IBaseMesh {
+export class EntityContainer extends Mesh<BufferGeometry, ShaderMaterial, Object3DEventMap> implements IBaseMesh {
     public type = IObjectTypes.EMPTY;
     public mesh_data = { id: -1 };
     public on_transform_changed?: OnTransformChanged;
@@ -86,6 +86,10 @@ export class EntityContainer extends Mesh implements IBaseMesh {
 
     get_slice() {
         return new Vector2(this.parameters.slice_width, this.parameters.slice_height);
+    }
+
+    get_texture(){
+        return [this.parameters.texture, this.parameters.atlas];
     }
 
     set_texture(name: string, atlas = '') {

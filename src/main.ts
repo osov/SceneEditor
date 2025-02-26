@@ -16,6 +16,7 @@ import { register_resource_manager } from './render_engine/resource_manager';
 import { register_view_control } from './controls/ViewControl';
 import { register_inspector_control } from './controls/InspectorControl';
 import { register_asset_control } from './controls/AssetControl';
+import { run_anim_scene } from './test_scene_anim';
 
 register_manager();
 register_engine();
@@ -40,3 +41,4 @@ register_control_manager();
 register_history_control();
 
 run_debug_scene();
+//run_anim_scene();

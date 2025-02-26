@@ -12,6 +12,7 @@ import { TextMesh } from "./objects/text";
 import { deepClone } from "../modules/utils";
 import { EntityContainer } from "./objects/entity_container";
 import {  GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
+import { AnimatedMesh } from "./objects/animated_mesh";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -32,7 +33,9 @@ type IMeshTypes = {
 
     [IObjectTypes.GUI_CONTAINER]: GuiContainer,
     [IObjectTypes.GUI_BOX]: GuiBox,
-    [IObjectTypes.GUI_TEXT]: GuiText
+    [IObjectTypes.GUI_TEXT]: GuiText,
+
+    [IObjectTypes.ANIMATED_MESH]: AnimatedMesh
 }
 
 export function SceneManagerModule() {
@@ -60,6 +63,9 @@ export function SceneManagerModule() {
         }
         else if (type == IObjectTypes.GUI_CONTAINER) {
             mesh = new GuiContainer();
+        }
+        else if (type == IObjectTypes.ANIMATED_MESH) {
+            mesh = new AnimatedMesh(params.width || 1, params.height || 1);
         }
         else {
             Log.error('Unknown mesh type', type);

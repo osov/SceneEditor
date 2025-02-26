@@ -160,6 +160,13 @@ export class TextMesh extends Text implements IBaseMesh {
             this.sync();
     }
 
+    get_texture() {
+        return ['', ''];
+    }
+
+    set_texture(name: string, atlas = '') {
+    }
+
     set_active(val: boolean) {
         this.visible = val;
     }
@@ -169,7 +176,7 @@ export class TextMesh extends Text implements IBaseMesh {
     }
 
     set_visible(val: boolean) {
-        this.geometry.setDrawRange(0,val ? Infinity : 0);
+        this.geometry.setDrawRange(0, val ? Infinity : 0);
     }
 
     get_visible() {
@@ -186,7 +193,7 @@ export class TextMesh extends Text implements IBaseMesh {
         this.set_text(data.text);
     }
 
-    transform_changed(){
-        
+    transform_changed() {
+
     }
 }

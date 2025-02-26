@@ -69,6 +69,10 @@ export interface RenderMapData {
     objects_layers: RenderObjectLayer[]
 }
 
+export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
+    return id_layer * 0.5 - (y - height / 2) * 0.000001;
+  }
+  
 
 const tiled_textures_data: Record<string, [string,string]> = {};
 function preload_tile_texture(id: string, path: string, atlas: string) {
@@ -127,7 +131,8 @@ function create_objects(obj_layer: ObjectLayer) {
             y: -obj.y + obj.height / 2,
             width: obj.width,
             height: obj.height,
-            tile_id: obj.tile_id
+            tile_id: obj.tile_id,
+            rotation: obj.rotation
         })
     }
     return objects;
