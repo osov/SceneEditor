@@ -5,9 +5,9 @@ import { register_event_bus } from "./EventBus";
 import { _SystemMessages } from "./modules_const";
 import { register_camera } from "./Camera";
 import { register_input } from "./InputManager";
-import { register_client_api } from "../modules_editor/ClientAPI";
 import { register_ws_client } from "./WsClient";
-import { _SystemMessages_Editor } from "../modules_editor/modules_editor_const";
+import { register_editor_modules } from "../modules_editor/Manager_editor";
+
 
 /*
     Основной модуль для подгрузки остальных, доступен по объекту Manager
@@ -16,8 +16,8 @@ import { _SystemMessages_Editor } from "../modules_editor/modules_editor_const";
 declare global {
     const Manager: ReturnType<typeof ManagerModule>;
     const GAME_CONFIG: typeof _GAME_CONFIG;
-    type UserMessages = _UserMessages;
-    type SystemMessages = _SystemMessages & _SystemMessages_Editor;
+    type UserMessages = _UserMessages & SystemMessagesEditor;
+    type SystemMessages = _SystemMessages ;
 }
 
 
@@ -36,7 +36,7 @@ function ManagerModule() {
         register_input();
         register_camera();
         register_ws_client();
-        register_client_api();
+        register_editor_modules();
     }
     return { init };
 }
