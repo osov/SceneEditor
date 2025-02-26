@@ -1,6 +1,7 @@
 import { SERVER_URL, WS_SERVER_URL } from "../config";
-import { FSObject, FSObjectType, Messages, URL_PATHS } from "../modules/modules_const";
+import { FSObject, FSObjectType,  URL_PATHS } from "../modules_editor/modules_editor_const";
 import { _span_elem } from "../modules/utils";
+import { Messages } from "../modules/modules_const";
 
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;

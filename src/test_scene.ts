@@ -169,4 +169,5 @@ export async function run_debug_scene() {
       id++;
     }
   }
+
 }

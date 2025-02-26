@@ -1,6 +1,6 @@
 import { SERVER_URL } from "../config";
 import { ProtocolWrapper } from "../render_engine/types";
-import { CommandId, URL_PATHS, AssetsResponses, FSObject, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, NetMessages, SAVE_INFO_CMD as SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD } from "./modules_const";
+import { CommandId, URL_PATHS, AssetsResponses, FSObject, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, NetMessages, SAVE_INFO_CMD as SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD } from "./modules_editor_const";
 
 
 declare global {

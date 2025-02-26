@@ -1,12 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-empty-function */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { PING_INTERVAL } from "../config";
-import { NetMessages } from "./modules_const";
+import { NetMessages as NetMessagesBase } from "./modules_const";
+import { NetMessages as NetMessagesEditor } from "../modules_editor/modules_editor_const";
 
+type NetMessages = NetMessagesBase & NetMessagesEditor;
 
 declare global {
     const WsClient: ReturnType<typeof WsClientModule>;

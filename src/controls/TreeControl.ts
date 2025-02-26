@@ -1,5 +1,5 @@
 import { deepClone } from "../modules/utils";
-import { contextMenuItem } from "../modules/ContextMenu";
+import { contextMenuItem } from "../modules_editor/ContextMenu";
 
 declare global {
     const TreeControl: ReturnType<typeof TreeControlCreate>;
