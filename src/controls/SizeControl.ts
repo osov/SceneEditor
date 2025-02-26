@@ -149,8 +149,8 @@ function SizeControlCreate() {
                             // draw_debug_bb(get_bounds_from_list());
                         }
                     }
-                    EventBus.send('SYS_DATA_UPDATED');
                 }
+                EventBus.send('SYS_DATA_UPDATED');
             }
         })
 

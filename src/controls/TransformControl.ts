@@ -90,7 +90,7 @@ function TransformControlCreate() {
             if (element.parent)
                 element.parent.getWorldScale(ws);
             const tmp = _delta_position.clone();
-            tmp.divide(ws)
+            tmp.divide(ws);
             element.set_position(element._position.x + tmp.x, element._position.y + tmp.y);
         }
     }
@@ -172,6 +172,30 @@ function TransformControlCreate() {
             scale_data.push({ id_mesh: object.mesh_data.id, scale, });
         }
         HistoryControl.add('MESH_SCALE', scale_data);
+    }
+
+    function write_position_in_history(object: IBaseMeshDataAndThree) {
+        const oldPosition = object.position.clone();
+        HistoryControl.add('MESH_TRANSLATE', [{
+            id_mesh: object.mesh_data.id,
+            position: oldPosition
+        }]);
+    }
+
+    function write_rotation_in_history(object: IBaseMeshDataAndThree) {
+        const oldRotation = object.rotation.clone();
+        HistoryControl.add('MESH_ROTATE', [{
+            id_mesh: object.mesh_data.id,
+            rotation: oldRotation
+        }]);
+    }
+
+    function write_scale_in_history(object: IBaseMeshDataAndThree) {
+        const oldScale = object.scale.clone();
+        HistoryControl.add('MESH_SCALE', [{
+            id_mesh: object.mesh_data.id,
+            scale: oldScale
+        }]);
     }
 
     function is_selected(mesh: IBaseMeshDataAndThree) {
@@ -273,5 +297,11 @@ function TransformControlCreate() {
 
     }
 
-    return { set_active, set_selected_list, detach, set_mode, save_previous_positions, save_previous_rotations, save_previous_scales, write_previous_positions_in_historty, write_previous_rotations_in_historty, write_previous_scales_in_historty, set_proxy_position, set_proxy_rotation, set_proxy_scale, get_proxy, set_proxy_in_average_point };
+    return {
+        set_active, set_selected_list, set_mode, detach,
+        save_previous_positions, save_previous_rotations, save_previous_scales,
+        write_previous_positions_in_historty, write_previous_rotations_in_historty, write_previous_scales_in_historty,
+        write_position_in_history, write_rotation_in_history, write_scale_in_history,
+        set_proxy_position, set_proxy_rotation, set_proxy_scale, set_proxy_in_average_point, get_proxy
+    };
 }

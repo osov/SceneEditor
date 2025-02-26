@@ -30,7 +30,7 @@ export type HistoryData = {
     MESH_TEXTURE: { id_mesh: number, texture: string }
     MESH_TEXT: { id_mesh: number, text: string }
     MESH_FONT: { id_mesh: number, font: string }
-    MESH_FONT_SIZE: { id_mesh: number, font_size: number }
+    MESH_FONT_SIZE: ScaleEventData
     MESH_TEXT_ALIGN: { id_mesh: number, text_align: 'left' | 'right' | 'center' | 'justify' }
 }
 type HistoryDataKeys = keyof HistoryData;
@@ -203,7 +203,7 @@ function HistoryControlCreate() {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_FONT_SIZE'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
-                (mesh as TextMesh).fontSize = data.font_size;
+                mesh.scale.copy(data.scale);
                 list_mesh.push(mesh);
             }
         } else if (type == 'MESH_TEXT_ALIGN') {
