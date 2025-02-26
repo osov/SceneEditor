@@ -55,38 +55,45 @@ export function ResourceManagerModule() {
         return (atlases[atlas][name] != undefined);
     }
 
-    async function preload_texture(path: string, atlas = '') {
-        const name = get_file_name(path);
-        if (has_texture_name(name, atlas)) {
-            Log.warn('texture exists', name, atlas);
-            return atlases[atlas][name].data;
-        }
+    async function load_texture(path: string) {
         let texture: Texture;
         if (path.endsWith('.ktx2'))
             texture = await ktx2Loader.loadAsync(path);
         else
             texture = await texture_loader.loadAsync(path);
         (texture as any).path = path;
+        return texture;
+    }
+
+    async function preload_texture(path: string, atlas = '', override = false) {
+        const name = get_file_name(path);
+        if (!override && has_texture_name(name, atlas)) {
+            Log.warn('texture exists', name, atlas);
+            return atlases[atlas][name].data;
+        }
+        const texture = await load_texture(path);
         if (!atlases[atlas])
             atlases[atlas] = {};
         if (atlases[atlas][name])
-            Log.warn('texture exists', name, atlas);
+            Log.warn('texture exists already', name, atlas);
         atlases[atlas][name] = { path, data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
-        log('Texture preloaded:', path);
+        //log('Texture preloaded:', path);
         return atlases[atlas][name].data;
     }
 
-    async function preload_atlas(atlas_path: string, texture_path: string) {
+    async function preload_atlas(atlas_path: string, texture_path: string, override = false) {
+        const name = get_file_name(atlas_path);
+        if (!override && atlases[name]) {
+            Log.warn('atlas exists', name);
+            const vals = Object.values(atlases[name]);
+            return vals[0].data.texture;
+        }
         const data = await (await fetch(atlas_path)).text();
-        let texture: Texture;
-        if (texture_path.endsWith('.ktx2'))
-            texture = await ktx2Loader.loadAsync(texture_path);
-        else
-            texture = await texture_loader.loadAsync(texture_path);
-        (texture as any).path = texture_path;
+        const texture = await load_texture(texture_path);
         const texture_data = parse_tp_data_to_uv(data, texture.image.width, texture.image.height);
 
-        const name = get_file_name(atlas_path);
+        if (atlases[name])
+            Log.warn('atlas exists already', name);
         atlases[name] = {};
         for (const texture_name in texture_data) {
             const tex_data = texture_data[texture_name];
@@ -100,26 +107,27 @@ export function ResourceManagerModule() {
                 }
             };
         }
-        log('Atlas preloaded:', atlas_path);
+        //log('Atlas preloaded:', atlas_path);
         return texture;
     }
 
-    async function preload_font(path: string) {
+    async function preload_font(path: string, override = false) {
         const name = get_file_name(path);
-        if (fonts[name]) {
+        if (!override && fonts[name]) {
+            Log.warn('font exists', name, path);
             return true;
         }
-        return new Promise((resolve, _reject) => {
+        return new Promise<boolean>((resolve, _reject) => {
             preloadFont({
                 font: path,
                 characters: font_characters
-            },
-                () => {
-                    fonts[name] = path;
-                    log('Font preloaded:', path);
-                    resolve(true);
-                }
-            )
+            }, () => {
+                if (fonts[name])
+                    Log.warn('font exists already', name, path);
+                fonts[name] = path;
+                //log('Font preloaded:', path);
+                resolve(true);
+            });
         })
     }
 
@@ -168,5 +176,5 @@ export function ResourceManagerModule() {
     }
 
     init();
-    return { preload_atlas, preload_texture, preload_font, get_all_fonts, get_atlas, get_texture, get_font, free_texture, get_all_textures };
+    return { load_texture, preload_atlas, preload_texture, preload_font, get_all_fonts, get_atlas, get_texture, get_font, free_texture, get_all_textures };
 };
