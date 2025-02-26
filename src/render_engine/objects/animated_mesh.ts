@@ -5,8 +5,8 @@ import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils'
 
 const shader = {
   vertexShader: `
+     uniform float offsetZ;
      varying vec2 vUv;
-     
      #include <skinning_pars_vertex>
      
      void main() {
@@ -16,6 +16,8 @@ const shader = {
        vUv = uv; 
        vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);
        worldPosition.z /= 10000.0;
+       worldPosition.z += offsetZ;
+       //worldPosition.z += modelMatrix[3].z;
        gl_Position = projectionMatrix * viewMatrix * worldPosition;
      }
 `,
@@ -40,7 +42,8 @@ export class AnimatedMesh extends EntityContainer {
 
   private skin_material = new ShaderMaterial({
     uniforms: {
-      uTexture: { value: null }
+      uTexture: { value: null },
+      offsetZ: { value: 0 },
     },
     vertexShader: shader.vertexShader,
     fragmentShader: shader.fragmentShader,
@@ -69,16 +72,18 @@ export class AnimatedMesh extends EntityContainer {
       if ((child as any).material)
         (child as any).material = this.skin_material;
     });
-    m.scale.setScalar(0.1);
+    m.scale.setScalar(0.2);
     if (this.children.length > 0)
       this.remove(this.children[0]);
     this.add(m);
     this.mixer = new AnimationMixer(m);
+    this.transform_changed();
   }
 
   on_mixer_update(e: { dt: number }) {
     if (this.mixer)
       this.mixer.update(e.dt);
+    this.skin_material.uniforms.offsetZ.value = this.position.z;
   }
 
   add_animation(name: string, alias: string) {
@@ -110,5 +115,6 @@ export class AnimatedMesh extends EntityContainer {
       }
     }
   }
+
 
 }

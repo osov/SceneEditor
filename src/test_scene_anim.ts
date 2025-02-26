@@ -8,10 +8,10 @@ export async function run_anim_scene() {
     //await ResourceManager.preload_atlas('./img/example_atlas.tpsheet', './img/example_atlas.png');
     ResourceManager.set_project_path('http://localhost:7000/assets/ExampleProject/public/');
 
-    /*
+    
     const plane_4 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 128, height: 32 });
     plane_4.scale.setScalar(2);
-    plane_4.position.set(300, -500, 1);
+    plane_4.position.set(300, -500, 0);
     plane_4.set_slice(8, 8)
     plane_4.set_color('#0f0')
     plane_4.set_texture('2');
@@ -29,9 +29,8 @@ export async function run_anim_scene() {
     am.add_animation('guy@Idle', 'idle');
     am.add_animation('guy@Medium Run', 'walk');
     am.rotateX(0.6)
-    am.position.set(250, -500, 0)
+    am.position.set(250, -500, -0.1)
     SceneManager.add(am);
-*/
 
     const map_data = await ResourceManager.load_asset('./parsed_map.json') as MapData;
     await preload_tiled_textures(map_data);
@@ -60,7 +59,7 @@ export async function run_anim_scene() {
             const tile_id = tile.tile_id & TILE_FLIP_MASK;
             const plane = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: tile.width, height: tile.height });
             plane.set_pivot(0,0);
-            plane.position.set(tile.x - tile.width / 2, tile.y - tile.height / 2, get_depth(tile.x, tile.y, id_layer, tile.width, tile.height));
+            plane.position.set(tile.x , tile.y , get_depth(tile.x, tile.y, id_layer, tile.width, tile.height));
             const tile_info = get_tile_texture(tile_id);
             plane.set_texture(tile_info.name, tile_info.atlas);
            // apply_tile_transform(plane, tile.tile_id);

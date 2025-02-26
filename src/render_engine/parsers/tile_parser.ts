@@ -70,31 +70,31 @@ export interface RenderMapData {
 }
 
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
-    return id_layer * 0.5 - (y - height / 2) * 0.000001;
-  }
-  
+    return id_layer * 5 - y * 0.001;
+}
 
-const tiled_textures_data: Record<string, [string,string]> = {};
+
+const tiled_textures_data: Record<string, [string, string]> = {};
 function preload_tile_texture(id: string, path: string, atlas: string) {
     const p = ResourceManager.preload_texture(path, atlas);
     p.then(_ => tiled_textures_data[id] = [get_file_name(path), atlas]);
     return p;
 }
 
-export function get_tile_texture(id:number){
+export function get_tile_texture(id: number) {
     const data = tiled_textures_data[id];
-    return {name:data[0], atlas:data[1]};
+    return { name: data[0], atlas: data[1] };
 }
 
 export async function preload_tiled_textures(map_data: MapData) {
     const list = [];
     for (const id_tileset in map_data.tile_info) {
-      const tile_set = map_data.tile_info[id_tileset];
-      for (const id in tile_set) {
-        const tex = tile_set[id];
-        const p = preload_tile_texture(id, tex.url, id_tileset);
-        list.push(p);
-      }
+        const tile_set = map_data.tile_info[id_tileset];
+        for (const id in tile_set) {
+            const tex = tile_set[id];
+            const p = preload_tile_texture(id, tex.url, id_tileset);
+            list.push(p);
+        }
     }
     await Promise.all(list);
 }
