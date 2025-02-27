@@ -10,7 +10,7 @@ import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
-import { PositionEventData, RotationEventData, ScaleEventData } from './types';
+import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from './types';
 
 
 declare global {
@@ -615,7 +615,6 @@ function InspectorControlCreate() {
 
         if (!property.readonly) {
             entity.onChange = (event: ChangeEvent) => {
-                console.log(event.target.controller.value);
                 onUpdatedValue({
                     ids,
                     data: {
@@ -815,60 +814,91 @@ function InspectorControlCreate() {
         return search(_last_state, property);
     }
 
-    // FIXME: вынести сохранение за пределы проходы по мешам, чтобы схранять сразу
-    //        для массива а не для каждого по отдельности, так как изменяется все срзу
     function onUpdatedValue(value: ChangeInfo) {
         if (_refreshed) {
             _refreshed = false;
             return;
         }
 
-        console.log("STATE: ", _last_state);
-
         switch (value.data.field.name) {
             case Property.NAME:
+                if (_is_first) {
+                    const names: NameEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        names.push({ id_mesh: id, name: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_NAME', names);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
 
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        HistoryControl.add('MESH_NAME', [{ id_mesh: id, name: mesh.name }]);
-                    }
 
                     mesh.name = value.data.event.value as string;
                     ControlManager.update_graph();
                 });
                 break;
+
             case Property.ACTIVE:
+                if (_is_first) {
+                    const actives: ActiveEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        actives.push({ id_mesh: id, state: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_ACTIVE', actives);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
 
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        HistoryControl.add('MESH_ACTIVE', [{ id_mesh: id, state: mesh.get_active() }]);
-                    }
 
                     const state = value.data.event.value as boolean;
                     mesh.set_active(state);
                 });
                 break;
+
             case Property.VISIBLE:
+                if (_is_first) {
+                    const visibles: VisibleEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        visibles.push({ id_mesh: id, state: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_VISIBLE', visibles);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
 
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        HistoryControl.add('MESH_VISIBLE', [{ id_mesh: id, state: mesh.visible }]);
-                    }
 
                     const state = value.data.event.value as boolean;
                     mesh.set_visible(state);
@@ -903,15 +933,15 @@ function InspectorControlCreate() {
                     const position_property = value.data.property as PropertyItem<PropertyType.VECTOR_3>;
                     const pos = value.data.event.value as Vector3;
 
-                    if (position_property.params?.x.disabled) {
+                    if (position_property.params?.x?.disabled) {
                         pos.x = oldPosition.x;
                     }
 
-                    if (position_property.params?.y.disabled) {
+                    if (position_property.params?.y?.disabled) {
                         pos.y = oldPosition.y;
                     }
 
-                    if (position_property.params?.z.disabled) {
+                    if (position_property.params?.z?.disabled) {
                         pos.z = oldPosition.z;
                     }
 
@@ -953,15 +983,15 @@ function InspectorControlCreate() {
                     const raw_rot = value.data.event.value as Vector3;
                     const rot = new Vector3(degToRad(raw_rot.x), degToRad(raw_rot.y), degToRad(raw_rot.z));
 
-                    if (rotation_property.params?.x.disabled) {
+                    if (rotation_property.params?.x?.disabled) {
                         rot.x = oldRotation.x;
                     }
 
-                    if (rotation_property.params?.y.disabled) {
+                    if (rotation_property.params?.y?.disabled) {
                         rot.y = oldRotation.y;
                     }
 
-                    if (rotation_property.params?.z.disabled) {
+                    if (rotation_property.params?.z?.disabled) {
                         rot.z = oldRotation.z;
                     }
 
@@ -1001,15 +1031,15 @@ function InspectorControlCreate() {
                     const scale_property = value.data.property as PropertyItem<PropertyType.VECTOR_3>;
                     const scale = value.data.event.value as Vector3;
 
-                    if (scale_property.params?.x.disabled) {
+                    if (scale_property.params?.x?.disabled) {
                         scale.x = oldScale.x;
                     }
 
-                    if (scale_property.params?.y.disabled) {
+                    if (scale_property.params?.y?.disabled) {
                         scale.y = oldScale.y;
                     }
 
-                    if (scale_property.params?.z.disabled) {
+                    if (scale_property.params?.z?.disabled) {
                         scale.z = oldScale.z;
                     }
 
@@ -1056,7 +1086,23 @@ function InspectorControlCreate() {
                 // обновляем визуал контролов
                 SizeControl.draw();
                 break;
+
             case Property.PIVOT:
+                if (_is_first) {
+                    const pivots: PivotEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        pivots.push({ id_mesh: id, pivot: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_PIVOT', pivots);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
@@ -1076,17 +1122,29 @@ function InspectorControlCreate() {
                 // обновляем визуал контролов
                 SizeControl.draw();
                 break;
+
             case Property.ANCHOR:
+                if (_is_first) {
+                    const anchors: AnchorEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        anchors.push({ id_mesh: id, anchor: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_ANCHOR', anchors);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
 
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        HistoryControl.add('MESH_ANCHOR', [{ id_mesh: id, anchor: mesh.get_anchor() }]);
-                    }
 
                     const anchor = value.data.event.value as Vector2;
                     mesh.set_anchor(anchor.x, anchor.y);
@@ -1098,17 +1156,29 @@ function InspectorControlCreate() {
                     refresh();
                 }
                 break;
+
             case Property.ANCHOR_PRESET:
+                if (_is_first) {
+                    const anchors: AnchorEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        anchors.push({ id_mesh: id, anchor: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_ANCHOR', anchors);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
 
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        HistoryControl.add('MESH_ANCHOR', [{ id_mesh: id, anchor: mesh.get_anchor() }]);
-                    }
 
                     const anchor = screenPresetToAnchorValue(value.data.event.value as ScreenPointPreset);
                     if (anchor) {
@@ -1119,122 +1189,201 @@ function InspectorControlCreate() {
                 SizeControl.draw();
                 refresh();
                 break;
+
             case Property.COLOR:
+                if (_is_first) {
+                    const colors: ColorEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        colors.push({ id_mesh: id, color: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_COLOR', colors);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
 
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        HistoryControl.add('MESH_COLOR', [{ id_mesh: id, color: mesh.get_color() }]);
-                    }
-
                     const color = value.data.event.value as string;
                     (mesh as Slice9Mesh).set_color(color);
                 });
                 break;
+
             case Property.TEXTURE:
+                if (_is_first) {
+                    const textures: TextureEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        textures.push({ id_mesh: id, texture: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_TEXTURE', textures);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
 
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        const texture_data = (mesh as Slice9Mesh).get_texture();
-                        const texture = `${texture_data[1]}/${texture_data[0]}`;
-                        HistoryControl.add('MESH_TEXTURE', [{ id_mesh: id, texture }]);
-                    }
 
                     const texture_data = (value.data.event.value as any).value.split('/');
                     (mesh as Slice9Mesh).set_texture(texture_data[1], texture_data[0]);
                 });
                 break;
+
             case Property.SLICE9:
+                if (_is_first) {
+                    const slices: SliceEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        slices.push({ id_mesh: id, slice: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_SLICE', slices);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
 
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        HistoryControl.add('MESH_SLICE', [{ id_mesh: id, slice: (mesh as Slice9Mesh).get_slice() }]);
-                    }
-
                     const slice = value.data.event.value as Vector2;
                     (mesh as Slice9Mesh).set_slice(slice.x, slice.y);
                 });
                 break;
+
             case Property.TEXT:
+                if (_is_first) {
+                    const texts: TextEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        texts.push({ id_mesh: id, text: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_TEXT', texts);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
 
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        HistoryControl.add('MESH_TEXT', [{ id_mesh: id, text: (mesh as TextMesh).text }]);
-                    }
 
                     const text = value.data.event.value as string;
                     (mesh as TextMesh).text = text;
                 });
                 break;
+
             case Property.FONT:
+                if (_is_first) {
+                    const fonts: FontEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        fonts.push({ id_mesh: id, font: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_FONT', fonts);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
 
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        HistoryControl.add('MESH_FONT', [{ id_mesh: id, font: (mesh as TextMesh).font || '' }]);
-                    }
 
                     const font = value.data.event.value as string;
                     (mesh as TextMesh).font = font;
                 });
                 break;
+
             case Property.FONT_SIZE:
+                if (_is_first) {
+                    const fontSizes: FontSizeEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        fontSizes.push({ id_mesh: id, scale: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_FONT_SIZE', fontSizes);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
 
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        HistoryControl.add('MESH_FONT_SIZE', [{ id_mesh: id, scale: mesh.scale.clone() }]);
-                    }
 
                     const font_size = value.data.event.value as number;
                     const delta = font_size / (mesh as TextMesh).fontSize;
 
                     mesh.scale.set(1 * delta, 1 * delta, mesh.scale.z);
                     mesh.transform_changed();
-
-                    // обновляем визуал контролов
-                    TransformControl.set_proxy_in_average_point(_selected_list);
-                    SizeControl.draw();
-                    refresh();
                 });
+
+                // обновляем визуал контролов
+                TransformControl.set_proxy_in_average_point(_selected_list);
+                SizeControl.draw();
+                refresh();
                 break;
+
             case Property.TEXT_ALIGN:
+                if (_is_first) {
+                    const textAligns: TextAlignEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+                        if (!mesh) return;
+
+                        textAligns.push({ id_mesh: id, text_align: searchFieldInLastState(value.data.property) });
+                    });
+
+                    HistoryControl.add('MESH_TEXT_ALIGN', textAligns);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
                     });
                     if (!mesh) return;
-
-                    if (_is_first) {
-                        HistoryControl.add('MESH_TEXT_ALIGN', [{ id_mesh: id, text_align: (mesh as TextMesh).textAlign }]);
-                    }
 
                     const text_align = value.data.event.value as any;;
                     (mesh as TextMesh).textAlign = text_align;
@@ -1272,8 +1421,6 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 {
                     name: Property.POSITION, title: 'Позиция', type: PropertyType.VECTOR_3, params: {
-                        x: { step: 0.5 },
-                        y: { step: 0.5 },
                         z: { step: 0.001 }
                     }
                 },

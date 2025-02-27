@@ -1,5 +1,4 @@
-import { Vector2 } from "three";
-import { AnchorEventData, MeshMoveEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData } from "./types";
+import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { IBaseMeshDataAndThree } from "../render_engine/types";
 import { TextMesh } from "../render_engine/objects/text";
@@ -23,15 +22,15 @@ export type HistoryData = {
     MESH_PIVOT: PivotEventData
     MESH_ANCHOR: AnchorEventData
     MESH_MOVE: MeshMoveEventData
-    MESH_NAME: { id_mesh: number, name: string }
-    MESH_ACTIVE: { id_mesh: number, state: boolean }
-    MESH_VISIBLE: { id_mesh: number, state: boolean }
-    MESH_COLOR: { id_mesh: number, color: string }
-    MESH_TEXTURE: { id_mesh: number, texture: string }
-    MESH_TEXT: { id_mesh: number, text: string }
-    MESH_FONT: { id_mesh: number, font: string }
-    MESH_FONT_SIZE: ScaleEventData
-    MESH_TEXT_ALIGN: { id_mesh: number, text_align: 'left' | 'right' | 'center' | 'justify' }
+    MESH_NAME: NameEventData
+    MESH_ACTIVE: ActiveEventData
+    MESH_VISIBLE: VisibleEventData
+    MESH_COLOR: ColorEventData
+    MESH_TEXTURE: TextureEventData
+    MESH_TEXT: TextEventData
+    MESH_FONT: FontEventData
+    MESH_FONT_SIZE: FontSizeEventData
+    MESH_TEXT_ALIGN: TextAlignEventData
 }
 type HistoryDataKeys = keyof HistoryData;
 

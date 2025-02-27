@@ -22,22 +22,64 @@ export type SizeEventData = {
 };
 
 export type SliceEventData = {
-    id_mesh: number
-    slice: Vector2
+    id_mesh: number;
+    slice: Vector2;
 };
 
 export type AnchorEventData = {
-    id_mesh: number
-    anchor: Vector2
+    id_mesh: number;
+    anchor: Vector2;
 };
 
 export type PivotEventData = {
-    id_mesh: number
-    pivot: Vector2
+    id_mesh: number;
+    pivot: Vector2;
 };
 
 export type MeshMoveEventData = {
-    id_mesh: number
-    pid: number,
-    next_id: number
+    id_mesh: number;
+    pid: number;
+    next_id: number;
+};
+
+export type NameEventData = {
+    id_mesh: number;
+    name: string;
+};
+
+export type ActiveEventData = {
+    id_mesh: number;
+    state: boolean;
+};
+
+export type VisibleEventData = {
+    id_mesh: number;
+    state: boolean;
+};
+
+export type ColorEventData = {
+    id_mesh: number;
+    color: string;
+};
+
+export type TextureEventData = {
+    id_mesh: number;
+    texture: string;
+};
+
+export type TextEventData = {
+    id_mesh: number;
+    text: string;
+};
+
+export type FontEventData = {
+    id_mesh: number;
+    font: string;
+};
+
+export type FontSizeEventData = ScaleEventData;
+
+export type TextAlignEventData = {
+    id_mesh: number;
+    text_align: 'left' | 'right' | 'center' | 'justify';
 };
