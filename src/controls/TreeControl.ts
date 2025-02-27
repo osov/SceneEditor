@@ -1084,9 +1084,15 @@ function TreeControlCreate() {
 
     function updateDaD(): void {
 
-        // устанавливаем ширину для span.tree__item_bg
+        // устанавливаем ширину для span.tree__item_bg и .menu_left
         const tree = divTree.querySelector('.tree');
-        tree.style.setProperty('--tree_width', tree?.clientWidth + 'px'); 
+        const menuLeft = document.querySelector('.menu_left');
+        if(menuLeft && tree) {
+            menuLeft.classList.add('ml_width_auto');
+            const tree_widthAuto = tree?.clientWidth;
+            menuLeft.classList.remove('ml_width_auto');
+            document.documentElement.style.setProperty('--tree_width', 1 + tree_widthAuto + 'px');
+        }
 
         // раскрываем дерево с tree__item.selected
         if (listSelected?.length) {

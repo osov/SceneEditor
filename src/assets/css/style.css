@@ -16,6 +16,13 @@
 
   --menu_bg: #364346;
   --menu_border: 1px solid #6d6d6d;
+  --tree_width: 200px;
+  --ml_min_w: 240px;
+  --ml_w: calc(var(--tree_width) + 20px);
+  --mm_w: 45px;
+  --mf_h: 300px;
+  --mr_w: 300px;
+  --mHead_height: 30px;
   --text_color: #fff;
   --color_blue: #17c7f6;
   --color_green: green;
@@ -41,9 +48,6 @@ body {
   color: #fff;
   position: relative;
   overflow: hidden;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
 }
 
 #scene {
@@ -123,10 +127,11 @@ body {
 /* end scroll */
 
 .menu_section {
-  position: relative;
+  position: fixed;
   height: 100%;
   background-color: var(--menu_bg);
-  transform: translateY(calc(100% - 30px));
+  bottom: 0;
+  transform: translateY(calc(100% - var(--mHead_height)));
   z-index: 2;
 }
 
@@ -139,36 +144,38 @@ body {
 }
 
 .menu_left {
-  width: auto;
   border-right: var(--menu_border);
-  min-width: 240px;
+  width: auto;
+  min-width: var(--ml_w, 240px);
   max-width: 440px;
+  left: var(--mm_w);
   z-index: 3;
   /* overflow-x: hidden; */
 }
+.menu_left.ml_width_auto {
+  width: auto;
+  min-width: var(--ml_min_w);
+}
 
 .menu_right {
-  --menu_right_width: 300px;
-  width: var(--menu_right_width);
-  min-width: var(--menu_right_width);
-  /* right: 0; */
+  width: var(--mr_w);
+  min-width: var(--mr_w);
+  right: 0;
   border-left: var(--menu_border);
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 .menu_footer {
-  max-height: 300px;
-  width: calc(100% - 625px);
-  width: auto;
-  flex-grow: 2;
-  /* left: 285px; */
+  max-height: var(--mf_h);
+  width: calc(100% - (var(--mm_w) + var(--ml_w) + var(--mr_w)));
+  left: calc(var(--mm_w) + var(--ml_w));
 }
 
 .menu_min {
   position: relative;
   background-color: var(--menu_bg);
-  width: 45px;
+  width: var(--mm_w);
   height: 100%;
   border-right: var(--menu_border);
   z-index: 2;
@@ -176,8 +183,8 @@ body {
 
 .menu_min a {
   padding: 12px;
-  width: 45px;
-  height: 45px;
+  width: var(--mm_w);
+  height: var(--mm_w);
   color: var(--color_blue);
   user-select: none;
 }
@@ -199,6 +206,7 @@ body {
 .menu_head {
   background-color: var(--head_bg);
   padding: 5px;
+  height: var(--mHead_height);
 }
 
 .menu_head h3 {
@@ -287,7 +295,6 @@ input.searchInTree {
 ul.tree {
   user-select: none;
   --tree_color: green;
-  --tree_width: 200px;
 }
 
 ul.tree li {
