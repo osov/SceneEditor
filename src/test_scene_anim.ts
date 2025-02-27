@@ -6,6 +6,8 @@ export async function run_anim_scene() {
     //  await ResourceManager.preload_texture('./img/2.png');
     //await ResourceManager.preload_atlas('./img/example_atlas.tpsheet', './img/example_atlas.png');
     ResourceManager.set_project_path('http://localhost:7000/assets/ExampleProject/public/');
+    await ResourceManager.preload_model('guy.fbx');
+    ResourceManager.preload_model('cow.glb');
 
     /*
         const plane_4 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 128, height: 32 });
@@ -18,19 +20,21 @@ export async function run_anim_scene() {
     
     
         await ResourceManager.preload_texture('Material-Color-Picker.jpg', '');
-        await ResourceManager.preload_model('guy@Idle.fbx');
-        await ResourceManager.preload_model('guy@Medium Run.fbx');
+        await ResourceManager.preload_model('guy.fbx', 'guy@idle');
+        await ResourceManager.preload_model('guy@Medium Run.fbx', 'guy@run');
     
         const am = SceneManager.create(IObjectTypes.ANIMATED_MESH, { width: 50, height: 50 });
-        am.mesh_data.id = 1000;
-        am.set_mesh('guy@Idle');
+        am.set_mesh('guy');
         am.set_texture('Material-Color-Picker')
-        am.add_animation('guy@Idle', 'idle');
-        am.add_animation('guy@Medium Run', 'walk');
+        am.add_animation('guy@idle', 'idle');
+        am.add_animation('guy@run', 'walk');
         am.rotateX(0.6)
         am.position.set(250, -500, -0.1)
         SceneManager.add(am);
-    */
+    
+        return
+
+        */
     const map_data = await ResourceManager.load_asset('./parsed_map.json') as MapData;
     await preload_tiled_textures(map_data);
     const render_data = parse_tiled(map_data);
@@ -69,12 +73,49 @@ export async function run_anim_scene() {
             plane.set_texture(tile_info.name, tile_info.atlas);
             apply_object_transform(plane, tile);
             if (tile.rotation)
-                plane.rotation.z = -tile.rotation * Math.PI / 180;
+                plane.rotation.z = -tile.rotation! * Math.PI / 180;
             container.add(plane);
         }
     }
 
-    CameraControl.set_position(4276, -874, false);
-    CameraControl.set_zoom(3, false)
-    ControlManager.update_graph(true);
+    CameraControl.set_position(3121, -1692, false);
+    CameraControl.set_zoom(1, false)
+    ControlManager.update_graph();
+
+
+    const am = SceneManager.create(IObjectTypes.ANIMATED_MESH, { width: 50, height: 50 });
+    am.set_mesh('cow');
+    am.children[0].scale.setScalar(100);
+    am.add_animation('Armature|idle1', 'idle');
+    am.rotateX(0.6)
+    am.position.set(3121, -1692, 5)
+    SceneManager.add(am);
+
+
+    await ResourceManager.preload_texture('T_GreatHornedOwl_BaseColor.jpg');
+    await ResourceManager.preload_model('SK_GreatHornedOwl2Sided.FBX');
+    await ResourceManager.preload_model('GreatHornedOwl@IdleLookAroundGrounded.FBX');
+    let mesh = SceneManager.create(IObjectTypes.ANIMATED_MESH, { width: 50, height: 50 });
+    mesh.set_mesh('SK_GreatHornedOwl2Sided');
+    mesh.children[0].scale.setScalar(1.5);
+    mesh.add_animation('GreatHornedOwl@IdleLookAroundGrounded', 'idle');
+    mesh.set_texture('T_GreatHornedOwl_BaseColor');
+    mesh.rotateX(0.6)
+    mesh.rotateY(0.6)
+    mesh.set_position(3155, -1692, 5)
+    SceneManager.add(mesh);
+
+
+    await ResourceManager.preload_texture('T_Duck_Legacy.jpg');
+    await ResourceManager.preload_model('SK_Duck.FBX');
+    await ResourceManager.preload_model('Duck@IdlePickGround.FBX');
+    mesh = SceneManager.create(IObjectTypes.ANIMATED_MESH, { width: 50, height: 50 });
+    mesh.set_mesh('SK_Duck');
+    mesh.children[0].scale.setScalar(2);
+    mesh.add_animation('Duck@IdlePickGround', 'idle');
+    mesh.set_texture('T_Duck_Legacy');
+    mesh.rotateX(0.6)
+    mesh.rotateY(-0.9)
+    mesh.set_position(3121, -1792, 25)
+    SceneManager.add(mesh);
 }

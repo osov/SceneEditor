@@ -1,4 +1,4 @@
-import { AnimationAction, AnimationMixer, ShaderMaterial } from "three";
+import { AnimationAction, AnimationMixer, MeshBasicMaterial, ShaderMaterial } from "three";
 import { IObjectTypes } from "../types";
 import { EntityContainer } from "./entity_container";
 import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils';
@@ -39,15 +39,8 @@ export class AnimatedMesh extends EntityContainer {
   private animations_list: { [k: string]: AnimationAction } = {};
   private activeAction: AnimationAction | null = null;
   private lastAction: AnimationAction | null = null;
-
-  private skin_material = new ShaderMaterial({
-    uniforms: {
-      uTexture: { value: null },
-      offsetZ: { value: 0 },
-    },
-    vertexShader: shader.vertexShader,
-    fragmentShader: shader.fragmentShader,
-  });
+  private mesh_name = '';
+  private materials: ShaderMaterial[] = [];
 
   constructor(width = 1, height = 1) {
     super();
@@ -57,9 +50,9 @@ export class AnimatedMesh extends EntityContainer {
     EventBus.on('SYS_ON_UPDATE', this.on_mixer_update.bind(this));
   }
 
-  set_texture(name: string, atlas = '') {
+  set_texture(name: string, atlas = '', index = 0) {
     super.set_texture(name, atlas);
-    this.skin_material.uniforms.uTexture.value = ResourceManager.get_texture(name, atlas).texture;
+    this.materials[index].uniforms.uTexture.value = ResourceManager.get_texture(name, atlas).texture;
   }
 
 
@@ -67,41 +60,58 @@ export class AnimatedMesh extends EntityContainer {
     const src = ResourceManager.get_model(name);
     if (!src)
       return Log.error('Mesh not found', name);
+    this.mesh_name = name;
     const m = skeleton_clone(src);
+    let index_material = 0;
     m.traverse((child) => {
-      if ((child as any).material)
-        (child as any).material = this.skin_material;
+      if ((child as any).material) {
+        const old_material = ((child as any).material as MeshBasicMaterial);
+        if (old_material.map && old_material.map.image) {
+          ResourceManager.add_texture(old_material.name, 'mesh_' + name, old_material.map);
+          log('Texture added', old_material.name, 'mesh_' + name);
+        }
+        const new_material = new ShaderMaterial({
+          uniforms: {
+            uTexture: { value: old_material.map },
+            offsetZ: { value: 0 },
+          },
+          vertexShader: shader.vertexShader,
+          fragmentShader: shader.fragmentShader,
+        });
+        this.materials.push(new_material);
+        (child as any).material = new_material;
+        index_material++;
+      }
     });
     m.scale.setScalar(0.2);
     if (this.children.length > 0)
       this.remove(this.children[0]);
     this.add(m);
-    this.mixer = new AnimationMixer(m);
+    if (!this.mixer)
+      this.mixer = new AnimationMixer(m);
     this.transform_changed();
   }
 
   on_mixer_update(e: { dt: number }) {
     if (this.mixer)
       this.mixer.update(e.dt);
-    this.skin_material.uniforms.offsetZ.value = this.position.z;
+    for (let i = 0; i < this.materials.length; i++)
+      this.materials[i].uniforms.offsetZ.value = this.position.z;
   }
 
-  add_animation(name: string, alias: string) {
-    const src = ResourceManager.get_model(name);
-    if (!src)
-      return Log.error('Mesh not found', name);
-    const m = skeleton_clone(src);
-    if (m.animations && m.animations.length) {
-      const animationAction = this.mixer.clipAction(m.animations[0])
-      this.animations_list[alias] = animationAction;
-      if (Object.keys(this.animations_list).length == 1) {
-        this.activeAction = animationAction;
-        animationAction.play();
-      }
+  add_animation(name: string, alias = '') {
+    const clip = ResourceManager.find_animation(name, this.mesh_name);
+    if (!clip)
+      return Log.error('Animation not found', name);
+    const animationAction = this.mixer.clipAction(clip.clip)
+    this.animations_list[alias == '' ? name : alias] = animationAction;
+    if (Object.keys(this.animations_list).length == 1) {
+      this.activeAction = animationAction;
+      animationAction.play();
     }
   }
 
-  set_animation(alias: string) {
+  set_animation(alias: string, offset = 0) {
     if (this.animations_list[alias]) {
       const toAction = this.animations_list[alias];
       if (toAction != this.activeAction) {
@@ -111,6 +121,7 @@ export class AnimatedMesh extends EntityContainer {
         this.lastAction!.fadeOut(t)
         this.activeAction.reset()
         this.activeAction.fadeIn(t)
+        this.activeAction.startAt(offset)
         this.activeAction.play()
       }
     }

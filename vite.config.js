@@ -35,6 +35,7 @@ export default defineConfig({
       "@": resolve(__dirname, "./src")
     }
   },
+  base: "./",
   build: { outDir: "dist" },
   publicDir: false,
   server: { host: true, hmr: true, },

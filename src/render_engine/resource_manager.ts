@@ -1,9 +1,10 @@
-import { CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Texture, TextureLoader, Vector2 } from 'three';
+import { AnimationAction, AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, SkinnedMesh, Texture, TextureLoader, Vector2 } from 'three';
 import { get_file_name } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -23,12 +24,20 @@ interface TextureData {
     size: Vector2;
 }
 
+
+interface AnimationInfo {
+    animation: string;
+    model: string;
+    clip: AnimationClip;
+}
+
 export function ResourceManagerModule() {
     const font_characters = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~йцукенгшщзхфывапролджэячсмитьбюЙЦУКЕНГШЩЗХФЫВАПРОЛДЖЯЧСМИТЬБЮЭ";
     const texture_loader = new TextureLoader();
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
     const models: { [name: string]: Object3D } = {};
+    const animations: AnimationInfo[] = [];
     const manager = new LoadingManager();
     let bad_texture: CanvasTexture;
     let project_path = '';
@@ -87,6 +96,20 @@ export function ResourceManagerModule() {
             Log.warn('texture exists already', name, atlas);
         atlases[atlas][name] = { path, data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
         //log('Texture preloaded:', path);
+        return atlases[atlas][name].data;
+    }
+
+    function add_texture(path: string, atlas = '', texture: Texture, override = false) {
+        const name = get_file_name(path);
+        if (!override && has_texture_name(name, atlas)) {
+            Log.warn('texture exists', name, atlas);
+            return atlases[atlas][name].data;
+        }
+        if (!atlases[atlas])
+            atlases[atlas] = {};
+        if (atlases[atlas][name])
+            Log.warn('texture exists already', name, atlas);
+        atlases[atlas][name] = { path, data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
         return atlases[atlas][name].data;
     }
 
@@ -174,14 +197,77 @@ export function ResourceManagerModule() {
         return list;
     }
 
+
+
+    function find_animation(name_anim: string, model_name: string) {
+        const list_anim = [];
+        for (const k in animations) {
+            if (animations[k].animation == name_anim)
+                list_anim.push(animations[k]);
+        }
+        if (list_anim.length) {
+            if (list_anim.length > 1)
+                Log.warn('animation more 1:', list_anim, name_anim, model_name);
+            for (let i = 0; i < list_anim.length; i++) {
+                const it = list_anim[i];
+                if (it.model == model_name)
+                    return it;
+            }
+            return list_anim[0];
+        }
+        return null;
+    }
+
+    function has_skinned_mesh(mesh: Object3D) {
+        let is_model = false;
+        mesh.traverse((m) => {
+            if (m instanceof SkinnedMesh)
+                is_model = true;
+        });
+        return is_model;
+    }
+
+    function add_animations(anim_list: AnimationClip[], has_mesh = false, model_path = '') {
+        if (anim_list.length) {
+            const model_name = get_file_name(model_path);
+            for (let i = 0; i < anim_list.length; i++) {
+                const clip = anim_list[i];
+                let cur_anim_name = has_mesh ? clip.name : model_name;
+                if (cur_anim_name == 'mixamo.com')
+                    cur_anim_name = model_name
+                if (find_animation(cur_anim_name, model_name))
+                    Log.warn('animation exists already', cur_anim_name, model_name);
+                animations.push({ model: model_name, animation: cur_anim_name, clip });
+            }
+        }
+    }
+
     async function preload_model(path: string) {
         path = project_path + path;
-        if (path.endsWith('.fbx')) {
+        const model_name = get_file_name(path);
+        if (path.toLowerCase().endsWith('.fbx')) {
             return new Promise<Group>(async (resolve, _) => {
                 const loader = new FBXLoader(manager);
-                loader.load(path, (object) => {
-                    models[get_file_name(path)] = object;
-                    resolve(object);
+                loader.load(path, (mesh) => {
+                    //log(mesh);
+                    const has_mesh = has_skinned_mesh(mesh);
+                    if (has_mesh)
+                        models[model_name] = mesh;
+                    add_animations(mesh.animations, has_mesh, path);
+                    resolve(mesh);
+                });
+            })
+        }
+        else if (path.toLowerCase().endsWith('.gltf') || path.toLowerCase().endsWith('.glb')) {
+            return new Promise<Group>(async (resolve, _) => {
+                const loader = new GLTFLoader(manager);
+                loader.load(path, (gltf) => {
+                    //log(gltf)
+                    const has_mesh = has_skinned_mesh(gltf.scene);
+                    if (has_mesh)
+                        models[model_name] = gltf.scene;
+                    add_animations(gltf.animations, has_mesh, path);
+                    resolve(gltf.scene);
                 });
             })
         }
@@ -191,6 +277,15 @@ export function ResourceManagerModule() {
 
     function get_model(name: string) {
         return models[name];
+    }
+
+    function get_animations_by_model(model_name: string) {
+        const list: AnimationInfo[] = [];
+        for (const k in animations) {
+            if (animations[k].model == model_name)
+                list.push(animations[k]);
+        }
+        return list;
     }
 
     async function load_asset(path: string) {
@@ -210,5 +305,5 @@ export function ResourceManagerModule() {
     }
 
     init();
-    return { load_asset, load_texture, preload_atlas, preload_texture, preload_font, get_all_fonts, get_atlas, get_texture, get_font, free_texture, get_all_textures, set_project_path, preload_model, get_model };
+    return { load_asset, add_texture, load_texture, preload_atlas, preload_texture, preload_font, get_all_fonts, get_atlas, get_texture, get_font, free_texture, get_all_textures, set_project_path, preload_model, get_model, find_animation, get_animations_by_model };
 };
