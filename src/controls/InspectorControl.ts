@@ -1,5 +1,5 @@
 import { Pane, TpChangeEvent } from 'tweakpane';
-import { BindingApi, BindingParams, ButtonParams, FolderApi } from '@tweakpane/core';
+import { BindingApi, BindingParams, bindValue, BladeState, ButtonParams, FolderApi } from '@tweakpane/core';
 import { IBaseMeshDataAndThree, IObjectTypes } from '../render_engine/types';
 import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
@@ -10,6 +10,7 @@ import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
+import { PositionEventData, RotationEventData, ScaleEventData } from './types';
 
 
 declare global {
@@ -70,7 +71,7 @@ export enum Property {
     TEXT_ALIGN = 'text_align'
 }
 
-export enum AnchorPreset {
+export enum ScreenPointPreset {
     NONE = 'None',
     CENTER = 'Center',
     TOP_LEFT = 'Top Left',
@@ -205,6 +206,7 @@ function InspectorControlCreate() {
     let _unique_fields: { ids: number[], field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }[];
     let _selected_list: IBaseMeshDataAndThree[];
     let _data: ObjectData[];
+    let _last_state: BladeState;
 
     let _refreshed = false;
     let _is_first = true;
@@ -242,7 +244,7 @@ function InspectorControlCreate() {
                     case Property.PIVOT: value.data = item.get_pivot(); break;
                     case Property.ANCHOR: value.data = item.get_anchor(); break;
                     case Property.ANCHOR_PRESET:
-                        value.data = anchorToPreset(item.get_anchor());
+                        value.data = anchorToScreenPreset(item.get_anchor());
                         break;
                     case Property.SLICE9: value.data = (item as Slice9Mesh).get_slice(); break;
                     case Property.ROTATION:
@@ -613,6 +615,7 @@ function InspectorControlCreate() {
 
         if (!property.readonly) {
             entity.onChange = (event: ChangeEvent) => {
+                console.log(event.target.controller.value);
                 onUpdatedValue({
                     ids,
                     data: {
@@ -629,7 +632,7 @@ function InspectorControlCreate() {
 
     function set_selected_list(list: IBaseMeshDataAndThree[]) {
         _selected_list = list;
-        TransformControl.set_proxy_in_average_point(list);
+        // TransformControl.set_proxy_in_average_point(list);
 
         const data = list.map((value) => {
             const raw = value.rotation;
@@ -638,7 +641,8 @@ function InspectorControlCreate() {
             // TODO: использовать index для расположения поля
             // TODO: в значение пихать callback который будет отвечать за обновление
 
-            const anchor_preset = anchorToPreset(value.get_anchor());
+            const pivot_preset = pivotToScreenPreset(value.get_pivot());
+            const anchor_preset = anchorToScreenPreset(value.get_anchor());
 
             const fields = [
                 { name: Property.ID, data: value.mesh_data.id },
@@ -650,7 +654,7 @@ function InspectorControlCreate() {
                 { name: Property.ROTATION, data: rotation },
                 { name: Property.SCALE, data: value.scale },
                 { name: Property.SIZE, data: value.get_size() },
-                { name: Property.PIVOT, data: value.get_pivot() },
+                { name: Property.PIVOT, data: pivot_preset },
                 { name: Property.ANCHOR_PRESET, data: anchor_preset },
                 { name: Property.ANCHOR, data: value.get_anchor() },
                 { name: Property.COLOR, data: value.get_color() },
@@ -701,52 +705,114 @@ function InspectorControlCreate() {
 
         clear();
         setData(data);
+        _last_state = deepClone(_inspector.exportState());
     }
 
-    function anchorToPreset(anchor: Vector2) {
-        if (anchor.x == 0.5 && anchor.y == 0.5) {
-            return AnchorPreset.CENTER;
-        } else if (anchor.x == 0 && anchor.y == 1) {
-            return AnchorPreset.TOP_LEFT;
-        } else if (anchor.x == 0.5 && anchor.y == 1) {
-            return AnchorPreset.TOP_CENTER;
-        } else if (anchor.x == 1 && anchor.y == 1) {
-            return AnchorPreset.TOP_RIGHT;
-        } else if (anchor.x == 0 && anchor.y == 0.5) {
-            return AnchorPreset.LEFT_CENTER;
-        } else if (anchor.x == 1 && anchor.y == 0.5) {
-            return AnchorPreset.RIGHT_CENTER;
-        } else if (anchor.x == 0 && anchor.y == 0) {
-            return AnchorPreset.BOTTOM_LEFT;
-        } else if (anchor.x == 0.5 && anchor.y == 0) {
-            return AnchorPreset.BOTTOM_CENTER;
-        } else if (anchor.x == 1 && anchor.y == 0) {
-            return AnchorPreset.BOTTOM_RIGHT;
-        } else if (anchor.x == -1 && anchor.y == -1) {
-            return AnchorPreset.NONE;
+    function pivotToScreenPreset(pivot: Vector2) {
+        if (pivot.x == 0.5 && pivot.y == 0.5) {
+            return ScreenPointPreset.CENTER;
+        } else if (pivot.x == 0 && pivot.y == 1) {
+            return ScreenPointPreset.TOP_LEFT;
+        } else if (pivot.x == 0.5 && pivot.y == 1) {
+            return ScreenPointPreset.TOP_CENTER;
+        } else if (pivot.x == 1 && pivot.y == 1) {
+            return ScreenPointPreset.TOP_RIGHT;
+        } else if (pivot.x == 0 && pivot.y == 0.5) {
+            return ScreenPointPreset.LEFT_CENTER;
+        } else if (pivot.x == 1 && pivot.y == 0.5) {
+            return ScreenPointPreset.RIGHT_CENTER;
+        } else if (pivot.x == 0 && pivot.y == 0) {
+            return ScreenPointPreset.BOTTOM_LEFT;
+        } else if (pivot.x == 0.5 && pivot.y == 0) {
+            return ScreenPointPreset.BOTTOM_CENTER;
+        } else if (pivot.x == 1 && pivot.y == 0) {
+            return ScreenPointPreset.BOTTOM_RIGHT;
         }
 
-        return AnchorPreset.CUSTOM;
+        return ScreenPointPreset.CENTER;
     }
 
-    function anchorPresetToValue(anchor_preset: AnchorPreset) {
-        switch (anchor_preset) {
-            case AnchorPreset.CENTER: return new Vector2(0.5, 0.5);
-            case AnchorPreset.TOP_LEFT: return new Vector2(0, 1);
-            case AnchorPreset.TOP_CENTER: return new Vector2(0.5, 1);
-            case AnchorPreset.TOP_RIGHT: return new Vector2(1, 1);
-            case AnchorPreset.LEFT_CENTER: return new Vector2(0, 0.5);
-            case AnchorPreset.RIGHT_CENTER: return new Vector2(1, 0.5);
-            case AnchorPreset.BOTTOM_LEFT: return new Vector2(0, 0);
-            case AnchorPreset.BOTTOM_CENTER: return new Vector2(0.5, 0);
-            case AnchorPreset.BOTTOM_RIGHT: return new Vector2(1, 0);
-            case AnchorPreset.NONE: return new Vector2(-1, -1);
+    function screenPresetToPivotValue(preset: ScreenPointPreset) {
+        switch (preset) {
+            case ScreenPointPreset.CENTER: return new Vector2(0.5, 0.5);
+            case ScreenPointPreset.TOP_LEFT: return new Vector2(0, 1);
+            case ScreenPointPreset.TOP_CENTER: return new Vector2(0.5, 1);
+            case ScreenPointPreset.TOP_RIGHT: return new Vector2(1, 1);
+            case ScreenPointPreset.LEFT_CENTER: return new Vector2(0, 0.5);
+            case ScreenPointPreset.RIGHT_CENTER: return new Vector2(1, 0.5);
+            case ScreenPointPreset.BOTTOM_LEFT: return new Vector2(0, 0);
+            case ScreenPointPreset.BOTTOM_CENTER: return new Vector2(0.5, 0);
+            case ScreenPointPreset.BOTTOM_RIGHT: return new Vector2(1, 0);
+            default: return new Vector2(0.5, 0.5);
+        }
+    }
+
+    function anchorToScreenPreset(anchor: Vector2) {
+        if (anchor.x == 0.5 && anchor.y == 0.5) {
+            return ScreenPointPreset.CENTER;
+        } else if (anchor.x == 0 && anchor.y == 1) {
+            return ScreenPointPreset.TOP_LEFT;
+        } else if (anchor.x == 0.5 && anchor.y == 1) {
+            return ScreenPointPreset.TOP_CENTER;
+        } else if (anchor.x == 1 && anchor.y == 1) {
+            return ScreenPointPreset.TOP_RIGHT;
+        } else if (anchor.x == 0 && anchor.y == 0.5) {
+            return ScreenPointPreset.LEFT_CENTER;
+        } else if (anchor.x == 1 && anchor.y == 0.5) {
+            return ScreenPointPreset.RIGHT_CENTER;
+        } else if (anchor.x == 0 && anchor.y == 0) {
+            return ScreenPointPreset.BOTTOM_LEFT;
+        } else if (anchor.x == 0.5 && anchor.y == 0) {
+            return ScreenPointPreset.BOTTOM_CENTER;
+        } else if (anchor.x == 1 && anchor.y == 0) {
+            return ScreenPointPreset.BOTTOM_RIGHT;
+        } else if (anchor.x == -1 && anchor.y == -1) {
+            return ScreenPointPreset.NONE;
+        }
+
+        return ScreenPointPreset.CUSTOM;
+    }
+
+    function screenPresetToAnchorValue(preset: ScreenPointPreset) {
+        switch (preset) {
+            case ScreenPointPreset.CENTER: return new Vector2(0.5, 0.5);
+            case ScreenPointPreset.TOP_LEFT: return new Vector2(0, 1);
+            case ScreenPointPreset.TOP_CENTER: return new Vector2(0.5, 1);
+            case ScreenPointPreset.TOP_RIGHT: return new Vector2(1, 1);
+            case ScreenPointPreset.LEFT_CENTER: return new Vector2(0, 0.5);
+            case ScreenPointPreset.RIGHT_CENTER: return new Vector2(1, 0.5);
+            case ScreenPointPreset.BOTTOM_LEFT: return new Vector2(0, 0);
+            case ScreenPointPreset.BOTTOM_CENTER: return new Vector2(0.5, 0);
+            case ScreenPointPreset.BOTTOM_RIGHT: return new Vector2(1, 0);
+            case ScreenPointPreset.NONE: return new Vector2(-1, -1);
             default: return new Vector2(0.5, 0.5);
         }
     }
 
     function detach() {
         clear();
+    }
+
+    function searchFieldInLastState(property: PropertyItem<PropertyType>) {
+        function search(state: BladeState, property: PropertyItem<PropertyType>) {
+            for (const [key, value] of Object.entries(state)) {
+                if (key == "children") {
+                    return search(value as BladeState, property);
+                }
+
+                for (const [k, v] of Object.entries(value as any)) {
+                    if (k == "children") {
+                        return search(v as BladeState, property);
+                    }
+
+                    if (k == "label" && v === property.title) {
+                        return (value as any).binding.value;
+                    }
+                }
+            }
+        }
+
+        return search(_last_state, property);
     }
 
     // FIXME: вынести сохранение за пределы проходы по мешам, чтобы схранять сразу
@@ -756,6 +822,8 @@ function InspectorControlCreate() {
             _refreshed = false;
             return;
         }
+
+        console.log("STATE: ", _last_state);
 
         switch (value.data.field.name) {
             case Property.NAME:
@@ -808,6 +876,23 @@ function InspectorControlCreate() {
                 break;
 
             case Property.POSITION:
+                const oldPosition = searchFieldInLastState(value.data.property);
+
+                if (_is_first) {
+                    const oldPositions: PositionEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        oldPositions.push({ id_mesh: mesh.mesh_data.id, position: oldPosition });
+                    });
+
+                    TransformControl.write_positions_in_history(oldPositions);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
@@ -815,24 +900,19 @@ function InspectorControlCreate() {
 
                     if (!mesh) return;
 
-                    if (_is_first) {
-                        TransformControl.write_position_in_history(mesh);
-                    }
-
-                    const old_position = mesh.position;
                     const position_property = value.data.property as PropertyItem<PropertyType.VECTOR_3>;
                     const pos = value.data.event.value as Vector3;
 
                     if (position_property.params?.x.disabled) {
-                        pos.x = old_position.x;
+                        pos.x = oldPosition.x;
                     }
 
                     if (position_property.params?.y.disabled) {
-                        pos.y = old_position.y;
+                        pos.y = oldPosition.y;
                     }
 
                     if (position_property.params?.z.disabled) {
-                        pos.z = old_position.z;
+                        pos.z = oldPosition.z;
                     }
 
                     mesh.set_position(pos.x, pos.y, pos.z);
@@ -845,6 +925,23 @@ function InspectorControlCreate() {
                 break;
 
             case Property.ROTATION:
+                const oldRotation = searchFieldInLastState(value.data.property);
+
+                if (_is_first) {
+                    const oldRotations: RotationEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        oldRotations.push({ id_mesh: id, rotation: oldRotation });
+                    });
+
+                    TransformControl.write_rotations_in_history(oldRotations);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
@@ -852,25 +949,20 @@ function InspectorControlCreate() {
 
                     if (!mesh) return;
 
-                    if (_is_first) {
-                        TransformControl.write_rotation_in_history(mesh);
-                    }
-
-                    const old_rotation = mesh.rotation;
                     const rotation_property = value.data.property as PropertyItem<PropertyType.VECTOR_3>;
                     const raw_rot = value.data.event.value as Vector3;
                     const rot = new Vector3(degToRad(raw_rot.x), degToRad(raw_rot.y), degToRad(raw_rot.z));
 
                     if (rotation_property.params?.x.disabled) {
-                        rot.x = old_rotation.x;
+                        rot.x = oldRotation.x;
                     }
 
                     if (rotation_property.params?.y.disabled) {
-                        rot.y = old_rotation.y;
+                        rot.y = oldRotation.y;
                     }
 
                     if (rotation_property.params?.z.disabled) {
-                        rot.z = old_rotation.z;
+                        rot.z = oldRotation.z;
                     }
 
                     mesh.rotation.set(rot.x, rot.y, rot.z);
@@ -882,6 +974,23 @@ function InspectorControlCreate() {
                 SizeControl.draw();
                 break;
             case Property.SCALE:
+                const oldScale = searchFieldInLastState(value.data.property);
+
+                if (_is_first) {
+                    const oldScales: ScaleEventData[] = [];
+                    value.ids.forEach((id) => {
+                        const mesh = _selected_list.find((item) => {
+                            return item.mesh_data.id == id;
+                        });
+
+                        if (!mesh) return;
+
+                        oldScales.push({ id_mesh: id, scale: oldScale })
+                    });
+
+                    TransformControl.write_scales_in_history(oldScales);
+                }
+
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
@@ -889,24 +998,19 @@ function InspectorControlCreate() {
 
                     if (!mesh) return;
 
-                    if (_is_first) {
-                        TransformControl.write_scale_in_history(mesh);
-                    }
-
-                    const old_scale = mesh.scale;
                     const scale_property = value.data.property as PropertyItem<PropertyType.VECTOR_3>;
                     const scale = value.data.event.value as Vector3;
 
                     if (scale_property.params?.x.disabled) {
-                        scale.x = old_scale.x;
+                        scale.x = oldScale.x;
                     }
 
                     if (scale_property.params?.y.disabled) {
-                        scale.y = old_scale.y;
+                        scale.y = oldScale.y;
                     }
 
                     if (scale_property.params?.z.disabled) {
-                        scale.z = old_scale.z;
+                        scale.z = oldScale.z;
                     }
 
                     (mesh as any).scale.copy(scale);
@@ -929,6 +1033,7 @@ function InspectorControlCreate() {
                 refresh();
                 break;
             case Property.SIZE:
+                // TODO: change logic
                 value.ids.forEach((id) => {
                     const mesh = _selected_list.find((item) => {
                         return item.mesh_data.id == id;
@@ -963,7 +1068,8 @@ function InspectorControlCreate() {
                         HistoryControl.add('MESH_PIVOT', [{ id_mesh: id, pivot: mesh.get_pivot() }]);
                     }
 
-                    const pivot = value.data.event.value as Vector2;
+                    const pivot_preset = value.data.event.value as ScreenPointPreset;
+                    const pivot = screenPresetToPivotValue(pivot_preset);
                     mesh.set_pivot(pivot.x, pivot.y, true);
                 });
 
@@ -1004,7 +1110,7 @@ function InspectorControlCreate() {
                         HistoryControl.add('MESH_ANCHOR', [{ id_mesh: id, anchor: mesh.get_anchor() }]);
                     }
 
-                    const anchor = anchorPresetToValue(value.data.event.value as AnchorPreset);
+                    const anchor = screenPresetToAnchorValue(value.data.event.value as ScreenPointPreset);
                     if (anchor) {
                         mesh.set_anchor(anchor.x, anchor.y);
                     }
@@ -1137,7 +1243,10 @@ function InspectorControlCreate() {
         }
 
         if (_is_first) _is_first = false;
-        if (value.data.event.last) _is_first = true;
+        if (value.data.event.last) {
+            _is_first = true;
+            _last_state = deepClone(_inspector.exportState());
+        }
     }
 
     init();
@@ -1172,9 +1281,16 @@ export function getDefaultInspectorConfig() {
                 { name: Property.SCALE, title: 'Маштаб', type: PropertyType.VECTOR_2 },
                 { name: Property.SIZE, title: 'Размер', type: PropertyType.VECTOR_2 },
                 {
-                    name: Property.PIVOT, title: 'Точка опоры', type: PropertyType.POINT_2D, params: {
-                        x: { min: 0, max: 1, step: 0.5 },
-                        y: { min: 0, max: 1, step: 0.5 }
+                    name: Property.PIVOT, title: 'Точка опоры', type: PropertyType.LIST_TEXT, params: {
+                        'Центр': ScreenPointPreset.CENTER,
+                        'Левый Верхний': ScreenPointPreset.TOP_LEFT,
+                        'Центр Сверху': ScreenPointPreset.TOP_CENTER,
+                        'Правый Верхний': ScreenPointPreset.TOP_RIGHT,
+                        'Центр Слева': ScreenPointPreset.LEFT_CENTER,
+                        'Центр Справа': ScreenPointPreset.RIGHT_CENTER,
+                        'Левый Нижний': ScreenPointPreset.BOTTOM_LEFT,
+                        'Центр Снизу': ScreenPointPreset.BOTTOM_CENTER,
+                        'Правый Нижний': ScreenPointPreset.BOTTOM_RIGHT
                     }
                 }
             ]
@@ -1191,17 +1307,17 @@ export function getDefaultInspectorConfig() {
                 },
                 {
                     name: Property.ANCHOR_PRESET, title: 'Пресет', type: PropertyType.LIST_TEXT, params: {
-                        'Не выбрано': AnchorPreset.NONE,
-                        'Центр': AnchorPreset.CENTER,
-                        'Левый Верхний': AnchorPreset.TOP_LEFT,
-                        'Центр Сверху': AnchorPreset.TOP_CENTER,
-                        'Правый Верхний': AnchorPreset.TOP_RIGHT,
-                        'Центр Слева': AnchorPreset.LEFT_CENTER,
-                        'Центр Справа': AnchorPreset.RIGHT_CENTER,
-                        'Левый Нижний': AnchorPreset.BOTTOM_LEFT,
-                        'Центр Снизу': AnchorPreset.BOTTOM_CENTER,
-                        'Правый Нижний': AnchorPreset.BOTTOM_RIGHT,
-                        'Индивидуальный': AnchorPreset.CUSTOM
+                        'Не выбрано': ScreenPointPreset.NONE,
+                        'Центр': ScreenPointPreset.CENTER,
+                        'Левый Верхний': ScreenPointPreset.TOP_LEFT,
+                        'Центр Сверху': ScreenPointPreset.TOP_CENTER,
+                        'Правый Верхний': ScreenPointPreset.TOP_RIGHT,
+                        'Центр Слева': ScreenPointPreset.LEFT_CENTER,
+                        'Центр Справа': ScreenPointPreset.RIGHT_CENTER,
+                        'Левый Нижний': ScreenPointPreset.BOTTOM_LEFT,
+                        'Центр Снизу': ScreenPointPreset.BOTTOM_CENTER,
+                        'Правый Нижний': ScreenPointPreset.BOTTOM_RIGHT,
+                        'Индивидуальный': ScreenPointPreset.CUSTOM
                     }
                 }
             ]
@@ -1256,60 +1372,60 @@ export function getDefaultInspectorConfig() {
 }
 
 /*
-
+ 
 Модуль должен быть независимой системой и не иметь или иметь минимум зависимостей от других.
-
+ 
 есть библиотека https://github.com/repalash/uiconfig-tweakpane которая вроде как делает то что нам нужно, те по данным генерит визуал, не понятно какой она плюс отдельно даст
 если можно и без нее делать все это, но при этом тут уже есть типы векторов и связка с ThreeJS может быть удобно, надо пощупать
-
+ 
 еще для LIST надо бы юзать не стандартную библиотеку, а типа такой, где есть поиск:
     https://github.com/hirohe/tweakpane-plugin-search-list
-
+ 
 есть еще селект плагин с превью какой-то:
     https://github.com/cosmicshelter/tweakpane-plugin-preview-select
-
+ 
 вот этот интересный и нужный, превью картинок(для текстур нужно будет), но не хватает конечно поиска в нем:
     https://github.com/donmccurdy/tweakpane-plugin-thumbnail-list
-
-
+ 
+ 
 на каждое изменение свойства срабатывает событие с данными аналогичные содержимому ObjectData[], но лишь измененные, а не все сразу
 но для сохранения истории изменений скажем если юзер таскал ползунок, то сохраняем до первого таскания состояние и затем лишь после отпускания, те не нужны все промежуточные
-
+ 
 этот контрол может управлять сразу несколькими выделенными объектами, если среди них есть разные свойства, например у Slice9Mesh есть свойство slice(get_slice/set_slice),
 а мы выделили одновременно и текстовый блок и картинку, то прятать данные эти хоть и в конфиге они есть
 также хороший пример если у 2х объектов например позиции х одинаковая, а y отличается, то нужно рисовать прочерк в этом поле(те поведение большинства редакторов игр)
-
-
+ 
+ 
 Не все свойства рисовать через визуальное отображение, те где плюсик нажимаем и появляется поле. 
 делать так только для свойств где указано visual.
 * - эти свойства только у типа IObjectTypes.SLICE9_PLANE
 ** - доступно только для типа IObjectTypes.TEXT
-
+ 
 Основные свойства:
-
+ 
 ID - число, не изменяемое | mesh_data.id
 Тип - строка, не изменяемое | type
 Имя - строка | name
 Видимый(Visible) - boolean | get_visble/set_visible
 Активный(Active) - boolean | get_active/set_active
-
+ 
 Позиция vec3 | метод get_position/set_position, шаг для x,y = 0.5, z = 0.001
 Вращение vec3(градусы, эйлеры) | свойство rotation - хранится изначально в радианах
 Масштаб vec3 | свойство scale
 Размер vec2 | метод get_size/set_size
-
+ 
 Точка опоры(Pivot) vec2(visual) | get_pivot/set_pivot(X, Y, true), шаг 0.5, значения 0, 0.5, 1
 Якорь(Anchor) - checkBox+vec2(visual) | get_anchor/set_anchor, значения 0..1, но если якорь не задан то вернет/задаем -1, -1, те например объединить - checkBox + vec2, те активен ли якорь и если чебокс снят то скидывать значение в -1, -1, если стоит то ставить в 0.5, 0.5 при клике
-
+ 
 Цвет color | метод get_color/set_color
 Текстура* string(выпадающий) | метод get_texture(вернет массив, - имя текстуры, атлас)/set_texture(имя, атлас), пустая строка если не задано либо строка вида atlas/texture_name текстуры
 Slice9* vec2 | метод get_slice/set_slice, минимум 0
-
+ 
 Текст** string | метод set_text/свойство text для чтения
 Шрифт** string(выпадающий список из ключей от ResourceManager.get_all_fonts()) | метод set_font/свойство parameters.font для чтения
 Размер шрифта** int | шаг 1, минимум 8 делаем как в дефолде, как бы управляем тут числом, но по факту меняем scale пропорционально, а отталкиваться от стартового значения из свойства fontSize, скажем шрифт 32 по умолчанию. и пишем тут что сейчас стоит скажем 32, но если начнем крутить то скейлим уже, но свойство не трогаем
 Выравнивание** string выпадающий из списка - [center, left, right, justify]/[Центр, Слева, Справа, По ширине] | свойство textAlign
-
+ 
 */
 
 

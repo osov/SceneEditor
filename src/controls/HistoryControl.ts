@@ -52,6 +52,7 @@ function HistoryControlCreate() {
         if (ctx == undefined)
             context_data[ctx_name] = [];
         context_data[ctx_name].push({ type, data: data_list });
+        console.log('WRITE: ', type, data_list);
     }
 
     function undo() {
@@ -63,9 +64,11 @@ function HistoryControlCreate() {
         const type = last.type;
         const list_mesh: IBaseMeshDataAndThree[] = [];
         if (type == 'MESH_TRANSLATE') {
+            console.log('UNDO TRANS', last.data.length);
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_TRANSLATE'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                console.log(data.position);
                 mesh.position.copy(data.position);
                 list_mesh.push(mesh);
             }

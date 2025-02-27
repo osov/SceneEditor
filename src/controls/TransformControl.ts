@@ -174,28 +174,16 @@ function TransformControlCreate() {
         HistoryControl.add('MESH_SCALE', scale_data);
     }
 
-    function write_position_in_history(object: IBaseMeshDataAndThree) {
-        const oldPosition = object.position.clone();
-        HistoryControl.add('MESH_TRANSLATE', [{
-            id_mesh: object.mesh_data.id,
-            position: oldPosition
-        }]);
+    function write_positions_in_history(positions: PositionEventData[]) {
+        HistoryControl.add('MESH_TRANSLATE', positions);
     }
 
-    function write_rotation_in_history(object: IBaseMeshDataAndThree) {
-        const oldRotation = object.rotation.clone();
-        HistoryControl.add('MESH_ROTATE', [{
-            id_mesh: object.mesh_data.id,
-            rotation: oldRotation
-        }]);
+    function write_rotations_in_history(rotations: RotationEventData[]) {
+        HistoryControl.add('MESH_ROTATE', rotations);
     }
 
-    function write_scale_in_history(object: IBaseMeshDataAndThree) {
-        const oldScale = object.scale.clone();
-        HistoryControl.add('MESH_SCALE', [{
-            id_mesh: object.mesh_data.id,
-            scale: oldScale
-        }]);
+    function write_scales_in_history(scales: ScaleEventData[]) {
+        HistoryControl.add('MESH_SCALE', scales);
     }
 
     function is_selected(mesh: IBaseMeshDataAndThree) {
@@ -301,7 +289,7 @@ function TransformControlCreate() {
         set_active, set_selected_list, set_mode, detach,
         save_previous_positions, save_previous_rotations, save_previous_scales,
         write_previous_positions_in_historty, write_previous_rotations_in_historty, write_previous_scales_in_historty,
-        write_position_in_history, write_rotation_in_history, write_scale_in_history,
+        write_positions_in_history, write_rotations_in_history, write_scales_in_history,
         set_proxy_position, set_proxy_rotation, set_proxy_scale, set_proxy_in_average_point, get_proxy
     };
 }
