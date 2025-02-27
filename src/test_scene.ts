@@ -135,7 +135,7 @@ export async function run_debug_scene() {
   const container = SceneManager.create(IObjectTypes.GUI_CONTAINER, {});
   SceneManager.add(container);
 
-  ControlManager.update_graph();
+  ControlManager.update_graph(true);
 
   run_debug_inpector();
   run_debug_filemanager();

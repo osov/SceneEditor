@@ -175,8 +175,9 @@ function ControlManagerCreate() {
         return list;
     }
 
-    function update_graph() {
-        TreeControl.draw_graph(ControlManager.get_tree_graph(), 'test_scene');
+    function update_graph(is_first = false) {
+        if (is_first) TreeControl.draw_graph(ControlManager.get_tree_graph(), 'test_scene', true);
+        else TreeControl.draw_graph(ControlManager.get_tree_graph(), 'test_scene');
     }
 
     init();

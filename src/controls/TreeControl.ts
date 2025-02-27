@@ -121,20 +121,20 @@ function TreeControlCreate() {
         ] },
     ];
 
-    function draw_graph(getList: Item[], scene_name?: string, is_clear_state = false) {
+    function draw_graph(getList: Item[], scene_name?: string, is_hide_allSub = false, is_clear_state = false) {
         currentSceneName = scene_name ? scene_name : currentSceneName;
         treeList = deepClone(getList);
         contexts[currentSceneName] = is_clear_state ? {} : contexts[currentSceneName];
         contexts[currentSceneName] = contexts[currentSceneName] ? contexts[currentSceneName] : {};
 
-        const renderList = buildTree(treeList);
+        const renderList = is_hide_allSub ? buildTree(treeList, currentSceneName) : buildTree(treeList);
         const html = getTreeHtml(renderList);
         divTree.innerHTML = html;
         scrollToLastSelected();
         updateDaD();
     }
 
-    function buildTree(list: any) {
+    function buildTree(list: any, sneceName?: string) {
         const treeMap: any = {};
         const tree: any = [];
         prevListSelected = deepClone(listSelected);
@@ -155,6 +155,14 @@ function TreeControlCreate() {
                 tree.push(treeMap[node.id]);
             }
         });
+        
+        if (sneceName) {
+            Object.values(treeMap).forEach((node: any) => {
+                if (node?.children.length) {
+                    contexts[sneceName][+node.id] = false; // все sub tree скрыты   is_hide_allSub = true
+                }
+            });
+        }
 
         return tree;
     }

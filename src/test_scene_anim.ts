@@ -76,5 +76,5 @@ export async function run_anim_scene() {
 
     CameraControl.set_position(4276, -874, false);
     CameraControl.set_zoom(3, false)
-    ControlManager.update_graph();
+    ControlManager.update_graph(true);
 }
