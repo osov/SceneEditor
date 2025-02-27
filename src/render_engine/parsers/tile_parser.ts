@@ -70,9 +70,8 @@ export interface RenderMapData {
 }
 
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
-    return id_layer * 5 - y * 0.001;
+    return id_layer * 2 - y * 0.001;
 }
-
 
 const tiled_textures_data: Record<string, [string, string]> = {};
 function preload_tile_texture(id: string, path: string, atlas: string) {
@@ -127,8 +126,8 @@ function create_objects(obj_layer: ObjectLayer) {
     const objects: RenderTileObject[] = [];
     for (const obj of obj_layer.objects) {
         objects.push({
-            x: obj.x + obj.width / 2,
-            y: -obj.y + obj.height / 2,
+            x: obj.x,
+            y: -obj.y,
             width: obj.width,
             height: obj.height,
             tile_id: obj.tile_id,
@@ -165,10 +164,10 @@ function create_chunk(chunk: Chunk) {
     return data;
 }
 
-export function apply_tile_transform(mesh: IBaseMeshDataAndThree, tileId: number): void {
-    const flipHorizontally = (tileId & FLIP_HORIZONTALLY_FLAG) !== 0;
-    const flipVertically = (tileId & FLIP_VERTICALLY_FLAG) !== 0;
-    const flipDiagonally = (tileId & FLIP_DIAGONALLY_FLAG) !== 0;
+export function apply_tile_transform(mesh: IBaseMeshDataAndThree, tile_id: number): void {
+    const flipHorizontally = (tile_id & FLIP_HORIZONTALLY_FLAG) !== 0;
+    const flipVertically = (tile_id & FLIP_VERTICALLY_FLAG) !== 0;
+    const flipDiagonally = (tile_id & FLIP_DIAGONALLY_FLAG) !== 0;
 
     if (flipDiagonally)
         mesh.rotation.z = Math.PI / 2; // Поворот на 90 градусов
@@ -178,5 +177,28 @@ export function apply_tile_transform(mesh: IBaseMeshDataAndThree, tileId: number
 
     if (flipVertically)
         mesh.scale.y *= -1;
+
+}
+
+export function apply_object_transform(mesh: IBaseMeshDataAndThree, tile: TileObject): void {
+    const tile_id = tile.tile_id;
+    const flipHorizontally = (tile_id & FLIP_HORIZONTALLY_FLAG) !== 0;
+    const flipVertically = (tile_id & FLIP_VERTICALLY_FLAG) !== 0;
+    const flipDiagonally = (tile_id & FLIP_DIAGONALLY_FLAG) !== 0;
+
+    if (flipDiagonally)
+        mesh.rotation.z = Math.PI / 2; // Поворот на 90 градусов
+
+    if (flipHorizontally) {
+        mesh.scale.x *= -1;
+        const pos = mesh.get_position();
+        mesh.set_position(pos.x + tile.width, pos.y);
+    }
+
+    if (flipVertically) {
+        mesh.scale.y *= -1;
+        const pos = mesh.get_position();
+        mesh.set_position(pos.x, pos.y - tile.height);
+    }
 
 }
