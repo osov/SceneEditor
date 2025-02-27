@@ -7,8 +7,7 @@ export async function run_anim_scene() {
     //await ResourceManager.preload_atlas('./img/example_atlas.tpsheet', './img/example_atlas.png');
     ResourceManager.set_project_path('http://localhost:7000/assets/ExampleProject/public/');
     await ResourceManager.preload_model('guy.fbx');
-    ResourceManager.preload_model('cow.glb');
-
+  
     /*
         const plane_4 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 128, height: 32 });
         plane_4.scale.setScalar(2);
@@ -82,7 +81,8 @@ export async function run_anim_scene() {
     CameraControl.set_zoom(1, false)
     ControlManager.update_graph();
 
-
+/*
+  ResourceManager.preload_model('cow.glb');
     const am = SceneManager.create(IObjectTypes.ANIMATED_MESH, { width: 50, height: 50 });
     am.set_mesh('cow');
     am.children[0].scale.setScalar(100);
@@ -118,4 +118,5 @@ export async function run_anim_scene() {
     mesh.rotateY(-0.9)
     mesh.set_position(3121, -1792, 25)
     SceneManager.add(mesh);
+    */
 }
