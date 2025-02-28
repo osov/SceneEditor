@@ -2,6 +2,7 @@ import { TransformControls, TransformControlsMode } from 'three/examples/jsm/con
 import { IBaseMeshDataAndThree } from '../render_engine/types';
 import { Euler, Object3D, Vector3 } from 'three';
 import { PositionEventData, RotationEventData, ScaleEventData } from './types';
+import { Property } from './InspectorControl';
 
 declare global {
     const TransformControl: ReturnType<typeof TransformControlCreate>;
@@ -54,12 +55,19 @@ function TransformControlCreate() {
 
     control.addEventListener('objectChange', () => {
         switch (control.getMode()) {
-            case 'translate': translate(); break;
-            case 'rotate': rotate(); break;
-            case 'scale': scale(); break;
+            case 'translate':
+                translate();
+                InspectorControl.refresh([Property.POSITION]);
+                break;
+            case 'rotate':
+                rotate();
+                InspectorControl.refresh([Property.ROTATION]);
+                break;
+            case 'scale':
+                scale();
+                InspectorControl.refresh([Property.SCALE]);
+                break;
         }
-
-        EventBus.send('SYS_DATA_UPDATED');
     });
 
     function set_proxy_position(x: number, y: number, z: number, objects = selectedObjects) {
@@ -115,48 +123,48 @@ function TransformControlCreate() {
     }
 
     /** сохраняет текущие значения позиций выбраных обьектов */
-    function save_previous_positions(objects = selectedObjects) {
+    function save_previous_positions() {
         _oldPositions = [];
-        objects.forEach((object) => {
+        selectedObjects.forEach((object) => {
             const oldPosition = object.position.clone();
             _oldPositions.push(oldPosition);
         });
     }
 
     /** сохраняет текущие значения вращений выбраных обьектов */
-    function save_previous_rotations(objects = selectedObjects) {
+    function save_previous_rotations() {
         _oldRotations = [];
-        objects.forEach((object) => {
+        selectedObjects.forEach((object) => {
             const oldRotation = object.rotation.clone();
             _oldRotations.push(oldRotation);
         });
     }
 
     /** сохраняет текущие значения маштабов выбраных обьектов */
-    function save_previous_scales(objects = selectedObjects) {
+    function save_previous_scales() {
         _oldScales = [];
-        objects.forEach((object) => {
+        selectedObjects.forEach((object) => {
             const oldScale = object.scale.clone();
             _oldScales.push(oldScale);
         });
     }
 
-    /** записывает сохраненные предыдущие значения позиций обьектов (по умолчанию выбранных) в историю изменений */
-    function write_previous_positions_in_historty(objects = selectedObjects) {
+    /** записывает сохраненные предыдущие значения позиций выбранных обьектов в историю изменений */
+    function write_previous_positions_in_historty() {
         const pos_data: PositionEventData[] = [];
-        for (let i = 0; i < objects.length; i++) {
-            const object = objects[i];
+        for (let i = 0; i < selectedObjects.length; i++) {
+            const object = selectedObjects[i];
             const position = _oldPositions[i].clone();
             pos_data.push({ id_mesh: object.mesh_data.id, position, });
         }
         HistoryControl.add('MESH_TRANSLATE', pos_data);
     }
 
-    /** записывает сохраненные предыдущие значения вращений обьектов (по умолчанию выбранных) в историю изменений */
-    function write_previous_rotations_in_historty(objects = selectedObjects) {
+    /** записывает сохраненные предыдущие значения вращений выбранных обьектов в историю изменений */
+    function write_previous_rotations_in_historty() {
         const rot_data: RotationEventData[] = [];
-        for (let i = 0; i < objects.length; i++) {
-            const object = objects[i];
+        for (let i = 0; i < selectedObjects.length; i++) {
+            const object = selectedObjects[i];
             const rotation = _oldRotations[i].clone();
             rot_data.push({ id_mesh: object.mesh_data.id, rotation, });
         }
@@ -172,18 +180,6 @@ function TransformControlCreate() {
             scale_data.push({ id_mesh: object.mesh_data.id, scale, });
         }
         HistoryControl.add('MESH_SCALE', scale_data);
-    }
-
-    function write_positions_in_history(positions: PositionEventData[]) {
-        HistoryControl.add('MESH_TRANSLATE', positions);
-    }
-
-    function write_rotations_in_history(rotations: RotationEventData[]) {
-        HistoryControl.add('MESH_ROTATE', rotations);
-    }
-
-    function write_scales_in_history(scales: ScaleEventData[]) {
-        HistoryControl.add('MESH_SCALE', scales);
     }
 
     function is_selected(mesh: IBaseMeshDataAndThree) {
@@ -287,9 +283,7 @@ function TransformControlCreate() {
 
     return {
         set_active, set_selected_list, set_mode, detach,
-        save_previous_positions, save_previous_rotations, save_previous_scales,
-        write_previous_positions_in_historty, write_previous_rotations_in_historty, write_previous_scales_in_historty,
-        write_positions_in_history, write_rotations_in_history, write_scales_in_history,
-        set_proxy_position, set_proxy_rotation, set_proxy_scale, set_proxy_in_average_point, get_proxy
+        set_proxy_position, set_proxy_rotation, set_proxy_scale, get_proxy,
+        set_proxy_in_average_point
     };
 }

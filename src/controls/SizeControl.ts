@@ -3,6 +3,7 @@ import { IBaseMeshDataAndThree, PivotX, PivotY } from "../render_engine/types";
 import { AnchorEventData, PositionEventData, SizeEventData, SliceEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { is_base_mesh } from "../render_engine/helpers/utils";
+import { Property } from "./InspectorControl";
 
 declare global {
     const SizeControl: ReturnType<typeof SizeControlCreate>;
@@ -150,7 +151,8 @@ function SizeControlCreate() {
                         }
                     }
                 }
-                EventBus.send('SYS_DATA_UPDATED');
+
+                InspectorControl.refresh([Property.POSITION, Property.PIVOT]);
             }
         })
 
@@ -244,7 +246,7 @@ function SizeControlCreate() {
                     dir[1] = tmp[1];
                 }
                 draw_debug_bb(bounds);
-                EventBus.send('SYS_DATA_UPDATED');
+                InspectorControl.refresh([Property.SLICE9]);
                 return;
             }
             if (Input.is_shift() || Input.is_alt())
@@ -336,7 +338,7 @@ function SizeControlCreate() {
                 draw_debug_bb(bounds);
 
                 TransformControl.set_proxy_in_average_point(selected_list);
-                EventBus.send('SYS_DATA_UPDATED');
+                InspectorControl.refresh([Property.POSITION, Property.SIZE]);
             }
         });
     }

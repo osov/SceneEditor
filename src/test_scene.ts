@@ -1,7 +1,6 @@
 import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, Vector3 } from 'three'
 import { IObjectTypes } from './render_engine/types';
 import { CreateInstanceMesh2Pool } from './render_engine/objects/pools/instance_mesh_2_pool';
-import { run_debug_inpector } from './controls/InspectorControl';
 import { run_debug_filemanager } from './controls/AssetControl';
 
 export async function run_debug_scene() {
@@ -137,7 +136,6 @@ export async function run_debug_scene() {
 
   ControlManager.update_graph(true);
 
-  run_debug_inpector();
   run_debug_filemanager();
 
   await ResourceManager.preload_atlas('./img/example_atlas.tpsheet', './img/example_atlas.png');
