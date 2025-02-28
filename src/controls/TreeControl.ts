@@ -76,6 +76,7 @@ function TreeControlCreate() {
     const divTree: any = document.querySelector('#wr_tree');
     let treeItem: any = null;
     let currentDroppable: any = null;
+    let copyItemDrag: any = null;
     let itemDrag: any = null;
     let itemDrop: any = null;
     let isDrop: boolean = false;
@@ -89,7 +90,7 @@ function TreeControlCreate() {
     let itemDragRenameId: number | null = null; // чтобы чекать DBLCLICK  или  при DELAY не выбрали ли другой элемент
 
     const menuContext: any = document.querySelector('.wr_menu__context');
-    let mContextVisible: boolean = false;
+    // let mContextVisible: boolean = false;
     let boxDD: any = document.querySelector(".drag_and_drop"); // div таскания за мышью
     let ddVisible: boolean = false; //  видимость div перетаскивания 
 
@@ -279,9 +280,9 @@ function TreeControlCreate() {
 
     function onMouseDown(event: any) {
 
-        if (mContextVisible && !event.target.closest('.menu__context a')) {
-            menuContextClear();
-        }
+        // if (mContextVisible && !event.target.closest('.menu__context a')) {
+        //     menuContextClear();
+        // }
         if (!event.target.closest('.tree_div')) return;
 
         // event.preventDefault();
@@ -334,12 +335,12 @@ function TreeControlCreate() {
     function onMouseUp(event: any) {
         // event.preventDefault(); // иногда отключается плавное сворачивание ...
         
-        if (mContextVisible && event.target.closest('.menu__context a') && itemDrag && event.button === 0) {
-            // menuContextClick(event);
-            log('menuContextClick')
-        }
+        // if (mContextVisible && event.target.closest('.menu__context a') && itemDrag && event.button === 0) {
+        //     // menuContextClick(event);
+        //     log('menuContextClick')
+        // }
 
-        if (mContextVisible == false && (event.button === 0 || event.button === 2)) {
+        if ((event.button === 0 || event.button === 2)) {
 
             if (!event.target.closest('.tree_div')) {
                 if(itemDrag) myClear(); 
@@ -990,7 +991,7 @@ function TreeControlCreate() {
         if (!itemDrag) return;
         if (!event.target.closest(".tree__item")) return;
 
-        mContextVisible = true;
+        copyItemDrag = deepClone(itemDrag);
 
         // запрет скроллинга при контекстном меню
         if (divTree.scrollHeight > divTree.clientHeight) {
@@ -1006,80 +1007,73 @@ function TreeControlCreate() {
 
     function menuContextClick(success: boolean, action?: number | string): void {
         log('menuContextClick:: ', success, action);        
-        if(!success || action == undefined || action == null) return;
-        
-        const dataAction = action; 
-        
-        if (dataAction == NodeAction[0]) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_X } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: itemDrag?.id, list: listSelected, key: NodeAction.CTRL_X });
-        }
-        if (dataAction == NodeAction[1]) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_C } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: itemDrag?.id, list: listSelected, key: NodeAction.CTRL_C });
-        }
-        if (dataAction == NodeAction[2]) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_V } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: itemDrag?.id, list: listSelected, key: NodeAction.CTRL_V });
-        }
-        if (dataAction == NodeAction[3]) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_B } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: itemDrag?.id, list: listSelected, key: NodeAction.CTRL_B });
-        }
-        if (dataAction == NodeAction[4]) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${itemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_D } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: itemDrag?.id, list: listSelected, key: NodeAction.CTRL_D });
-        }
-        if (dataAction == NodeAction[5]) {
-            const itemName = document.querySelector(`.tree__item[data-id='${itemDrag?.id}'] .tree__item_name`);
-            if (!itemName || itemDrag?.no_rename) return;
-            preRename(itemDrag?.id, itemName);
-        }
-        if (dataAction == NodeAction[6]) {
-            log(`SYS_GRAPH_REMOVE, { id: ${itemDrag?.id}, list: ${listSelected} }`);
-            EventBus.trigger('SYS_GRAPH_REMOVE', { id: itemDrag?.id, list: listSelected });
-        }
-        if (dataAction == NodeAction[7]) {
-            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_box_empty} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_box_empty });
-        }
-        if (dataAction == NodeAction[8]) {
-            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_box} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_box });
-        }
-        if (dataAction == NodeAction[9]) {
-            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_text} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_text });
-        }
-        if (dataAction == NodeAction[10]) {
-            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_button} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_button });
-        }
-        if (dataAction == NodeAction[11]) {
-            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_bar} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_bar });
-        }
-        if (dataAction == NodeAction[12]) {
-            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_scroll} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_scroll });
-        }
-        if (dataAction == NodeAction[13]) {
-            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_sprite} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_sprite });
-        }
-        if (dataAction == NodeAction[14]) {
-            log(`SYS_GRAPH_ADD, { id: ${itemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_label} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: itemDrag?.id, list: listSelected, type: NodeAction.add_label });
-        }
-
-        menuContextClear();
-    }
-
-    function menuContextClear(): void {
         divTree.classList.remove('no_scrolling');
-        // menuContext.classList.remove('active');
-        // menuContext.removeAttribute('style');
-        mContextVisible = false;
+
+        if(!success || action == undefined || action == null || !copyItemDrag) return;
+        
+        if (action == NodeAction.CTRL_X) {
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_X } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_X });
+        }
+        if (action == NodeAction.CTRL_C) {
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_C } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_C });
+        }
+        if (action == NodeAction.CTRL_V) {
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_V } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_V });
+        }
+        if (action == NodeAction.CTRL_B) {
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_B } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_B });
+        }
+        if (action == NodeAction.CTRL_D) {
+            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_D } }`);
+            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_D });
+        }
+        if (action == NodeAction.rename) {
+            const itemName = document.querySelector(`.tree__item[data-id='${copyItemDrag?.id}'] .tree__item_name`);
+            if (!itemName || copyItemDrag?.no_rename) return;
+            preRename(copyItemDrag?.id, itemName);
+        }
+        if (action == NodeAction.remove) {
+            log(`SYS_GRAPH_REMOVE, { id: ${copyItemDrag?.id}, list: ${listSelected} }`);
+            EventBus.trigger('SYS_GRAPH_REMOVE', { id: copyItemDrag?.id, list: listSelected });
+        }
+        if (action == NodeAction.add_box_empty) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_box_empty} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_box_empty });
+        }
+        if (action == NodeAction.add_box) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_box} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_box });
+        }
+        if (action == NodeAction.add_text) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_text} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_text });
+        }
+        if (action == NodeAction.add_button) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_button} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_button });
+        }
+        if (action == NodeAction.add_bar) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_bar} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_bar });
+        }
+        if (action == NodeAction.add_scroll) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_scroll} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_scroll });
+        }
+        if (action == NodeAction.add_sprite) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_sprite} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_sprite });
+        }
+        if (action == NodeAction.add_label) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_label} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_label });
+        }
+
+        copyItemDrag = null;
     }
 
     function updateDaD(): void {

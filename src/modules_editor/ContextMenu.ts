@@ -80,8 +80,6 @@ function ContextMenuCreate() {
         if (html?.length) {
             menuContext.innerHTML = html;
             showContextMenu(event);
-            EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
-            EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
         }
 
     }
@@ -183,6 +181,9 @@ function ContextMenuCreate() {
         myCb(true, dataAction);
         hideContextMenu();
     }
+
+    EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
+    EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
     return { open };
 }
