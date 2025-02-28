@@ -76,16 +76,12 @@ function ContextMenuCreate() {
 
         myCb = callback;
 
-        log('ContextMenu.open()')
-
         const html = getMenuHtml(list);
         if (html?.length) {
             menuContext.innerHTML = html;
             showContextMenu(event);
-            // menuContext.addEventListener('click', menuClick);
             EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
             EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
-
         }
 
     }
@@ -158,26 +154,23 @@ function ContextMenuCreate() {
     }
 
     function onMouseDown(e: any) {
-        if (mContextVisible && !e.target.closest('.wr_menu__context .menu__context a') && e.button === 0) {
+        if (mContextVisible && !e.target.closest('.wr_menu__context .menu__context a')) {
             myCb(false);
             hideContextMenu();
         }
     }
 
     function onMouseUp(e: any) {
-                
         if (mContextVisible && e.target.closest('.wr_menu__context .menu__context a') && e.button === 0) {
             menuContextClick(e);
         }
-
-        
     }
 
     function menuContextClick(e: any): void {
         const itemContext = e.target.closest(".wr_menu__context .menu__context a");
         if (!itemContext) { 
             myCb(false);
-           hideContextMenu()
+            hideContextMenu()
             return;
         }
 
@@ -187,10 +180,8 @@ function ContextMenuCreate() {
             return;
         }
 
-        log({dataAction})
         myCb(true, dataAction);
         hideContextMenu();
-
     }
 
     return { open };

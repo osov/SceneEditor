@@ -550,26 +550,27 @@ li:not(.active)>.tree__btn .use_trgl {
   position: fixed;
   display: none;
   width: auto;
+  height: auto;
   min-width: 505px;
   top: -500px;
   left: -500px;
-  min-height: min(385px, calc(100vh - 28px));
-  max-height: min(385px, calc(100vh - 28px));
-  overflow-y: auto;
-  overflow-x: visible;
+  /* min-height: min(385px, calc(100vh - 28px)); */
+  /* max-height: min(385px, calc(100vh - 28px)); */
+  /* overflow-y: auto; */
+  /* overflow-x: visible; */
   user-select: none;
   z-index: 101;
   --bgLi: #2d3536;
   --border_color: #3a3a3a;
   /* top: 100px;
   left: 10px;
-  display: block;
-  border: 1px solid; */
+  display: block; 
+  border: 1px solid red; */
 }
 
 .wr_menu__context.bottom {
-  min-height: min(275px, calc(100vh - 28px));
-  max-height: min(275px, calc(100vh - 28px));
+  /* min-height: min(275px, calc(100vh - 28px)); */
+  /* max-height: min(275px, calc(100vh - 28px)); */
 }
 
 .wr_menu__context.active {
