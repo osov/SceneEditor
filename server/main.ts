@@ -7,4 +7,3 @@ import { register_log } from "./modules/Log";
 register_log();
 
 const server = Server(server_port);
-server.start();

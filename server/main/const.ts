@@ -1,5 +1,4 @@
 import { WatchEventType } from "fs";
-import { TDictionary } from "./types";
 
 export const CMD_PARAM_NAME = 'cmd_id';
 export const PATH_PARAM_NAME = 'path';
@@ -60,18 +59,23 @@ export const ERROR_TEXT = {
     PROJECT_ALREADY_EXISTS: 'A project with the same name already exists!',
     NO_NAME: 'No name received!',
     NO_NEW_NAME: 'No new name received!',
-    DIR_NOT_EXISTS: 'Path does not exist',
+    DIR_NOT_EXIST: 'Path does not exist',
+    FOLDER_ALREADY_EXISTS: 'Folder already exists',
+    FOLDER_NOT_EXIST: 'Folder does not exist',
     IMAGE_NOT_FOUND: 'Image not found!',
     NO_PATH: 'No path received!',
     NO_FILE_NAME: 'No file name received!',
     WRONG_JSON: 'Request with wrong JSON!',
     NO_DATA: 'No data to save!',
-    FILE_NOT_EXISTS: 'File does not exists!',
+    FILE_NOT_EXISTS: 'File does not exists',
     CANT_WRITE_FILE: 'Cannot write file',
     CANT_UPLOAD_FILE: 'Cannot upload file',
     NO_NEW_PATH: 'New path not received!',
     NO_NEW_NEW: 'New name not received!',
     COPY_CHANGE_ROOT: `Trying copy or change the project's assets' root folder!`,
+    SOME_FIELDS_WRONG: `Some of the command's required params are missing or empty`,
+    WRONG_ORIG_EXTENTION: `Wrong extention of the initial file`,
+    WRONG_END_EXTENTION: `Wrong extention of the destination file`,
 }
 
 

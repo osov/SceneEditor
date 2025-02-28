@@ -1,8 +1,8 @@
 import path from "path";
 import { Router } from "bun-serve-router";
-import { ERROR_TEXT, URL_PATHS, CMD_NAME } from "./const";
+import { ERROR_TEXT, URL_PATHS, CMD_NAME, LOAD_PROJECT_CMD } from "./const";
 import { get_file, handle_command } from "./logic";
-import { CommandId, ExtWebSocket, WsClient, NetMessages, TDictionary } from "./types";
+import { CommandId, ExtWebSocket, WsClient, NetMessages, TDictionary, ServerResponses } from "./types";
 import { do_response, json_parsable } from "./utils";
 import { get_asset_path, get_full_path } from "./fs_utils";
 import { WsServer } from "./WsServer";
@@ -14,6 +14,7 @@ export function Server(server_port: number) {
     const fs_watcher = FSWatcher(get_full_path(""), clients);
     const router = new Router();
     const data_sessions: TDictionary<any> = {};
+    let loaded_project: string | undefined;
 
     router.add("GET", `${URL_PATHS.TEST}`, (request, params) => {
         return test_func();
@@ -50,9 +51,15 @@ export function Server(server_port: number) {
         return do_response({result: 1, size, path: file_path, name, project});    
     })
     
-    router.add("GET", `${URL_PATHS.ASSETS}/*`, (request, params) => {
+    router.add("GET", `${URL_PATHS.ASSETS}/*`, async (request, params) => {
         const uri = params[0];  
-        return get_file(uri);
+        const asset_path = decodeURIComponent(uri ? uri : "");
+        if (loaded_project) {
+            const file = await get_file(loaded_project, asset_path);
+            if (file) 
+                return do_response(file, false);
+        }
+        return do_response("404 Not Found", false, 404);
     });
 
     router.add("POST", `${URL_PATHS.API}*`, async (request, params) => {
@@ -65,8 +72,8 @@ export function Server(server_port: number) {
         if (!json_parsable(data)) 
             return do_response({message: ERROR_TEXT.WRONG_JSON, result: 0});
         const json_data = JSON.parse(data);
-        const result = handle_command(cmd_id, json_data);
-        return result;
+        const result = await on_command(cmd_id, json_data);
+        return  do_response(result);
     });
 
     const server = Bun.serve({
@@ -77,13 +84,7 @@ export function Server(server_port: number) {
             if (response) {
                 return response;
             }
-            return new Response("404 Not Found", { 
-                status: 404, 
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Headers": "*"
-                },
-            });
+            return do_response("404 Not Found", false, 404);
         }     
     });
 
@@ -114,12 +115,15 @@ export function Server(server_port: number) {
     );
     log("Запущен сервер на порту " + server_port);
 
-    async function update() {
-        setTimeout(() => update(), 1000);
-    }
 
-    function start() {
-        update();
+    async function on_command(cmd_id: CommandId, params: any) {
+        const result = await handle_command(cmd_id, params);
+        log(result)
+        if (cmd_id === LOAD_PROJECT_CMD && result.result) {
+            const _result = result as ServerResponses[typeof LOAD_PROJECT_CMD]
+            loaded_project = _result.data?.name as string;
+        }
+        return result;
     }
 
     function on_message<T extends keyof NetMessages>(socket: WsClient, id_message: T, _message: NetMessages[T]) {
@@ -142,16 +146,7 @@ export function Server(server_port: number) {
     }
 
     function test_func() {
-        const resp = new Response(JSON.stringify(
-            {message: "OK!", result: 1}
-        ), { 
-            status: 200, 
-            headers: {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "*"
-            },
-        });
-        return resp;
+        return do_response({message: "OK!", result: 1}, true, 200);
     }
 
     function get_session_data(id_session: string) {
@@ -183,5 +178,5 @@ export function Server(server_port: number) {
         return true;
     }
 
-    return {start}
+    return {}
 }

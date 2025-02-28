@@ -12,13 +12,16 @@ export const EditorCommandsNames: (keyof AssetsCommands)[] = [
     DELETE_CMD
 ];
 
-export function do_response(data: any) {
-    return new Response(JSON.stringify(data), {
+export function do_response(data: any, stringify = true, status?: number) {
+    const options: ResponseInit = {
         headers: {
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Headers": "*"
-        },
-    });
+        }
+    };
+    if (status) options.status = status;
+    const body = stringify ? JSON.stringify(data) : data;
+    return new Response(body, options);
 }
 
 export function json_parsable(str: string) {

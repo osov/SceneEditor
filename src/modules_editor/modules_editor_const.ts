@@ -23,7 +23,11 @@ export type _SystemMessagesEditor = {
     SYS_GRAPH_ADD: { id: number, list: number[], type: string | number },
     SYS_INSPECTOR_UPDATED_VALUE: ChangeInfo,
     SYS_FILE_UPLOADED: FileUploadedData,
-    SYS_CLICK_ON_FILE_ASSET: { name: string, path: string, project: string },
+    SYS_CLICK_ON_ASSET: { name: string, path: string, project: string },
+    SYS_RENAME_ASSET_CMD: { new_name: string, path: string, project: string },
+    SYS_DELETE_ASSET_CMD: { path: string, project: string },
+    SYS_COPY_CMD: { path: string, new_path: string, project: string },
+    NEW_FOLDER_CMD: { name: string, path: string, project: string },
 };
 
 
@@ -34,7 +38,7 @@ export type AssetsCommands = {
     [GET_FOLDER_CMD]: { path: string, project: string },
     [SEARCH_CMD]: { name: string, project: string },
     [LOAD_PROJECT_CMD]: { project: string }
-    [RENAME_CMD]: { name: string, new_name: string, path: string, project: string },
+    [RENAME_CMD]: { new_name: string, path: string, project: string },
     [COPY_CMD]: { path: string, new_path: string, project: string },
     [DELETE_CMD]: { path: string, project: string },
     [SAVE_INFO_CMD]: { path: string, project: string, data: TRecursiveDict },
@@ -55,7 +59,7 @@ export type BaseResp<T> = {
 }
 
 export type AssetsResponses = {
-    [GET_PROJECTS_CMD]: BaseResp<FSObject[]>,
+    [GET_PROJECTS_CMD]: BaseResp<string[]>,
     [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
     [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
     [GET_FOLDER_CMD]: BaseResp<FSObject[]>,

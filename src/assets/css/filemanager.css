@@ -128,12 +128,12 @@
 }
 
 .icon.img {
-    width: 3.5em;
-    height: 3.5em;
+    width: 2.5em;
+    height: 2.5em;
     border-radius: 0.25em;
     display: inline-block;
 	object-fit: contain;
-    margin: 0.5px 0.5em 0.5em 0.5em;
+    margin: 2.5px 1.0em 0.8em 1.3em;
     background-size: 100%!important;
     background-repeat: no-repeat!important;
     background-position: 100% 100%!important;
@@ -146,14 +146,14 @@
 }
 
 .icon.file {
-	width: 3.5em;
-	height: 3.5em;
+	width: 2.5em;
+	height: 2.5em;
 	line-height: 3em;
 	text-align: center;
 	border-radius: 0.25em;
 	color: #FFF;
 	display: inline-block;
-    margin: 0.5px 0.5em 0.5em 0.5em;
+	margin: 0.5em 1.0em 0.8em 1.3em;
 	position: relative;
 	overflow: hidden;
 	box-shadow: 1.74em -2.1em 0 0 #A4A7AC inset;
@@ -315,50 +315,3 @@
 	width: 100%;
 	border-left: 1px solid #6d6d6d;
 }
-
-
-.fm_wr_menu {
-	position: fixed;
-	display: none;
-	width: auto;
-	min-width: 505px;
-	top: -0px;
-	left: -0px;
-	min-height: min(385px, calc(100vh - 28px));
-	max-height: min(385px, calc(100vh - 28px));
-	overflow-y: auto;
-	overflow-x: visible;
-	user-select: none;
-	z-index: 101;
-	--bgLi: #2d3536;
-	--border_color: #3a3a3a;
-  }
-  
-  .fm_wr_menu.bottom {
-	min-height: min(275px, calc(100vh - 28px));
-	max-height: min(275px, calc(100vh - 28px));
-  }
-  
-  .fm_wr_menu.active {
-	display: block;
-  }
-  
-  .fm_menu {
-	width: auto;
-  }
-  
-  .fm_menu li {
-	position: relative;
-	background-color: var(--bgLi);
-	border-bottom: 1px solid var(--border_color);
-	max-width: 170px;
-  }
-  
-  .fm_menu li:hover:not(:has(a.not_active)) {
-	background-color: var(--border_color);
-  }
-  
-  .fm_menu li:first-child {
-	border-top: 1px solid var(--border_color);
-  }
-

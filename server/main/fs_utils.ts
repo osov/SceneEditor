@@ -5,6 +5,11 @@ import { working_folder_path } from '../config';
 import { METADATA, PUBLIC, URL_PATHS } from './const';
 
 
+export async function is_folder(path: string) {
+    const stats = await fs.stat(path);
+    return stats.isDirectory();
+}
+
 export async function mk_dir(name: string) {
     await fs.mkdir(name);
 }
@@ -28,15 +33,12 @@ export async function read_dir_assets(dir: string, root_dir?: string) {
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const item_path = path.join(dir, item);
-        // Путь файла относительно самой папки либо root_dir
         const rel_path = path.relative(root_dir ? root_dir : dir, item_path);
-        // Путь относительно рабочей папки со всеми проектами, нужен для построения url для <img>
-        const rel_path_url = path.relative(get_full_path(''), item_path);
         const stats = await fs.stat(item_path);
         const is_file = stats.isFile();
         const num_files = is_file ? 0 : await get_files_amount(item_path);
         const ext = is_file ?  path.extname(item).slice(1) : undefined;
-        const src = is_file ?  path.join(URL_PATHS.ASSETS, rel_path_url) : undefined;
+        const src = is_file ?  path.join(URL_PATHS.ASSETS, rel_path) : undefined;
         const info: FSObject = {name: item, type: is_file ? "file" : "folder", size: stats.size, path: rel_path, num_files, ext, src};
         list.push(info);
         
@@ -83,11 +85,12 @@ export function get_metadata_path(project_name: string) {
 
 export async function new_folder(dir: string, name: string) {
     const full_path = path.join(dir, name);
-    log('full_path', full_path)
     mk_dir(full_path);
     return full_path;
 }
 
 export async function new_project(name: string) {
-    await new_folder(name, "");
+    const full_path = get_full_path(name);
+    mk_dir(full_path);
+    mk_dir(path.join(full_path, PUBLIC));
 }

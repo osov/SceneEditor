@@ -16,7 +16,7 @@ export type AssetsCommands = {
     [NEW_PROJECT_CMD]: { project: string},
     [NEW_FOLDER_CMD]: { name: string, path: string, project: string },
     [GET_FOLDER_CMD]: { path: string, project: string },
-    [SEARCH_CMD]: { name: string, project: string },
+    // [SEARCH_CMD]: { name: string, project: string },
     [LOAD_PROJECT_CMD]: { project: string, id_session?: string },
     [RENAME_CMD]: { name: string, new_name: string, path: string, project: string },
     [COPY_CMD]: { path: string, new_path: string, project: string },
@@ -39,11 +39,11 @@ export type BaseResp<T> = {
 };
 
 export type AssetsResponses = {
-    [GET_PROJECTS_CMD]: BaseResp<FSObject[]>,
+    [GET_PROJECTS_CMD]: BaseResp<string[]>,
     [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
     [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
     [GET_FOLDER_CMD]: BaseResp<FSObject[]>,
-    [SEARCH_CMD]: BaseResp<string>,
+    // [SEARCH_CMD]: BaseResp<string>,
     [LOAD_PROJECT_CMD]: BaseResp<{assets: FSObject[], name: string}>,
     [RENAME_CMD]: BaseResp<VoidMessage>,
     [COPY_CMD]: BaseResp<VoidMessage>,
@@ -77,4 +77,8 @@ export type WsClient = ServerWebSocket<ExtWebSocket>;
 export interface ProtocolWrapper {
     id: string;
     message: any;
+}
+
+export type KeyOfType<T, V> = keyof {
+    [P in keyof T as T[P] extends V? P: never]: any
 }
