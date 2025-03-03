@@ -593,7 +593,7 @@ export async function run_debug_filemanager() {
 
         // Иначе загружаем список существующих проектов
         const projects = await ClientAPI.get_projects();
-        const project_to_load = 'test';
+        const project_to_load = 'ExampleProject';
         const names: string[] = [];
 
         // Ищем проект с именем project_to_load и пробуем его загрузить

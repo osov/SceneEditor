@@ -1,3 +1,4 @@
+import { run_debug_filemanager } from "./controls/AssetControl";
 import { apply_object_transform, apply_tile_transform, get_depth, get_tile_texture, MapData, parse_tiled, preload_tiled_textures, TILE_FLIP_MASK } from "./render_engine/parsers/tile_parser";
 import { IObjectTypes } from "./render_engine/types";
 
@@ -5,7 +6,8 @@ import { IObjectTypes } from "./render_engine/types";
 export async function run_anim_scene() {
     //  await ResourceManager.preload_texture('./img/2.png');
     //await ResourceManager.preload_atlas('./img/example_atlas.tpsheet', './img/example_atlas.png');
-    ResourceManager.set_project_path('http://localhost:7000/assets/ExampleProject/public/');
+      run_debug_filemanager();
+    ResourceManager.set_project_path('http://localhost:7000/assets/');
     await ResourceManager.preload_model('guy.fbx');
   
     /*
