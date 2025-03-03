@@ -188,10 +188,11 @@ export function ResourceManagerModule() {
     }
 
     function get_all_textures() {
-        const list: { name: string, atlas: string, data: TextureData }[] = [];
+        const list: { name: string, atlas: string, path: string, data: TextureData }[] = [];
         for (const k in atlases) {
             for (const k2 in atlases[k]) {
-                list.push({ name: k2, atlas: k, data: atlases[k][k2].data });
+                const asset = atlases[k][k2];
+                list.push({ name: k2, atlas: k, path: asset.path, data: asset.data });
             }
         }
         return list;

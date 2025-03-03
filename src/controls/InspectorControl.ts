@@ -265,8 +265,8 @@ function InspectorControlCreate() {
     let _selected_list: IBaseMeshDataAndThree[];
     let _data: ObjectData[];
     let _last_state: BladeState;
-    let _refreshed_properies: Property[];
 
+    let _refreshed_properies: Property[] = [];
     let _is_first = true;
 
     function init() {
@@ -435,6 +435,7 @@ function InspectorControlCreate() {
 
         _refreshed_properies = properties;
         _inspector.refresh();
+        _last_state = deepClone(_inspector.exportState());
     }
 
     function clear() {

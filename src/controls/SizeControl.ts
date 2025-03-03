@@ -208,14 +208,22 @@ function SizeControlCreate() {
             if (e.button != 0)
                 return;
             is_down = false;
-            if (is_changed_pos)
+            if (is_changed_pos) {
+                is_changed_pos = false;
                 HistoryControl.add('MESH_TRANSLATE', old_pos);
-            if (is_changed_size)
+            }
+            if (is_changed_size) {
+                is_changed_size = false;
                 HistoryControl.add('MESH_SIZE', old_size);
-            if (is_changed_slice)
+            }
+            if (is_changed_slice) {
+                is_changed_slice = false;
                 HistoryControl.add('MESH_SLICE', old_slice);
-            if (is_changed_anchor)
+            }
+            if (is_changed_anchor) {
+                is_changed_anchor = false;
                 HistoryControl.add('MESH_ANCHOR', old_anchor);
+            }
         });
 
         EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
