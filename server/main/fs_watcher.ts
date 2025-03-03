@@ -4,9 +4,11 @@ import { IClients } from "./clients";
 import { get_full_path } from "./fs_utils";
 import path from "path";
 import { FSEventType, FSObjectType, PUBLIC } from "./const";
+import { send_message_socket } from "./ws_utils";
+import { WsClient } from "./types";
 
 
-export function FSWatcher(dir: string, clients: IClients) {
+export function FSWatcher(dir: string, sockets: WsClient[]) {
     const watcher = watch(
         dir,
         { recursive: true }, 
@@ -26,7 +28,8 @@ export function FSWatcher(dir: string, clients: IClients) {
                 const full_rel_path = path.relative(get_full_path(""), _dir);  // Путь относительно папки со всеми проектами
                 const project = full_rel_path.split(path.sep)[0];    // Достаём название проекта
                 const rel_path = path.relative(path.join(project, PUBLIC), full_rel_path);  // Путь относительно папки public этого проекта
-                clients.send_message_all("SERVER_FILE_SYSTEM_EVENT", {path: rel_path, project, obj_type, event_type})
+                for (const soc of sockets)
+                    send_message_socket(soc, "SERVER_FILE_SYSTEM_EVENT", {path: rel_path, project, obj_type, event_type})
             }
         }
     );    

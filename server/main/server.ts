@@ -1,20 +1,23 @@
 import path from "path";
 import { Router } from "bun-serve-router";
-import { ERROR_TEXT, URL_PATHS, CMD_NAME, LOAD_PROJECT_CMD } from "./const";
-import { get_file, handle_command } from "./logic";
-import { CommandId, ExtWebSocket, WsClient, NetMessages, TDictionary, ServerResponses } from "./types";
+import { ERROR_TEXT, URL_PATHS, CMD_NAME, LOAD_PROJECT_CMD, GET_FOLDER_CMD, GET_LOADED_PROJECT_CMD } from "./const";
+import { project_name_required, get_file, handle_command, loaded_project_required } from "./logic";
+import { CommandId, ExtWebSocket, WsClient, NetMessages, TDictionary, ServerResponses, ServerCommands } from "./types";
 import { do_response, json_parsable } from "./utils";
 import { get_asset_path, get_full_path } from "./fs_utils";
 import { WsServer } from "./WsServer";
 import { Clients } from "./clients";
 import { FSWatcher } from "./fs_watcher";
+import { send_message_socket } from "./ws_utils";
 
 export function Server(server_port: number) {
-    const clients = Clients();
-    const fs_watcher = FSWatcher(get_full_path(""), clients);
+    // const clients = Clients();
+    let sockets: WsClient[] = [];
+    const fs_watcher = FSWatcher(get_full_path(""), sockets);
     const router = new Router();
     const data_sessions: TDictionary<any> = {};
-    let loaded_project: string | undefined;
+    let current_project: string | undefined;
+    let current_dir = "";
 
     router.add("GET", `${URL_PATHS.TEST}`, (request, params) => {
         return test_func();
@@ -23,6 +26,7 @@ export function Server(server_port: number) {
     router.add("POST", `${URL_PATHS.UPLOAD}`, async (request, params) => {
         const content_type = request.headers.get('content-type');
         let size = 0;
+        let dir_path: string | null = "";
         let file_path = "";
         let name = "";
         let project = "";
@@ -30,32 +34,37 @@ export function Server(server_port: number) {
             try {
                 const formdata = await request.formData();
                 const file_data = formdata.get('file');
-                const project_name = formdata.get('project') as string | null;
-                const _path = formdata.get('path') as string | null;
-                if (file_data != null && _path != null && project_name != null) {
+                const project = current_project;
+                dir_path = formdata.get('path') as  string | null;
+                if (file_data != null && dir_path != null && project != null) {
                     const file = file_data as unknown as Blob;
                     const file_name = file.name as string | undefined;
                     if (file_name) {
-                        file_path = path.join(_path, file_name);
-                        project = project_name;
+                        file_path = path.join(dir_path, file_name);
                         name = file_name;
-                        size = await Bun.write(`${get_asset_path(project_name, file_path)}`, file);
+                        size = await Bun.write(`${get_asset_path(project, file_path)}`, file);
+                        return do_response({result: 1, size, path: file_path, name, project});   
                     }
                 }
             }
             catch(e: any) {
-                const response ={result: 0, message: `${ERROR_TEXT.CANT_UPLOAD_FILE}: ${e}`};
+                const response = {result: 0, message: `${ERROR_TEXT.CANT_UPLOAD_FILE}: ${e}`};
                 return do_response(response);
             } 
-        }
-        return do_response({result: 1, size, path: file_path, name, project});    
+        } 
+        const reason = (name === "") ? "no name" : 
+                        (dir_path === "") ? "no dir path" : 
+                        (project === "") ? "no loaded project" :
+                        ""
+        const response = {result: 0, message: `${ERROR_TEXT.CANT_UPLOAD_FILE}: ${reason}`}; 
+        return do_response(response);
     })
     
     router.add("GET", `${URL_PATHS.ASSETS}/*`, async (request, params) => {
         const uri = params[0];  
         const asset_path = decodeURIComponent(uri ? uri : "");
-        if (loaded_project) {
-            const file = await get_file(loaded_project, asset_path);
+        if (current_project) {
+            const file = await get_file(current_project, asset_path);
             if (file) 
                 return do_response(file, false);
         }
@@ -69,10 +78,7 @@ export function Server(server_port: number) {
             return do_response({message: ERROR_TEXT.COMMAND_NOT_FOUND, result: 0});
         }
         const data = await request.text();
-        if (!json_parsable(data)) 
-            return do_response({message: ERROR_TEXT.WRONG_JSON, result: 0});
-        const json_data = JSON.parse(data);
-        const result = await on_command(cmd_id, json_data);
+        const result = await on_command(cmd_id, data);
         return  do_response(result);
     });
 
@@ -116,33 +122,48 @@ export function Server(server_port: number) {
     log("Запущен сервер на порту " + server_port);
 
 
-    async function on_command(cmd_id: CommandId, params: any) {
-        const result = await handle_command(cmd_id, params);
-        log(result)
-        if (cmd_id === LOAD_PROJECT_CMD && result.result) {
-            const _result = result as ServerResponses[typeof LOAD_PROJECT_CMD]
-            loaded_project = _result.data?.name as string;
+    async function on_command(cmd_id: CommandId, data: string) {
+        if (cmd_id == GET_LOADED_PROJECT_CMD) {
+            return {result: 1, data: {project: current_project, current_dir}};;
+        }
+        
+        if (!json_parsable(data)) 
+            return do_response({message: ERROR_TEXT.WRONG_JSON, result: 0});
+        const params = JSON.parse(data);
+
+        const resp = await project_name_required(cmd_id, params);
+        if (resp) return resp;
+        
+        if (loaded_project_required(cmd_id) && !current_project)
+            return {message: ERROR_TEXT.PROJECT_NOT_LOADED, result: 0}
+
+        const result = await handle_command(current_project as string, cmd_id, params);
+        if (result.result) {
+            if (cmd_id === LOAD_PROJECT_CMD) {
+                const _result = result as ServerResponses[typeof LOAD_PROJECT_CMD];
+                current_project = _result.data?.name as string;
+                log(`${current_project} is current loaded project`);
+                current_dir = "";
+            }
+            if (cmd_id === GET_FOLDER_CMD) {
+                const _params = params as ServerCommands[typeof GET_FOLDER_CMD];
+                current_dir = _params.path as string; 
+                log(`${current_dir} is current dir`);           
+            }
         }
         return result;
     }
 
-    function on_message<T extends keyof NetMessages>(socket: WsClient, id_message: T, _message: NetMessages[T]) {
-        if (id_message == 'CLIENT_CONNECT') {
-            const message = _message as NetMessages['CLIENT_CONNECT'];
-            const id_session = message.id_session;
-            let session_data = get_session_data(id_session); 
-            socket.data.id_session = id_session; 
-            clients.add(id_session, socket);
-        } 
+    function on_message<T extends keyof NetMessages>(socket: WsClient, id_message: T, _message: NetMessages[T]) {     
     }
 
     function on_connect(socket: WsClient) {
+        sockets.push(socket);
     }
 
     function on_disconnect(socket: WsClient) {
-        if (socket.data.id_session !== undefined) {
-            clients.remove(socket.data.id_session);
-        }
+        const i = sockets.indexOf(socket);
+        sockets.splice(i, 1);
     }
 
     function test_func() {
@@ -180,3 +201,4 @@ export function Server(server_port: number) {
 
     return {}
 }
+

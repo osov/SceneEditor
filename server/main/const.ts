@@ -10,6 +10,7 @@ export const DATA_PARAM_NAME = 'data';
 export const ID_SESSION_PARAM_NAME = 'id_session';
 ;
 
+export const GET_LOADED_PROJECT_CMD = '/get_loaded_project';
 export const GET_PROJECTS_CMD = '/get_projects';
 export const NEW_PROJECT_CMD = '/new_project';
 export const NEW_FOLDER_CMD = '/new_folder';
@@ -34,6 +35,7 @@ export const URL_PATHS = {
 }
 
 export const CMD_NAME = [
+    GET_LOADED_PROJECT_CMD,
     GET_PROJECTS_CMD, 
     NEW_PROJECT_CMD, 
     NEW_FOLDER_CMD, 
@@ -56,6 +58,7 @@ export const ERROR_TEXT = {
     COMMAND_NOT_FOUND: 'Command not found!',
     NO_PROJECT_NAME: 'No project name received!',
     PROJECT_NOT_FOUND: 'Project not found!',
+    PROJECT_NOT_LOADED: 'No project loaded!',
     PROJECT_ALREADY_EXISTS: 'A project with the same name already exists!',
     NO_NAME: 'No name received!',
     NO_NEW_NAME: 'No new name received!',
@@ -68,8 +71,8 @@ export const ERROR_TEXT = {
     WRONG_JSON: 'Request with wrong JSON!',
     NO_DATA: 'No data to save!',
     FILE_NOT_EXISTS: 'File does not exists',
-    CANT_WRITE_FILE: 'Cannot write file',
-    CANT_UPLOAD_FILE: 'Cannot upload file',
+    CANT_WRITE_FILE: 'Could not write file',
+    CANT_UPLOAD_FILE: 'Could not upload file',
     NO_NEW_PATH: 'New path not received!',
     NO_NEW_NEW: 'New name not received!',
     COPY_CHANGE_ROOT: `Trying copy or change the project's assets' root folder!`,

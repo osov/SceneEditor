@@ -1,5 +1,5 @@
 import { ServerWebSocket } from "bun";
-import { NEW_PROJECT_CMD, NEW_FOLDER_CMD, RENAME_CMD, DELETE_CMD, LOAD_PROJECT_CMD, COPY_CMD, GET_PROJECTS_CMD, FSObjectType, SEARCH_CMD, GET_FOLDER_CMD, SAVE_INFO_CMD, GET_INFO_CMD, GET_DATA_CMD, SAVE_DATA_CMD, FILE_UPLOAD_CMD, FSEventType } from "./const";
+import { NEW_PROJECT_CMD, NEW_FOLDER_CMD, RENAME_CMD, DELETE_CMD, LOAD_PROJECT_CMD, COPY_CMD, GET_PROJECTS_CMD, FSObjectType, SEARCH_CMD, GET_FOLDER_CMD, SAVE_INFO_CMD, GET_INFO_CMD, GET_DATA_CMD, SAVE_DATA_CMD, FILE_UPLOAD_CMD, FSEventType, GET_LOADED_PROJECT_CMD } from "./const";
 
 
 export type ServerCommands = AssetsCommands;
@@ -7,24 +7,26 @@ export type ServerResponses = AssetsResponses;
 export type CommandId = keyof ServerCommands;
 
 export type NetMessages = {
-    CLIENT_CONNECT: { id_session: string },
+    GET_LOADED_PROJECT: VoidMessage,
+    LOADED_PROJECT: { project: string | undefined, current_dir: string },
     SERVER_FILE_SYSTEM_EVENT: { path: string, project: string, obj_type: FSObjectType, event_type: FSEventType },
 }
 
 export type AssetsCommands = {
+    [GET_LOADED_PROJECT_CMD]: VoidMessage,
     [GET_PROJECTS_CMD]: VoidMessage,
-    [NEW_PROJECT_CMD]: { project: string},
-    [NEW_FOLDER_CMD]: { name: string, path: string, project: string },
-    [GET_FOLDER_CMD]: { path: string, project: string },
-    // [SEARCH_CMD]: { name: string, project: string },
-    [LOAD_PROJECT_CMD]: { project: string, id_session?: string },
-    [RENAME_CMD]: { name: string, new_name: string, path: string, project: string },
-    [COPY_CMD]: { path: string, new_path: string, project: string },
-    [DELETE_CMD]: { path: string, project: string },
-    [SAVE_INFO_CMD]: { path: string, project: string, data: TRecursiveDict },
-    [GET_INFO_CMD]: { path: string, project: string },
-    [SAVE_DATA_CMD]: { path: string, project: string, data: string },
-    [GET_DATA_CMD]: { path: string, project: string },
+    [NEW_PROJECT_CMD]: { project: string },
+    [LOAD_PROJECT_CMD]: { project: string },
+    [NEW_FOLDER_CMD]: { name: string, path: string },
+    [GET_FOLDER_CMD]: { path: string },
+    // [SEARCH_CMD]: { name: string },
+    [RENAME_CMD]: { new_name: string, path: string },
+    [COPY_CMD]: { path: string, new_path: string },
+    [DELETE_CMD]: { path: string },
+    [SAVE_INFO_CMD]: { path: string, data: TRecursiveDict },
+    [GET_INFO_CMD]: { path: string },
+    [SAVE_DATA_CMD]: { path: string, data: string },
+    [GET_DATA_CMD]: { path: string },
     // [NEW_MATERIAL]: {name: string, path: string, data: IDictionary<string>},
     // [GET_MATERIAL]: {name: string, path: string},
     // [SET_INFO]: {name: string, path: string, data: IDictionary<string>},
@@ -39,6 +41,7 @@ export type BaseResp<T> = {
 };
 
 export type AssetsResponses = {
+    [GET_LOADED_PROJECT_CMD]: BaseResp<{ project?: string, current_dir: string }>,
     [GET_PROJECTS_CMD]: BaseResp<string[]>,
     [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
     [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,

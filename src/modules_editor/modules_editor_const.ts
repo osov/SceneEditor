@@ -22,28 +22,29 @@ export type _SystemMessagesEditor = {
     SYS_GRAPH_ADD: { id: number, list: number[], type: string | number },
     SYS_INSPECTOR_UPDATED_VALUE: ChangeInfo,
     SYS_FILE_UPLOADED: FileUploadedData,
-    SYS_CLICK_ON_ASSET: { name: string, path: string, project: string },
-    SYS_RENAME_ASSET_CMD: { new_name: string, path: string, project: string },
-    SYS_DELETE_ASSET_CMD: { path: string, project: string },
-    SYS_COPY_CMD: { path: string, new_path: string, project: string },
-    NEW_FOLDER_CMD: { name: string, path: string, project: string },
+    SYS_CLICK_ON_ASSET: { name: string, path: string },
+    SYS_RENAME_ASSET_CMD: { new_name: string, path: string },
+    SYS_DELETE_ASSET_CMD: { path: string },
+    SYS_COPY_CMD: { path: string, new_path: string },
+    NEW_FOLDER_CMD: { name: string, path: string },
 };
 
 
 export type AssetsCommands = {
+    [GET_LOADED_PROJECT_CMD]: VoidMessage,
     [GET_PROJECTS_CMD]: VoidMessage,
     [NEW_PROJECT_CMD]: { project: string },
-    [NEW_FOLDER_CMD]: { name: string, path: string, project: string },
-    [GET_FOLDER_CMD]: { path: string, project: string },
-    [SEARCH_CMD]: { name: string, project: string },
-    [LOAD_PROJECT_CMD]: { project: string }
-    [RENAME_CMD]: { new_name: string, path: string, project: string },
-    [COPY_CMD]: { path: string, new_path: string, project: string },
-    [DELETE_CMD]: { path: string, project: string },
-    [SAVE_INFO_CMD]: { path: string, project: string, data: TRecursiveDict },
-    [GET_INFO_CMD]: { path: string, project: string },
-    [SAVE_DATA_CMD]: { path: string, project: string, data: string },
-    [GET_DATA_CMD]: { path: string, project: string },
+    [LOAD_PROJECT_CMD]: { project: string },
+    [NEW_FOLDER_CMD]: { name: string, path: string },
+    [GET_FOLDER_CMD]: { path: string },
+    // [SEARCH_CMD]: { name: string },
+    [RENAME_CMD]: { new_name: string, path: string },
+    [COPY_CMD]: { path: string, new_path: string },
+    [DELETE_CMD]: { path: string },
+    [SAVE_INFO_CMD]: { path: string, data: TRecursiveDict },
+    [GET_INFO_CMD]: { path: string },
+    [SAVE_DATA_CMD]: { path: string, data: string },
+    [GET_DATA_CMD]: { path: string },
     // [NEW_MATERIAL]: {name: string, path: string, data: IDictionary<string>},
     // [GET_MATERIAL]: {name: string, path: string},
     // [SET_INFO]: {name: string, path: string, data: IDictionary<string>},
@@ -58,11 +59,12 @@ export type BaseResp<T> = {
 }
 
 export type AssetsResponses = {
+    [GET_LOADED_PROJECT_CMD]: BaseResp<{ project?: string, current_dir: string }>,
     [GET_PROJECTS_CMD]: BaseResp<string[]>,
     [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
     [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
     [GET_FOLDER_CMD]: BaseResp<FSObject[]>,
-    [SEARCH_CMD]: BaseResp<string>,
+    // [SEARCH_CMD]: BaseResp<string>,
     [LOAD_PROJECT_CMD]: BaseResp<{ assets: FSObject[], name: string }>,
     [RENAME_CMD]: BaseResp<VoidMessage>,
     [COPY_CMD]: BaseResp<VoidMessage>,
@@ -75,10 +77,12 @@ export type AssetsResponses = {
 }
 
 export type NetMessagesEditor = {
-    CLIENT_CONNECT: { id_session: number },
+    GET_LOADED_PROJECT: VoidMessage,
+    LOADED_PROJECT: { project: string | undefined, current_dir: string },
     SERVER_FILE_SYSTEM_EVENT: { path: string, project: string, obj_type: FSObjectType, event_type: WatchEventType },
 }
 
+export const GET_LOADED_PROJECT_CMD = '/get_loaded_project'
 export const GET_PROJECTS_CMD = '/get_projects';
 export const NEW_PROJECT_CMD = '/new_project';
 export const NEW_FOLDER_CMD = '/new_folder';

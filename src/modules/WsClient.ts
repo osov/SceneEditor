@@ -1,8 +1,6 @@
-import { PING_INTERVAL } from "../config";
-import { NetMessages as NetMessagesBase } from "./modules_const";
 import { NetMessagesEditor } from "../modules_editor/modules_editor_const";
 
-type NetMessages = NetMessagesBase & NetMessagesEditor;
+type NetMessages = NetMessagesEditor;
 
 declare global {
     const WsClient: ReturnType<typeof WsClientModule>;

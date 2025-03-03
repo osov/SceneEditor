@@ -1,7 +1,6 @@
 import { SERVER_URL } from "../config";
-import { FSObject } from "../controls/AssetControl";
 import { ProtocolWrapper } from "../render_engine/types";
-import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD as SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor } from "./modules_editor_const";
+import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD as SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, GET_LOADED_PROJECT_CMD } from "./modules_editor_const";
 
 
 declare global {
@@ -14,7 +13,13 @@ export function register_client_api() {
 function ClientAPIModule() {
     let id_session = System.now();
 
-    async function get_projects(): Promise<FSObject[]> {
+
+    async function get_loaded_project(): Promise<AssetsResponses[typeof GET_LOADED_PROJECT_CMD]> {
+        const command_id = GET_LOADED_PROJECT_CMD;
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {});
+    }
+
+    async function get_projects(): Promise<string[]> {
         const command_id = GET_PROJECTS_CMD;
         const resp = await api.command<typeof command_id>(URL_PATHS.API, command_id, {});
         if (resp.result === 1 && resp.data != undefined) {
@@ -33,64 +38,56 @@ function ClientAPIModule() {
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project});
     }
 
-    async function new_folder(project: string, path: string, name: string): Promise<AssetsResponses[typeof NEW_FOLDER_CMD]> {
+    async function new_folder(path: string, name: string): Promise<AssetsResponses[typeof NEW_FOLDER_CMD]> {
         const command_id = NEW_FOLDER_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path, name});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, name});
     }
 
-    async function get_folder(project: string, path: string): Promise<AssetsResponses[typeof GET_FOLDER_CMD]> {
+    async function get_folder(path: string): Promise<AssetsResponses[typeof GET_FOLDER_CMD]> {
         const command_id = GET_FOLDER_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
     }
 
-    async function copy(project: string, path: string, new_path: string): Promise<AssetsResponses[typeof COPY_CMD]> {
+    async function copy(path: string, new_path: string): Promise<AssetsResponses[typeof COPY_CMD]> {
         const command_id = COPY_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path, new_path});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, new_path});
     }
 
-    async function rename(project: string, path: string, name: string, new_name: string): Promise<AssetsResponses[typeof RENAME_CMD]> {
+    async function rename(path: string, new_name: string): Promise<AssetsResponses[typeof RENAME_CMD]> {
         const command_id = RENAME_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path, name, new_name});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, new_name});
     }
 
-    async function remove(project: string, path: string): Promise<AssetsResponses[typeof DELETE_CMD]> {
+    async function remove(path: string): Promise<AssetsResponses[typeof DELETE_CMD]> {
         const command_id = DELETE_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
     }
 
-    async function save_data(project: string, path: string, data: string): Promise<AssetsResponses[typeof SAVE_DATA_CMD]> {
+    async function save_data(path: string, data: string): Promise<AssetsResponses[typeof SAVE_DATA_CMD]> {
         const command_id = SAVE_DATA_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path, data});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, data});
     }
     
-    async function get_data(project: string, path: string): Promise<AssetsResponses[typeof GET_DATA_CMD]> {
+    async function get_data(path: string): Promise<AssetsResponses[typeof GET_DATA_CMD]> {
         const command_id = GET_DATA_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
     }
 
-    async function save_info(project: string, path: string, data: string): Promise<AssetsResponses[typeof SAVE_INFO_CMD]> {
+    async function save_info(path: string, data: string): Promise<AssetsResponses[typeof SAVE_INFO_CMD]> {
         const command_id = SAVE_INFO_CMD;
         const data_json = JSON.parse(data);
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path, data: data_json});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, data: data_json});
     }
     
-    async function get_info(project: string, path: string): Promise<AssetsResponses[typeof GET_INFO_CMD]> {
+    async function get_info(path: string): Promise<AssetsResponses[typeof GET_INFO_CMD]> {
         const command_id = GET_INFO_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {project, path});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
     }
 
     async function test_server_ok() {
         return await api.GET(URL_PATHS.TEST, {});
     }
     
-    EventBus.on('ON_WS_CONNECTED', (m) => {
-        WsClient.send_message('CLIENT_CONNECT', { id_session });
-    });
-    EventBus.on('ON_WS_DATA', (m) => {
-        const data = JSON.parse(m.data) as ProtocolWrapper;
-        on_message_socket(data.id as keyof NetMessagesEditor, data.message);
-    });
-
     function on_message_socket<T extends keyof NetMessagesEditor>(id_message: T, _message: NetMessagesEditor[T]) {
         if (id_message == 'SERVER_FILE_SYSTEM_EVENT') {
             const message = _message as NetMessagesEditor['SERVER_FILE_SYSTEM_EVENT'];
@@ -98,7 +95,15 @@ function ClientAPIModule() {
         }
     }
 
-    return {get_projects, load_project, new_project, new_folder, get_folder, copy, rename, remove, test_server_ok, save_info, get_info, save_data, get_data}
+    EventBus.on('ON_WS_CONNECTED', (m) => {
+        
+    });
+    EventBus.on('ON_WS_DATA', (m) => {
+        const data = JSON.parse(m.data) as ProtocolWrapper;
+        on_message_socket(data.id as keyof NetMessagesEditor, data.message);
+    });
+
+    return {get_loaded_project, get_projects, load_project, new_project, new_folder, get_folder, copy, rename, remove, test_server_ok, save_info, get_info, save_data, get_data}
 }
 
 
