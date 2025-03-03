@@ -1,8 +1,8 @@
 import { TransformControls, TransformControlsMode } from 'three/examples/jsm/controls/TransformControls.js';
-import { IBaseMeshDataAndThree } from '../render_engine/types';
 import { Euler, Object3D, Vector3 } from 'three';
 import { PositionEventData, RotationEventData, ScaleEventData } from './types';
 import { Property } from './InspectorControl';
+import { IBaseEntityAndThree } from '../render_engine/types';
 
 declare global {
     const TransformControl: ReturnType<typeof TransformControlCreate>;
@@ -26,7 +26,7 @@ function TransformControlCreate() {
     let _oldScales: Vector3[] = [];
     let _oldRotations: Euler[] = [];
 
-    let selectedObjects: IBaseMeshDataAndThree[] = [];
+    let selectedObjects: IBaseEntityAndThree[] = [];
     const proxy = new Object3D();
     scene.add(proxy);
     const control = new TransformControls(RenderEngine.camera, RenderEngine.renderer.domElement);
@@ -92,7 +92,7 @@ function TransformControlCreate() {
     function translate(objects = selectedObjects) {
         _delta_position.copy(proxy.position.clone().sub(_start_position));
         for (let i = 0; i < objects.length; i++) {
-            const element = objects[i] as IBaseMeshDataAndThree & { _position: Vector3 };
+            const element = objects[i] as IBaseEntityAndThree & { _position: Vector3 };
             // todo если объект родителя отскейлен и вращался то здесь будут ошибки
             const ws = new Vector3(1, 1, 1);
             if (element.parent)
@@ -182,7 +182,7 @@ function TransformControlCreate() {
         HistoryControl.add('MESH_SCALE', scale_data);
     }
 
-    function is_selected(mesh: IBaseMeshDataAndThree) {
+    function is_selected(mesh: IBaseEntityAndThree) {
         for (let i = 0; i < selectedObjects.length; i++) {
             const m = selectedObjects[i];
             if (m.mesh_data.id == mesh.mesh_data.id) return true;
@@ -196,7 +196,7 @@ function TransformControlCreate() {
         detach_object_to_transform_control();
     }
 
-    function select_mesh(mesh: IBaseMeshDataAndThree) {
+    function select_mesh(mesh: IBaseEntityAndThree) {
         if (is_selected(mesh)) return;
         if (selectedObjects.length == 0) {
             proxy.position.copy(mesh.position);
@@ -210,7 +210,7 @@ function TransformControlCreate() {
         attach_object_to_transform_control();
     }
 
-    function set_selected_list(list: IBaseMeshDataAndThree[]) {
+    function set_selected_list(list: IBaseEntityAndThree[]) {
         if (!control.enabled)
             return;
         detach();

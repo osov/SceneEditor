@@ -25,6 +25,7 @@ interface SerializeData {
 
 export class TextMesh extends Text implements IBaseMesh {
     public type = IObjectTypes.TEXT;
+    public is_component = false;
     public mesh_data = { id: -1 };
     private parameters: IParameters = {
         width: 1,
@@ -42,6 +43,7 @@ export class TextMesh extends Text implements IBaseMesh {
         this.textAlign = 'center';
         this.anchorX = '50%';
         this.anchorY = '50%';
+        this.fontSize = 32;
         this.letterSpacing = 0.013; // 0.013+ есть границы размеров текста maxWidth при которых defold и threeJs расходятся переносы
         this.set_size(width, height, false);
         this.set_text(text);

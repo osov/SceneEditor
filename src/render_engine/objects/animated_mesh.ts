@@ -1,7 +1,7 @@
 import { AnimationAction, AnimationMixer, MeshBasicMaterial, ShaderMaterial } from "three";
 import { IObjectTypes } from "../types";
-import { EntityContainer } from "./entity_container";
 import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils';
+import { EntityPlane } from "./entity_plane";
 
 const shader = {
   vertexShader: `
@@ -15,9 +15,9 @@ const shader = {
        #include <skinning_vertex>
        vUv = uv; 
        vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);
+
        worldPosition.z /= 10000.0;
        worldPosition.z += offsetZ;
-       //worldPosition.z += modelMatrix[3].z;
        gl_Position = projectionMatrix * viewMatrix * worldPosition;
      }
 `,
@@ -32,9 +32,9 @@ const shader = {
 `
 };
 
-export class AnimatedMesh extends EntityContainer {
-  public type = IObjectTypes.SLICE9_PLANE;
-  public mesh_data = { id: -1 };
+export class AnimatedMesh extends EntityPlane {
+  public type = IObjectTypes.GO_MODEL_COMPONENT;
+  public mesh_data = { id: -1};
   private mixer = new AnimationMixer(this);
   private animations_list: { [k: string]: AnimationAction } = {};
   private activeAction: AnimationAction | null = null;

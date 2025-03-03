@@ -1,7 +1,7 @@
 import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute } from "three";
-import { IBaseParametersEntity, IObjectTypes } from "../types";
+import { IBaseParameters, IObjectTypes } from "../types";
 import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
-import { EntityContainer } from "./entity_container";
+import { EntityPlane } from "./entity_plane";
 
 // todo optimize material list
 
@@ -78,7 +78,7 @@ interface SerializeData {
 }
 
 export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, slice_width = 0, slice_height = 0) {
-    const parameters: IBaseParametersEntity = {
+    const parameters: IBaseParameters = {
         pivot_x: 0.5,
         pivot_y: 0.5,
         anchor_x: -1,
@@ -249,9 +249,9 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
 }
 
 
-export class Slice9Mesh extends EntityContainer {
+export class Slice9Mesh extends EntityPlane {
     public type = IObjectTypes.SLICE9_PLANE;
-    public mesh_data = { id: -1 };
+    public mesh_data = { id: -1};
     private template: ReturnType<typeof CreateSlice9>;
 
     constructor(width = 1, height = 1, slice_width = 0, slice_height = 0, custom_material?: ShaderMaterial) {
@@ -290,7 +290,7 @@ export class Slice9Mesh extends EntityContainer {
         return new Vector2(this.template.parameters.slice_width, this.template.parameters.slice_height);
     }
 
-    get_texture(){
+    get_texture() {
         return [this.template.parameters.texture, this.template.parameters.atlas];
     }
 
@@ -334,10 +334,11 @@ export class Slice9Mesh extends EntityContainer {
     }
 
     serialize() {
-        return this.template.serialize();
+        return { ...super.serialize(), ...this.template.serialize() }
     }
 
     deserialize(data: any) {
+        super.deserialize(data);
         this.template.deserialize(data);
     }
 

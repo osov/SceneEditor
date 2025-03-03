@@ -1,5 +1,5 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, LineDashedMaterial, BufferGeometry, Line, Object3DEventMap, Scene } from "three";
-import { IBaseMeshDataAndThree, PivotX, PivotY } from "../render_engine/types";
+import {  IBaseEntityAndThree, IBaseMeshAndThree, PivotX, PivotY } from "../render_engine/types";
 import { AnchorEventData, PositionEventData, SizeEventData, SliceEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { is_base_mesh } from "../render_engine/helpers/utils";
@@ -30,7 +30,7 @@ function SizeControlCreate() {
     const prev_point = new Vector2();
     let click_pos = new Vector3();
     let offset_move = 0;
-    let selected_list: IBaseMeshDataAndThree[] = [];
+    let selected_list: IBaseMeshAndThree[] = [];
     let is_down = false;
     let is_active = false;
     let is_selected_anchor = false;
@@ -526,13 +526,13 @@ function SizeControlCreate() {
             set_bb_visible(false);
     }
 
-    function get_parent_bb(mesh: IBaseMeshDataAndThree) {
+    function get_parent_bb(mesh: IBaseMeshAndThree) {
         if (mesh.parent == null) return [0, 0, 0, 0];
         if (mesh.parent instanceof Scene) {
             return [0, 0, 540, -960];
         }
         else if (is_base_mesh(mesh.parent)) {
-            const parent = mesh.parent as IBaseMeshDataAndThree;
+            const parent = mesh.parent as IBaseMeshAndThree;
             return parent.get_bounds();
         }
         return [0, 0, 0, 0];
@@ -606,7 +606,7 @@ function SizeControlCreate() {
         document.body.style.cursor = 'default';
     }
 
-    function set_selected_list(list: IBaseMeshDataAndThree[]) {
+    function set_selected_list(list: IBaseMeshAndThree[]) {
         if (!is_active) return;
         selected_list = list;
         draw();

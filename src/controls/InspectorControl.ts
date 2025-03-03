@@ -86,7 +86,7 @@ TODO: попробовать упростить через дженерики, �
 
 import { Pane, TpChangeEvent } from 'tweakpane';
 import { BindingApi, BindingParams, BladeState, ButtonParams, FolderApi } from '@tweakpane/core';
-import { IBaseMeshDataAndThree, IObjectTypes } from '../render_engine/types';
+import {  IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
@@ -262,7 +262,7 @@ function InspectorControlCreate() {
     let _config: InspectorGroup[];
     let _inspector: Pane;
     let _unique_fields: { ids: number[], field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }[];
-    let _selected_list: IBaseMeshDataAndThree[];
+    let _selected_list: IBaseMeshAndThree[];
     let _data: ObjectData[];
     let _last_state: BladeState;
 
@@ -324,7 +324,7 @@ function InspectorControlCreate() {
         if (tp_to) tp_to.classList.add('my_scroll');
     }
 
-    function set_selected_list(list: IBaseMeshDataAndThree[]) {
+    function set_selected_list(list: IBaseMeshAndThree[]) {
         _selected_list = list;
         // TransformControl.set_proxy_in_average_point(list);
 
@@ -376,11 +376,11 @@ function InspectorControlCreate() {
 
 
             switch (value.type) {
-                case IObjectTypes.SLICE9_PLANE:
+                case IObjectTypes.SLICE9_PLANE: case IObjectTypes.GUI_BOX: case IObjectTypes.GO_SPRITE_COMPONENT:
                     fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
                     fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
                     break;
-                case IObjectTypes.GO_TEXT: case IObjectTypes.TEXT:
+                case IObjectTypes.TEXT: case IObjectTypes.GUI_TEXT:  case IObjectTypes.GO_LABEL_COMPONENT:
                     fields.push({ name: Property.TEXT, data: (value as TextMesh).text });
                     fields.push({ name: Property.FONT, data: (value as TextMesh).font || '' });
 

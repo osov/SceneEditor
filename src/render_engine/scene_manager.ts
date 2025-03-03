@@ -7,12 +7,13 @@ Layers:
 import { Object3D, Quaternion, Vector3 } from "three";
 import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
-import { IBaseMeshData, IBaseMeshDataAndThree, IObjectTypes } from "./types";
+import { IBaseEntityAndThree, IBaseEntityData, IObjectTypes } from "./types";
 import { TextMesh } from "./objects/text";
 import { deepClone } from "../modules/utils";
-import { EntityContainer } from "./objects/entity_container";
-import {  GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
+import { GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
 import { AnimatedMesh } from "./objects/animated_mesh";
+import { EntityBase } from "./objects/entity_base";
+import { EntityPlane } from "./objects/entity_plane";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -23,19 +24,23 @@ export function register_scene_manager() {
 }
 
 type IMeshTypes = {
-    [IObjectTypes.EMPTY]: EntityContainer,
+
+    [IObjectTypes.EMPTY]: EntityBase,
+    [IObjectTypes.ENTITY]: EntityBase,
     [IObjectTypes.SLICE9_PLANE]: Slice9Mesh,
     [IObjectTypes.TEXT]: TextMesh,
-
-    [IObjectTypes.GO_CONTAINER]: GoContainer,
-    [IObjectTypes.GO_SPRITE]: GoSprite,
-    [IObjectTypes.GO_TEXT]: GoText,
 
     [IObjectTypes.GUI_CONTAINER]: GuiContainer,
     [IObjectTypes.GUI_BOX]: GuiBox,
     [IObjectTypes.GUI_TEXT]: GuiText,
 
-    [IObjectTypes.ANIMATED_MESH]: AnimatedMesh
+    [IObjectTypes.GO_CONTAINER]: GoContainer,
+    [IObjectTypes.GO_SPRITE_COMPONENT]: GoSprite,
+    [IObjectTypes.GO_LABEL_COMPONENT]: GoText,
+    [IObjectTypes.GO_MODEL_COMPONENT]: AnimatedMesh
+
+
+
 }
 
 export function SceneManagerModule() {
@@ -50,27 +55,43 @@ export function SceneManagerModule() {
         }
     }
 
-    function create<T extends IObjectTypes>(type: T, params: any, id = -1): IMeshTypes[T] {
-        let mesh: IBaseMeshDataAndThree;
-        if (type == IObjectTypes.SLICE9_PLANE) {
-            mesh = new Slice9Mesh(params.width || 1, params.height || 1, params.slice_width || 0, params.slice_height || 0);
-        }
-        else if (type == IObjectTypes.TEXT) {
-            mesh = new TextMesh(params.text || '', params.width || 1, params.height || 1);
-        }
-        else if (type == IObjectTypes.GO_CONTAINER) {
-            mesh = new GoContainer();
-        }
-        else if (type == IObjectTypes.GUI_CONTAINER) {
+    function create<T extends IObjectTypes>(type: T, params?: any, id = -1): IMeshTypes[T] {
+        let mesh: IBaseEntityAndThree;
+        params = params || {};
+        const default_size = 32;
+
+        // base
+        if (type == IObjectTypes.ENTITY)
+            mesh = new EntityBase();
+        else if (type == IObjectTypes.ENTITY)
+            mesh = new EntityBase();
+        else if (type == IObjectTypes.SLICE9_PLANE)
+            mesh = new Slice9Mesh(params.width || default_size, params.height || default_size, params.slice_width || 0, params.slice_height || 0);
+        else if (type == IObjectTypes.TEXT)
+            mesh = new TextMesh(params.text || '', params.width || default_size, params.height || default_size);
+
+        // gui
+        else if (type == IObjectTypes.GUI_CONTAINER)
             mesh = new GuiContainer();
-        }
-        else if (type == IObjectTypes.ANIMATED_MESH) {
-            mesh = new AnimatedMesh(params.width || 1, params.height || 1);
-        }
+        else if (type == IObjectTypes.GUI_BOX)
+            mesh = new GuiBox(params.width || default_size, params.height || default_size, params.slice_width || 0, params.slice_height || 0);
+        else if (type == IObjectTypes.GUI_TEXT)
+            mesh = new GuiText(params.text || '', params.width || default_size, params.height || default_size);
+
+        // go
+        else if (type == IObjectTypes.GO_CONTAINER)
+            mesh = new GoContainer();
+        // go components
+        else if (type == IObjectTypes.GO_SPRITE_COMPONENT)
+            mesh = new GoSprite(params.width || default_size, params.height || default_size, params.slice_width || 0, params.slice_height || 0);
+        else if (type == IObjectTypes.GO_LABEL_COMPONENT)
+            mesh = new GoText(params.text || '', params.width || default_size, params.height || default_size);
+        else if (type == IObjectTypes.GO_MODEL_COMPONENT)
+            mesh = new AnimatedMesh(params.width || default_size, params.height || default_size);
         else {
             Log.error('Unknown mesh type', type);
             mesh = new Slice9Mesh(32, 32);
-            mesh.set_color('#f00');
+            //mesh.set_color('#f00');
         }
         if (id != -1) {
             const m = get_mesh_by_id(id);
@@ -89,15 +110,15 @@ export function SceneManagerModule() {
         return mesh as IMeshTypes[T];
     }
 
-    function serialize_mesh(m: IBaseMeshDataAndThree) {
+    function serialize_mesh(m: IBaseEntityAndThree) {
         const wp = new Vector3();
         const ws = new Vector3();
         const wr = new Quaternion();
         m.getWorldPosition(wp);
         m.getWorldScale(ws);
         m.getWorldQuaternion(wr);
-        const pid = m.parent ? (is_base_mesh(m.parent) ? (m.parent as IBaseMeshDataAndThree).mesh_data.id : -1) : -1;
-        const data: IBaseMeshData = {
+        const pid = m.parent ? (is_base_mesh(m.parent) ? (m.parent as IBaseEntityAndThree).mesh_data.id : -1) : -1;
+        const data: IBaseEntityData = {
             id: m.mesh_data.id,
             pid,
             type: m.type,
@@ -106,21 +127,18 @@ export function SceneManagerModule() {
             position: wp.toArray(),
             rotation: wr.toArray(),
             scale: ws.toArray(),
-            size: m.get_size().toArray(),
-            color: m.get_color(),
-            pivot: m.get_pivot(),
             other_data: m.serialize(),
         };
         if (m.children.length > 0) {
             data.children = [];
             for (let i = 0; i < m.children.length; i++)
                 if (is_base_mesh(m.children[i]))
-                    data.children.push(serialize_mesh(m.children[i] as IBaseMeshDataAndThree));
+                    data.children.push(serialize_mesh(m.children[i] as IBaseEntityAndThree));
         }
         return data;
     }
 
-    function deserialize_mesh(data: IBaseMeshData, with_id = false, parent?: Object3D) {
+    function deserialize_mesh(data: IBaseEntityData, with_id = false, parent?: Object3D) {
         const mesh = create(data.type, data.other_data, with_id ? data.id : -1);
         if (parent) {
             const lp = parent.worldToLocal(new Vector3(data.position[0], data.position[1], data.position[2]));
@@ -139,9 +157,7 @@ export function SceneManagerModule() {
         }
         mesh.name = data.name;
         mesh.visible = data.visible;
-        mesh.set_pivot(data.pivot.x, data.pivot.y, false);
-        mesh.set_size(data.size[0], data.size[1]);
-        mesh.set_color(data.color);
+
         mesh.deserialize(data.other_data);
         if (data.children) {
             for (let i = 0; i < data.children.length; i++)
@@ -159,16 +175,16 @@ export function SceneManagerModule() {
     }
 
     function save_scene() {
-        const list: IBaseMeshData[] = [];
+        const list: IBaseEntityData[] = [];
         for (let i = 0; i < scene.children.length; i++) {
             const m = scene.children[i];
             if (is_base_mesh(m))
-                list.push(serialize_mesh(m as IBaseMeshDataAndThree));
+                list.push(serialize_mesh(m as IBaseEntityAndThree));
         }
         return list;
     }
 
-    function load_scene(data: IBaseMeshData[], sub_name = '') {
+    function load_scene(data: IBaseEntityData[], sub_name = '') {
         if (sub_name == '') {
             clear_scene();
             for (let i = 0; i < data.length; i++) {
@@ -195,7 +211,7 @@ export function SceneManagerModule() {
         }
     }
 
-    function find_max_id(list: IBaseMeshData[], max = 0) {
+    function find_max_id(list: IBaseEntityData[], max = 0) {
         for (let i = 0; i < list.length; i++) {
             const it = list[i];
             if (it.id > max)
@@ -206,7 +222,7 @@ export function SceneManagerModule() {
         return max;
     }
 
-    function modify_id_pid_list(list: IBaseMeshData[], inc: number) {
+    function modify_id_pid_list(list: IBaseEntityData[], inc: number) {
         for (let i = 0; i < list.length; i++) {
             const it = list[i];
             if (it.id != -1)
@@ -247,7 +263,7 @@ export function SceneManagerModule() {
             Log.error('mesh is null');
     }
 
-    function get_next_base_mesh_id(mesh: IBaseMeshDataAndThree) {
+    function get_next_base_mesh_id(mesh: IBaseEntityAndThree) {
         const parent = mesh.parent ? mesh.parent : scene;
         const index = parent.children.indexOf(mesh);
         if (index == parent.children.length - 1)
@@ -255,13 +271,13 @@ export function SceneManagerModule() {
         for (let i = index + 1; i < parent.children.length; i++) {
             const child = parent.children[i];
             if (is_base_mesh(child)) {
-                return (child as any as IBaseMeshDataAndThree).mesh_data.id;
+                return (child as any as IBaseEntityAndThree).mesh_data.id;
             }
         }
         return -1;
     }
 
-    function find_next_id_mesh(mesh: IBaseMeshDataAndThree) {
+    function find_next_id_mesh(mesh: IBaseEntityAndThree) {
         const parent = mesh.parent ? mesh.parent : scene;
         const index = parent.children.indexOf(mesh);
 
@@ -271,7 +287,7 @@ export function SceneManagerModule() {
         return get_next_base_mesh_id(mesh);
     }
 
-    function move_mesh(mesh: IBaseMeshDataAndThree, pid = -1, next_id = -1) {
+    function move_mesh(mesh: IBaseEntityAndThree, pid = -1, next_id = -1) {
         let pid_is_child = false;
         mesh.traverse((child) => {
             if (is_base_mesh(child) && (child as any).mesh_data.id == pid && pid != -1)
@@ -282,7 +298,7 @@ export function SceneManagerModule() {
         move_mesh_to(mesh, pid, next_id);
     }
 
-    function move_mesh_to(mesh: IBaseMeshDataAndThree, pid = -1, next_id = -1) {
+    function move_mesh_to(mesh: IBaseEntityAndThree, pid = -1, next_id = -1) {
         const has_old_parent = mesh.parent != null;
         const old_parent = mesh.parent ? mesh.parent : scene;
         const old_index = old_parent.children.indexOf(mesh);
@@ -306,18 +322,23 @@ export function SceneManagerModule() {
         var children = new_parent.children;
         children.splice(new_index, 0, mesh);
         mesh.parent = new_parent;
-        const lp = mesh.parent.worldToLocal(old_pos);
+        const lp = mesh.parent!.worldToLocal(old_pos);
         mesh.position.copy(lp);
         if (has_old_parent) {
             const parent_scale = new Vector3();
-            mesh.parent.getWorldScale(parent_scale);
+            mesh.parent!.getWorldScale(parent_scale);
             old_scale.divide(parent_scale);
             mesh.scale.copy(old_scale);
         }
     }
 
-    function add(mesh: IBaseMeshDataAndThree, id_parent = -1, id_before = -1) {
+    function add(mesh: IBaseEntityAndThree, id_parent = -1, id_before = -1) {
         move_mesh(mesh, id_parent, id_before);
+    }
+
+    function add_to_mesh(mesh: IBaseEntityAndThree, parent_mesh: IBaseEntityAndThree) {
+        const id_parent = parent_mesh.mesh_data.id;
+        move_mesh(mesh, id_parent);
     }
 
     function remove(id: number) {
@@ -330,10 +351,10 @@ export function SceneManagerModule() {
         const list: { id: number, pid: number, name: string, visible: boolean, type: IObjectTypes }[] = [];
         scene.traverse((child) => {
             if (is_base_mesh(child)) {
-                const it = child as any as IBaseMeshDataAndThree;
+                const it = child as any as IBaseEntityAndThree;
                 let pid = -1;
                 if (is_base_mesh(it.parent!))
-                    pid = (it.parent as any as IBaseMeshDataAndThree).mesh_data.id;
+                    pid = (it.parent as any as IBaseEntityAndThree).mesh_data.id;
                 list.push({ id: it.mesh_data.id, pid: pid, name: it.name, visible: it.visible, type: it.type });
             }
         });
@@ -360,5 +381,5 @@ export function SceneManagerModule() {
         id_counter = data.id_counter;
     }
 
-    return { get_unique_id, create, add, remove, get_mesh_by_id, move_mesh, move_mesh_id, find_next_id_mesh, make_graph, debug_graph, save_editor, load_editor, serialize_mesh, deserialize_mesh, save_scene, load_scene };
+    return { get_unique_id, create, add, add_to_mesh, remove, get_mesh_by_id, move_mesh, move_mesh_id, find_next_id_mesh, make_graph, debug_graph, save_editor, load_editor, serialize_mesh, deserialize_mesh, save_scene, load_scene };
 }

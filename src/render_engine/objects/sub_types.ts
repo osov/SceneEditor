@@ -1,19 +1,9 @@
-import { IBaseMesh, IObjectTypes } from "../types";
-import { EntityContainer } from "./entity_container";
+import {  IObjectTypes } from "../types";
 import { Slice9Mesh } from "./slice9";
 import { TextMesh } from "./text";
+import { EntityBase } from "./entity_base";
 
-export class GoContainer extends EntityContainer {
-    public type = IObjectTypes.GO_CONTAINER;
-
-    constructor() {
-        super();
-        this.layers.disable(0);
-        this.layers.disable(1);
-    }
-}
-
-export class GuiContainer extends EntityContainer implements IBaseMesh {
+export class GuiContainer extends EntityBase  {
     public type = IObjectTypes.GUI_CONTAINER;
 
     constructor() {
@@ -27,19 +17,34 @@ export class GuiContainer extends EntityContainer implements IBaseMesh {
     set_size(w: number, h: number): void { }
 }
 
-export class GuiBox extends Slice9Mesh {
-    public type = IObjectTypes.GUI_BOX;
+export class GoContainer extends EntityBase {
+    public type = IObjectTypes.GO_CONTAINER;
+
+    constructor() {
+        super();
+        this.layers.disable(0);
+        this.layers.disable(1);
+    }
 }
 
-export class GoSprite extends Slice9Mesh {
-    public type = IObjectTypes.GO_SPRITE;
+
+export class GuiBox extends Slice9Mesh {
+    public type = IObjectTypes.GUI_BOX;
 }
 
 export class GuiText extends TextMesh {
     public type = IObjectTypes.GUI_TEXT;
 }
 
+
+export class GoSprite extends Slice9Mesh {
+    public type = IObjectTypes.GO_SPRITE_COMPONENT;
+    public is_component = true;
+    set_pivot(x: number, y: number, is_sync?: boolean): void { }
+}
+
 export class GoText extends TextMesh {
-    public type = IObjectTypes.GO_TEXT;
+    public type = IObjectTypes.GO_LABEL_COMPONENT;
+    public is_component = true;
 }
 
