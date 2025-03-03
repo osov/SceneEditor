@@ -97,6 +97,7 @@ import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
 import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from './types';
+import { TextureInfo } from '../render_engine/resource_manager';
 
 
 declare global {
@@ -358,13 +359,7 @@ function InspectorControlCreate() {
             _config.forEach((group) => {
                 const property = group.property_list.find((property) => property.name == Property.TEXTURE);
                 if (!property) return;
-                (property.params as PropertyParams[PropertyType.LIST_TEXTURES]) = ResourceManager.get_all_textures().map((info) => {
-                    return {
-                        value: `${info.atlas}/${info.name}`,
-                        // FIXME: нужно оптимизировать если хотим с картинками
-                        src: ''//info.data.texture.source.toJSON().url as string
-                    };
-                });
+                (property.params as PropertyParams[PropertyType.LIST_TEXTURES]) = ResourceManager.get_all_textures().map(castTextureInfo);
             });
 
             // обновляем конфиг шрифтов
@@ -400,6 +395,55 @@ function InspectorControlCreate() {
         clear();
         setData(data);
         _last_state = deepClone(_inspector.exportState());
+    }
+
+    function castTextureInfo(info: TextureInfo) {
+        const data = {
+            value: `${info.atlas}/${info.name}`,
+            src: info.path.replace('tpsheet', 'png'),
+        } as any;
+
+        if (info.atlas != '') {
+            const sizeX = info.data.texture.image.width;
+            const sizeY = info.data.texture.image.height;
+
+            data.offset = {
+                posX: -(sizeX * info.data.uvOffset.x),
+                posY: -(sizeY - (sizeY * info.data.uvOffset.y)),
+                width: info.data.size.x,
+                height: info.data.size.y,
+                sizeX,
+                sizeY
+            };
+
+            if (info.data.size.x > info.data.size.y) {
+                // по ширине
+                if (info.data.size.x > 40) {
+                    const delta = info.data.size.x / 40;
+                    data.offset.posX /= delta;
+                    data.offset.posY /= delta;
+                    data.offset.width = 40;
+                    data.offset.height = info.data.size.y / delta;
+                    data.offset.sizeX = sizeX / delta;
+                    data.offset.sizeY = sizeY / delta;
+                }
+            } else {
+                // по высоте
+                if (info.data.size.y > 40) {
+                    const delta = info.data.size.y / 40;
+                    data.offset.posX /= delta;
+                    data.offset.posY /= delta;
+                    data.offset.width = info.data.size.x / delta;
+                    data.offset.height = 40;
+                    data.offset.sizeX = sizeX / delta;
+                    data.offset.sizeY = sizeY / delta;
+                }
+            }
+
+            data.offset.posY += data.offset.height;
+        }
+
+        return data;
     }
 
     function refresh(properties: Property[]) {

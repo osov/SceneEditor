@@ -17,13 +17,19 @@ interface AssetData<T> {
     [k: string]: { path: string, data: T };
 }
 
-interface TextureData {
+export interface TextureData {
     texture: Texture;
     uvOffset: Vector2;
     uvScale: Vector2;
     size: Vector2;
 }
 
+export interface TextureInfo {
+    name: string;
+    atlas: string;
+    path: string;
+    data: TextureData;
+}
 
 interface AnimationInfo {
     animation: string;
@@ -188,7 +194,7 @@ export function ResourceManagerModule() {
     }
 
     function get_all_textures() {
-        const list: { name: string, atlas: string, path: string, data: TextureData }[] = [];
+        const list: TextureInfo[] = [];
         for (const k in atlases) {
             for (const k2 in atlases[k]) {
                 const asset = atlases[k][k2];

@@ -31,7 +31,7 @@
     "ts-browser-helpers": "^0.16.3",
     "tweakpane": "4.0.5",
     "tweakpane4-extended-vector-plugin": "^0.0.5",
-    "tweakpane4-image-list-plugin": "1.0.8",
+    "tweakpane4-image-list-plugin": "1.1.0",
     "tweakpane4-search-list-plugin": "1.0.6",
     "bun-serve-router": "^0.0.3",
     "cookie": "^1.0.2"
