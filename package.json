@@ -11,19 +11,19 @@
   },
   "devDependencies": {
     "@types/three": "latest",
-    "bun-types": "^1.0.14",
-    "tsx": "^4.19.2",
-    "typescript": "^5.4.2",
-    "vite": "^5.1.6",
+    "bun-types": "^1.2.4",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vite": "^5.4.14",
     "vite-multiple-assets": "^2.2.5"
   },
   "dependencies": {
     "@pangenerator/tweakpane-textarea-plugin": "^2.0.0",
-    "@three.ez/instanced-mesh": "^0.3.0-alpha.9",
+    "@three.ez/instanced-mesh": "^0.3.0-alpha.10",
     "@tweakpane/core": "^2.0.5",
     "@types/stats": "^0.16.30",
     "@types/cookie": "^0.6.0",
-    "camera-controls": "^2.9.0",
+    "camera-controls": "^2.10.0",
     "protobufjs": "^7.4.0",
     "stats.js": "^0.17.0",
     "three": "latest",
@@ -31,8 +31,8 @@
     "ts-browser-helpers": "^0.16.3",
     "tweakpane": "4.0.5",
     "tweakpane4-extended-vector-plugin": "^0.0.5",
-    "tweakpane4-image-list-plugin": "1.1.0",
-    "tweakpane4-search-list-plugin": "1.0.6",
+    "tweakpane4-image-list-plugin": "1.1.2",
+    "tweakpane4-search-list-plugin": "1.1.1",
     "bun-serve-router": "^0.0.3",
     "cookie": "^1.0.2"
   }

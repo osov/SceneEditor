@@ -86,7 +86,7 @@ TODO: попробовать упростить через дженерики, �
 
 import { Pane, TpChangeEvent } from 'tweakpane';
 import { BindingApi, BindingParams, BladeState, ButtonParams, FolderApi } from '@tweakpane/core';
-import {  IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
+import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
@@ -375,7 +375,7 @@ function InspectorControlCreate() {
                     fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
                     fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
                     break;
-                case IObjectTypes.TEXT: case IObjectTypes.GUI_TEXT:  case IObjectTypes.GO_LABEL_COMPONENT:
+                case IObjectTypes.TEXT: case IObjectTypes.GUI_TEXT: case IObjectTypes.GO_LABEL_COMPONENT:
                     fields.push({ name: Property.TEXT, data: (value as TextMesh).text });
                     fields.push({ name: Property.FONT, data: (value as TextMesh).font || '' });
 
@@ -462,6 +462,7 @@ function InspectorControlCreate() {
                     case Property.ANCHOR_PRESET:
                         value.data = anchorToScreenPreset(item.get_anchor());
                         break;
+                    case Property.TEXTURE: value.data = `${(item as Slice9Mesh).get_texture()[1]}/${(item as Slice9Mesh).get_texture()[0]}`; break;
                     case Property.SLICE9: value.data = (item as Slice9Mesh).get_slice(); break;
                     case Property.ROTATION:
                         const raw = item.rotation;
@@ -820,8 +821,10 @@ function InspectorControlCreate() {
     function onUpdatedValue(value: ChangeInfo) {
         if (_refreshed_properies.length != 0) {
             const index = _refreshed_properies.findIndex((property) => value.data.property.name == property);
-            _refreshed_properies.splice(index, 1);
-            return;
+            if (index != -1) {
+                _refreshed_properies.splice(index, 1);
+                return;
+            }
         }
 
         switch (value.data.field.name) {
@@ -1287,6 +1290,8 @@ function InspectorControlCreate() {
             const texture_data = (value.data.event.value as any).value.split('/');
             (mesh as Slice9Mesh).set_texture(texture_data[1], texture_data[0]);
         });
+
+        refresh([Property.TEXTURE]);
     }
 
     function updateSlice(value: ChangeInfo) {
