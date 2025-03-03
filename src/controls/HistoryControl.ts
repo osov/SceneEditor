@@ -114,6 +114,7 @@ function HistoryControlCreate() {
                 SceneManager.remove(data.id_mesh)!;
             }
             // ---
+            ControlManager.update_graph();
         }
         else if (type == 'MESH_ADD') {
             for (let i = 0; i < last.data.length; i++) {

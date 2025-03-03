@@ -1,5 +1,6 @@
 import { deepClone } from "../modules/utils";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
+import { NodeAction } from "./ActionsControl";
 
 declare global {
     const TreeControl: ReturnType<typeof TreeControlCreate>;
@@ -7,26 +8,6 @@ declare global {
 
 export function register_tree_control() {
     (window as any).TreeControl = TreeControlCreate();
-}
-
-export enum NodeAction {
-    CTRL_X,
-    CTRL_C,
-    CTRL_V,
-    CTRL_B,
-    CTRL_D,
-    rename,
-    remove,
-    add_box_empty,
-    add_box,
-    add_text,
-    add_button,
-    add_bar,
-    add_scroll,
-    add_sprite,
-    add_label,
-    add_gui_container,
-    add_go_container
 }
 
 interface Item {
@@ -105,20 +86,21 @@ function TreeControlCreate() {
         { text: 'line' },
         { text: 'Создать UI', children: [
             { text: 'Добавить контейнер', action: NodeAction.add_gui_container },
-            { text: 'Добавить блок', action: NodeAction.add_box },
-            { text: 'Добавить текст', action: NodeAction.add_text },
+            { text: 'Добавить блок', action: NodeAction.add_gui_box },
+            { text: 'Добавить текст', action: NodeAction.add_gui_text },
             { text: 'line' },
             { text: 'Расширенные', children: [
-                { text: 'Добавить кнопку', action: NodeAction.add_button },
-                { text: 'Добавить прогресс бар', action: NodeAction.add_bar },
-                { text: 'Добавить скрол', action: NodeAction.add_scroll },
+                { text: 'Добавить кнопку', action: 'none' },
+                { text: 'Добавить прогресс бар', action: 'none' },
+                { text: 'Добавить скрол', action: 'none' },
             ] },
         ] },
         { text: 'line' },
         { text: 'Game', children: [
             { text: 'Добавить контейнер', action: NodeAction.add_go_container },
-            { text: 'Добавить спрайт', action: NodeAction.add_sprite },
-            { text: 'Добавить надпись', action: NodeAction.add_label },
+            { text: 'Добавить спрайт', action: NodeAction.add_go_sprite_component },
+            { text: 'Добавить надпись', action: NodeAction.add_go_label_component },
+            { text: 'Добавить модель', action: NodeAction.add_go_model_component },
         ] },
     ];
 
@@ -301,6 +283,7 @@ function TreeControlCreate() {
                 itemDrag = treeList.find(e => e.id === +treeItem?.getAttribute("data-id")) || null;
                 console.log({ itemDrag });
                 itemDragRenameId = itemDrag?.id || null;
+                copyItemDrag = deepClone(itemDrag);
 
                 if (!itemDrag?.no_drag) {
                     boxDD.querySelector(".tree__item_name").innerText = itemDrag.name;
@@ -730,22 +713,24 @@ function TreeControlCreate() {
         
         const currentId = +currentItem?.getAttribute("data-id");
         if (!currentId) return;
-
-        const itemName = event.target.closest("a.tree__item.selected .tree__item_name");
-        if (!itemName) return;
                 
         setTimeout(() => { 
+            log({itemDragRenameId, currentId})
             if (itemDragRenameId != currentId) return; // тк setTimeout сверяем, что это тот же элемент
-            preRename(currentId, itemName);
+            preRename();
         }, 1200);
 
     }
 
-    function preRename(currentId: number, itemName: any) {
+    function preRename() {
+        if(!copyItemDrag) return;
+        const itemName = document.querySelector(`.tree__item[data-id='${copyItemDrag?.id}'] .tree__item_name`) as HTMLLIElement | null;
+        if (!itemName || copyItemDrag?.no_rename) return;
+
         itemName.setAttribute("contenteditable", "true");
         itemName.focus();
         document.execCommand('selectAll', false, undefined);
-        renameItem(currentId, itemName);
+        renameItem(copyItemDrag?.id, itemName);
     }
     
     function toggleClassSelected(event: any) {
@@ -991,8 +976,6 @@ function TreeControlCreate() {
         if (!itemDrag) return;
         if (!event.target.closest(".tree__item")) return;
 
-        copyItemDrag = deepClone(itemDrag);
-
         // запрет скроллинга при контекстном меню
         if (divTree.scrollHeight > divTree.clientHeight) {
             divTree.classList.add('no_scrolling');
@@ -1016,12 +999,12 @@ function TreeControlCreate() {
             EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_X });
         }
         if (action == NodeAction.CTRL_C) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_C } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_C });
+            log(`ActionsControl.copy() , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_C } }`);
+            ActionsControl.copy();
         }
         if (action == NodeAction.CTRL_V) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_V } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_V });
+            log(`ActionsControl.paste() , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_V } }`);
+            ActionsControl.paste();
         }
         if (action == NodeAction.CTRL_B) {
             log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_B } }`);
@@ -1032,45 +1015,38 @@ function TreeControlCreate() {
             EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_D });
         }
         if (action == NodeAction.rename) {
-            const itemName = document.querySelector(`.tree__item[data-id='${copyItemDrag?.id}'] .tree__item_name`);
-            if (!itemName || copyItemDrag?.no_rename) return;
-            preRename(copyItemDrag?.id, itemName);
+            preRename();
         }
         if (action == NodeAction.remove) {
-            log(`SYS_GRAPH_REMOVE, { id: ${copyItemDrag?.id}, list: ${listSelected} }`);
-            EventBus.trigger('SYS_GRAPH_REMOVE', { id: copyItemDrag?.id, list: listSelected });
+            log('remove: ', listSelected)
+            ActionsControl.remove();
         }
-        if (action == NodeAction.add_box_empty) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_box_empty} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_box_empty });
+        if (action == NodeAction.add_gui_container) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_gui_container} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_gui_container });
         }
-        if (action == NodeAction.add_box) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_box} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_box });
+        if (action == NodeAction.add_gui_box) {
+            ActionsControl.add_gui_box(copyItemDrag?.id);
         }
-        if (action == NodeAction.add_text) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_text} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_text });
+        if (action == NodeAction.add_gui_text) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_gui_text} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_gui_text });
         }
-        if (action == NodeAction.add_button) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_button} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_button });
+        if (action == NodeAction.add_go_container) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_go_container} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_go_container });
         }
-        if (action == NodeAction.add_bar) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_bar} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_bar });
+        if (action == NodeAction.add_go_sprite_component) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_go_sprite_component} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_go_sprite_component });
         }
-        if (action == NodeAction.add_scroll) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_scroll} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_scroll });
+        if (action == NodeAction.add_go_label_component) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_go_label_component} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_go_label_component });
         }
-        if (action == NodeAction.add_sprite) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_sprite} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_sprite });
-        }
-        if (action == NodeAction.add_label) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_label} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_label });
+        if (action == NodeAction.add_go_model_component) {
+            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_go_model_component} }`);
+            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_go_model_component });
         }
 
         copyItemDrag = null;
@@ -1159,6 +1135,6 @@ function TreeControlCreate() {
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
 
-    return { draw_graph };
+    return { draw_graph, preRename };
 
 }
