@@ -10,16 +10,7 @@ export function register_contextmenu() {
 
 //  ****** ContextMenu example: ******
 /* 
-export enum NodeAction {
-    rename,
-    CTRL_X,
-    CTRL_C,
-    remove,
-    add_box,
-    add_text,
-    add_button,
-    add_scroll
-}
+import { NodeAction } from "./ActionsControl";
 
 const list: contextMenuItem [] = [
     { text: 'Переименовать', action: NodeAction.rename },
@@ -28,8 +19,8 @@ const list: contextMenuItem [] = [
     { text: 'Удалить', action: NodeAction.remove },
     { text: 'line' },                                                        //  'line'   - когда нужно разделить линией 
     { text: 'Создать UI', children: [                                        
-        { text: 'Добавить блок', action: NodeAction.add_box },
-        { text: 'Добавить текст', action: NodeAction.add_text },
+        { text: 'Добавить блок', action: NodeAction.add_gui_box },
+        { text: 'Добавить текст', action: NodeAction.add_gui_text },
         { text: 'line' },
         { text: 'Расширенные', children: [                                   // children: [{}, ..., {} ]
             { text: 'Добавить кнопку', action: NodeAction.add_button },

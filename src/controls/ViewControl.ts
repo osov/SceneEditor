@@ -29,6 +29,10 @@ function ViewControlCreate() {
             if (Input.is_control() && (e.key == 'c' || e.key == 'с')) {
                 ActionsControl.copy();
             }
+            
+            if (Input.is_control() && (e.key == 'x' || e.key == 'ч')) {
+                ActionsControl.cut();
+            }
 
             if (Input.is_control() && (e.key == 'v' || e.key == 'м')) {
                 ActionsControl.paste();
@@ -36,10 +40,7 @@ function ViewControlCreate() {
 
             if (Input.is_control() && (e.key == 'b' || e.key == 'и')) {
                 log('CTRL_B')
-            }
-
-            if (Input.is_control() && (e.key == 'd' || e.key == 'в')) {
-                log('CTRL_D')
+                ActionsControl.paste(true);
             }
 
             if (e.key == 'Delete') {

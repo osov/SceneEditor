@@ -47,12 +47,14 @@ function TreeControlCreate() {
     let currentSceneName: string = defaultList[0]?.name ? defaultList[0]?.name : "root";
     let prevListSelected: number[] = [];
     let listSelected: number[] = [];
+    let cutList: number[] = [];
 
     let _is_mousedown: boolean = false; // зажата ли при mousemove
     let _is_dragging: boolean = true; 
     let _is_moveItemDrag: boolean = false; // если начали тащить 
     let _is_editItem: boolean = false; // ренейм возможен только в одном случае 
     let _is_currentOnly: boolean = false; // когда кликаем по единственному и текущему элементу 
+    let is_copied: boolean = false; // скопировано ли (listSelected) 
 
     const divTree: any = document.querySelector('#wr_tree');
     let treeItem: any = null;
@@ -74,35 +76,6 @@ function TreeControlCreate() {
     // let mContextVisible: boolean = false;
     let boxDD: any = document.querySelector(".drag_and_drop"); // div таскания за мышью
     let ddVisible: boolean = false; //  видимость div перетаскивания 
-
-    const treeContextMenu: contextMenuItem [] = [
-        { text: 'Переименовать', action: NodeAction.rename },
-        { text: 'Вырезать', action: NodeAction.CTRL_X },
-        { text: 'Копировать', action: NodeAction.CTRL_C },
-        { text: 'Вставить', action: NodeAction.CTRL_V },
-        { text: 'Вставить дочерним', action: NodeAction.CTRL_B },
-        { text: 'Дублировать', action: NodeAction.CTRL_D },
-        { text: 'Удалить', action: NodeAction.remove },
-        { text: 'line' },
-        { text: 'Создать UI', children: [
-            { text: 'Добавить контейнер', action: NodeAction.add_gui_container },
-            { text: 'Добавить блок', action: NodeAction.add_gui_box },
-            { text: 'Добавить текст', action: NodeAction.add_gui_text },
-            { text: 'line' },
-            { text: 'Расширенные', children: [
-                { text: 'Добавить кнопку', action: 'none' },
-                { text: 'Добавить прогресс бар', action: 'none' },
-                { text: 'Добавить скрол', action: 'none' },
-            ] },
-        ] },
-        { text: 'line' },
-        { text: 'Game', children: [
-            { text: 'Добавить контейнер', action: NodeAction.add_go_container },
-            { text: 'Добавить спрайт', action: NodeAction.add_go_sprite_component },
-            { text: 'Добавить надпись', action: NodeAction.add_go_label_component },
-            { text: 'Добавить модель', action: NodeAction.add_go_model_component },
-        ] },
-    ];
 
     function draw_graph(getList: Item[], scene_name?: string, is_hide_allSub = false, is_clear_state = false) {
         currentSceneName = scene_name ? scene_name : currentSceneName;
@@ -199,7 +172,7 @@ function TreeControlCreate() {
     }
 
     function getTreeItemHtml(item: any) {
-        return `<a class="tree__item ${item?.selected ? 'selected' : ''}" ${setAttrs(item)}>
+        return `<a class="tree__item ${item?.selected ? 'selected' : ''} ${cutList.includes(item.id) ? 'isCut' : ''}" ${setAttrs(item)}>
                     <span class="tree__item_bg"></span>
                     ${getTreeIcoHtml(item.icon)}
                     <span class="tree__item_name">${item.name}</span>
@@ -971,6 +944,42 @@ function TreeControlCreate() {
         });
     }
 
+    function getContextMenuItems(clipboard_empty: boolean = false): contextMenuItem[] {
+        const cm_list: contextMenuItem [] = [];
+        cm_list.push({ text: 'Переименовать', action: NodeAction.rename });
+        cm_list.push({ text: 'Вырезать', action: NodeAction.CTRL_X });
+        cm_list.push({ text: 'Копировать', action: NodeAction.CTRL_C });
+
+        cm_list.push({ text: 'Вставить', action: NodeAction.CTRL_V, not_active: !clipboard_empty  });
+        cm_list.push({ text: 'Вставить дочерним', action: NodeAction.CTRL_B, not_active: !clipboard_empty });
+        
+        cm_list.push({ text: 'Дублировать', action: NodeAction.CTRL_D });
+        cm_list.push({ text: 'Удалить', action: NodeAction.remove });
+        cm_list.push({ text: 'line' });
+
+        cm_list.push({ text: 'Создать UI', children: [
+            { text: 'Добавить контейнер', action: NodeAction.add_gui_container },
+            { text: 'Добавить блок', action: NodeAction.add_gui_box },
+            { text: 'Добавить текст', action: NodeAction.add_gui_text },
+            { text: 'line' },
+            { text: 'Расширенные', children: [
+                { text: 'Добавить кнопку', action: 'none' },
+                { text: 'Добавить прогресс бар', action: 'none' },
+                { text: 'Добавить скрол', action: 'none' },
+            ] },
+        ] });
+
+        cm_list.push({ text: 'line' });
+        cm_list.push({ text: 'Game', children: [
+            { text: 'Добавить контейнер', action: NodeAction.add_go_container },
+            { text: 'Добавить спрайт', action: NodeAction.add_go_sprite_component },
+            { text: 'Добавить надпись', action: NodeAction.add_go_label_component },
+            { text: 'Добавить модель', action: NodeAction.add_go_model_component },
+        ] });
+        
+        log({cm_list});
+        return cm_list;
+    }
 
     function openMenuContext(event: any): void {
         if (!itemDrag) return;
@@ -981,12 +990,31 @@ function TreeControlCreate() {
             divTree.classList.add('no_scrolling');
         }
 
-        // ContextMenu.open(treeContextMenu, event, (tt, action) => {console.log('cM: ', tt, action)});
-        ContextMenu.open(treeContextMenu, event, menuContextClick);
-       
+        ContextMenu.open(getContextMenuItems(is_copied), event, menuContextClick);
     }
 
+    function setIsCopied(val: boolean = true) {
+        is_copied = val;
+    }
 
+    function setCutList(is_clear: boolean = false) {
+        if (!is_clear) { 
+            cutList = deepClone(listSelected);
+            addClassIsCut();
+        }
+        else { 
+            cutList.length = 0;
+            log('clear: ', cutList)
+        }
+    }
+
+    function addClassIsCut() {
+        if (cutList.length == 0) return; 
+        cutList.forEach((i) => {
+            const item = document.querySelector(`a.tree__item[data-id="${i}"]`)
+            if (item) item.classList.add('isCut');
+        })
+    }
 
     function menuContextClick(success: boolean, action?: number | string): void {
         log('menuContextClick:: ', success, action);        
@@ -995,8 +1023,8 @@ function TreeControlCreate() {
         if(!success || action == undefined || action == null || !copyItemDrag) return;
         
         if (action == NodeAction.CTRL_X) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_X } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_X });
+            log(`ActionsControl.cut() , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_X } }`);
+            ActionsControl.cut();
         }
         if (action == NodeAction.CTRL_C) {
             log(`ActionsControl.copy() , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_C } }`);
@@ -1007,12 +1035,12 @@ function TreeControlCreate() {
             ActionsControl.paste();
         }
         if (action == NodeAction.CTRL_B) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_B } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_B });
+            log(`ActionsControl.paste(true) , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_B } }`);
+            ActionsControl.paste(true);
         }
         if (action == NodeAction.CTRL_D) {
-            log(`SYS_GRAPH_KEY_COM_PRESSED , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_D } }`);
-            EventBus.trigger('SYS_GRAPH_KEY_COM_PRESSED', { id: copyItemDrag?.id, list: listSelected, key: NodeAction.CTRL_D });
+            log(`ActionsControl.duplication() , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_D } }`);
+            ActionsControl.duplication();
         }
         if (action == NodeAction.rename) {
             preRename();
@@ -1135,6 +1163,6 @@ function TreeControlCreate() {
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
 
-    return { draw_graph, preRename };
+    return { draw_graph, preRename, setIsCopied, setCutList };
 
 }
