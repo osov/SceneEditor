@@ -333,11 +333,11 @@ function InspectorControlCreate() {
             const raw = value.rotation;
             const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
 
-            // TODO: использовать index для расположения поля
-            // TODO: в значение пихать callback который будет отвечать за обновление
 
             const pivot_preset = pivotToScreenPreset(value.get_pivot());
             const anchor_preset = anchorToScreenPreset(value.get_anchor());
+
+            // IDEA: в значение пихать callback который будет отвечать за обновление
 
             const fields = [
                 { name: Property.ID, data: value.mesh_data.id },
@@ -394,6 +394,7 @@ function InspectorControlCreate() {
 
         clear();
         setData(data);
+
         _last_state = deepClone(_inspector.exportState());
     }
 
@@ -462,7 +463,6 @@ function InspectorControlCreate() {
                     case Property.ANCHOR_PRESET:
                         value.data = anchorToScreenPreset(item.get_anchor());
                         break;
-                    case Property.TEXTURE: value.data = `${(item as Slice9Mesh).get_texture()[1]}/${(item as Slice9Mesh).get_texture()[0]}`; break;
                     case Property.SLICE9: value.data = (item as Slice9Mesh).get_slice(); break;
                     case Property.ROTATION:
                         const raw = item.rotation;
@@ -761,6 +761,15 @@ function InspectorControlCreate() {
 
         if (!property.readonly) {
             entity.onChange = (event: ChangeEvent) => {
+                // не обновляем только что измененные значения из вне (после refresh)
+                if (_refreshed_properies.length != 0) {
+                    const index = _refreshed_properies.findIndex((prop) => property.name == prop);
+                    if (index != -1) {
+                        _refreshed_properies.splice(index, 1);
+                        return;
+                    }
+                }
+
                 onUpdatedValue({
                     ids,
                     data: {
@@ -769,6 +778,14 @@ function InspectorControlCreate() {
                         event
                     }
                 });
+
+                if (_is_first) _is_first = false;
+                if (event.last) {
+                    _is_first = true;
+
+                    // сохраняем текущие значения полей инспектора
+                    _last_state = deepClone(_inspector.exportState());
+                }
             };
         }
 
@@ -819,14 +836,6 @@ function InspectorControlCreate() {
     }
 
     function onUpdatedValue(value: ChangeInfo) {
-        if (_refreshed_properies.length != 0) {
-            const index = _refreshed_properies.findIndex((property) => value.data.property.name == property);
-            if (index != -1) {
-                _refreshed_properies.splice(index, 1);
-                return;
-            }
-        }
-
         switch (value.data.field.name) {
             case Property.NAME: updateName(value); break;
             case Property.ACTIVE: updateActive(value); break;
@@ -845,12 +854,6 @@ function InspectorControlCreate() {
             case Property.FONT: updateFont(value); break;
             case Property.FONT_SIZE: updateFontSize(value); break;
             case Property.TEXT_ALIGN: updateTextAlign(value); break;
-        }
-
-        if (_is_first) _is_first = false;
-        if (value.data.event.last) {
-            _is_first = true;
-            _last_state = deepClone(_inspector.exportState());
         }
     }
 
@@ -1287,11 +1290,9 @@ function InspectorControlCreate() {
 
             if (!mesh) return;
 
-            const texture_data = (value.data.event.value as any).value.split('/');
+            const texture_data = (value.data.event.value as string).split('/');
             (mesh as Slice9Mesh).set_texture(texture_data[1], texture_data[0]);
         });
-
-        refresh([Property.TEXTURE]);
     }
 
     function updateSlice(value: ChangeInfo) {
