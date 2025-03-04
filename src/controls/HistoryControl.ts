@@ -187,7 +187,9 @@ function HistoryControlCreate() {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_TEXTURE'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
-                (mesh as Slice9Mesh).set_texture(data.texture);
+                const atlas = data.texture.split('/')[0];
+                const texture = data.texture.split('/')[1];
+                (mesh as Slice9Mesh).set_texture(texture, atlas);
                 list_mesh.push(mesh);
             }
         } else if (type == 'MESH_TEXT') {
