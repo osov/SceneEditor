@@ -133,7 +133,7 @@ function PopupsCreate() {
         if (popupTitle) { popupTitle.textContent = data?.params?.title; }
 
         const popupText = popup.querySelector('.popup__text') as HTMLInputElement | null;
-        if (popupText && data?.type == 'Notify') { popupText.textContent = data?.params?.text || popupText.textContent; }
+        if (popupText && (data?.type == 'Notify' || data?.type == 'Confirm')) { popupText.textContent = data?.params?.text || popupText.textContent; }
         
         const inputField = popup.querySelector('.popup__input') as HTMLInputElement | null;
         if (inputField && data?.type == 'Rename') { inputField.value = data?.params?.currentName ? data?.params?.currentName : ''; }
