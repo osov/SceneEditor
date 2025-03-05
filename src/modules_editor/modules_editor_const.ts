@@ -101,7 +101,6 @@ export const METADATA = '/metadata.txt'
 
 export const URL_PATHS = {
     TEST: '/test',
-    DOWNLOAD: '/download',
     UPLOAD: '/upload',
     ASSETS: '/assets',
     API: '/api',

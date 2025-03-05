@@ -334,6 +334,9 @@ function AssetControlCreate() {
             const path = active_asset.getAttribute('data-path') as string;
             const name = active_asset.getAttribute('data-name') as string;
             const type = active_asset.getAttribute('data-type') as AssetType | undefined;
+            if (action == NodeAction.download) 
+                download_asset(path, name);
+            
             if (action == NodeAction.rename) {
                 rename_popup(path, name, type);
             }
@@ -414,6 +417,17 @@ function AssetControlCreate() {
             params: {title: "Ошибка", text: message, button: "Ok", auto_close: true},
             callback: () => {}   // (success: boolean) => void
         });
+    }
+
+    async function download_asset(path: string, name: string) {
+        const url = `${SERVER_URL}${URL_PATHS.ASSETS}/${path}`;
+        const resp = await fetch(url);
+        const blob = await resp.blob();
+        let fileURL = URL.createObjectURL(blob);
+        let fileLink = document.createElement('a');
+        fileLink.href = fileURL;
+        fileLink.download = name;
+        fileLink.click();
     }
 
     async function on_file_upload(resp: Response) {
