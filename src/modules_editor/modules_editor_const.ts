@@ -38,7 +38,7 @@ export type AssetsCommands = {
     [NEW_FOLDER_CMD]: { name: string, path: string },
     [GET_FOLDER_CMD]: { path: string },
     // [SEARCH_CMD]: { name: string },
-    [RENAME_CMD]: { new_name: string, path: string },
+    [RENAME_CMD]: { path: string, new_path: string },
     [COPY_CMD]: { path: string, new_path: string },
     [DELETE_CMD]: { path: string },
     [SAVE_INFO_CMD]: { path: string, data: TRecursiveDict },

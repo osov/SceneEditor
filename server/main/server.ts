@@ -6,9 +6,7 @@ import { CommandId, ExtWebSocket, WsClient, NetMessages, TDictionary, ServerResp
 import { do_response, json_parsable } from "./utils";
 import { get_asset_path, get_full_path } from "./fs_utils";
 import { WsServer } from "./WsServer";
-import { Clients } from "./clients";
 import { FSWatcher } from "./fs_watcher";
-import { send_message_socket } from "./ws_utils";
 
 export function Server(server_port: number) {
     // const clients = Clients();
@@ -147,8 +145,7 @@ export function Server(server_port: number) {
             }
             if (cmd_id === GET_FOLDER_CMD) {
                 const _params = params as ServerCommands[typeof GET_FOLDER_CMD];
-                current_dir = _params.path as string; 
-                log(`${current_dir} is current dir`);           
+                current_dir = _params.path as string;         
             }
         }
         return result;

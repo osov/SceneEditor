@@ -53,9 +53,9 @@ function ClientAPIModule() {
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, new_path});
     }
 
-    async function rename(path: string, new_name: string): Promise<AssetsResponses[typeof RENAME_CMD]> {
+    async function rename(path: string, new_path: string): Promise<AssetsResponses[typeof RENAME_CMD]> {
         const command_id = RENAME_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, new_name});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, new_path});
     }
 
     async function remove(path: string): Promise<AssetsResponses[typeof DELETE_CMD]> {

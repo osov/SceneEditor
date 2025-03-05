@@ -173,8 +173,12 @@ function ContextMenuCreate() {
         hideContextMenu();
     }
 
+    function isVisible() {
+        return mContextVisible;
+    }
+
     EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
-    return { open };
+    return { open, isVisible };
 }

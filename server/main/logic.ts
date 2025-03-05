@@ -3,6 +3,7 @@ import path from "path";
 import { PATH_PARAM_NAME, NEW_PROJECT_CMD, ERROR_TEXT, DELETE_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, NEW_NAME_PARAM_NAME, NAME_PARAM_NAME, COPY_CMD, PROJECT_PARAM_NAME, GET_PROJECTS_CMD, SEARCH_CMD, RENAME_CMD, GET_FOLDER_CMD, SAVE_INFO_CMD, GET_INFO_CMD, DATA_PARAM_NAME, SAVE_DATA_CMD, GET_DATA_CMD, NEW_PATH_PARAM_NAME, ID_SESSION_PARAM_NAME, PUBLIC, GET_LOADED_PROJECT_CMD, } from "./const";
 import { check_dir_exists, exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, new_folder, read_dir_assets, rename, get_data_file_path, remove_path, copy, get_data_folder_path, new_project, is_folder, mk_dir } from "./fs_utils";
 import { CommandId, ServerCommands, ServerResponses, TRecursiveDict, } from "./types";
+import { incr_file_name } from "./utils";
 
 
 const project_name_required_commands = [
@@ -28,7 +29,7 @@ const loaded_project_required_commands = [
 const allowed_ext = ['mtr', 'prt', 'pss', 'txt', 'jpg','jpeg','png','gif','gltf','glb','obj','mtr','smpl','prt','fbx','mp3','ogg'];
 
 export async function handle_command<T extends CommandId>(project: string, cmd_id: T, params: object) {
-    log('params: ', params)
+    log('cmd_id:', cmd_id, 'params: ', params)
 
     async function on_get_projects() {
         const projects_list: string[] = []
@@ -100,11 +101,10 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
     
     async function on_rename(cmd: ServerCommands[typeof RENAME_CMD]): Promise<ServerResponses[typeof RENAME_CMD]> {
         const old_path = get_asset_path(project, cmd.path);
+        const new_path = get_asset_path(project, cmd.new_path);
         const file_exists = await exists(old_path);
         if (!file_exists)
             return {message: `${ERROR_TEXT.FILE_NOT_EXISTS}: ${old_path}`, result: 0};
-        const old_path_dirname = path.dirname(old_path);
-        const new_path = path.join(old_path_dirname, cmd.new_name);
         const ext1 = path.extname(old_path).slice(1);
         const ext2 = path.extname(new_path).slice(1);
         if (!allowed_ext.includes(ext1))
@@ -120,10 +120,18 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         if (cmd.path === "" || cmd.new_path === "")
             return {message: ERROR_TEXT.COPY_CHANGE_ROOT, result: 0};
         const old_path = get_asset_path(project, cmd.path);
+        let new_path = get_asset_path(project, cmd.new_path);
         const file_exists = await exists(old_path);
         if (!file_exists)
             return {message: `${ERROR_TEXT.FILE_NOT_EXISTS}: ${old_path}`, result: 0};
-        const new_path = get_asset_path(project, cmd.new_path);
+
+        // TODO: Обработать случай, когда в директории назначения уже есть файл с таким именем?
+        // if (get_dir_names(path.dirname(new_path)).includes(path.basename(new_path))) {
+        //     while (get_dir_names(path.dirname(new_path)).includes(path.basename(new_path))) {
+        //         new_path = incr_file_name(new_path);
+        //     }
+        // }
+        
         await copy(old_path, new_path);
         return {result: 1, data: {new_path}};
     }
@@ -271,7 +279,7 @@ export function check_fields(cmd_id: CommandId, params: any) {
     if (cmd_id === NEW_FOLDER_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME, NAME_PARAM_NAME]);
     if (cmd_id === RENAME_CMD)
-        wrong_fields = _check_fields(params, [PATH_PARAM_NAME, NEW_NAME_PARAM_NAME]);
+        wrong_fields = _check_fields(params, [PATH_PARAM_NAME, NEW_PATH_PARAM_NAME]);
     if (cmd_id === COPY_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME, NEW_PATH_PARAM_NAME]);
     if (cmd_id === DELETE_CMD)
