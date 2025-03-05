@@ -371,7 +371,7 @@ function AssetControlCreate() {
         if (type == "folder") type_name = "папку";
         Popups.open({
             type: "Rename",
-            params: {title: `Переименовать ${type_name} ${name}`, button: "Ok", auto_close: true},
+            params: {title: `Переименовать ${type_name} ${name}`, button: "Ok", currentName: name, auto_close: true},
             callback: async (success, name) => {
                 if (success && name) {
                     const new_path = `${current_dir}/${name}`;

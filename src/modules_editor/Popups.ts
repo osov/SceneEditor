@@ -25,7 +25,7 @@ Popups.open({
 
 Popups.open({
     type: "Rename",
-    params: {title: "Rename", button: "Ok", auto_close: true},
+    params: {title: "Rename", button: "Ok", currentName: "currentName", auto_close: true},
     callback: nameFunction   // (success: boolean, name?: string) => void
 });
 
@@ -70,7 +70,7 @@ interface Confirm {
 
 interface Rename {
     type: "Rename",
-    params: { title: string, button: string, auto_close?: boolean },
+    params: { title: string, button: string, currentName?: string, auto_close?: boolean },
     callback: (success: boolean, name?: string) => void
 }
 
@@ -136,6 +136,7 @@ function PopupsCreate() {
         if (popupText && data?.type == 'Notify') { popupText.textContent = data?.params?.text || popupText.textContent; }
         
         const inputField = popup.querySelector('.popup__input') as HTMLInputElement | null;
+        if (inputField && data?.type == 'Rename') { inputField.value = data?.params?.currentName ? data?.params?.currentName : ''; }
 
         // if (data?.type == 'Layers') {
             const layer_list: LayerItem [] = (data?.type == 'Layers' && data?.params?.list) ? deepClone(data?.params?.list) : [];
