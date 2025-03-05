@@ -314,7 +314,7 @@ function AssetControlCreate() {
             // open_material_popup(asset_path);
         }
         if (action == NodeAction.new_folder) {
-            open_new_folder_popup(current_dir);
+            new_folder_popup(current_dir);
         }
         if (action == NodeAction.CTRL_V && moving_asset_name) {
             const move_to = `${current_dir}/${moving_asset_name}`;
@@ -335,7 +335,7 @@ function AssetControlCreate() {
             const name = active_asset.getAttribute('data-name') as string;
             const type = active_asset.getAttribute('data-type') as AssetType | undefined;
             if (action == NodeAction.rename) {
-                open_rename_popup(path, name, type);
+                rename_popup(path, name, type);
             }
             if (action == NodeAction.CTRL_X) {
                 moving_asset_name = name;
@@ -347,26 +347,29 @@ function AssetControlCreate() {
             }
             if (action == NodeAction.remove) {
                 const asset_path = active_asset.getAttribute("data-path") as string;
-                open_remove_popup(asset_path, name);
+                remove_popup(asset_path, name);
             }
         }
     }
 
-    function open_new_folder_popup(current_path: string) {
+    function new_folder_popup(current_path: string) {
         Popups.open({
             type: "Rename",
             params: {title: "Новая папка:", button: "Ok", auto_close: true},
             callback: async (success, name) => {
                 if (success && name) {
-                    const response = await ClientAPI.new_folder(current_path, name);
-                    if (response.result === 0) 
-                        open_error_popup(`Не удалось создать папку, ответ сервера: ${response.message}`)
+                    const r = await ClientAPI.new_folder(current_path, name);
+                    if (r.result === 0) 
+                        error_popup(`Не удалось создать папку, ответ сервера: ${r.message}`);
+                    if (r.result && r.data) {
+                        go_to_dir(current_path, true);
+                    }
                 }
             }
         });
     }
 
-    function open_rename_popup(asset_path: string, name: string, type?: AssetType) {
+    function rename_popup(asset_path: string, name: string, type?: AssetType) {
         let type_name = "файл";
         if (type == "folder") type_name = "папку";
         Popups.open({
@@ -375,15 +378,18 @@ function AssetControlCreate() {
             callback: async (success, name) => {
                 if (success && name) {
                     const new_path = `${current_dir}/${name}`;
-                    const response = await ClientAPI.rename(asset_path, new_path);
-                    if (response.result === 0)
-                        open_error_popup(`Не удалось переименовать ${type_name}, ответ сервера: ${response.message}`)
+                    const r = await ClientAPI.rename(asset_path, new_path);
+                    if (r.result === 0)
+                        error_popup(`Не удалось переименовать ${type_name}, ответ сервера: ${r.message}`);
+                    if (r.result && r.data && current_dir) {
+                        go_to_dir(current_dir, true);
+                    }
                 }
             }
         });
     }
 
-    function open_remove_popup(asset_path: string, name: string, type?: AssetType) {
+    function remove_popup(asset_path: string, name: string, type?: AssetType) {
         let type_name = "файл";
         if (type == "folder") type_name = "папку";
         Popups.open({
@@ -391,15 +397,18 @@ function AssetControlCreate() {
             params: {title: `Удаление файла`, text: `Удалить ${type_name} ${name}?`, button: "Да", buttonNo: "Нет", auto_close: true},
             callback: async (success) => {
                 if (success) {
-                    const response = await ClientAPI.remove(asset_path);
-                    if (response.result === 0) 
-                        open_error_popup(`Не удалось удалить ${type_name}, ответ сервера: ${response.message}`)
+                    const r = await ClientAPI.remove(asset_path);
+                    if (r.result === 0) 
+                        error_popup(`Не удалось удалить ${type_name}, ответ сервера: ${r.message}`);
+                    if (r.result && r.data && current_dir) {
+                        go_to_dir(current_dir, true);
+                    }
                 }
             }
         });
     }
 
-    function open_error_popup(message: string) {
+    function error_popup(message: string) {
         Popups.open({
             type: "Notify",
             params: {title: "Ошибка", text: message, button: "Ok", auto_close: true},
@@ -412,8 +421,9 @@ function AssetControlCreate() {
         if (!json_parsable(resp_text)) 
             return;
         const resp_json = JSON.parse(resp_text) as ServerResponses[typeof FILE_UPLOAD_CMD];
-        if (resp_json.result && resp_json.result === 1) {
+        if (resp_json.result === 1 && resp_json.data) {
             const data = resp_json.data;
+            console.log(`file ${data.name} uploaded in dir ${data.path}`);
             EventBus.trigger("SYS_FILE_UPLOADED", data)
         }
     }
@@ -491,7 +501,7 @@ function AssetControlCreate() {
             const path = active_asset.getAttribute('data-path') as string;
             const name = active_asset.getAttribute('data-name') as string;
             if (event.key == 'F2' && active_asset) {
-                open_rename_popup(path, name);
+                rename_popup(path, name);
             }
             if (Input.is_control() && (event.key == 'c' || event.key == 'с')) {
                 moving_asset_name = name;
@@ -513,7 +523,7 @@ function AssetControlCreate() {
                 moving_asset_name = undefined;
             }
             if (event.key == 'Delete') {
-                open_remove_popup(path, name);
+                remove_popup(path, name);
             }  
         }
     }
@@ -581,18 +591,22 @@ function AssetControlCreate() {
         }
     }  
 
-    function upload_files(files: File[], ) {
-        const data = new FormData();
+    async function upload_files(files: File[], ) {
         for (const file of files) {
+            const data = new FormData();
+            console.log(`trying upload a file: ${file.name} in dir ${current_dir}`);
             data.append('file', file, file.name);
             data.append('path', current_dir as string);
+            try {
+                const resp = await fetch(`${SERVER_URL}${URL_PATHS.UPLOAD}`, {
+                    method: 'POST',
+                    body: data
+                });
+                on_file_upload(resp)
+            } catch (e) {
+                console.error(e)
+            }
         }
-        fetch(`${SERVER_URL}${URL_PATHS.UPLOAD}`, {
-            method: 'POST',
-            body: data
-        })
-        .then(() => console.log("file uploaded"))
-        .catch(reason => console.error(reason));
     }
 
     document.querySelector('.filemanager')?.addEventListener('contextmenu', (event: any) => {

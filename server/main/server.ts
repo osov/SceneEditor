@@ -2,7 +2,7 @@ import path from "path";
 import { Router } from "bun-serve-router";
 import { ERROR_TEXT, URL_PATHS, CMD_NAME, LOAD_PROJECT_CMD, GET_FOLDER_CMD, GET_LOADED_PROJECT_CMD } from "./const";
 import { project_name_required, get_file, handle_command, loaded_project_required } from "./logic";
-import { CommandId, ExtWebSocket, WsClient, NetMessages, TDictionary, ServerResponses, ServerCommands } from "./types";
+import { CommandId, ExtWebSocket, WsClient, NetMessages, TDictionary, ServerResponses, ServerCommands, AssetsResponses } from "./types";
 import { do_response, json_parsable } from "./utils";
 import { get_asset_path, get_full_path } from "./fs_utils";
 import { WsServer } from "./WsServer";
@@ -41,12 +41,13 @@ export function Server(server_port: number) {
                         file_path = path.join(dir_path, file_name);
                         name = file_name;
                         size = await Bun.write(`${get_asset_path(project, file_path)}`, file);
-                        return do_response({result: 1, size, path: file_path, name, project});   
+                        const response: AssetsResponses['/upload'] = {result: 1, data: {size, path: file_path, name, project}};
+                        return do_response(response);   
                     }
                 }
             }
             catch(e: any) {
-                const response = {result: 0, message: `${ERROR_TEXT.CANT_UPLOAD_FILE}: ${e}`};
+                const response: AssetsResponses['/upload'] = {result: 0, message: `${ERROR_TEXT.CANT_UPLOAD_FILE}: ${e}`};
                 return do_response(response);
             } 
         } 

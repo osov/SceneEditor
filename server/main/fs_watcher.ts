@@ -1,6 +1,5 @@
 import { watch } from "fs";
 import * as fs from 'fs/promises';
-import { IClients } from "./clients";
 import { get_full_path } from "./fs_utils";
 import path from "path";
 import { FSEventType, FSObjectType, PUBLIC } from "./const";
@@ -14,7 +13,7 @@ export function FSWatcher(dir: string, sockets: WsClient[]) {
         { recursive: true }, 
         async (event, filename) => {
             if (filename !== null) {
-                const _dir = get_full_path(filename);
+                const _dir = path.dirname(get_full_path(filename));
                 const exists = await fs.exists(_dir);
                 let obj_type: FSObjectType = "null";
                 let event_type: FSEventType = event;

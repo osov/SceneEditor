@@ -271,6 +271,7 @@
 }
 
 .data_container{
+	height: 100%;
 	user-select: none;
 	max-height: 265px;
 }
