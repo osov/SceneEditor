@@ -1,5 +1,5 @@
 import { BufferGeometry, Object3D, Vector2, Vector3 } from "three";
-import { IBaseMeshDataAndThree } from "../types";
+import { IBaseMeshAndThree } from "../types";
 
 export function get_basename(path: string) {
     return path.split('/').reverse()[0];
@@ -14,7 +14,7 @@ export function is_base_mesh(mesh: Object3D) {
 }
 
 // исключить из списка дочерние элементы, тк при удалении проще будет восстановить 
-export function format_list_without_children(list: IBaseMeshDataAndThree[]) {
+export function format_list_without_children(list: IBaseMeshAndThree[]) {
     const ids = [];
     for (let i = 0; i < list.length; i++) {
         ids.push(list[i].mesh_data.id);
@@ -22,7 +22,7 @@ export function format_list_without_children(list: IBaseMeshDataAndThree[]) {
     const res = [];
     for (let i = 0; i < list.length; i++) {
         if (is_base_mesh(list[i].parent!)) {
-            const p = list[i].parent! as IBaseMeshDataAndThree;
+            const p = list[i].parent! as IBaseMeshAndThree;
             if (ids.indexOf(p.mesh_data.id) == -1) {
                 res.push(list[i]);
             }
@@ -34,11 +34,11 @@ export function format_list_without_children(list: IBaseMeshDataAndThree[]) {
 }
 
 export function filter_list_base_mesh(tmp: Object3D[]) {
-    const list: IBaseMeshDataAndThree[] = [];
+    const list: IBaseMeshAndThree[] = [];
     for (let i = 0; i < tmp.length; i++) {
         const it = tmp[i];
         if (is_base_mesh(it)) {
-            list.push(it as any as IBaseMeshDataAndThree);
+            list.push(it as any as IBaseMeshAndThree);
         }
     }
     return list;
@@ -54,7 +54,7 @@ export function convert_width_height_to_pivot_bb(w: number, h: number, ax = 0.5,
     ]
 }
 
-export function set_pivot_with_sync_pos(mesh: IBaseMeshDataAndThree, width: number, height: number, old_pivot_x: number, old_pivot_y: number, new_pivot_x: number, new_pivot_y: number) {
+export function set_pivot_with_sync_pos(mesh: IBaseMeshAndThree, width: number, height: number, old_pivot_x: number, old_pivot_y: number, new_pivot_x: number, new_pivot_y: number) {
     const scale = mesh.scale;
     const op = convert_width_height_to_pivot_bb(width * scale.x, height * scale.y, old_pivot_x, old_pivot_y);
     const old_positions = [];

@@ -18,7 +18,7 @@ export async function run_anim_scene() {
     plane_1.set_slice(8, 8)
     plane_1.set_color('#0f0')
     plane_1.set_texture('2');
-    SceneManager.add(plane_1);
+  //  SceneManager.add(plane_1);
 
     const plane_2 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 128, height: 32 });
     plane_2.scale.setScalar(2);
@@ -26,7 +26,7 @@ export async function run_anim_scene() {
     plane_2.set_slice(8, 8)
     plane_2.set_color('#0f0')
     plane_2.set_texture('2');
-    SceneManager.add(plane_2);
+   // SceneManager.add(plane_2);
 
 
     await ResourceManager.preload_texture('Material-Color-Picker.jpg', '');
@@ -40,13 +40,19 @@ export async function run_anim_scene() {
     am.add_animation('guy@Medium Run', 'walk');
     am.rotateX(0.6)
     am.position.set(250, -500, 1)
-    am.children[0].scale.setScalar(0.5)
+    am.children[0].scale.setScalar(0.3)
     SceneManager.add(am);
 
 
 
+    await ResourceManager.preload_texture('iso/stoneWallArchway_S.png');
+    await ResourceManager.preload_texture('iso/stoneWallStructure_S.png');
+    const t1 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 256, height: 512 });
+    t1.position.set(300, -379, 0.99);
+    t1.set_texture('stoneWallStructure_S');
+    SceneManager.add(t1);
 
-/*
+
     const map_data = await ResourceManager.load_asset('./parsed_map.json') as MapData;
     await preload_tiled_textures(map_data);
     const render_data = parse_tiled(map_data);
@@ -90,8 +96,9 @@ export async function run_anim_scene() {
         }
     }
 
-    CameraControl.set_position(3121, -1692, false);
-    */
+   
+    
+    CameraControl.set_position(276, -580, false);
     CameraControl.set_zoom(2, false)
     ControlManager.update_graph(true);
 

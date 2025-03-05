@@ -1,5 +1,5 @@
 import { get_file_name } from "../helpers/utils";
-import { IBaseMeshDataAndThree } from "../types";
+import { IBaseEntityAndThree } from "../types";
 
 // Флаги Tiled для отражения и вращения
 const FLIP_HORIZONTALLY_FLAG = 0x80000000;
@@ -164,7 +164,7 @@ function create_chunk(chunk: Chunk) {
     return data;
 }
 
-export function apply_tile_transform(mesh: IBaseMeshDataAndThree, tile_id: number): void {
+export function apply_tile_transform(mesh: IBaseEntityAndThree, tile_id: number): void {
     const flipHorizontally = (tile_id & FLIP_HORIZONTALLY_FLAG) !== 0;
     const flipVertically = (tile_id & FLIP_VERTICALLY_FLAG) !== 0;
     const flipDiagonally = (tile_id & FLIP_DIAGONALLY_FLAG) !== 0;
@@ -180,7 +180,7 @@ export function apply_tile_transform(mesh: IBaseMeshDataAndThree, tile_id: numbe
 
 }
 
-export function apply_object_transform(mesh: IBaseMeshDataAndThree, tile: TileObject): void {
+export function apply_object_transform(mesh: IBaseEntityAndThree, tile: TileObject): void {
     const tile_id = tile.tile_id;
     const flipHorizontally = (tile_id & FLIP_HORIZONTALLY_FLAG) !== 0;
     const flipVertically = (tile_id & FLIP_VERTICALLY_FLAG) !== 0;
