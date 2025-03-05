@@ -1,5 +1,5 @@
 import { is_base_mesh } from "../render_engine/helpers/utils";
-import { IBaseMeshDataAndThree } from "../render_engine/types";
+import { IBaseMeshAndThree } from "../render_engine/types";
 import { TreeItem } from "./TreeControl";
 import { HistoryData } from "./HistoryControl";
 import Stats from 'stats.js';
@@ -57,7 +57,7 @@ function ControlManagerCreate() {
         EventBus.on('SYS_GRAPH_MOVED_TO', (e) => {
             // save history
             const saved_list: HistoryData['MESH_MOVE'][] = [];
-            const mesh_list: IBaseMeshDataAndThree[] = [];
+            const mesh_list: IBaseMeshAndThree[] = [];
             for (let i = 0; i < e.id_mesh_list.length; i++) {
                 const id = e.id_mesh_list[i];
                 const mesh = SceneManager.get_mesh_by_id(id);
@@ -68,7 +68,7 @@ function ControlManagerCreate() {
                 const parent = mesh.parent!;
                 let pid = -1;
                 if (is_base_mesh(parent))
-                    pid = (parent as any as IBaseMeshDataAndThree).mesh_data.id;
+                    pid = (parent as any as IBaseMeshAndThree).mesh_data.id;
                 saved_list.push({ id_mesh: id, pid: pid, next_id: SceneManager.find_next_id_mesh(mesh) });
                 mesh_list.push(mesh);
             }

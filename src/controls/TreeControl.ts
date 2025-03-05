@@ -1049,31 +1049,25 @@ function TreeControlCreate() {
             ActionsControl.remove();
         }
         if (action == NodeAction.add_gui_container) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_gui_container} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_gui_container });
+            ActionsControl.add_gui_container(copyItemDrag?.id);
         }
         if (action == NodeAction.add_gui_box) {
             ActionsControl.add_gui_box(copyItemDrag?.id);
         }
         if (action == NodeAction.add_gui_text) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_gui_text} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_gui_text });
+            ActionsControl.add_gui_text(copyItemDrag?.id);
         }
         if (action == NodeAction.add_go_container) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_go_container} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_go_container });
+            ActionsControl.add_go_container(copyItemDrag?.id);
         }
         if (action == NodeAction.add_go_sprite_component) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_go_sprite_component} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_go_sprite_component });
+            ActionsControl.add_go_sprite_component(copyItemDrag?.id);
         }
         if (action == NodeAction.add_go_label_component) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_go_label_component} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_go_label_component });
+            ActionsControl.add_go_label_component(copyItemDrag?.id);
         }
         if (action == NodeAction.add_go_model_component) {
-            log(`SYS_GRAPH_ADD, { id: ${copyItemDrag?.id}, list: ${listSelected}, type: ${NodeAction.add_go_model_component} }`);
-            EventBus.trigger('SYS_GRAPH_ADD', { id: copyItemDrag?.id, list: listSelected, type: NodeAction.add_go_model_component });
+            ActionsControl.add_go_model_component(copyItemDrag?.id);
         }
 
         copyItemDrag = null;

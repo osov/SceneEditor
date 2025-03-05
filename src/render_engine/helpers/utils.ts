@@ -1,5 +1,5 @@
 import { BufferGeometry, Object3D, Vector2, Vector3 } from "three";
-import { IBaseMeshAndThree } from "../types";
+import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
 
 export function get_basename(path: string) {
     return path.split('/').reverse()[0];
@@ -14,7 +14,7 @@ export function is_base_mesh(mesh: Object3D) {
 }
 
 // исключить из списка дочерние элементы, тк при удалении проще будет восстановить 
-export function format_list_without_children(list: IBaseMeshAndThree[]) {
+export function format_list_without_children(list: IBaseEntityAndThree[]) {
     const ids = [];
     for (let i = 0; i < list.length; i++) {
         ids.push(list[i].mesh_data.id);
@@ -22,7 +22,7 @@ export function format_list_without_children(list: IBaseMeshAndThree[]) {
     const res = [];
     for (let i = 0; i < list.length; i++) {
         if (is_base_mesh(list[i].parent!)) {
-            const p = list[i].parent! as IBaseMeshAndThree;
+            const p = list[i].parent! as IBaseEntityAndThree;
             if (ids.indexOf(p.mesh_data.id) == -1) {
                 res.push(list[i]);
             }

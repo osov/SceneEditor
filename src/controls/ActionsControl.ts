@@ -110,17 +110,59 @@ function ActionsControlCreate() {
         SelectControl.set_selected_list([]);
     }
 
+    function add_gui_container(pid: number = -1) {
+        const container = SceneManager.create(IObjectTypes.GUI_CONTAINER);
+        sceneAddItem(container, pid);
+    }
+    
     function add_gui_box(pid: number = -1) {
-        //   const mesh = SceneManager.get_mesh_by_id(plane_1.id);
         const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: 128, height: 32 });
         box.scale.setScalar(1);
         box.position.set(200, -200, 0);
         box.set_color('#0f0')
         box.set_texture('2');
         box.set_slice(8, 8);
-        SceneManager.add(box, pid);
-        HistoryControl.add('MESH_DELETE', [{id_mesh: box.mesh_data.id}]);
-        SelectControl.set_selected_list([box]);
+        sceneAddItem(box, pid);
+    }
+
+    function add_gui_text(pid: number = -1) {
+        const txt = SceneManager.create(IObjectTypes.GUI_TEXT, { text: 'Text', width: 250, height: 50 });
+        txt.set_color('#0f0');
+        txt.scale.setScalar(0.5);
+        txt.set_font('ShantellSans-Light11');
+        sceneAddItem(txt, pid);
+    }
+
+    function add_go_container(pid: number = -1) {
+        const container = SceneManager.create(IObjectTypes.GO_CONTAINER);
+        container.set_position(540 / 2, -960 / 2);
+        sceneAddItem(container, pid);
+    }
+
+    function add_go_sprite_component(pid: number = -1) {
+        const sprite = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT);
+        sprite.set_texture('arrow1', 'example_atlas');
+        sceneAddItem(sprite, pid);
+    }
+
+    function add_go_label_component(pid: number = -1) {
+        const label = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, {text:'label'});
+        label.set_font('ShantellSans-Light11');
+        sceneAddItem(label, pid);
+    }
+
+    function add_go_model_component(pid: number = -1) {
+        const model = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
+        model.position.set(250, 250, 1);
+        sceneAddItem(model, pid);
+    }
+
+    function sceneAddItem(item: any, pid: number = -1) {
+        if (!item) return;
+        const parent = SceneManager.get_mesh_by_id(pid);
+        parent ? parent.add(item) : SceneManager.add(item, pid);
+        HistoryControl.add('MESH_DELETE', [{id_mesh: item.mesh_data.id}]);
+        SelectControl.set_selected_list([item]);
     }
 
     function setUniqueNameMeshList(list: TreeItem[]): void {
@@ -142,5 +184,14 @@ function ActionsControlCreate() {
         });
     }
 
-    return { cut, copy, paste, duplication, remove, add_gui_box };
+    return { 
+        cut, copy, paste, duplication, remove,
+        add_gui_container,
+        add_gui_box,
+        add_gui_text,
+        add_go_container,
+        add_go_sprite_component,
+        add_go_label_component,
+        add_go_model_component,
+    };
 }

@@ -507,8 +507,6 @@ li:not(.active)>.tree__btn .use_trgl {
   display: none;
 }
 
-
-
 .drag_and_drop {
   display: flex;
   display: none;
@@ -570,11 +568,6 @@ li:not(.active)>.tree__btn .use_trgl {
   left: 10px;
   display: block; 
   border: 1px solid red; */
-}
-
-.wr_menu__context.bottom {
-  /* min-height: min(275px, calc(100vh - 28px)); */
-  /* max-height: min(275px, calc(100vh - 28px)); */
 }
 
 .wr_menu__context.active {
