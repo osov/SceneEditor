@@ -1,6 +1,7 @@
 import { format_list_without_children } from "../render_engine/helpers/utils";
 import { HistoryData } from "./HistoryControl";
 import { IObjectTypes } from '../render_engine/types';
+import { TreeItem } from "./TreeControl";
 
 declare global {
     const ActionsControl: ReturnType<typeof ActionsControlCreate>;
@@ -35,7 +36,6 @@ export enum NodeAction {
 function ActionsControlCreate() {
     let copy_mesh_list: any[] = [];
     let is_cut: boolean = false;
-    let countPaste: number = 0;
 
     function cut() {
         copy();
@@ -46,7 +46,6 @@ function ActionsControlCreate() {
     }
 
     function copy() {
-        countPaste = 0;
         const list = format_list_without_children(SelectControl.get_selected_list());
         if (list.length == 0) return;
         copy_mesh_list = [];
@@ -54,7 +53,7 @@ function ActionsControlCreate() {
             copy_mesh_list.push(SceneManager.serialize_mesh(list[i]));
         }
         
-        if (copy_mesh_list.length > 0) TreeControl.setIsCopied();
+        if (copy_mesh_list.length > 0) TreeControl.setIsCopied();ControlManager.get_tree_graph()
     }
 
     function paste(asChild: boolean = false) {
@@ -75,18 +74,18 @@ function ActionsControlCreate() {
             return;
         }
 
-        countPaste++;
         const mesh_list = [];
         const mesh_ids = [];
         for (let i = 0; i < copy_mesh_list.length; i++) {
             const m = SceneManager.deserialize_mesh(copy_mesh_list[i], false, target);
             m.position.x += 5;
             m.position.y -= 5;
-            m.name = incrName(m.name);
             target.add(m);
             mesh_ids.push({ id_mesh: m.mesh_data.id });
             mesh_list.push(m);
         }
+        setUniqueNameMeshList(ControlManager.get_tree_graph());
+
         HistoryControl.add('MESH_DELETE', mesh_ids);
         SelectControl.set_selected_list(mesh_list);
     }
@@ -124,8 +123,23 @@ function ActionsControlCreate() {
         SelectControl.set_selected_list([box]);
     }
 
-    function incrName(name: string) {
-        return name + ` (${countPaste})`;
+    function setUniqueNameMeshList(list: TreeItem[]): void {
+        if (!list.length) return;
+
+        const namesMap: { [key: string]: number } = {};
+
+        list.forEach(item => {
+            const match = item.name.match(/^(.+?)\s*\(\d+\)$/);
+            const baseName = match ? match[1] : item.name;
+
+            if (namesMap[baseName]) {
+                namesMap[baseName]++;
+                const mesh = SceneManager.get_mesh_by_id(item.id);
+                if (mesh) mesh.name = baseName + ` (${namesMap[baseName] - 1})`;
+            } else {
+                namesMap[baseName] = 1;
+            }
+        });
     }
 
     return { cut, copy, paste, duplication, remove, add_gui_box };

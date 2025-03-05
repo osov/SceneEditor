@@ -39,8 +39,11 @@ function ViewControlCreate() {
             }
 
             if (Input.is_control() && (e.key == 'b' || e.key == 'и')) {
-                log('CTRL_B')
                 ActionsControl.paste(true);
+            }
+
+            if (Input.is_control() && (e.key == 'd' || e.key == 'в')) {
+                ActionsControl.duplication();
             }
 
             if (e.key == 'Delete') {

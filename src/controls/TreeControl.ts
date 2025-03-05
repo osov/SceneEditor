@@ -977,7 +977,6 @@ function TreeControlCreate() {
             { text: 'Добавить модель', action: NodeAction.add_go_model_component },
         ] });
         
-        log({cm_list});
         return cm_list;
     }
 

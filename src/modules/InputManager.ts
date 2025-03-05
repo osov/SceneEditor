@@ -31,6 +31,9 @@ function InputModule() {
             keys_state[e.key] = true;
             if (e.repeat) return;
             EventBus.trigger('SYS_VIEW_INPUT_KEY_DOWN', { key: e.key, target: e.target }, false);
+            if (e.ctrlKey && (e.key == 'd' || e.key == 'в')) {
+                e.preventDefault(); // ctrl+d перехватывал браузер
+            }
             if (_is_alt)
                 e.preventDefault(); // alt перехватывал браузер
         });
