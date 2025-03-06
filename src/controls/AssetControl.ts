@@ -681,48 +681,47 @@ function fileIsImg(path: string) {
 }
 
 export async function run_debug_filemanager() {
-    // Подключаемся к серверу
     const resp = await ClientAPI.test_server_ok();
     if (resp && resp.result === 1) {
-        
         WsClient.connect(WS_SERVER_URL);
-
-        // Пробуем загрузить последний открытый проект
-        const result = await ClientAPI.get_loaded_project();
-        if (result.result) {
-            const data = result.data as {project?: string, current_dir: string};
-            if (data.project) {
-                AssetControl.load_project(data.project, undefined, data.current_dir);
-                return;
-            }   
-        }
-
-        // Иначе загружаем список существующих проектов
         const projects = await ClientAPI.get_projects();
         const project_to_load = 'ExampleProject';
         const names: string[] = [];
-
         // Ищем проект с именем project_to_load и пробуем его загрузить
         for (const project of projects) {
             names.push(project);
         }
-
-        // Если не найден, пробуем создать его
-        // if (!names.includes(project_to_load)) {
-        //     await ClientAPI.new_project(project_to_load);
-        // }
-
-        const load_project_resp = await ClientAPI.load_project(project_to_load);
-        if (load_project_resp.result !== 1)  {
-            log(`Failed to load project ${project_to_load}`);
-            return;
+        // Достаём данные о последнем открытом проекте
+        let last_project_data: {name?: string, current_dir: string} = {name: undefined, current_dir: ""};
+        const last_project_r = await ClientAPI.get_loaded_project();
+        if (last_project_r.result) {
+            last_project_data = last_project_r.data as {name?: string, current_dir: string};
         }
-        const data = load_project_resp.data as {assets: FSObject[], name: string};
-        // Устанавливаем текущий проект для ассет менеждера
-        AssetControl.load_project(data.name, data.assets);
-
-        // Прочие действия при открытии проекта в редакторе
+        // Если проект project_to_load существует, пробуем загрузить
+        if (names.includes(project_to_load)) {
+            const r = await ClientAPI.load_project(project_to_load);
+            if (r.result === 1) {
+                const data = r.data as {assets: FSObject[], name: string};
+                let assets: FSObject[] | undefined = data.assets;
+                let go_to_dir: string | undefined = undefined;
+                // Если project_to_load это последний открытый проект, будем переходить в последнюю открытую папку
+                if (project_to_load === last_project_data.name) {
+                    assets = undefined;
+                    go_to_dir = last_project_data.current_dir;
+                }
+                AssetControl.load_project(data.name, assets, go_to_dir);
+                log('Project loaded', data.name);
+                return;
+            }
+        }             
+        // Если не удалось загрузить project_to_load, пробуем загрузить последний открытый проект
+        if (last_project_data.name) {
+            AssetControl.load_project(last_project_data.name, undefined, last_project_data.current_dir);
+            log('Previously opened project loaded', last_project_data.name);
+            return;
+        }   
         
+        log('Failed to load any project!');
     }
     else {
         log('Server does not respond, cannot run debug filemanager');

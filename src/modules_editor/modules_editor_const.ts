@@ -59,7 +59,7 @@ export type BaseResp<T> = {
 }
 
 export type AssetsResponses = {
-    [GET_LOADED_PROJECT_CMD]: BaseResp<{ project?: string, current_dir: string }>,
+    [GET_LOADED_PROJECT_CMD]: BaseResp<{ name?: string, current_dir: string }>,
     [GET_PROJECTS_CMD]: BaseResp<string[]>,
     [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
     [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,

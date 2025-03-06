@@ -123,11 +123,12 @@ export function Server(server_port: number) {
 
     async function on_command(cmd_id: CommandId, data: string) {
         if (cmd_id == GET_LOADED_PROJECT_CMD) {
-            return {result: 1, data: {project: current_project, current_dir}};;
+            const result: ServerResponses[typeof GET_LOADED_PROJECT_CMD] = {result: 1, data: {name: current_project, current_dir}};
+            return result;
         }
         
         if (!json_parsable(data)) 
-            return do_response({message: ERROR_TEXT.WRONG_JSON, result: 0});
+            return {message: ERROR_TEXT.WRONG_JSON, result: 0};
         const params = JSON.parse(data);
 
         const resp = await project_name_required(cmd_id, params);
