@@ -1,6 +1,6 @@
 // todo select https://threejs.org/examples/?q=box#misc_boxselection
 import { Intersection, Object3D, Object3DEventMap, Vector2 } from "three";
-import { IBaseEntityAndThree } from "../render_engine/types";
+import { IBaseEntityAndThree, IBaseMeshAndThree } from "../render_engine/types";
 import { filter_list_base_mesh } from "../render_engine/helpers/utils";
 
 
@@ -16,8 +16,8 @@ function SelectControlCreate() {
     const pointer = new Vector2();
     const click_point = new Vector2();
     const prev_point = new Vector2();
-    let selected: IBaseEntityAndThree | null = null;
-    let selected_list: IBaseEntityAndThree[] = [];
+    let selected: IBaseMeshAndThree | null = null;
+    let selected_list: IBaseMeshAndThree[] = [];
     function init() {
 
         EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
@@ -94,7 +94,7 @@ function SelectControlCreate() {
         set_selected_list(list, false);
     }
 
-    function set_selected_list(list: IBaseEntityAndThree[], clear_old = true) {
+    function set_selected_list(list: IBaseMeshAndThree[], clear_old = true) {
         if (clear_old) {
             selected_list = [];
         }
