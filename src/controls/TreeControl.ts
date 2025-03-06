@@ -278,7 +278,11 @@ function TreeControlCreate() {
                 myScrollTo(divTree, startY, event);
 
                 // отмены не происходит, если выбрано больше одного
-                if (Input.is_control() && listSelected?.length > 0) { 
+                if (
+                    Input.is_control() && 
+                    listSelected?.length > 0 && 
+                    isItPossibleToChoose(listSelected, itemDrag)
+                ) { 
                     treeItem?.classList.add("selected");
                 }
 
@@ -737,8 +741,10 @@ function TreeControlCreate() {
                 }
             }
             else {
-                currentItem.classList.add("selected");
-                listSelected.push(currentId);
+                if (isItPossibleToChoose(listSelected, {id: currentId, icon: currentItem?.getAttribute("data-icon")})) {
+                    currentItem.classList.add("selected");
+                    listSelected.push(currentId);
+                }
             }
 
         }
@@ -797,7 +803,10 @@ function TreeControlCreate() {
 
         // если движение было
         if (Input.is_control() && _is_currentOnly) { 
-            if (!listSelected.includes(itemDrag?.id)) {
+            if (
+                !listSelected.includes(itemDrag?.id) && 
+                isItPossibleToChoose(listSelected, itemDrag)
+            ) {
                 listSelected.push(itemDrag?.id);
             }
             return;
@@ -916,45 +925,60 @@ function TreeControlCreate() {
 
     }
 
-    function toggleMenuContextItem() {
-        menuContext.querySelectorAll("a[data-action]").forEach((item: any) => {
-            item.classList.remove('not_active');
-            
-            if (item?.getAttribute("data-action") == "rename") {
-                if (itemDrag?.no_rename || itemDrag?.id == -1)
-                    item.classList.add('not_active');
-            }
-            
-            if (item?.getAttribute("data-action") == "CTRL_X") {
-                if (itemDrag?.no_remove || itemDrag?.id == -1)
-                    item.classList.add('not_active');
-            }
-            
-            if (item?.getAttribute("data-action") == "CTRL_C") {
-                if (itemDrag?.id == -1)
-                    item.classList.add('not_active');
-            }
-            
-            if (item?.getAttribute("data-action") == "remove") {
-                if (itemDrag?.no_remove || itemDrag?.id == -1)
-                    item.classList.add('not_active');
-            }
+    
+    function isItPossibleToChoose(listS: any, candidate: any, canvas: boolean = false) { // можно ли выбрать...
+        if (listS.length == 0) return true;
+        if (!candidate) return false;
 
-            
-        });
+        const go = ['go', 'sprite', 'label', 'model'];
+        const gui = ['gui', 'box', 'text'];
+
+        let icon = '';
+        let iconC = '';
+
+        if (canvas) {
+            icon = listS[0]?.type ? listS[0]?.type : '';
+            iconC = candidate?.type ? candidate?.type : '';
+        }
+        else {
+            const item = treeList.filter(e => e.id == listS[0]);
+            icon = item.length ? item[0]?.icon : '';
+            iconC = candidate?.icon ? candidate?.icon : '';
+        }
+
+        const world = go.includes(icon) ? 'go' : gui.includes(icon) ? 'gui' : null;
+
+        if (world && world == 'go' && go.includes(iconC)) return true;
+        if (world && world == 'gui' && gui.includes(iconC)) return true;
+        return false;
     }
+    
+    function isNotActiveCMI(action: number): boolean {
+        if (!itemDrag) return false;    
 
+        if (action == NodeAction.rename)
+            if (itemDrag?.no_rename || itemDrag?.id == -1) return true;
+
+        if (action == NodeAction.CTRL_X || action == NodeAction.remove)
+            if (itemDrag?.no_remove || itemDrag?.id == -1) return true;
+
+        if (action == NodeAction.CTRL_C || action == NodeAction.CTRL_D)
+            if (itemDrag?.id == -1) return true;
+
+        return false;        
+    }
+    
     function getContextMenuItems(clipboard_empty: boolean = false): contextMenuItem[] {
         const cm_list: contextMenuItem [] = [];
-        cm_list.push({ text: 'Переименовать', action: NodeAction.rename });
-        cm_list.push({ text: 'Вырезать', action: NodeAction.CTRL_X });
-        cm_list.push({ text: 'Копировать', action: NodeAction.CTRL_C });
+        cm_list.push({ text: 'Переименовать', action: NodeAction.rename, not_active: isNotActiveCMI(NodeAction.rename) });
+        cm_list.push({ text: 'Вырезать', action: NodeAction.CTRL_X, not_active: isNotActiveCMI(NodeAction.rename) });
+        cm_list.push({ text: 'Копировать', action: NodeAction.CTRL_C, not_active: isNotActiveCMI(NodeAction.rename) });
 
-        cm_list.push({ text: 'Вставить', action: NodeAction.CTRL_V, not_active: !clipboard_empty  });
-        cm_list.push({ text: 'Вставить дочерним', action: NodeAction.CTRL_B, not_active: !clipboard_empty });
+        cm_list.push({ text: 'Вставить', action: NodeAction.CTRL_V, not_active: !clipboard_empty || isNotActiveCMI(NodeAction.rename) });
+        cm_list.push({ text: 'Вставить дочерним', action: NodeAction.CTRL_B, not_active: !clipboard_empty || isNotActiveCMI(NodeAction.rename) });
         
-        cm_list.push({ text: 'Дублировать', action: NodeAction.CTRL_D });
-        cm_list.push({ text: 'Удалить', action: NodeAction.remove });
+        cm_list.push({ text: 'Дублировать', action: NodeAction.CTRL_D, not_active: isNotActiveCMI(NodeAction.rename) });
+        cm_list.push({ text: 'Удалить', action: NodeAction.remove, not_active: isNotActiveCMI(NodeAction.rename) });
         cm_list.push({ text: 'line' });
 
         cm_list.push({ text: 'Создать UI', children: [
@@ -1156,6 +1180,6 @@ function TreeControlCreate() {
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
 
-    return { draw_graph, preRename, setIsCopied, setCutList };
+    return { draw_graph, preRename, setIsCopied, setCutList, isItPossibleToChoose };
 
 }

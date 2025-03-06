@@ -170,6 +170,7 @@ function ControlManagerCreate() {
                 selected: sel_list_ids.includes(g_item.id),
                 visible: g_item.visible
             };
+            if (g_item.type == 'sprite' || g_item.type == 'label') { item.no_drop = true; }
             list.push(item);
         }
         return list;

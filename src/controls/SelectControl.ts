@@ -56,11 +56,13 @@ function SelectControlCreate() {
 
         EventBus.on('SYS_SELECTED_MESH', (e) => {
             if (Input.is_control()) {
-                if (!is_selected(e.mesh))
+                if (TreeControl.isItPossibleToChoose(selected_list, e.mesh, true)) { // можно ли выбрать...
+                    if (!is_selected(e.mesh))
                     selected_list.push(e.mesh);
-                else {
-                    const index = selected_list.indexOf(e.mesh);
-                    selected_list.splice(index, 1);
+                    else {
+                        const index = selected_list.indexOf(e.mesh);
+                        selected_list.splice(index, 1);
+                    }
                 }
             }
             else {
