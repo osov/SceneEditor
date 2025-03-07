@@ -1,3 +1,4 @@
+import { Vector2 } from "three";
 import { get_file_name } from "../helpers/utils";
 import { IBaseEntityAndThree } from "../types";
 
@@ -70,7 +71,7 @@ export interface RenderMapData {
 }
 
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
-    return id_layer * 2 - y * 0.001;
+    return id_layer * 2 - (y - height / 2) * 0.001;
 }
 
 const tiled_textures_data: Record<string, [string, string]> = {};
@@ -113,6 +114,7 @@ export function parse_tiled(data: MapData) {
     };
 
     for (const obj_layer of data.objects) {
+       // if (obj_layer.layer_name != 'КрышаКрона') continue;
         render_data.objects_layers.push({
             layer_name: obj_layer.layer_name,
             objects: create_objects(obj_layer)
@@ -125,14 +127,16 @@ export function parse_tiled(data: MapData) {
 function create_objects(obj_layer: ObjectLayer) {
     const objects: RenderTileObject[] = [];
     for (const obj of obj_layer.objects) {
-        objects.push({
-            x: obj.x,
-            y: -obj.y,
+        const new_pos = rotate_point(new Vector2(obj.x, -obj.y), new Vector2(obj.width, obj.height), obj.rotation != undefined ? -obj.rotation : 0);
+        const data = {
+            x:new_pos.x+ obj.width / 2,
+            y: new_pos.y+ obj.height / 2,
             width: obj.width,
             height: obj.height,
             tile_id: obj.tile_id,
             rotation: obj.rotation
-        })
+        };
+        objects.push(data)
     }
     return objects;
 }
@@ -182,23 +186,50 @@ export function apply_tile_transform(mesh: IBaseEntityAndThree, tile_id: number)
 
 export function apply_object_transform(mesh: IBaseEntityAndThree, tile: TileObject): void {
     const tile_id = tile.tile_id;
-    const flipHorizontally = (tile_id & FLIP_HORIZONTALLY_FLAG) !== 0;
-    const flipVertically = (tile_id & FLIP_VERTICALLY_FLAG) !== 0;
     const flipDiagonally = (tile_id & FLIP_DIAGONALLY_FLAG) !== 0;
+    let flipHorizontally = (tile_id & FLIP_HORIZONTALLY_FLAG) !== 0;
+    let flipVertically = (tile_id & FLIP_VERTICALLY_FLAG) !== 0;
 
-    if (flipDiagonally)
-        mesh.rotation.z = Math.PI / 2; // Поворот на 90 градусов
+    if (flipDiagonally) {
+        flipHorizontally = true;
+        flipVertically = true;
+        //mesh.rotation.z = Math.PI / 2; // Поворот на 90 градусов
+    }
 
     if (flipHorizontally) {
         mesh.scale.x *= -1;
-        const pos = mesh.get_position();
-        mesh.set_position(pos.x + tile.width, pos.y);
+        //const pos = mesh.get_position();
+        //mesh.set_position(pos.x + tile.width, pos.y);
     }
 
     if (flipVertically) {
         mesh.scale.y *= -1;
-        const pos = mesh.get_position();
-        mesh.set_position(pos.x, pos.y - tile.height);
+        //const pos = mesh.get_position();
+        //mesh.set_position(pos.x, pos.y - tile.height);
     }
 
+}
+
+export function rotate_point(point: Vector2, size: Vector2, angle_deg: number) {
+    // Нижняя левая точка (pivot)
+    const pivot = { x: point.x - size.x / 2, y: point.y - size.y / 2 };
+
+    // Переводим угол из градусов в радианы
+    const angle = angle_deg * (Math.PI / 180);
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+
+    // Перемещение точки в начало координат относительно pivot
+    const xTranslated = point.x - pivot.x;
+    const yTranslated = point.y - pivot.y;
+
+    // Поворот
+    const xRotated = xTranslated * cosA - yTranslated * sinA;
+    const yRotated = xTranslated * sinA + yTranslated * cosA;
+
+    // Обратное перемещение
+    const xNew = xRotated + pivot.x;
+    const yNew = yRotated + pivot.y;
+
+    return { x: xNew, y: yNew };
 }

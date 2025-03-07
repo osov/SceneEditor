@@ -1,5 +1,6 @@
+import { Vector2 } from "three";
 import { run_debug_filemanager } from "./controls/AssetControl";
-import { apply_object_transform, apply_tile_transform, get_depth, get_tile_texture, MapData, parse_tiled, preload_tiled_textures, TILE_FLIP_MASK } from "./render_engine/parsers/tile_parser";
+import { apply_object_transform, apply_tile_transform, get_depth, get_tile_texture, MapData, parse_tiled, preload_tiled_textures, rotate_point, TILE_FLIP_MASK } from "./render_engine/parsers/tile_parser";
 import { IObjectTypes } from "./render_engine/types";
 
 
@@ -7,8 +8,9 @@ export async function run_anim_scene() {
     await ResourceManager.preload_texture('./img/2.png');
     run_debug_filemanager();
     ResourceManager.set_project_path('http://localhost:7000/assets/');
-   
 
+
+    /*
     const go = SceneManager.create(IObjectTypes.GO_CONTAINER, { width: 32, height: 32 });
     SceneManager.add(go);
 
@@ -52,7 +54,7 @@ export async function run_anim_scene() {
     t1.set_texture('stoneWallStructure_S');
     SceneManager.add(t1);
 
-
+*/
     const map_data = await ResourceManager.load_asset('./parsed_map.json') as MapData;
     await preload_tiled_textures(map_data);
     const render_data = parse_tiled(map_data);
@@ -85,7 +87,6 @@ export async function run_anim_scene() {
             id_object++;
             const tile_id = tile.tile_id & TILE_FLIP_MASK;
             const plane = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: tile.width, height: tile.height });
-            plane.set_pivot(0, 0)
             plane.position.set(tile.x, tile.y, get_depth(tile.x, tile.y, id_layer, tile.width, tile.height));
             const tile_info = get_tile_texture(tile_id);
             plane.set_texture(tile_info.name, tile_info.atlas);
@@ -96,9 +97,9 @@ export async function run_anim_scene() {
         }
     }
 
-   
-    
-    CameraControl.set_position(276, -580, false);
+
+
+    CameraControl.set_position(3916, -2437, false);
     CameraControl.set_zoom(2, false)
     ControlManager.update_graph(true);
 
