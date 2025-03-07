@@ -1,4 +1,5 @@
-import { NetMessages, WsClient } from "./types";
+import { WsClient } from "./types";
+import { NetMessagesEditor as NetMessages } from "../../src/modules_editor/modules_editor_const";
 
 
 export function make_message<T extends keyof NetMessages>(id: T, message: NetMessages[T]) {

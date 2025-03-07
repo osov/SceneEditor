@@ -1,6 +1,7 @@
 import { ServerWebSocket } from "bun";
 import * as cookie_parser from 'cookie';
 
+
 export function WsServer<T>(port: number,
     on_data: (client: ServerWebSocket<T>, data: String | Buffer) => void,
     on_client_connected: (client: ServerWebSocket<T>) => void,

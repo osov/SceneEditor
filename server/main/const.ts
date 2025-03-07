@@ -1,5 +1,3 @@
-import { WatchEventType } from "fs";
-
 export const CMD_PARAM_NAME = 'cmd_id';
 export const PATH_PARAM_NAME = 'path';
 export const NEW_PATH_PARAM_NAME = 'new_path';
@@ -80,8 +78,3 @@ export const ERROR_TEXT = {
     WRONG_ORIG_EXTENTION: `Wrong extention of the initial file`,
     WRONG_END_EXTENTION: `Wrong extention of the destination file`,
 }
-
-
-export type FSObjectType = "folder" | "file" | "null";
-
-export type FSEventType = WatchEventType | "removed";

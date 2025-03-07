@@ -113,10 +113,3 @@ export interface IBaseParameters {
 
 export type IBaseEntityAndThree = IBaseEntity & Object3D;
 export type IBaseMeshAndThree = IBaseMesh & Object3D;
-
-export interface ProtocolWrapper {
-    id: string;
-    message: any;
-}
-
-export type TRecursiveDict = { [Key: number | string]: TRecursiveDict | number | string };

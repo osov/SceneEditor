@@ -1,8 +1,7 @@
 import { WatchEventType } from "fs";
-import { IBaseMeshDataAndThree, TRecursiveDict } from "../render_engine/types";
+import { IBaseMeshDataAndThree } from "../render_engine/types";
 import { ChangeInfo } from "../controls/InspectorControl";
 import { VoidMessage } from "../modules/modules_const";
-import { FileUploadedData, FSObject, FSObjectType } from "../controls/AssetControl";
 
 export type ServerCommands = AssetsCommands;
 export type ServerResponses = AssetsResponses;
@@ -78,9 +77,19 @@ export type AssetsResponses = {
 
 export type NetMessagesEditor = {
     GET_LOADED_PROJECT: VoidMessage,
-    LOADED_PROJECT: { project: string | undefined, current_dir: string },
-    SERVER_FILE_SYSTEM_EVENT: { path: string, project: string, obj_type: FSObjectType, event_type: WatchEventType },
+    LOADED_PROJECT: { name: string | undefined, current_dir: string },
+    SERVER_FILE_SYSTEM_EVENT: { path: string, project: string, obj_type: FSObjectType, event_type: FSEventType },
 }
+
+export type FileUploadedData = { size: number, path: string, name: string, project: string };
+
+export type FSObjectType = "folder" | "file" | "null";
+
+export type AssetType = "folder" | "material" | "texture" | "other";
+
+export type FSEventType = WatchEventType | "removed";
+
+export interface FSObject { name: string, type: FSObjectType, size: number, path: string, ext?: string, num_files?: number, src?: string };
 
 export const GET_LOADED_PROJECT_CMD = '/get_loaded_project'
 export const GET_PROJECTS_CMD = '/get_projects';
@@ -97,7 +106,8 @@ export const GET_DATA_CMD = '/get_data';
 export const SAVE_INFO_CMD = '/save_info';
 export const GET_INFO_CMD = '/get_info';
 export const FILE_UPLOAD_CMD = '/upload';
-export const METADATA = '/metadata.txt'
+export const PUBLIC = '/public'  // Путь к папке с ассетами проекта
+export const METADATA = '/metadata.txt'  // Путь к файлу с метаинфо проекта
 
 export const URL_PATHS = {
     TEST: '/test',
@@ -105,3 +115,12 @@ export const URL_PATHS = {
     ASSETS: '/assets',
     API: '/api',
 }
+
+export interface ProtocolWrapper {
+    id: string;
+    message: any;
+}
+
+export type TDictionary<T> = { [key: number | string]: T };
+
+export type TRecursiveDict = { [Key: number | string]: TRecursiveDict | number | string };

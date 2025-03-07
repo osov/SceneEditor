@@ -2,8 +2,8 @@ import { watch } from "fs";
 import * as fs from 'fs/promises';
 import { get_full_path } from "./fs_utils";
 import path from "path";
-import { FSEventType, FSObjectType, PUBLIC } from "./const";
 import { send_message_socket } from "./ws_utils";
+import { FSEventType, FSObjectType, PUBLIC } from "../../src/modules_editor/modules_editor_const";
 import { WsClient } from "./types";
 
 

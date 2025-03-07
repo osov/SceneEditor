@@ -1,6 +1,5 @@
 import { SERVER_URL } from "../config";
-import { ProtocolWrapper } from "../render_engine/types";
-import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD as SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, GET_LOADED_PROJECT_CMD } from "./modules_editor_const";
+import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD as SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, GET_LOADED_PROJECT_CMD, ProtocolWrapper } from "./modules_editor_const";
 
 
 declare global {
@@ -11,9 +10,6 @@ export function register_client_api() {
     (window as any).ClientAPI = ClientAPIModule();
 }
 function ClientAPIModule() {
-    let id_session = System.now();
-
-
     async function get_loaded_project(): Promise<AssetsResponses[typeof GET_LOADED_PROJECT_CMD]> {
         const command_id = GET_LOADED_PROJECT_CMD;
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {});
@@ -107,26 +103,31 @@ function ClientAPIModule() {
 }
 
 
-const api = {
+export const api = {
     GET: async function (
         path: string,
-        params: any,
+        params: any = [],
     ) {     
-        const string_params = new URLSearchParams(params).toString()
+        const string_params = new URLSearchParams(params).toString();
         const resp = await try_fetch(`${SERVER_URL}${path}?${string_params}`, {
             method: 'GET',
         });
-        if (resp) {
-            const text_response = await resp.text();
-            return JSON.parse(text_response);
-        }
+        return resp; 
     },
 
-    // POST: async function<T> (
-    //     path: string,
-    //     params: any,
-    // ): Promise<T> {       
-    // },
+    POST: async function (
+        path: string,
+        params: any = [],
+        body?: any,
+    ): Promise<Response | undefined> {  
+        const string_params = new URLSearchParams(params).toString();
+        const init: RequestInit | undefined =  {
+            method: 'POST',
+        };
+        if (body) init.body = body;
+        const resp = await try_fetch(`${SERVER_URL}${path}?${string_params}`, init);
+        return resp;  
+    },
 
     command: async function<T extends CommandId> (
         path: string,
@@ -145,10 +146,6 @@ async function try_fetch(input: string | URL | globalThis.Request, init?: Reques
     try {
         return await fetch(input, init);
     } catch (e) {
-        return undefined;
+        Log.error(e);
     }
-}
-
-function project_file_path(path: string) {
-    return `${SERVER_URL}${path}`;
 }

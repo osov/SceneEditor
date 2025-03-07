@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import path from 'path';
-import { FSObject } from './types';
+import { FSObject } from '../../src/modules_editor/modules_editor_const';
 import { working_folder_path } from '../config';
 import { METADATA, PUBLIC, URL_PATHS } from './const';
 

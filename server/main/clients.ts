@@ -1,5 +1,5 @@
-import { json } from "stream/consumers";
-import { WsClient, NetMessages, ProtocolWrapper, TDictionary } from "./types";
+import { ProtocolWrapper, TDictionary, NetMessagesEditor as NetMessages } from "../../src/modules_editor/modules_editor_const";
+import { WsClient } from "./types";
 
 
 type FilterCallback = (client: WsClient) => void;
@@ -76,7 +76,6 @@ export function Clients() {
     function get_client_by_id(id: number) {
         return connected_sockets[id];
     }
-
 
     return { add, remove, make_message, send_data_socket, send_message_socket, send_message_all, for_each, get_client_by_id, send_message_id_user, connected_sockets, send_full_buffer }
 }

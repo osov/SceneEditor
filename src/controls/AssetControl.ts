@@ -1,10 +1,10 @@
-import { WatchEventType } from "fs";
 import { SERVER_URL, WS_SERVER_URL } from "../config";
-import { FILE_UPLOAD_CMD, ServerResponses, URL_PATHS } from "../modules_editor/modules_editor_const";
+import { AssetType, FILE_UPLOAD_CMD, FSObject, ServerResponses, URL_PATHS } from "../modules_editor/modules_editor_const";
 import { _span_elem, json_parsable } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction } from "./ActionsControl";
+import { api } from "../modules_editor/ClientAPI";
 
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
@@ -14,24 +14,11 @@ export function register_asset_control() {
     (window as any).AssetControl = AssetControlCreate();
 }
 
-export type FileUploadedData = { size: number, path: string, name: string, project: string };
-
-export type FSObjectType = "folder" | "file" | "null";
-
-export type AssetType = "folder" | "material" | "texture" | "other";
-
-export type FSEventType = WatchEventType | "removed";
-
-export interface FSObject { name: string, type: FSObjectType, size: number, path: string, ext?: string, num_files?: number, src?: string };
-
-
 function AssetControlCreate() {
     const filemanager = document.querySelector('.filemanager') as HTMLDivElement;
     const breadcrumbs = filemanager.querySelector('.breadcrumbs') as HTMLDivElement;
     const assets_list = filemanager.querySelector('.assets_list') as HTMLDivElement;
-    const menu: any = document.querySelector('.fm_wr_menu') as HTMLDivElement;
     let active_asset: Element | undefined = undefined;
-    let menu_visible = false;
     let current_dir: string | undefined = undefined;
     let current_project: string | undefined = undefined;
     let copy_asset_path: string | undefined = "";
@@ -154,6 +141,7 @@ function AssetControlCreate() {
                 file_elem.setAttribute("data-type", asset_type);
                 file_elem.setAttribute("data-name", name);
                 file_elem.setAttribute("data-path", _path);
+                file_elem.setAttribute("data-ext", ext);
                 file_elem.setAttribute("draggable", "true");
                 file_elem.classList.add("file", "asset");
                 file_elem.appendChild(icon_elem);
@@ -296,7 +284,8 @@ function AssetControlCreate() {
         if (type && type != "folder") {
             assets_menu_list.push({ text: 'Скачать', action: NodeAction.download });   
             assets_menu_list.push({ text: 'Вырезать', action: NodeAction.CTRL_X });  
-            assets_menu_list.push({ text: 'Копировать', action: NodeAction.CTRL_C });      
+            assets_menu_list.push({ text: 'Копировать', action: NodeAction.CTRL_C });   
+            assets_menu_list.push({ text: 'Дублировать', action: NodeAction.CTRL_D });      
         }
         if (type) {
             assets_menu_list.push({ text: 'Переименовать', action: NodeAction.rename });    
@@ -316,23 +305,13 @@ function AssetControlCreate() {
         if (action == NodeAction.new_folder) {
             new_folder_popup(current_dir);
         }
-        if (action == NodeAction.CTRL_V && moving_asset_name) {
-            const move_to = `${current_dir}/${moving_asset_name}`;
-            let r = {result: 0};
-            if (cut_asset_path) {
-                r = await ClientAPI.rename(cut_asset_path, move_to);                
-            }
-            if (copy_asset_path) {
-                r = await ClientAPI.copy(copy_asset_path, move_to);   
-            }
-            if (r.result) go_to_dir(current_dir, true);
-            moving_asset_name = undefined;
-            cut_asset_path = "";
-            copy_asset_path = "";
+        if (action == NodeAction.CTRL_V) {
+            paste_asset();
         }
         if (active_asset) {
             const path = active_asset.getAttribute('data-path') as string;
-            const name = active_asset.getAttribute('data-name') as string;
+            const name = escapeHTML(active_asset.getAttribute('data-name') as string);
+            const ext = active_asset.getAttribute('data-ext');
             const type = active_asset.getAttribute('data-type') as AssetType | undefined;
             if (action == NodeAction.download) 
                 download_asset(path, name);
@@ -347,6 +326,9 @@ function AssetControlCreate() {
             if (action == NodeAction.CTRL_C) {
                 moving_asset_name = name;
                 copy_asset_path = path;
+            }
+            if (action == NodeAction.CTRL_D) {
+                duplicate_asset(path, name);
             }
             if (action == NodeAction.remove) {
                 const asset_path = active_asset.getAttribute("data-path") as string;
@@ -404,7 +386,7 @@ function AssetControlCreate() {
                     if (r.result === 0) 
                         error_popup(`Не удалось удалить ${type_name}, ответ сервера: ${r.message}`);
                     if (r.result && r.data && current_dir) {
-                        go_to_dir(current_dir, true);
+                        await go_to_dir(current_dir, true);
                     }
                 }
             }
@@ -420,14 +402,56 @@ function AssetControlCreate() {
     }
 
     async function download_asset(path: string, name: string) {
-        const url = `${SERVER_URL}${URL_PATHS.ASSETS}/${path}`;
-        const resp = await fetch(url);
+        const resp = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
+        if (!resp) return;
         const blob = await resp.blob();
         let fileURL = URL.createObjectURL(blob);
         let fileLink = document.createElement('a');
         fileLink.href = fileURL;
         fileLink.download = name;
         fileLink.click();
+    }
+
+    async function paste_asset() {
+        if (!moving_asset_name) return;
+        const move_to = `${current_dir as string}/${moving_asset_name}`;
+        let r = {result: 0};
+        if (cut_asset_path) {
+            r = await ClientAPI.rename(cut_asset_path, move_to);                
+        }
+        if (copy_asset_path) {
+            r = await ClientAPI.copy(copy_asset_path, move_to);   
+        }
+        if (r.result) go_to_dir(current_dir as string, true);
+        moving_asset_name = undefined;
+        cut_asset_path = "";
+        copy_asset_path = "";
+    }
+
+    async function duplicate_asset(path: string, name: string) {
+        const ext = "." + getFileExt(name);
+        let base_name = name.replace(ext, "");
+        const get_folder_resp = await ClientAPI.get_folder(current_dir as string);
+        if (!get_folder_resp || get_folder_resp.result === 0) return;
+        const folder_content = get_folder_resp.data as FSObject[];
+        const names: string[] = [];
+        let names_counter = 0;        
+        folder_content.forEach(elem => {
+            const elem_ext = "." + getFileExt(elem.name);
+            const elem_base_name = elem.name.replace(elem_ext, "");
+            // TODO: Возможно стоит полностью скопировать логику выдачи имён для дублей у файловой системы
+            const regex = new RegExp(String.raw`^(${escapeRegex(base_name)})\s*\(\d+\)$`); 
+            const match = elem_base_name.match(regex);
+            const matched_elem_name = match ? match[1] : elem_base_name;
+            if (matched_elem_name == base_name && elem_ext == ext) {
+                names_counter ++;
+                names.push(elem.name);
+            }
+            log(regex, base_name, match, matched_elem_name, matched_elem_name == base_name, names_counter)
+        });
+        const new_name = (names_counter !== 0) ? `${base_name} (${names_counter})${ext}` : name;
+        const move_to = `${current_dir}/${new_name}`;
+        await ClientAPI.copy(path, move_to);        
     }
 
     async function on_file_upload(resp: Response) {
@@ -611,15 +635,9 @@ function AssetControlCreate() {
             console.log(`trying upload a file: ${file.name} in dir ${current_dir}`);
             data.append('file', file, file.name);
             data.append('path', current_dir as string);
-            try {
-                const resp = await fetch(`${SERVER_URL}${URL_PATHS.UPLOAD}`, {
-                    method: 'POST',
-                    body: data
-                });
-                on_file_upload(resp)
-            } catch (e) {
-                console.error(e)
-            }
+            const resp = await api.POST(URL_PATHS.UPLOAD, [], data);
+            if (resp)
+                await on_file_upload(resp);
         }
     }
 
@@ -634,10 +652,10 @@ function AssetControlCreate() {
     EventBus.on('SERVER_FILE_SYSTEM_EVENT', on_dir_change);
     
     EventBus.on('LOADED_PROJECT', async (m) => {
-        if (m.project && m.current_dir) {
-            const load_project_resp = await ClientAPI.load_project(m.project);
+        if (m.name && m.current_dir) {
+            const load_project_resp = await ClientAPI.load_project(m.name);
             if (load_project_resp.result !== 1)  {
-                log(`Failed to load previously loaded project ${m.project}`);
+                log(`Failed to load previously loaded project ${m.name}`);
                 return;
             }
             const data = load_project_resp.data as {assets: FSObject[], name: string};
@@ -651,6 +669,10 @@ function AssetControlCreate() {
 
 function escapeHTML(text: string) {
     return text.replace(/\&/g,'&amp;').replace(/\</g,'&lt;').replace(/\>/g,'&gt;');
+}
+
+function escapeRegex(text: string) {
+    return text.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
 }
 
 function bytesToSize(bytes: number) {
@@ -681,8 +703,14 @@ function fileIsImg(path: string) {
 }
 
 export async function run_debug_filemanager() {
+    let server_ok = false;
     const resp = await ClientAPI.test_server_ok();
-    if (resp && resp.result === 1) {
+    if (resp) {
+        const text_response = await resp.text();
+        const resp_data = JSON.parse(text_response);
+        server_ok = resp_data.result === 1;
+    }
+    if (server_ok) {
         WsClient.connect(WS_SERVER_URL);
         const projects = await ClientAPI.get_projects();
         const project_to_load = 'ExampleProject';
