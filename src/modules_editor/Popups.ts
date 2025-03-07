@@ -1,3 +1,5 @@
+import { Notyf } from 'notyf';
+import 'notyf/notyf.min.css';
 import { deepClone } from "../modules/utils";
 
 declare global {
@@ -10,6 +12,19 @@ export function register_popups() {
 
 //  ****** Popups examples:  ******
 /* 
+
+toast: 
+    Popups.toast.error('lorem ipsum dolor.....');
+
+    Popups.toast.success('lorem ipsum dolor.....');
+
+    Popups.toast.open({
+        type: 'warning', // 'success', 'error', 'warning', 'info'
+        message: 'lorem ipsum dolor.....'
+    });
+
+documentation: https://github.com/caroso1222/notyf#readme
+
 
 Popups.open({
     type: "Notify",
@@ -279,5 +294,39 @@ function PopupsCreate() {
         popup.querySelector('.popup')?.classList.remove('active');
     }
 
-    return { open };
+    const toast = new Notyf({
+        duration: 3000,
+        position: {
+            x: 'right',
+            y: 'bottom',
+        },
+        types: [
+            {
+                type: 'success',
+                background: '#3dc763',
+            },
+            {
+                type: 'info',
+                background: '#72728d',
+                dismissible: true
+            },
+            {
+                type: 'error',
+                background: 'indianred',
+                dismissible: true
+            },
+            {
+                type: 'warning',
+                background: 'orange',
+                icon: {
+                        className: 'material-icons',
+                        tagName: 'i',
+                        text: 'warning'
+                    }
+            },
+        ]
+    });
+
+
+    return { open, toast };
 }

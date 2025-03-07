@@ -50,7 +50,10 @@ function ActionsControlCreate() {
         if (list.length == 0) return;
         const canCopy = fromTheSameWorld(list);
         if (!canCopy) { 
-            log('Нельзя одновременно копировать/вырезать/дублировать элементы из GUI и GO!');
+            Popups.toast.open({
+                type: 'info',
+                message: 'Нельзя одновременно копировать/вырезать/дублировать элементы из GUI и GO!'
+              });
             return;
         }
 

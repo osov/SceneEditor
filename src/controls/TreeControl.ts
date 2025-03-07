@@ -275,7 +275,12 @@ function TreeControlCreate() {
             if (treeItem && _is_dragging) {
                 countMove++;
                 const canMove = ActionsControl.fromTheSameWorld(listSelected, treeList);
-                if (!canMove && countMove == 2) log('Нельзя одновременно перемещать элементы из GUI и GO!');
+                if (!canMove && countMove == 2) {
+                    Popups.toast.open({
+                        type: 'info',
+                        message: 'Нельзя одновременно перемещать элементы из GUI и GO!'
+                      });
+                }
                 if(canMove) moveAt(event.offset_x, event.offset_y);
                 myScrollTo(divTree, startY, event);
 

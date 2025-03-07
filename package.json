@@ -12,6 +12,7 @@
   "devDependencies": {
     "@types/three": "latest",
     "bun-types": "^1.2.4",
+    "notyf": "^3.10.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "vite": "^5.4.14",
