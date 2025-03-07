@@ -72,8 +72,6 @@ function TreeControlCreate() {
     let startX: number;   
     let itemDragRenameId: number | null = null; // чтобы чекать DBLCLICK  или  при DELAY не выбрали ли другой элемент
 
-    const menuContext: any = document.querySelector('.wr_menu__context');
-    // let mContextVisible: boolean = false;
     let boxDD: any = document.querySelector(".drag_and_drop"); // div таскания за мышью
     let ddVisible: boolean = false; //  видимость div перетаскивания 
 
@@ -86,8 +84,8 @@ function TreeControlCreate() {
         const renderList = is_hide_allSub ? buildTree(treeList, currentSceneName) : buildTree(treeList);
         const html = getTreeHtml(renderList);
         divTree.innerHTML = html;
-        scrollToLastSelected();
         updateDaD();
+        scrollToLastSelected();
     }
 
     function buildTree(list: any, sneceName?: string) {
@@ -924,7 +922,6 @@ function TreeControlCreate() {
         }
 
     }
-
     
     function isItPossibleToChoose(listS: any, candidate: any, canvas: boolean = false) { // можно ли выбрать...
         if (listS.length == 0) return true;
