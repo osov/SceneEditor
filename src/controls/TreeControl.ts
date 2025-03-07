@@ -63,6 +63,7 @@ function TreeControlCreate() {
     let itemDrag: any = null;
     let itemDrop: any = null;
     let isDrop: boolean = false;
+    let countMove: number = 0;
 
     let hoverStart: number; // для добавления класса с задержкой
     let hoverEnd: number | null;
@@ -272,20 +273,21 @@ function TreeControlCreate() {
             _is_moveItemDrag = _is_moveItemDrag ? true : isMove(event.offset_x, event.offset_y, startX, startY); // начало движения было
 
             if (treeItem && _is_dragging) {
-                moveAt(event.offset_x, event.offset_y);
+                countMove++;
+                const canMove = ActionsControl.fromTheSameWorld(listSelected, treeList);
+                if (!canMove && countMove == 2) log('Нельзя одновременно перемещать элементы из GUI и GO!');
+                if(canMove) moveAt(event.offset_x, event.offset_y);
                 myScrollTo(divTree, startY, event);
 
                 // отмены не происходит, если выбрано больше одного
-                if (
-                    Input.is_control() && 
-                    listSelected?.length > 0 && 
-                    isItPossibleToChoose(listSelected, itemDrag)
-                ) { 
+                if (Input.is_control() && listSelected?.length > 0) { 
                     treeItem?.classList.add("selected");
                 }
 
-                toggleCurrentBox(event.target.closest('.tree__item'));
-                switchClassItem(event.target.closest('.tree__item'), event.offset_x, event.offset_y);
+                if(canMove) {
+                    toggleCurrentBox(event.target.closest('.tree__item'));
+                    switchClassItem(event.target.closest('.tree__item'), event.offset_x, event.offset_y);
+                }
             }
         }
     }
@@ -353,6 +355,7 @@ function TreeControlCreate() {
         itemDrag = null;
         itemDrop = null;
         isDrop = false;
+        countMove = 0;
         console.log('clear');
         const items = document.querySelectorAll('.tree__item') as NodeListOf<HTMLLIElement>;
         items.forEach(i => { i.classList.remove('top', 'bg', 'bottom'); });
@@ -739,10 +742,8 @@ function TreeControlCreate() {
                 }
             }
             else {
-                if (isItPossibleToChoose(listSelected, {id: currentId, icon: currentItem?.getAttribute("data-icon")})) {
                     currentItem.classList.add("selected");
                     listSelected.push(currentId);
-                }
             }
 
         }
@@ -801,10 +802,7 @@ function TreeControlCreate() {
 
         // если движение было
         if (Input.is_control() && _is_currentOnly) { 
-            if (
-                !listSelected.includes(itemDrag?.id) && 
-                isItPossibleToChoose(listSelected, itemDrag)
-            ) {
+            if (!listSelected.includes(itemDrag?.id)) {
                 listSelected.push(itemDrag?.id);
             }
             return;
@@ -921,33 +919,6 @@ function TreeControlCreate() {
             EventBus.trigger('SYS_GRAPH_CHANGE_NAME', { id, name });
         }
 
-    }
-    
-    function isItPossibleToChoose(listS: any, candidate: any, canvas: boolean = false) { // можно ли выбрать...
-        if (listS.length == 0) return true;
-        if (!candidate) return false;
-
-        const go = ['go', 'sprite', 'label', 'model'];
-        const gui = ['gui', 'box', 'text'];
-
-        let icon = '';
-        let iconC = '';
-
-        if (canvas) {
-            icon = listS[0]?.type ? listS[0]?.type : '';
-            iconC = candidate?.type ? candidate?.type : '';
-        }
-        else {
-            const item = treeList.filter(e => e.id == listS[0]);
-            icon = item.length ? item[0]?.icon : '';
-            iconC = candidate?.icon ? candidate?.icon : '';
-        }
-
-        const world = go.includes(icon) ? 'go' : gui.includes(icon) ? 'gui' : null;
-
-        if (world && world == 'go' && go.includes(iconC)) return true;
-        if (world && world == 'gui' && gui.includes(iconC)) return true;
-        return false;
     }
     
     function isNotActiveCMI(action: number): boolean {
@@ -1177,6 +1148,6 @@ function TreeControlCreate() {
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
 
-    return { draw_graph, preRename, setIsCopied, setCutList, isItPossibleToChoose };
+    return { draw_graph, preRename, setIsCopied, setCutList };
 
 }

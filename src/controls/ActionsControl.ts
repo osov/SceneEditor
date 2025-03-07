@@ -48,12 +48,18 @@ function ActionsControlCreate() {
     function copy() {
         const list = format_list_without_children(SelectControl.get_selected_list());
         if (list.length == 0) return;
+        const canCopy = fromTheSameWorld(list);
+        if (!canCopy) { 
+            log('Нельзя одновременно копировать/вырезать/дублировать элементы из GUI и GO!');
+            return;
+        }
+
         copy_mesh_list = [];
         for (let i = 0; i < list.length; i++) {
             copy_mesh_list.push(SceneManager.serialize_mesh(list[i]));
         }
         
-        if (copy_mesh_list.length > 0) TreeControl.setIsCopied();ControlManager.get_tree_graph()
+        if (copy_mesh_list.length > 0) TreeControl.setIsCopied();
     }
 
     function paste(asChild: boolean = false) {
@@ -184,7 +190,40 @@ function ActionsControlCreate() {
         });
     }
 
-    return { 
+        function getWorldName(type: string): string {
+            if (!type) return '';
+            const go = ['go', 'sprite', 'label', 'model'];
+            const gui = ['gui', 'box', 'text'];
+            if (go.includes(type)) return 'go';
+            if (gui.includes(type)) return 'gui';
+            return '';
+        }
+        
+        function fromTheSameWorld(listS: any, treeList: TreeItem[] = []) {
+            if (listS.length <= 1) return true;
+    
+            const worldMap: any = [];
+    
+            for (let i = 0; i < listS.length; i++) {
+                if (treeList.length) {
+                    const item = treeList.filter((e: any) => e.id == listS[i]);
+                    const icon = item.length ? item[0]?.icon : '';
+                    worldMap.push(getWorldName(icon));
+                }
+                else {
+                    worldMap.push(getWorldName(listS[i]?.type));
+                }
+    
+                if (worldMap.length > 1) {
+                    if (worldMap[i] != worldMap[i - 1]) { log('1', {worldMap}); return false; }
+                }
+            }
+            log('2', {worldMap})
+            return true;
+        }
+
+    return {
+        fromTheSameWorld,
         cut, copy, paste, duplication, remove,
         add_gui_container,
         add_gui_box,
