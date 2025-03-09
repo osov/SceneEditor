@@ -85,19 +85,21 @@ TODO: попробовать упростить через дженерики, �
 
 
 import { Pane, TpChangeEvent } from 'tweakpane';
-import { BindingApi, BindingParams, BladeState, ButtonParams, FolderApi } from '@tweakpane/core';
+import { BindingApi, BindingParams, ButtonParams, FolderApi } from '@tweakpane/core';
 import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
-import { Euler, Vector2, Vector3 } from 'three';
+import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plugin';
+import { Vector2, Vector3 } from 'three';
 import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
 import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from './types';
 import { TextureInfo } from '../render_engine/resource_manager';
+import { SERVER_URL } from '../config';
 
 
 declare global {
@@ -144,6 +146,14 @@ export enum ScreenPointPreset {
     CUSTOM = 'Custom'
 }
 
+export enum TextAlign {
+    NONE = 'None',
+    CENTER = 'center',
+    LEFT = 'left',
+    RIGHT = 'right',
+    JUSTIFY = 'justify'
+}
+
 export enum ComponentType {
     MESH,
     FILE
@@ -167,17 +177,17 @@ export enum PropertyType {
 
 export type PropertyParams = {
     [PropertyType.NUMBER]: { min?: number, max?: number, step?: number, format?: (value: number) => string }; // formater for symbols after comma
-    [PropertyType.VECTOR_2]: { x: { min: number, max: number, step?: number, disabled?: boolean }, y: { min: number, max: number, step?: number, disabled?: boolean } };
-    [PropertyType.VECTOR_3]: { x: { min: number, max: number, step?: number, disabled?: boolean }, y: { min: number, max: number, step?: number, disabled?: boolean }, z: { min: number, max: number, step?: number, disabled?: boolean } };
-    [PropertyType.VECTOR_4]: { x: { min: number, max: number, step?: number, disabled?: boolean }, y: { min: number, max: number, step?: number, disabled?: boolean }, z: { min: number, max: number, step?: number, disabled?: boolean }, w: { min: number, max: number, step?: number, disabled?: boolean } };
-    [PropertyType.BOOLEAN]: {};
+    [PropertyType.VECTOR_2]: { x: { min?: number, max?: number, step?: number, format?: (value: number) => string, disabled?: boolean }, y: { min?: number, max?: number, step?: number, format?: (value: number) => string, disabled?: boolean } };
+    [PropertyType.VECTOR_3]: { x: { min?: number, max?: number, step?: number, format?: (value: number) => string, disabled?: boolean }, y: { min?: number, max?: number, step?: number, format?: (value: number) => string, disabled?: boolean }, z: { min?: number, max?: number, step?: number, format?: (value: number) => string, disabled?: boolean } };
+    [PropertyType.VECTOR_4]: { x: { min?: number, max?: number, step?: number, format?: (value: number) => string, disabled?: boolean }, y: { min?: number, max?: number, step?: number, format?: (value: number) => string, disabled?: boolean }, z: { min?: number, max?: number, step?: number, format?: (value: number) => string, disabled?: boolean }, w: { min?: number, max?: number, step?: number, format?: (value: number) => string, disabled?: boolean } };
+    [PropertyType.BOOLEAN]: { disabled: boolean };
     [PropertyType.COLOR]: {};
     [PropertyType.STRING]: {};
     [PropertyType.SLIDER]: { min: number, max: number, step: number };
     [PropertyType.LIST_TEXT]: { [key in string]: string };
     [PropertyType.LIST_TEXTURES]: { value: string, src: string }[];
     [PropertyType.BUTTON]: {};
-    [PropertyType.POINT_2D]: { x: { min: number, max: number, step?: number, disabled?: boolean }, y: { min: number, max: number, step?: number, disabled?: boolean } };
+    [PropertyType.POINT_2D]: { x: { min: number, max: number, step?: number, format?: (value: number) => string, disabled?: boolean }, y: { min: number, max: number, step?: number, format?: (value: number) => string, disabled?: boolean } };
     [PropertyType.LOG_DATA]: {};
 }
 
@@ -222,6 +232,11 @@ export interface ObjectData {
     data: PropertyData<PropertyType>[];
 }
 
+export interface BeforeChangeInfo {
+    ids: number[];
+    field: PropertyData<PropertyType>;
+}
+
 export interface ChangeInfo {
     ids: number[];
     data: {
@@ -248,6 +263,7 @@ interface Entity {
     obj: any;
     key: string;
     params?: BindingParams;
+    onBeforeChange?: (event: any) => void;
     onChange?: (event: ChangeEvent) => void;
 }
 
@@ -265,10 +281,9 @@ function InspectorControlCreate() {
     let _unique_fields: { ids: number[], field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }[];
     let _selected_list: IBaseMeshAndThree[];
     let _data: ObjectData[];
-    let _last_state: BladeState;
 
-    let _refreshed_properies: Property[] = [];
     let _is_first = true;
+    let _refreshed_properies: Property[] = [];
 
     function init() {
         _inspector = new Pane({
@@ -278,6 +293,7 @@ function InspectorControlCreate() {
         _inspector.registerPlugin(TweakpaneSearchListPlugin);
         _inspector.registerPlugin(TextareaPlugin);
         _inspector.registerPlugin(ExtendedPointNdInputPlugin);
+        _inspector.registerPlugin(TweakpaneExtendedBooleanPlugin);
     }
 
     function setupConfig(config: InspectorGroup[]) { //, type: ComponentType) {
@@ -287,6 +303,7 @@ function InspectorControlCreate() {
     function setData(list_data: ObjectData[]) {
         _unique_fields = [];
         _data = list_data;
+
         list_data.forEach((obj, index) => {
             const info: ObjectInfo[] = [];
             for (const field of obj.data) {
@@ -323,128 +340,95 @@ function InspectorControlCreate() {
         if (tp_slo) tp_slo.classList.add('my_scroll');
         const tp_to = document.querySelector('.tp-thumbv_ovl') as HTMLDivElement;
         if (tp_to) tp_to.classList.add('my_scroll');
+
+        const textureFiles = document.querySelectorAll<HTMLElement>(".file");
+        textureFiles.forEach((file) => {
+            file.addEventListener("dragstart", (event: DragEvent) => {
+                if (!event.dataTransfer)
+                    return;
+                event.dataTransfer.clearData();
+
+                const path = file.getAttribute("data-path") || '';
+                const data = ResourceManager.get_all_textures().find((info) => {
+                    return (info.data.texture as any).path == `${SERVER_URL}/assets/${path}`;
+                });
+
+                event.dataTransfer.setData("text/plain", `${data?.atlas}/${data?.name}`);
+            });
+        });
     }
 
     function set_selected_list(list: IBaseMeshAndThree[]) {
         _selected_list = list;
         // TransformControl.set_proxy_in_average_point(list);
 
+        // обновляем конфиг текстур
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.TEXTURE);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXTURES]) = ResourceManager.get_all_textures().map(castTextureInfo);
+        });
+
+        // обновляем конфиг шрифтов
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.FONT);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = ResourceManager.get_all_fonts();
+        });
+
+        // IDEA: в значение пихать callback который будет отвечать за обновление
         const data = list.map((value) => {
+            const fields = [];
+
+            fields.push({ name: Property.ID, data: value.mesh_data.id });
+            fields.push({ name: Property.TYPE, data: value.type });
+            fields.push({ name: Property.NAME, data: value.name });
+            fields.push({ name: Property.VISIBLE, data: value.get_visible() });
+            fields.push({ name: Property.ACTIVE, data: value.get_active() });
+            fields.push({ name: Property.POSITION, data: value.position });
+
             const raw = value.rotation;
             const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
+            fields.push({ name: Property.ROTATION, data: rotation });
 
+            fields.push({ name: Property.SCALE, data: value.scale });
+            fields.push({ name: Property.SIZE, data: value.get_size() });
 
-            const pivot_preset = pivotToScreenPreset(value.get_pivot());
+            if ([IObjectTypes.GUI_CONTAINER, IObjectTypes.GUI_BOX, IObjectTypes.GUI_TEXT].includes(value.type)) {
+                const pivot_preset = pivotToScreenPreset(value.get_pivot());
+                fields.push({ name: Property.PIVOT, data: pivot_preset });
+            }
+
             const anchor_preset = anchorToScreenPreset(value.get_anchor());
+            fields.push({ name: Property.ANCHOR_PRESET, data: anchor_preset });
+            fields.push({ name: Property.ANCHOR, data: value.get_anchor() });
 
-            // IDEA: в значение пихать callback который будет отвечать за обновление
+            if ([IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT].includes(value.type)) {
+                fields.push({ name: Property.COLOR, data: value.get_color() });
+            }
 
-            const fields = [
-                { name: Property.ID, data: value.mesh_data.id },
-                { name: Property.TYPE, data: value.type },
-                { name: Property.NAME, data: value.name },
-                { name: Property.VISIBLE, data: value.get_visible() },
-                { name: Property.ACTIVE, data: value.get_active() },
-                { name: Property.POSITION, data: value.position },
-                { name: Property.ROTATION, data: rotation },
-                { name: Property.SCALE, data: value.scale },
-                { name: Property.SIZE, data: value.get_size() },
-                { name: Property.PIVOT, data: pivot_preset },
-                { name: Property.ANCHOR_PRESET, data: anchor_preset },
-                { name: Property.ANCHOR, data: value.get_anchor() },
-                { name: Property.COLOR, data: value.get_color() },
-            ];
+            if ([IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT].includes(value.type)) {
+                fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
+                fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
+            }
 
-            // обновляем конфиг текстур
-            _config.forEach((group) => {
-                const property = group.property_list.find((property) => property.name == Property.TEXTURE);
-                if (!property) return;
-                (property.params as PropertyParams[PropertyType.LIST_TEXTURES]) = ResourceManager.get_all_textures().map(castTextureInfo);
-            });
+            if ([IObjectTypes.TEXT, IObjectTypes.GUI_TEXT, IObjectTypes.GO_LABEL_COMPONENT].includes(value.type)) {
+                fields.push({ name: Property.TEXT, data: (value as TextMesh).text });
+                fields.push({ name: Property.FONT, data: (value as TextMesh).font || '' });
 
-            // обновляем конфиг шрифтов
-            _config.forEach((group) => {
-                const property = group.property_list.find((property) => property.name == Property.FONT);
-                if (!property) return;
-                (property.params as PropertyParams[PropertyType.LIST_TEXT]) = ResourceManager.get_all_fonts();
-            });
+                const delta = new Vector3(1 * value.scale.x, 1 * value.scale.y);
+                const max_delta = Math.max(delta.x, delta.y);
+                const font_size = (value as TextMesh).fontSize * max_delta;
 
-
-            switch (value.type) {
-                case IObjectTypes.SLICE9_PLANE: case IObjectTypes.GUI_BOX: case IObjectTypes.GO_SPRITE_COMPONENT:
-                    fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
-                    fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
-                    break;
-                case IObjectTypes.TEXT: case IObjectTypes.GUI_TEXT: case IObjectTypes.GO_LABEL_COMPONENT:
-                    fields.push({ name: Property.TEXT, data: (value as TextMesh).text });
-                    fields.push({ name: Property.FONT, data: (value as TextMesh).font || '' });
-
-                    const delta = new Vector3(1 * value.scale.x, 1 * value.scale.y);
-                    const max_delta = Math.max(delta.x, delta.y);
-                    const font_size = (value as TextMesh).fontSize * max_delta;
-
-                    fields.push({ name: Property.FONT_SIZE, data: font_size });
-                    fields.push({ name: Property.TEXT_ALIGN, data: (value as TextMesh).textAlign });
-                    break;
+                fields.push({ name: Property.FONT_SIZE, data: font_size });
+                fields.push({ name: Property.TEXT_ALIGN, data: (value as TextMesh).textAlign });
             }
 
             return { id: value.mesh_data.id, data: fields };
         });
 
-
         clear();
         setData(data);
-
-        _last_state = deepClone(_inspector.exportState());
-    }
-
-    function castTextureInfo(info: TextureInfo) {
-        const data = {
-            value: `${info.atlas}/${info.name}`,
-            src: info.path.replace('tpsheet', 'png'),
-        } as any;
-
-        if (info.atlas != '') {
-            const sizeX = info.data.texture.image.width;
-            const sizeY = info.data.texture.image.height;
-
-            data.offset = {
-                posX: -(sizeX * info.data.uvOffset.x),
-                posY: -(sizeY - (sizeY * info.data.uvOffset.y)),
-                width: info.data.size.x,
-                height: info.data.size.y,
-                sizeX,
-                sizeY
-            };
-
-            if (info.data.size.x > info.data.size.y) {
-                // по ширине
-                if (info.data.size.x > 40) {
-                    const delta = info.data.size.x / 40;
-                    data.offset.posX /= delta;
-                    data.offset.posY /= delta;
-                    data.offset.width = 40;
-                    data.offset.height = info.data.size.y / delta;
-                    data.offset.sizeX = sizeX / delta;
-                    data.offset.sizeY = sizeY / delta;
-                }
-            } else {
-                // по высоте
-                if (info.data.size.y > 40) {
-                    const delta = info.data.size.y / 40;
-                    data.offset.posX /= delta;
-                    data.offset.posY /= delta;
-                    data.offset.width = info.data.size.x / delta;
-                    data.offset.height = 40;
-                    data.offset.sizeX = sizeX / delta;
-                    data.offset.sizeY = sizeY / delta;
-                }
-            }
-
-            data.offset.posY += data.offset.height;
-        }
-
-        return data;
     }
 
     function refresh(properties: Property[]) {
@@ -480,7 +464,6 @@ function InspectorControlCreate() {
 
         _refreshed_properies = properties;
         _inspector.refresh();
-        _last_state = deepClone(_inspector.exportState());
     }
 
     function clear() {
@@ -497,13 +480,38 @@ function InspectorControlCreate() {
             if (result) {
                 // копируем чтобы не менялось в конфиге
                 const copy = deepClone(result);
-                // отдельно копируем callback, он есть только в NUMBER поэтому пока тут
+                // отдельно копируем callback, он есть только в NUMBER и в PointNd поэтому пока тут
                 if (result.type == PropertyType.NUMBER) {
                     const number_params = (result.params as PropertyParams[PropertyType.NUMBER]);
                     if (result.params && (result.params as PropertyParams[PropertyType.NUMBER]).format) {
                         copy.params.format = number_params.format;
                     }
                 }
+
+                if (result.type == PropertyType.VECTOR_2 || result.type == PropertyType.VECTOR_3 || result.type == PropertyType.VECTOR_4 || result.type == PropertyType.POINT_2D) {
+                    const v2p = (result.params as PropertyParams[PropertyType.VECTOR_2]);
+                    if (result.params && (result.params as PropertyParams[PropertyType.VECTOR_2]).x && (result.params as PropertyParams[PropertyType.VECTOR_2]).x.format) {
+                        copy.params.x.format = v2p.x.format;
+                    }
+                    if (result.params && (result.params as PropertyParams[PropertyType.VECTOR_2]).y && (result.params as PropertyParams[PropertyType.VECTOR_2]).y.format) {
+                        copy.params.y.format = v2p.y.format;
+                    }
+                }
+
+                if (result.type == PropertyType.VECTOR_3 || result.type == PropertyType.VECTOR_4) {
+                    const v3p = (result.params as PropertyParams[PropertyType.VECTOR_3]);
+                    if (result.params && (result.params as PropertyParams[PropertyType.VECTOR_3]).z && (result.params as PropertyParams[PropertyType.VECTOR_3]).z.format) {
+                        copy.params.z.format = v3p.z.format;
+                    }
+                }
+
+                if (result.type == PropertyType.VECTOR_4) {
+                    const v4p = (result.params as PropertyParams[PropertyType.VECTOR_4]);
+                    if (result.params && (result.params as PropertyParams[PropertyType.VECTOR_4]).w && (result.params as PropertyParams[PropertyType.VECTOR_4]).w.format) {
+                        copy.params.w.format = v4p.w.format;
+                    }
+                }
+
                 return copy;
             }
         }
@@ -551,67 +559,78 @@ function InspectorControlCreate() {
 
         } else _unique_fields[index].ids.push(obj.id);
 
-        if (property.type === PropertyType.VECTOR_2 || PropertyType.POINT_2D || property.type === PropertyType.VECTOR_3 || property.type === PropertyType.VECTOR_4) {
+        if (property.type == PropertyType.VECTOR_2 || property.type == PropertyType.POINT_2D || property.type == PropertyType.VECTOR_3 || property.type == PropertyType.VECTOR_4) {
             type T = PropertyValues[PropertyType.VECTOR_2];
             const field_data = field.data as T;
             const unique_field_data = _unique_fields[index].field.data as T;
 
-            if (property.type === PropertyType.VECTOR_2 || property.type === PropertyType.POINT_2D || property.type === PropertyType.VECTOR_3 || property.type === PropertyType.VECTOR_4) {
-                let disabled_x = false;
-                if (field_data.x !== unique_field_data.x) {
+            if (property.type == PropertyType.VECTOR_2 || property.type == PropertyType.POINT_2D || property.type == PropertyType.VECTOR_3 || property.type == PropertyType.VECTOR_4) {
+                if (field_data.x != unique_field_data.x) {
                     const params = _unique_fields[index].property.params;
                     if (params) {
                         const v2p = (params as PropertyParams[PropertyType.VECTOR_2]);
                         if (v2p.x) v2p.x.disabled = true;
+                        else v2p.x = { disabled: true };
                     } else _unique_fields[index].property.params = { x: { disabled: true } };
-                    disabled_x = true;
                 }
 
-                let disabled_y = false;
-                if (field_data.y !== unique_field_data.y) {
+                if (field_data.y != unique_field_data.y) {
                     const params = _unique_fields[index].property.params;
                     if (params) {
                         const v2p = (params as PropertyParams[PropertyType.VECTOR_2]);
                         if (v2p.y) v2p.y.disabled = true;
+                        else v2p.y = { disabled: true };
                     } else _unique_fields[index].property.params = { y: { disabled: true } };
-                    disabled_y = true;
-                }
-
-                if (disabled_x && disabled_y) {
-                    _unique_fields.splice(index, 1);
-                    return false;
                 }
             }
 
-            if (property.type === PropertyType.VECTOR_3 || property.type === PropertyType.VECTOR_4) {
+            if (property.type == PropertyType.VECTOR_3 || property.type == PropertyType.VECTOR_4) {
                 type T = PropertyValues[PropertyType.VECTOR_3];
                 const field_data = field.data as T;
                 const unique_field_data = _unique_fields[index].field.data as T;
 
-                if (field_data.z !== unique_field_data.z) {
+                if (field_data.z != unique_field_data.z) {
                     const params = _unique_fields[index].property.params;
                     if (params) {
                         const v3p = (params as PropertyParams[PropertyType.VECTOR_3]);
                         if (v3p.z) v3p.z.disabled = true;
+                        else v3p.z = { disabled: true };
                     } else _unique_fields[index].property.params = { z: { disabled: true } };
                 }
             }
 
-            if (property.type === PropertyType.VECTOR_4) {
+            if (property.type == PropertyType.VECTOR_4) {
                 type T = PropertyValues[PropertyType.VECTOR_4];
                 const field_data = field.data as T;
                 const unique_field_data = _unique_fields[index].field.data as T;
 
-                if (field_data.w !== unique_field_data.w) {
+                if (field_data.w != unique_field_data.w) {
                     const params = _unique_fields[index].property.params;
                     if (params) {
                         const v4p = (params as PropertyParams[PropertyType.VECTOR_4]);
                         if (v4p.w) v4p.w.disabled = true;
+                        else v4p.w = { disabled: true };
                     } else _unique_fields[index].property.params = { w: { disabled: true } };
                 }
             }
-        } else if (field.data != _unique_fields[index].field.data) {
-            _unique_fields.splice(index, 1);
+        } else {
+            if (field.data != _unique_fields[index].field.data) {
+                if ([PropertyType.LIST_TEXT, PropertyType.LIST_TEXTURES, PropertyType.LOG_DATA].includes(property.type)) {
+                    // для выпадающего списка и текстовых полей если между обьектами разные значения
+                    _unique_fields[index].field.data = "";
+                } else if (property.type == PropertyType.COLOR) {
+                    // для цвета если между обьектами разные значения
+                    _unique_fields[index].field.data = "#000000";
+                } else if (property.type == PropertyType.BOOLEAN) {
+                    // для чекбокса если между обьектами разные значения
+                    _unique_fields[index].field.data = false;
+                    _unique_fields[index].property.params = { disabled: true };
+                } else {
+                    // в ином случае просто убираем поле
+                    _unique_fields.splice(index, 1);
+                    return false;
+                }
+            }
         }
 
         return true;
@@ -620,8 +639,11 @@ function InspectorControlCreate() {
     function castProperty<T extends PropertyType>(ids: number[], field: PropertyData<T>, property: PropertyItem<T>): Entities | undefined {
         switch (property.type) {
             case PropertyType.STRING:
-            case PropertyType.BOOLEAN:
                 return createEntity(ids, field, property);
+            case PropertyType.BOOLEAN:
+                return createEntity(ids, field, property, {
+                    unset: (property as PropertyItem<PropertyType.BOOLEAN>)?.params?.disabled
+                });
             case PropertyType.NUMBER:
                 const number_prop = property as PropertyItem<PropertyType.NUMBER>;
                 return createEntity(ids, field, property, {
@@ -760,6 +782,19 @@ function InspectorControlCreate() {
         };
 
         if (!property.readonly) {
+            entity.onBeforeChange = () => {
+                if (!_is_first) {
+                    return;
+                }
+
+                _is_first = false;
+
+                saveValue({
+                    ids,
+                    field
+                });
+            };
+
             entity.onChange = (event: ChangeEvent) => {
                 // не обновляем только что измененные значения из вне (после refresh)
                 if (_refreshed_properies.length != 0) {
@@ -770,7 +805,7 @@ function InspectorControlCreate() {
                     }
                 }
 
-                onUpdatedValue({
+                updatedValue({
                     ids,
                     data: {
                         field,
@@ -779,12 +814,8 @@ function InspectorControlCreate() {
                     }
                 });
 
-                if (_is_first) _is_first = false;
                 if (event.last) {
                     _is_first = true;
-
-                    // сохраняем текущие значения полей инспектора
-                    _last_state = deepClone(_inspector.exportState());
                 }
             };
         }
@@ -810,69 +841,71 @@ function InspectorControlCreate() {
 
             // обычное поле
             const binding = place.addBinding(entity.obj, entity.key, entity.params);
+            if (entity.onBeforeChange) binding.controller.value.emitter.on('beforechange', entity.onBeforeChange);
             if (entity.onChange) binding.on('change', entity.onChange);
         }
     }
 
-    function searchFieldInLastState(property: PropertyItem<PropertyType>) {
-        function search(state: BladeState, property: PropertyItem<PropertyType>) {
-            for (const [key, value] of Object.entries(state)) {
-                if (key == "children") {
-                    for (const child of (value as any)) {
-                        const result = search(child as BladeState, property) as any;
-                        if (result) return result;
-                    }
-                }
-
-                if (value == property.title) {
-                    return (state.binding as any).value;
-                }
-            }
-
-            return undefined;
+    function saveValue(info: BeforeChangeInfo) {
+        switch (info.field.name) {
+            case Property.NAME: saveName(info.ids); break;
+            case Property.ACTIVE: saveActive(info.ids); break;
+            case Property.VISIBLE: saveVisible(info.ids); break;
+            case Property.POSITION: savePosition(info.ids); break;
+            case Property.ROTATION: saveRotation(info.ids); break;
+            case Property.SCALE: saveScale(info.ids); break;
+            case Property.SIZE: saveSize(info.ids); break;
+            case Property.PIVOT: savePivot(info.ids); break;
+            case Property.ANCHOR: saveAnchor(info.ids); break;
+            case Property.ANCHOR_PRESET: saveAnchorPreset(info.ids); break;
+            case Property.COLOR: saveColor(info.ids); break;
+            case Property.TEXTURE: saveTexture(info.ids); break;
+            case Property.SLICE9: saveSlice(info.ids); break;
+            case Property.TEXT: saveText(info.ids); break;
+            case Property.FONT: saveFont(info.ids); break;
+            case Property.FONT_SIZE: saveFontSize(info.ids); break;
+            case Property.TEXT_ALIGN: saveTextAlign(info.ids); break;
         }
-
-        return search(_last_state, property);
     }
 
-    function onUpdatedValue(value: ChangeInfo) {
-        switch (value.data.field.name) {
-            case Property.NAME: updateName(value); break;
-            case Property.ACTIVE: updateActive(value); break;
-            case Property.VISIBLE: updateVisible(value); break;
-            case Property.POSITION: updatePosition(value); break;
-            case Property.ROTATION: updateRotation(value); break;
-            case Property.SCALE: updateScale(value); break;
-            case Property.SIZE: updateSize(value); break;
-            case Property.PIVOT: updatePivot(value); break;
-            case Property.ANCHOR: updateAnchor(value); break;
-            case Property.ANCHOR_PRESET: updateAnchorPreset(value); break;
-            case Property.COLOR: updateColor(value); break;
-            case Property.TEXTURE: updateTexture(value); break;
-            case Property.SLICE9: updateSlice(value); break;
-            case Property.TEXT: updateText(value); break;
-            case Property.FONT: updateFont(value); break;
-            case Property.FONT_SIZE: updateFontSize(value); break;
-            case Property.TEXT_ALIGN: updateTextAlign(value); break;
+    function updatedValue(info: ChangeInfo) {
+        switch (info.data.field.name) {
+            case Property.NAME: updateName(info); break;
+            case Property.ACTIVE: updateActive(info); break;
+            case Property.VISIBLE: updateVisible(info); break;
+            case Property.POSITION: updatePosition(info); break;
+            case Property.ROTATION: updateRotation(info); break;
+            case Property.SCALE: updateScale(info); break;
+            case Property.SIZE: updateSize(info); break;
+            case Property.PIVOT: updatePivot(info); break;
+            case Property.ANCHOR: updateAnchor(info); break;
+            case Property.ANCHOR_PRESET: updateAnchorPreset(info); break;
+            case Property.COLOR: updateColor(info); break;
+            case Property.TEXTURE: updateTexture(info); break;
+            case Property.SLICE9: updateSlice(info); break;
+            case Property.TEXT: updateText(info); break;
+            case Property.FONT: updateFont(info); break;
+            case Property.FONT_SIZE: updateFontSize(info); break;
+            case Property.TEXT_ALIGN: updateTextAlign(info); break;
         }
+    }
+
+    function saveName(ids: number[]) {
+        const names: NameEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (!mesh) return;
+
+            names.push({ id_mesh: id, name: mesh.name });
+        });
+
+        HistoryControl.add('MESH_NAME', names);
     }
 
     function updateName(value: ChangeInfo) {
-        if (_is_first) {
-            const names: NameEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                names.push({ id_mesh: id, name: searchFieldInLastState(value.data.property) });
-            });
-
-            HistoryControl.add('MESH_NAME', names);
-        }
-
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -885,22 +918,22 @@ function InspectorControlCreate() {
         });
     }
 
-    function updateActive(value: ChangeInfo) {
-        if (_is_first) {
-            const actives: ActiveEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                actives.push({ id_mesh: id, state: searchFieldInLastState(value.data.property) });
+    function saveActive(ids: number[]) {
+        const actives: ActiveEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add('MESH_ACTIVE', actives);
-        }
+            if (!mesh) return;
 
+            actives.push({ id_mesh: id, state: mesh.get_active() });
+        });
+
+        HistoryControl.add('MESH_ACTIVE', actives);
+    }
+
+    function updateActive(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -913,22 +946,22 @@ function InspectorControlCreate() {
         });
     }
 
-    function updateVisible(value: ChangeInfo) {
-        if (_is_first) {
-            const visibles: VisibleEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                visibles.push({ id_mesh: id, state: searchFieldInLastState(value.data.property) });
+    function saveVisible(ids: number[]) {
+        const visibles: VisibleEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add('MESH_VISIBLE', visibles);
-        }
+            if (!mesh) return;
 
+            visibles.push({ id_mesh: id, state: mesh.get_visible() });
+        });
+
+        HistoryControl.add('MESH_VISIBLE', visibles);
+    }
+
+    function updateVisible(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -941,24 +974,22 @@ function InspectorControlCreate() {
         });
     }
 
-    function updatePosition(value: ChangeInfo) {
-        const oldPosition = searchFieldInLastState(value.data.property);
-
-        if (_is_first) {
-            const oldPositions: PositionEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                oldPositions.push({ id_mesh: mesh.mesh_data.id, position: oldPosition });
+    function savePosition(ids: number[]) {
+        const oldPositions: PositionEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add("MESH_TRANSLATE", oldPositions);
-        }
+            if (!mesh) return;
 
+            oldPositions.push({ id_mesh: mesh.mesh_data.id, position: deepClone(mesh.position) });
+        });
+
+        HistoryControl.add("MESH_TRANSLATE", oldPositions);
+    }
+
+    function updatePosition(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -966,21 +997,7 @@ function InspectorControlCreate() {
 
             if (!mesh) return;
 
-            const position_property = value.data.property as PropertyItem<PropertyType.VECTOR_3>;
             const pos = value.data.event.value as Vector3;
-
-            if (position_property.params?.x?.disabled) {
-                pos.x = oldPosition.x;
-            }
-
-            if (position_property.params?.y?.disabled) {
-                pos.y = oldPosition.y;
-            }
-
-            if (position_property.params?.z?.disabled) {
-                pos.z = oldPosition.z;
-            }
-
             mesh.set_position(pos.x, pos.y, pos.z);
         });
 
@@ -988,28 +1005,22 @@ function InspectorControlCreate() {
         SizeControl.draw();
     }
 
-    function updateRotation(value: ChangeInfo) {
-        const oldRotation = searchFieldInLastState(value.data.property);
-
-        if (_is_first) {
-            const oldRotations: RotationEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                const rot = new Euler();
-                rot.copy(mesh.rotation);
-                rot.set(degToRad(oldRotation.x), degToRad(oldRotation.y), degToRad(oldRotation.z));
-
-                oldRotations.push({ id_mesh: id, rotation: rot });
+    function saveRotation(ids: number[]) {
+        const oldRotations: RotationEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add("MESH_ROTATE", oldRotations);
-        }
+            if (!mesh) return;
 
+            oldRotations.push({ id_mesh: id, rotation: deepClone(mesh.rotation) });
+        });
+
+        HistoryControl.add("MESH_ROTATE", oldRotations);
+    }
+
+    function updateRotation(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1017,22 +1028,8 @@ function InspectorControlCreate() {
 
             if (!mesh) return;
 
-            const rotation_property = value.data.property as PropertyItem<PropertyType.VECTOR_3>;
             const raw_rot = value.data.event.value as Vector3;
             const rot = new Vector3(degToRad(raw_rot.x), degToRad(raw_rot.y), degToRad(raw_rot.z));
-
-            if (rotation_property.params?.x?.disabled) {
-                rot.x = oldRotation.x;
-            }
-
-            if (rotation_property.params?.y?.disabled) {
-                rot.y = oldRotation.y;
-            }
-
-            if (rotation_property.params?.z?.disabled) {
-                rot.z = oldRotation.z;
-            }
-
             mesh.rotation.set(rot.x, rot.y, rot.z);
             mesh.transform_changed();
         });
@@ -1041,24 +1038,22 @@ function InspectorControlCreate() {
         SizeControl.draw();
     }
 
-    function updateScale(value: ChangeInfo) {
-        const oldScale = searchFieldInLastState(value.data.property);
-
-        if (_is_first) {
-            const oldScales: ScaleEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                oldScales.push({ id_mesh: id, scale: oldScale })
+    function saveScale(ids: number[]) {
+        const oldScales: ScaleEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add("MESH_SCALE", oldScales);
-        }
+            if (!mesh) return;
 
+            oldScales.push({ id_mesh: id, scale: deepClone(mesh.scale) });
+        });
+
+        HistoryControl.add("MESH_SCALE", oldScales);
+    }
+
+    function updateScale(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1066,21 +1061,7 @@ function InspectorControlCreate() {
 
             if (!mesh) return;
 
-            const scale_property = value.data.property as PropertyItem<PropertyType.VECTOR_3>;
             const scale = value.data.event.value as Vector3;
-
-            if (scale_property.params?.x?.disabled) {
-                scale.x = oldScale.x;
-            }
-
-            if (scale_property.params?.y?.disabled) {
-                scale.y = oldScale.y;
-            }
-
-            if (scale_property.params?.z?.disabled) {
-                scale.z = oldScale.z;
-            }
-
             (mesh as any).scale.copy(scale);
             mesh.transform_changed();
 
@@ -1100,37 +1081,29 @@ function InspectorControlCreate() {
         refresh([Property.FONT_SIZE]);
     }
 
-    function updateSize(value: ChangeInfo) {
-        if (_is_first) {
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                HistoryControl.add('MESH_SIZE', [{
-                    id_mesh: id,
-                    position: mesh.get_position(),
-                    size: mesh.get_size()
-                }]);
-            });
-        }
-
-        value.ids.forEach((id) => {
+    function saveSize(ids: number[]) {
+        ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            if (_is_first) {
-                HistoryControl.add('MESH_SIZE', [{
-                    id_mesh: id,
-                    position: mesh.get_position(),
-                    size: mesh.get_size()
-                }]);
-            }
+            HistoryControl.add('MESH_SIZE', [{
+                id_mesh: id,
+                position: mesh.get_position(),
+                size: mesh.get_size()
+            }]);
+        });
+    }
+
+    function updateSize(value: ChangeInfo) {
+        value.ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (!mesh) return;
 
             const size = value.data.event.value as Vector2;
             mesh.set_size(size.x, size.y);
@@ -1139,25 +1112,22 @@ function InspectorControlCreate() {
         SizeControl.draw();
     }
 
-    function updatePivot(value: ChangeInfo) {
-        if (_is_first) {
-            const pivots: PivotEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                const pivot_preset = searchFieldInLastState(value.data.property);
-                const pivot = screenPresetToPivotValue(pivot_preset);
-
-                pivots.push({ id_mesh: id, pivot });
+    function savePivot(ids: number[]) {
+        const pivots: PivotEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add('MESH_PIVOT', pivots);
-        }
+            if (!mesh) return;
 
+            pivots.push({ id_mesh: id, pivot: mesh.get_pivot() });
+        });
+
+        HistoryControl.add('MESH_PIVOT', pivots);
+    }
+
+    function updatePivot(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1173,22 +1143,22 @@ function InspectorControlCreate() {
         SizeControl.draw();
     }
 
-    function updateAnchor(value: ChangeInfo) {
-        if (_is_first) {
-            const anchors: AnchorEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                anchors.push({ id_mesh: id, anchor: searchFieldInLastState(value.data.property) });
+    function saveAnchor(ids: number[]) {
+        const anchors: AnchorEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add('MESH_ANCHOR', anchors);
-        }
+            if (!mesh) return;
 
+            anchors.push({ id_mesh: id, anchor: mesh.get_anchor() });
+        });
+
+        HistoryControl.add('MESH_ANCHOR', anchors);
+    }
+
+    function updateAnchor(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1207,22 +1177,22 @@ function InspectorControlCreate() {
         }
     }
 
-    function updateAnchorPreset(value: ChangeInfo) {
-        if (_is_first) {
-            const anchors: AnchorEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                anchors.push({ id_mesh: id, anchor: searchFieldInLastState(value.data.property) });
+    function saveAnchorPreset(ids: number[]) {
+        const anchors: AnchorEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add('MESH_ANCHOR', anchors);
-        }
+            if (!mesh) return;
 
+            anchors.push({ id_mesh: id, anchor: mesh.get_anchor() });
+        });
+
+        HistoryControl.add('MESH_ANCHOR', anchors);
+    }
+
+    function updateAnchorPreset(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1240,22 +1210,22 @@ function InspectorControlCreate() {
         refresh([Property.ANCHOR]);
     }
 
-    function updateColor(value: ChangeInfo) {
-        if (_is_first) {
-            const colors: ColorEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                colors.push({ id_mesh: id, color: searchFieldInLastState(value.data.property) });
+    function saveColor(ids: number[]) {
+        const colors: ColorEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add('MESH_COLOR', colors);
-        }
+            if (!mesh) return;
 
+            colors.push({ id_mesh: id, color: mesh.get_color() });
+        });
+
+        HistoryControl.add('MESH_COLOR', colors);
+    }
+
+    function updateColor(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1267,22 +1237,23 @@ function InspectorControlCreate() {
         });
     }
 
-    function updateTexture(value: ChangeInfo) {
-        if (_is_first) {
-            const textures: TextureEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                textures.push({ id_mesh: id, texture: searchFieldInLastState(value.data.property) });
+    function saveTexture(ids: number[]) {
+        const textures: TextureEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add('MESH_TEXTURE', textures);
-        }
+            if (!mesh) return;
 
+            const texture = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
+            textures.push({ id_mesh: id, texture });
+        });
+
+        HistoryControl.add('MESH_TEXTURE', textures);
+    }
+
+    function updateTexture(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1290,27 +1261,30 @@ function InspectorControlCreate() {
 
             if (!mesh) return;
 
-            const texture_data = (value.data.event.value as string).split('/');
-            (mesh as Slice9Mesh).set_texture(texture_data[1], texture_data[0]);
+            if (value.data.event.value) {
+                const atlas = (value.data.event.value as string).split('/')[0];
+                const texture = (value.data.event.value as string).split('/')[1];
+                (mesh as Slice9Mesh).set_texture(texture, atlas);
+            } else (mesh as Slice9Mesh).set_texture('');
         });
     }
 
-    function updateSlice(value: ChangeInfo) {
-        if (_is_first) {
-            const slices: SliceEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                slices.push({ id_mesh: id, slice: searchFieldInLastState(value.data.property) });
+    function saveSlice(ids: number[]) {
+        const slices: SliceEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add('MESH_SLICE', slices);
-        }
+            if (!mesh) return;
 
+            slices.push({ id_mesh: id, slice: (mesh as Slice9Mesh).get_slice() });
+        });
+
+        HistoryControl.add('MESH_SLICE', slices);
+    }
+
+    function updateSlice(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1322,22 +1296,22 @@ function InspectorControlCreate() {
         });
     }
 
-    function updateText(value: ChangeInfo) {
-        if (_is_first) {
-            const texts: TextEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                texts.push({ id_mesh: id, text: searchFieldInLastState(value.data.property) });
+    function saveText(ids: number[]) {
+        const texts: TextEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add('MESH_TEXT', texts);
-        }
+            if (!mesh) return;
 
+            texts.push({ id_mesh: id, text: deepClone((mesh as TextMesh).text) });
+        });
+
+        HistoryControl.add('MESH_TEXT', texts);
+    }
+
+    function updateText(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1350,22 +1324,23 @@ function InspectorControlCreate() {
         });
     }
 
-    function updateFont(value: ChangeInfo) {
-        if (_is_first) {
-            const fonts: FontEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                fonts.push({ id_mesh: id, font: searchFieldInLastState(value.data.property) });
+    function saveFont(ids: number[]) {
+        const fonts: FontEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add('MESH_FONT', fonts);
-        }
+            if (!mesh) return;
 
+            const oldFont = deepClone((mesh as TextMesh).font);
+            fonts.push({ id_mesh: id, font: oldFont ? oldFont : '' });
+        });
+
+        HistoryControl.add('MESH_FONT', fonts);
+    }
+
+    function updateFont(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1378,22 +1353,23 @@ function InspectorControlCreate() {
         });
     }
 
-    function updateFontSize(value: ChangeInfo) {
-        if (_is_first) {
-            const fontSizes: FontSizeEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (!mesh) return;
-
-                fontSizes.push({ id_mesh: id, scale: searchFieldInLastState(value.data.property) });
+    function saveFontSize(ids: number[]) {
+        const fontSizes: FontSizeEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
 
-            HistoryControl.add('MESH_FONT_SIZE', fontSizes);
-        }
+            if (!mesh) return;
 
+            const oldScale = mesh.get_scale();
+            fontSizes.push({ id_mesh: id, scale: new Vector3(oldScale.x, oldScale.y, 1) });
+        });
+
+        HistoryControl.add('MESH_FONT_SIZE', fontSizes);
+    }
+
+    function updateFontSize(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1413,21 +1389,21 @@ function InspectorControlCreate() {
         refresh([Property.SCALE]);
     }
 
-    function updateTextAlign(value: ChangeInfo) {
-        if (_is_first) {
-            const textAligns: TextAlignEventData[] = [];
-            value.ids.forEach((id) => {
-                const mesh = _selected_list.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-                if (!mesh) return;
-
-                textAligns.push({ id_mesh: id, text_align: searchFieldInLastState(value.data.property) });
+    function saveTextAlign(ids: number[]) {
+        const textAligns: TextAlignEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
             });
+            if (!mesh) return;
 
-            HistoryControl.add('MESH_TEXT_ALIGN', textAligns);
-        }
+            textAligns.push({ id_mesh: id, text_align: deepClone((mesh as TextMesh).textAlign) });
+        });
 
+        HistoryControl.add('MESH_TEXT_ALIGN', textAligns);
+    }
+
+    function updateTextAlign(value: ChangeInfo) {
         value.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1524,6 +1500,55 @@ function screenPresetToAnchorValue(preset: ScreenPointPreset) {
     }
 }
 
+function castTextureInfo(info: TextureInfo) {
+    const data = {
+        value: `${info.atlas}/${info.name}`,
+        src: (info.data.texture as any).path
+    } as any;
+
+    if (info.atlas != '') {
+        const sizeX = info.data.texture.image.width;
+        const sizeY = info.data.texture.image.height;
+
+        data.offset = {
+            posX: -(sizeX * info.data.uvOffset.x),
+            posY: -(sizeY - (sizeY * info.data.uvOffset.y)),
+            width: info.data.size.x,
+            height: info.data.size.y,
+            sizeX,
+            sizeY
+        };
+
+        if (info.data.size.x > info.data.size.y) {
+            // по ширине
+            if (info.data.size.x > 40) {
+                const delta = info.data.size.x / 40;
+                data.offset.posX /= delta;
+                data.offset.posY /= delta;
+                data.offset.width = 40;
+                data.offset.height = info.data.size.y / delta;
+                data.offset.sizeX = sizeX / delta;
+                data.offset.sizeY = sizeY / delta;
+            }
+        } else {
+            // по высоте
+            if (info.data.size.y > 40) {
+                const delta = info.data.size.y / 40;
+                data.offset.posX /= delta;
+                data.offset.posY /= delta;
+                data.offset.width = info.data.size.x / delta;
+                data.offset.height = 40;
+                data.offset.sizeX = sizeX / delta;
+                data.offset.sizeY = sizeY / delta;
+            }
+        }
+
+        data.offset.posY += data.offset.height;
+    }
+
+    return data;
+}
+
 // TODO: вынести
 export function getDefaultInspectorConfig() {
     return [
@@ -1544,12 +1569,30 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 {
                     name: Property.POSITION, title: 'Позиция', type: PropertyType.VECTOR_3, params: {
-                        z: { step: 0.001 }
+                        x: { format: (v: number) => v.toFixed(2) },
+                        y: { format: (v: number) => v.toFixed(2) },
+                        z: { step: 0.001, format: (v: number) => v.toFixed(3) }
                     }
                 },
-                { name: Property.ROTATION, title: 'Вращение', type: PropertyType.VECTOR_3 },
-                { name: Property.SCALE, title: 'Маштаб', type: PropertyType.VECTOR_2 },
-                { name: Property.SIZE, title: 'Размер', type: PropertyType.VECTOR_2 },
+                {
+                    name: Property.ROTATION, title: 'Вращение', type: PropertyType.VECTOR_3, params: {
+                        x: { format: (v: number) => v.toFixed(2) },
+                        y: { format: (v: number) => v.toFixed(2) },
+                        z: { format: (v: number) => v.toFixed(2) }
+                    }
+                },
+                {
+                    name: Property.SCALE, title: 'Маштаб', type: PropertyType.VECTOR_2, params: {
+                        x: { format: (v: number) => v.toFixed(2) },
+                        y: { format: (v: number) => v.toFixed(2) },
+                    }
+                },
+                {
+                    name: Property.SIZE, title: 'Размер', type: PropertyType.VECTOR_2, params: {
+                        x: { format: (v: number) => v.toFixed(2) },
+                        y: { format: (v: number) => v.toFixed(2) },
+                    }
+                },
                 {
                     name: Property.PIVOT, title: 'Точка опоры', type: PropertyType.LIST_TEXT, params: {
                         'Центр': ScreenPointPreset.CENTER,
@@ -1571,8 +1614,8 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 {
                     name: Property.ANCHOR, title: 'Значение', type: PropertyType.POINT_2D, params: {
-                        x: { min: -1, max: 1 },
-                        y: { min: -1, max: 1 }
+                        x: { min: -1, max: 1, format: (v: number) => v.toFixed(2) },
+                        y: { min: -1, max: 1, format: (v: number) => v.toFixed(2) }
                     }
                 },
                 {
@@ -1598,19 +1641,12 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 { name: Property.COLOR, title: 'Цвет', type: PropertyType.COLOR },
                 {
-                    name: Property.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: ResourceManager.get_all_textures().map((info) => {
-                        return {
-                            key: `${info.atlas}/${info.name}`,
-                            text: `${info.atlas}/${info.name}`,
-                            // FIXME: нужно оптимизировать если хотим с картинками
-                            src: ''//info.data.texture.source.toJSON().url as string
-                        };
-                    })
+                    name: Property.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: ResourceManager.get_all_textures().map(castTextureInfo)
                 },
                 {
                     name: Property.SLICE9, title: 'Slice9', type: PropertyType.POINT_2D, params: {
-                        x: { min: 0, max: 100 },
-                        y: { min: 0, max: 100 }
+                        x: { min: 0, max: 100, format: (v: number) => v.toFixed(2) },
+                        y: { min: 0, max: 100, format: (v: number) => v.toFixed(2) }
                     }
                 },
             ]
@@ -1630,10 +1666,10 @@ export function getDefaultInspectorConfig() {
                 },
                 {
                     name: Property.TEXT_ALIGN, title: 'Выравнивание', type: PropertyType.LIST_TEXT, params: {
-                        'Центр': 'center',
-                        'Слева': 'left',
-                        'Справа': 'right',
-                        'По ширине': 'justify'
+                        'Центр': TextAlign.CENTER,
+                        'Слева': TextAlign.LEFT,
+                        'Справа': TextAlign.RIGHT,
+                        'По ширине': TextAlign.JUSTIFY
                     }
                 },
             ]

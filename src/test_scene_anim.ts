@@ -1,4 +1,3 @@
-import { Vector2 } from "three";
 import { run_debug_filemanager } from "./controls/AssetControl";
 import { apply_object_transform, apply_tile_transform, get_depth, get_tile_texture, MapData, parse_tiled, preload_tiled_textures, rotate_point, TILE_FLIP_MASK } from "./render_engine/parsers/tile_parser";
 import { IObjectTypes } from "./render_engine/types";
@@ -7,7 +6,8 @@ import { IObjectTypes } from "./render_engine/types";
 export async function run_anim_scene() {
     await ResourceManager.preload_texture('./img/2.png');
     run_debug_filemanager();
-    ResourceManager.set_project_path('http://localhost:7000/assets/');
+    ResourceManager.set_project_path('http://localhost:7007/assets/');
+
 
 
     /*
@@ -20,7 +20,7 @@ export async function run_anim_scene() {
     plane_1.set_slice(8, 8)
     plane_1.set_color('#0f0')
     plane_1.set_texture('2');
-  //  SceneManager.add(plane_1);
+    //  SceneManager.add(plane_1);
 
     const plane_2 = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: 128, height: 32 });
     plane_2.scale.setScalar(2);
@@ -28,7 +28,7 @@ export async function run_anim_scene() {
     plane_2.set_slice(8, 8)
     plane_2.set_color('#0f0')
     plane_2.set_texture('2');
-   // SceneManager.add(plane_2);
+    // SceneManager.add(plane_2);
 
 
     await ResourceManager.preload_texture('Material-Color-Picker.jpg', '');

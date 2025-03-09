@@ -14,7 +14,7 @@ export function register_resource_manager() {
     (window as any).ResourceManager = ResourceManagerModule();
 }
 interface AssetData<T> {
-    [k: string]: { path: string, data: T };
+    [k: string]: { data: T };
 }
 
 export interface TextureData {
@@ -27,7 +27,6 @@ export interface TextureData {
 export interface TextureInfo {
     name: string;
     atlas: string;
-    path: string;
     data: TextureData;
 }
 
@@ -100,7 +99,7 @@ export function ResourceManagerModule() {
             atlases[atlas] = {};
         if (atlases[atlas][name])
             Log.warn('texture exists already', name, atlas);
-        atlases[atlas][name] = { path, data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
+        atlases[atlas][name] = { data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
         //log('Texture preloaded:', path);
         return atlases[atlas][name].data;
     }
@@ -115,7 +114,7 @@ export function ResourceManagerModule() {
             atlases[atlas] = {};
         if (atlases[atlas][name])
             Log.warn('texture exists already', name, atlas);
-        atlases[atlas][name] = { path, data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
+        atlases[atlas][name] = { data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
         return atlases[atlas][name].data;
     }
 
@@ -136,7 +135,6 @@ export function ResourceManagerModule() {
         for (const texture_name in texture_data) {
             const tex_data = texture_data[texture_name];
             atlases[name][texture_name] = {
-                path: atlas_path,
                 data: {
                     texture,
                     size: new Vector2(texture.image.width * tex_data.uvScale[0], texture.image.width * tex_data.uvScale[1]),
@@ -198,7 +196,7 @@ export function ResourceManagerModule() {
         for (const k in atlases) {
             for (const k2 in atlases[k]) {
                 const asset = atlases[k][k2];
-                list.push({ name: k2, atlas: k, path: asset.path, data: asset.data });
+                list.push({ name: k2, atlas: k, data: asset.data });
             }
         }
         return list;
