@@ -54,7 +54,6 @@ function TreeControlCreate() {
     let _is_moveItemDrag: boolean = false; // если начали тащить 
     let _is_editItem: boolean = false; // ренейм возможен только в одном случае 
     let _is_currentOnly: boolean = false; // когда кликаем по единственному и текущему элементу 
-    let is_copied: boolean = false; // скопировано ли (listSelected) 
 
     const divTree: any = document.querySelector('#wr_tree');
     let treeItem: any = null;
@@ -527,10 +526,15 @@ function TreeControlCreate() {
         // a.tree__item.droppable  и  статус для добавления внутрь
         itemDrop = treeList.find(e => e.id === +currentDroppable?.getAttribute("data-id")) || null;
 
+        const itemSelected = treeList.filter((e: any) => e.id == listSelected[0]);
+        const canBeMoved = ActionsControl.checkPasteSameWorld(itemDrop, itemSelected);
+
         if (
-            (listSelected?.length == 1 && currentDroppable === treeItem) || 
-            itemDrag?.no_drag === true
+            (listSelected?.length == 1 && currentDroppable === treeItem) 
+            || itemDrag?.no_drag === true
+            || canBeMoved == false
         ) {
+            currentDroppable.classList.remove('success');
             boxDD.classList.remove('active');
             isDrop = false;
         }
@@ -538,8 +542,8 @@ function TreeControlCreate() {
             if (ddVisible) boxDD.classList.add('pos');
 
             if (
-                itemDrop?.no_drop === true && itemDrag || 
-                (isChild(treeList, itemDrag.id, itemDrop.pid) && listSelected?.length == 1)
+                (itemDrop?.no_drop === true && itemDrag) 
+                || (isChild(treeList, itemDrag.id, itemDrop.pid) && listSelected?.length == 1)
             ) {
                 boxDD.classList.remove('active');
                 currentDroppable.classList.remove('success');
@@ -558,10 +562,15 @@ function TreeControlCreate() {
         // статус и li.droppable для добавления рядом
         itemDrop = treeList.find(e => e.id === +currentDroppable?.getAttribute("data-id")) || null;
 
+        const itemSelected = treeList.filter((e: any) => e.id == listSelected[0]);
+        const parentDrop = treeList.filter((e: any) => e.id == itemDrop?.pid);
+        const canBeMoved = parentDrop[0]?.id > -1 ? ActionsControl.checkPasteSameWorld(parentDrop[0], itemSelected) : true;
+
         if (
-            (listSelected?.length == 1 && currentDroppable === treeItem) ||
-            itemDrop?.pid < -2 ||
-            itemDrag?.no_drag === true
+            (listSelected?.length == 1 && currentDroppable === treeItem)
+            || itemDrop?.pid < -2
+            || itemDrag?.no_drag === true 
+            || canBeMoved == false
         ) {
             boxDD.classList.remove('pos');
             isDrop = false;
@@ -570,9 +579,9 @@ function TreeControlCreate() {
             if (ddVisible) boxDD.classList.add('pos');
 
             if (
-                itemDrop?.pid === -2 || // root
-                (isChild(treeList, itemDrag.id, itemDrop.pid) && listSelected?.length == 1) ||
-                isParentNoDrop(treeList, itemDrag, itemDrop)
+                itemDrop?.pid === -2 // root
+                || (isChild(treeList, itemDrag.id, itemDrop.pid) && listSelected?.length == 1)
+                || isParentNoDrop(treeList, itemDrag, itemDrop)
             ) {
                 boxDD.classList.remove('active');
                 currentDroppable.classList.remove('success');
@@ -938,17 +947,22 @@ function TreeControlCreate() {
         if (action == NodeAction.CTRL_C || action == NodeAction.CTRL_D)
             if (itemDrag?.id == -1) return true;
 
+        if (action == NodeAction.CTRL_V || action == NodeAction.CTRL_B) {
+            const canPaste = ActionsControl.checkPasteSameWorld(itemDrag) == false;
+            if (itemDrag?.no_drop || canPaste) return true;
+        }
+
         return false;        
     }
     
-    function getContextMenuItems(clipboard_empty: boolean = false): contextMenuItem[] {
+    function getContextMenuItems(): contextMenuItem[] {
         const cm_list: contextMenuItem [] = [];
         cm_list.push({ text: 'Переименовать', action: NodeAction.rename, not_active: isNotActiveCMI(NodeAction.rename) });
         cm_list.push({ text: 'Вырезать', action: NodeAction.CTRL_X, not_active: isNotActiveCMI(NodeAction.rename) });
         cm_list.push({ text: 'Копировать', action: NodeAction.CTRL_C, not_active: isNotActiveCMI(NodeAction.rename) });
 
-        cm_list.push({ text: 'Вставить', action: NodeAction.CTRL_V, not_active: !clipboard_empty || isNotActiveCMI(NodeAction.rename) });
-        cm_list.push({ text: 'Вставить дочерним', action: NodeAction.CTRL_B, not_active: !clipboard_empty || isNotActiveCMI(NodeAction.rename) });
+        cm_list.push({ text: 'Вставить', action: NodeAction.CTRL_V, not_active: isNotActiveCMI(NodeAction.CTRL_V) });
+        cm_list.push({ text: 'Вставить дочерним', action: NodeAction.CTRL_B, not_active: isNotActiveCMI(NodeAction.CTRL_B) });
         
         cm_list.push({ text: 'Дублировать', action: NodeAction.CTRL_D, not_active: isNotActiveCMI(NodeAction.rename) });
         cm_list.push({ text: 'Удалить', action: NodeAction.remove, not_active: isNotActiveCMI(NodeAction.rename) });
@@ -986,11 +1000,7 @@ function TreeControlCreate() {
             divTree.classList.add('no_scrolling');
         }
 
-        ContextMenu.open(getContextMenuItems(is_copied), event, menuContextClick);
-    }
-
-    function setIsCopied(val: boolean = true) {
-        is_copied = val;
+        ContextMenu.open(getContextMenuItems(), event, menuContextClick);
     }
 
     function setCutList(is_clear: boolean = false) {
@@ -1153,6 +1163,6 @@ function TreeControlCreate() {
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
 
-    return { draw_graph, preRename, setIsCopied, setCutList };
+    return { draw_graph, preRename, setCutList };
 
 }

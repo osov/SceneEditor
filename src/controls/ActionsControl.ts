@@ -62,12 +62,19 @@ function ActionsControlCreate() {
             copy_mesh_list.push(SceneManager.serialize_mesh(list[i]));
         }
         
-        if (copy_mesh_list.length > 0) TreeControl.setIsCopied();
     }
 
     function paste(asChild: boolean = false) {
         if (copy_mesh_list.length == 0) return;
         const selected = SelectControl.get_selected_list();
+        if (checkPasteSameWorld(selected[0]) == false) {
+            Popups.toast.open({
+                type: 'info',
+                message: 'Нельзя элементы из GUI и GO вкладывать друг в друга!'
+            });
+            return;
+        }
+
         let target: any = selected.length == 1 ? selected[0].parent : RenderEngine.scene;
 
         if(asChild && selected.length == 1) target = selected[0];
@@ -78,7 +85,6 @@ function ActionsControlCreate() {
             TreeControl.setCutList(true);
             is_cut = false;
             copy_mesh_list.length = 0;
-            TreeControl.setIsCopied(false);
             EventBus.trigger("SYS_GRAPH_MOVED_TO", { pid: target.mesh_data?.id || -1, next_id: -1, id_mesh_list: id_mlist });
             return;
         }
@@ -102,7 +108,6 @@ function ActionsControlCreate() {
     function duplication() {
         copy();
         paste();
-        TreeControl.setIsCopied(false);
         copy_mesh_list = [];
     }
 
@@ -218,15 +223,31 @@ function ActionsControlCreate() {
                 }
     
                 if (worldMap.length > 1) {
-                    if (worldMap[i] != worldMap[i - 1]) { log('1', {worldMap}); return false; }
+                    if (worldMap[i] != worldMap[i - 1]) return false;
                 }
             }
-            log('2', {worldMap})
+
             return true;
+        }
+
+        function checkPasteSameWorld(itemWhere: any, selected: any = copy_mesh_list) {
+            const listWhat = selected?.length ? selected : [];
+            if (!listWhat.length) return false;
+
+            const type = listWhat[0]?.type ? listWhat[0]?.type : listWhat[0]?.icon ? listWhat[0]?.icon : '';
+            const worldS = getWorldName(type);
+            if (!worldS) return false;
+            
+            const icon = itemWhere?.type ? itemWhere?.type : itemWhere?.icon ? itemWhere?.icon : '';
+            const worldIW = getWorldName(icon);
+            if (!worldIW) return false;
+
+            return worldS == worldIW;
         }
 
     return {
         fromTheSameWorld,
+        checkPasteSameWorld,
         cut, copy, paste, duplication, remove,
         add_gui_container,
         add_gui_box,
