@@ -51,6 +51,7 @@ export const CMD_NAME = [
 
 export const PUBLIC = '/public'  // Путь к папке с ассетами проекта
 export const METADATA = '/metadata.json'  // Путь к файлу с метаинфо проекта
+export const CACHE = '/server_cache.json'
 
 export const ERROR_TEXT = {
     COMMAND_NOT_FOUND: 'Command not found!',

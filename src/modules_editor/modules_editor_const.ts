@@ -42,6 +42,7 @@ export type AssetsCommands = {
     [DELETE_CMD]: { path: string },
     [SAVE_INFO_CMD]: { path: string, data: TRecursiveDict },
     [GET_INFO_CMD]: { path: string },
+    [DEL_INFO_CMD]: { path: string },
     [SAVE_DATA_CMD]: { path: string, data: string },
     [GET_DATA_CMD]: { path: string },
     // [NEW_MATERIAL]: {name: string, path: string, data: IDictionary<string>},
@@ -70,6 +71,7 @@ export type AssetsResponses = {
     [DELETE_CMD]: BaseResp<VoidMessage>,
     [SAVE_INFO_CMD]: BaseResp<VoidMessage>,
     [GET_INFO_CMD]: BaseResp<TRecursiveDict>,
+    [DEL_INFO_CMD]: BaseResp<VoidMessage>,
     [SAVE_DATA_CMD]: BaseResp<VoidMessage>,
     [GET_DATA_CMD]: BaseResp<string>,
     [FILE_UPLOAD_CMD]: BaseResp<FileUploadedData>
@@ -105,6 +107,7 @@ export const SAVE_DATA_CMD = '/save_data';
 export const GET_DATA_CMD = '/get_data';
 export const SAVE_INFO_CMD = '/save_info';
 export const GET_INFO_CMD = '/get_info';
+export const DEL_INFO_CMD = '/del_info';
 export const FILE_UPLOAD_CMD = '/upload';
 export const PUBLIC = '/public'  // Путь к папке с ассетами проекта
 export const METADATA = '/metadata.txt'  // Путь к файлу с метаинфо проекта

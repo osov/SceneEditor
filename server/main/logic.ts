@@ -1,8 +1,9 @@
 
 import path from "path";
 import { PATH_PARAM_NAME, NEW_PROJECT_CMD, ERROR_TEXT, DELETE_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, NAME_PARAM_NAME, COPY_CMD, PROJECT_PARAM_NAME, GET_PROJECTS_CMD, RENAME_CMD, GET_FOLDER_CMD, SAVE_INFO_CMD, GET_INFO_CMD, DATA_PARAM_NAME, SAVE_DATA_CMD, GET_DATA_CMD, NEW_PATH_PARAM_NAME } from "./const";
-import { check_dir_exists, exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, read_dir_assets, rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir } from "./fs_utils";
-import { ServerResponses, ServerCommands, CommandId, TRecursiveDict } from "../../src/modules_editor/modules_editor_const";
+import { check_dir_exists, exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, read_dir_assets, rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir, get_cache_path } from "./fs_utils";
+import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD } from "../../src/modules_editor/modules_editor_const";
+import { ServerCacheData } from "./types";
 
 
 const project_name_required_commands = [
@@ -18,6 +19,7 @@ const loaded_project_required_commands = [
     GET_INFO_CMD,
     SAVE_DATA_CMD,
     SAVE_INFO_CMD,
+    DEL_INFO_CMD,
     NEW_FOLDER_CMD,
     GET_FOLDER_CMD,
     COPY_CMD,
@@ -106,10 +108,17 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
             return {message: `${ERROR_TEXT.FILE_NOT_EXISTS}: ${old_path}`, result: 0};
         const ext1 = path.extname(old_path).slice(1);
         const ext2 = path.extname(new_path).slice(1);
-        if (!allowed_ext.includes(ext1))
-            return {result: 0, message: ERROR_TEXT.WRONG_ORIG_EXTENTION};
-        if (!allowed_ext.includes(ext2))
-            return {result: 0, message: ERROR_TEXT.WRONG_END_EXTENTION};
+        // if (!allowed_ext.includes(ext1))
+        //     return {result: 0, message: ERROR_TEXT.WRONG_ORIG_EXTENTION};
+        // if (!allowed_ext.includes(ext2))
+        //     return {result: 0, message: ERROR_TEXT.WRONG_END_EXTENTION};
+        
+        const info = await read_metadata(project, cmd.path);
+        if (info) {
+            await write_metadata(project, cmd.new_path, info);
+            await clear_metadata(project, cmd.path);
+        }
+
         await rename(old_path, new_path);
         return {result: 1, data: {new_path}};
     }
@@ -124,13 +133,11 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         if (!file_exists)
             return {message: `${ERROR_TEXT.FILE_NOT_EXISTS}: ${old_path}`, result: 0};
 
-        // TODO: Обработать случай, когда в директории назначения уже есть файл с таким именем?
-        // if (get_dir_names(path.dirname(new_path)).includes(path.basename(new_path))) {
-        //     while (get_dir_names(path.dirname(new_path)).includes(path.basename(new_path))) {
-        //         new_path = incr_file_name(new_path);
-        //     }
-        // }
-        
+        const info = await read_metadata(project, cmd.path);
+        if (info) {
+            await write_metadata(project, cmd.new_path, info);
+        }
+
         await copy(old_path, new_path);
         return {result: 1, data: {new_path}};
     }
@@ -138,6 +145,12 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
     async function on_delete(cmd: ServerCommands[typeof DELETE_CMD]): Promise<ServerResponses[typeof DELETE_CMD]> {
         const asset_path = get_asset_path(project, cmd.path);
         const root_dir_content = await remove_path(asset_path);
+
+        const info = await read_metadata(project, cmd.path);
+        if (info) {
+            await clear_metadata(project, cmd.path);
+        }
+
         return {result: 1, data: {path: root_dir_content}};
     }
     
@@ -152,6 +165,14 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const data = await read_metadata(project, cmd.path);
         return {result: 1, data};
     }
+
+    async function on_del_info(cmd: ServerCommands[typeof DEL_INFO_CMD]): Promise<ServerResponses[typeof DEL_INFO_CMD]> {
+        const current = await read_metadata(project, cmd.path);
+        if (current)
+            await clear_metadata(project, cmd.path);
+        return {result: 1};
+    }
+
     const resp = check_fields(cmd_id, params);
     if (resp) return resp;
 
@@ -196,6 +217,10 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         return await on_get_info(params as ServerCommands[typeof GET_INFO_CMD]);
     }
 
+    if (cmd_id == DEL_INFO_CMD) {
+        return await on_del_info(params as ServerCommands[typeof DEL_INFO_CMD]);
+    }
+
     if (cmd_id == SAVE_DATA_CMD) {
         return await on_save_data(params as ServerCommands[typeof SAVE_DATA_CMD]);
     }
@@ -218,25 +243,59 @@ async function read_metadata(project_name: string, dir: string) {
     const data_file = Bun.file(data_file_path);
     const data_string = await data_file.text();
     const all_metadata = JSON.parse(data_string);
-    const asset_metadata = all_metadata[dir] ? all_metadata[dir] : {};
-    log(all_metadata, dir, asset_metadata)
-    return asset_metadata as TRecursiveDict;
+    const asset_metadata = all_metadata[dir] ? all_metadata[dir] as TRecursiveDict : undefined;
+    return asset_metadata;
+}
+
+async function clear_metadata(project_name: string, dir: string) {
+    const data_file_path = get_metadata_path(project_name);
+    const file_exists = await exists(data_file_path);
+    if (!file_exists) return;
+    const data_file = Bun.file(data_file_path);
+    const data_string = await data_file.text();
+    const all_metadata = JSON.parse(data_string);
+    delete all_metadata[dir];
+    await Bun.write(data_file_path, JSON.stringify(all_metadata));    
 }
 
 async function write_metadata(project_name: string, dir: string, data: TRecursiveDict) {
     const data_file_path = get_metadata_path(project_name);
-    const project_metadata = {[dir]: data};
-    const data_string = JSON.stringify(project_metadata);
-    await Bun.write(data_file_path, data_string);
-    
+    const file_exists = await exists(data_file_path);
+    if (!file_exists) await Bun.write(data_file_path, "{}");
+    const data_file = Bun.file(data_file_path);
+    const data_string = await data_file.text();
+    const all_metadata = JSON.parse(data_string);
+    all_metadata[dir] = data;
+    await Bun.write(data_file_path, JSON.stringify(all_metadata));
 }
 
 export async function get_file(project_name: string, asset_path: string) {
-    const full_path = get_asset_path(project_name, asset_path)
+    const full_path = get_asset_path(project_name, asset_path);
     const file = Bun.file(full_path);
     const exists = await file.exists();
     if (exists) 
         return file;
+}
+
+export async function get_cache(): Promise<ServerCacheData | undefined> {
+    const _path = get_cache_path();
+    const file_exists = await exists(_path);
+    if (!file_exists) {
+        return;
+    }
+    const data_file = Bun.file(_path);
+    const data_string = await data_file.text();
+    return JSON.parse(data_string) as ServerCacheData;
+}
+
+export async function write_cache(data) {
+    const _path = get_cache_path();
+    const file_exists = await exists(_path);
+    if (!file_exists) await Bun.write(_path, "{}");
+    const data_file = Bun.file(_path);
+    const data_string = await data_file.text();
+    const all_data = JSON.parse(data_string);
+    await Bun.write(_path, JSON.stringify({...all_data, ...data}));
 }
 
 export async function project_name_required(cmd_id: CommandId, params: any) {
@@ -273,6 +332,8 @@ export function check_fields(cmd_id: CommandId, params: any) {
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME, DATA_PARAM_NAME]);
     if (cmd_id === SAVE_INFO_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME, DATA_PARAM_NAME]);
+    if (cmd_id === DEL_INFO_CMD)
+        wrong_fields = _check_fields(params, [PATH_PARAM_NAME]);
     if (cmd_id === GET_FOLDER_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME]);
     if (cmd_id === NEW_FOLDER_CMD)

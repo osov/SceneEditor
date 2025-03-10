@@ -1,3 +1,4 @@
+import { WS_RECONNECT_INTERVAL } from "../config";
 import { NetMessagesEditor } from "../modules_editor/modules_editor_const";
 
 type NetMessages = NetMessagesEditor;
@@ -18,7 +19,7 @@ function WsClientModule() {
     let _is_connected = false;
     let cb_on_message: CbOnMessage;
     let is_message_callback = false;
-
+    let timer: NodeJS.Timeout | undefined;
 
     function set_on_message_callback(callback: CbOnMessage) {
         is_message_callback = true;
@@ -75,9 +76,19 @@ function WsClientModule() {
         send_raw(JSON.stringify({ id: id_message, message }));
     }
 
+    function set_reconnect_timer(url: string, time: number) {
+        stop_reconnect_timer();
+        connect(url);
+        timer = setInterval(() => connect(url), WS_RECONNECT_INTERVAL * 1000);
+    }
+
+    function stop_reconnect_timer() {
+        clearInterval(timer);
+    }
+
     // const send_command = function <T extends keyof Messages>(id_message: T, message?: Messages[T]) {
     //     WsClient.send_message('CS_Command', {id: id_message, message});
     // };
 
-    return {connect, disconnect, send_message, send_raw, is_connected}
+    return {connect, disconnect, send_message, send_raw, is_connected, set_reconnect_timer, stop_reconnect_timer}
 }

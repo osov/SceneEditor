@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import path from 'path';
 import { FSObject } from '../../src/modules_editor/modules_editor_const';
 import { working_folder_path } from '../config';
-import { METADATA, PUBLIC, URL_PATHS } from './const';
+import { CACHE, METADATA, PUBLIC, URL_PATHS } from './const';
 
 
 export async function is_folder(path: string) {
@@ -81,6 +81,10 @@ export function get_asset_path(project_name: string, dir: string) {
 
 export function get_metadata_path(project_name: string) {
     return path.join(path.resolve(working_folder_path), project_name, METADATA);  
+}
+
+export function get_cache_path() {
+    return path.join(path.resolve(working_folder_path), CACHE);  
 }
 
 export async function new_folder(dir: string, name: string) {

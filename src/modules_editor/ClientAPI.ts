@@ -1,5 +1,5 @@
 import { SERVER_URL } from "../config";
-import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD as SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, GET_LOADED_PROJECT_CMD, ProtocolWrapper } from "./modules_editor_const";
+import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD as SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, GET_LOADED_PROJECT_CMD, ProtocolWrapper, TDictionary, TRecursiveDict, DEL_INFO_CMD } from "./modules_editor_const";
 
 
 declare global {
@@ -69,15 +69,20 @@ function ClientAPIModule() {
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
     }
 
-    async function save_info(path: string, data: string): Promise<AssetsResponses[typeof SAVE_INFO_CMD]> {
+    async function save_info(path: string, data: TRecursiveDict): Promise<AssetsResponses[typeof SAVE_INFO_CMD]> {
         const command_id = SAVE_INFO_CMD;
-        const data_json = JSON.parse(data);
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, data: data_json});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, data});
     }
     
     async function get_info(path: string): Promise<AssetsResponses[typeof GET_INFO_CMD]> {
         const command_id = GET_INFO_CMD;
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
+    }
+
+    async function del_info(path: string): Promise<AssetsResponses[typeof DEL_INFO_CMD]> {
+        const command_id = DEL_INFO_CMD;
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
+        
     }
 
     async function test_server_ok() {
@@ -99,7 +104,7 @@ function ClientAPIModule() {
         on_message_socket(data.id as keyof NetMessagesEditor, data.message);
     });
 
-    return {get_loaded_project, get_projects, load_project, new_project, new_folder, get_folder, copy, rename, remove, test_server_ok, save_info, get_info, save_data, get_data}
+    return {get_loaded_project, get_projects, load_project, new_project, new_folder, get_folder, copy, rename, remove, test_server_ok, save_info, get_info, del_info, save_data, get_data}
 }
 
 

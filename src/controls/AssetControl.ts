@@ -1,5 +1,5 @@
-import { SERVER_URL, WS_SERVER_URL } from "../config";
-import { AssetType, FILE_UPLOAD_CMD, FSObject, ServerResponses, URL_PATHS } from "../modules_editor/modules_editor_const";
+import { SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
+import { AssetType, FILE_UPLOAD_CMD, FSObject, ServerResponses, TRecursiveDict, URL_PATHS } from "../modules_editor/modules_editor_const";
 import { _span_elem, json_parsable } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
@@ -154,23 +154,27 @@ function AssetControlCreate() {
     }
 
     async function get_file_data(path: string) {
-        if (!current_project) return;
         return await ClientAPI.get_data(path);
     }
 
     async function save_file_data(path: string, data: string) {
-        if (!current_project) return;
         await ClientAPI.save_data(path, data);
     }
 
-    async function save_meta_file_info(path: string, data: string) {
-        if (!current_project) return;
+    async function save_meta_info(path: string, data: TRecursiveDict) {
         await ClientAPI.save_info(path, data);
     }
 
-    async function get_meta_file_info(path: string) {
-        if (!current_project) return;
-        return await ClientAPI.get_info(path);
+    async function get_meta_info(path: string) {
+        const resp = await ClientAPI.get_info(path);
+        if (resp && resp.result === 1 && resp.data) {
+            return resp.data;
+        }
+        return undefined;
+    }
+
+    async function del_meta_info(path: string) {
+        await ClientAPI.del_info(path);
     }
 
     function generate_breadcrumbs(dir: string) {
@@ -363,7 +367,7 @@ function AssetControlCreate() {
             params: { title: `Переименовать ${type_name} ${name}`, button: "Ok", currentName: name, auto_close: true },
             callback: async (success, name) => {
                 if (success && name) {
-                    const new_path = `${current_dir}/${name}`;
+                    const new_path = (current_dir) ? `${current_dir}/${name}` : name;
                     const r = await ClientAPI.rename(asset_path, new_path);
                     if (r.result === 0)
                         error_popup(`Не удалось переименовать ${type_name}, ответ сервера: ${r.message}`);
@@ -415,18 +419,26 @@ function AssetControlCreate() {
 
     async function paste_asset() {
         if (!moving_asset_name) return;
-        const move_to = `${current_dir as string}/${moving_asset_name}`;
-        let r = { result: 0 };
+        const move_to = (current_dir) ? `${current_dir as string}/${moving_asset_name}` : moving_asset_name;
         if (cut_asset_path) {
-            r = await ClientAPI.rename(cut_asset_path, move_to);
+            const resp = await ClientAPI.rename(cut_asset_path, move_to);
+            if (resp && resp.result === 1)
+                await go_to_dir(current_dir as string, true);
+            else if (resp.result === 0) {
+                error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${resp.message}`);
+            }
+            moving_asset_name = undefined;
+            cut_asset_path = "";
+            copy_asset_path = "";
         }
         if (copy_asset_path) {
-            r = await ClientAPI.copy(copy_asset_path, move_to);
+            const resp = await ClientAPI.copy(copy_asset_path, move_to);
+            if (resp && resp.result === 1)
+                await go_to_dir(current_dir as string, true);
+            else if (resp.result === 0) {
+                error_popup(`Не удалось скопировать файл ${name}, ответ сервера: ${resp.message}`);
+            }
         }
-        if (r.result) go_to_dir(current_dir as string, true);
-        moving_asset_name = undefined;
-        cut_asset_path = "";
-        copy_asset_path = "";
     }
 
     async function duplicate_asset(path: string, name: string) {
@@ -448,7 +460,6 @@ function AssetControlCreate() {
                 names_counter++;
                 names.push(elem.name);
             }
-            log(regex, base_name, match, matched_elem_name, matched_elem_name == base_name, names_counter)
         });
         const new_name = (names_counter !== 0) ? `${base_name} (${names_counter})${ext}` : name;
         const move_to = `${current_dir}/${new_name}`;
@@ -554,12 +565,24 @@ function AssetControlCreate() {
             if (Input.is_control() && (event.key == 'v' || event.key == 'м') && moving_asset_name) {
                 const move_to = `${current_dir}/${moving_asset_name}`;
                 if (cut_asset_path) {
-                    await ClientAPI.rename(cut_asset_path, move_to);
+                    const resp = await ClientAPI.rename(cut_asset_path, move_to);
+                    if (resp && resp.result === 1)
+                        await go_to_dir(current_dir as string, true);
+                    else if (resp.result === 0) {
+                        error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${resp.message}`);
+                    }
+                    moving_asset_name = undefined;
+                    cut_asset_path = "";
+                    copy_asset_path = "";
                 }
                 if (copy_asset_path) {
-                    await ClientAPI.copy(copy_asset_path, move_to);
+                    const resp = await ClientAPI.copy(copy_asset_path, move_to);
+                    if (resp && resp.result === 1)
+                        await go_to_dir(current_dir as string, true);
+                    else if (resp.result === 0) {
+                        error_popup(`Не удалось скопировать файл ${name}, ответ сервера: ${resp.message}`);
+                    }
                 }
-                moving_asset_name = undefined;
             }
             if (event.key == 'Delete') {
                 remove_popup(path, name);
@@ -623,9 +646,13 @@ function AssetControlCreate() {
                 const _path = e.dataTransfer.getData("data-path");
                 const name = e.dataTransfer.getData("data-name");
                 const move_to = `${target_path}/${name}`;
-                await ClientAPI.rename(_path, move_to);
-                // обновляем текущую папку, чтобы отобразить изменившееся число файлов в той папке, куда переместили файл
-                await go_to_dir(current_dir, true);
+                const r = await ClientAPI.rename(_path, move_to);
+                if (r && r.result === 1)
+                    // обновляем текущую папку, чтобы отобразить изменившееся число файлов в той папке, куда переместили файл
+                    await go_to_dir(current_dir, true);
+                else {
+                    error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${r.message}`);
+                }
             }
         }
     }
@@ -665,7 +692,7 @@ function AssetControlCreate() {
         }
     });
 
-    return { load_project, draw_assets, get_file_data, save_file_data, save_meta_file_info, get_meta_file_info, draw_empty_project };
+    return { load_project, draw_assets, get_file_data, save_file_data, save_meta_file_info: save_meta_info, get_meta_file_info: get_meta_info, draw_empty_project };
 }
 
 function escapeHTML(text: string) {
@@ -712,7 +739,7 @@ export async function run_debug_filemanager() {
         server_ok = resp_data.result === 1;
     }
     if (server_ok) {
-        WsClient.connect(WS_SERVER_URL);
+        WsClient.set_reconnect_timer(WS_SERVER_URL, WS_RECONNECT_INTERVAL);
         const projects = await ClientAPI.get_projects();
         const project_to_load = 'ExampleProject';
         const names: string[] = [];

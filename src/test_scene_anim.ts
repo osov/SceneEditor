@@ -1,4 +1,6 @@
+import { SERVER_URL } from "./config";
 import { run_debug_filemanager } from "./controls/AssetControl";
+import { URL_PATHS } from "./modules_editor/modules_editor_const";
 import { apply_object_transform, apply_tile_transform, get_depth, get_tile_texture, MapData, parse_tiled, preload_tiled_textures, rotate_point, TILE_FLIP_MASK } from "./render_engine/parsers/tile_parser";
 import { IObjectTypes } from "./render_engine/types";
 
@@ -6,7 +8,7 @@ import { IObjectTypes } from "./render_engine/types";
 export async function run_anim_scene() {
     await ResourceManager.preload_texture('./img/2.png');
     run_debug_filemanager();
-    ResourceManager.set_project_path('http://localhost:7007/assets/');
+    ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
 
 
 

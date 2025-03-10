@@ -5,7 +5,7 @@ export const _GAME_CONFIG = {
 
 export const SERVER_URL = 'http://localhost:7007';
 export const WS_SERVER_URL = 'http://localhost:7001';
-export const PING_INTERVAL = 10;
+export const WS_RECONNECT_INTERVAL = 10;
 
 export type _UserMessages = {
 

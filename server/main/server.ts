@@ -1,7 +1,7 @@
 import path from "path";
 import { Router } from "bun-serve-router";
 import { ERROR_TEXT, URL_PATHS, CMD_NAME, LOAD_PROJECT_CMD, GET_FOLDER_CMD, GET_LOADED_PROJECT_CMD } from "./const";
-import { project_name_required, get_file, handle_command, loaded_project_required } from "./logic";
+import { project_name_required, get_file, handle_command, loaded_project_required, get_cache, write_cache } from "./logic";
 import { ExtWebSocket, WsClient } from "./types";
 import { ServerResponses, ServerCommands, NetMessagesEditor as NetMessages, CommandId } from "../../src/modules_editor/modules_editor_const";
 import { TDictionary } from "../../src/modules_editor/modules_editor_const";
@@ -10,14 +10,15 @@ import { get_asset_path, get_full_path } from "./fs_utils";
 import { WsServer } from "./WsServer";
 import { FSWatcher } from "./fs_watcher";
 
-export function Server(server_port: number) {
+export async function Server(server_port: number, ws_server_port: number) {
     // const clients = Clients();
     let sockets: WsClient[] = [];
     const fs_watcher = FSWatcher(get_full_path(""), sockets);
     const router = new Router();
     const data_sessions: TDictionary<any> = {};
-    let current_project: string | undefined;
-    let current_dir = "";
+    const cache = await get_cache();
+    let current_project: string | undefined = (cache) ? cache.current_project : undefined;
+    let current_dir = (cache) ? cache.current_dir : "";
 
     router.add("GET", `${URL_PATHS.TEST}`, (request, params) => {
         return test_func();
@@ -95,7 +96,7 @@ export function Server(server_port: number) {
         }     
     });
 
-    const ws_server = WsServer<ExtWebSocket>(server_port + 1,
+    const ws_server = WsServer<ExtWebSocket>(ws_server_port,
         // on_data
         (client, data) => {
             // log('client data', client.data, data);
@@ -146,10 +147,12 @@ export function Server(server_port: number) {
                 current_project = _result.data?.name as string;
                 log(`${current_project} is current loaded project`);
                 current_dir = "";
+                await write_cache({current_project, current_dir});
             }
             if (cmd_id === GET_FOLDER_CMD) {
                 const _params = params as ServerCommands[typeof GET_FOLDER_CMD];
-                current_dir = _params.path as string;         
+                current_dir = _params.path as string;    
+                await write_cache({current_dir});     
             }
         }
         return result;

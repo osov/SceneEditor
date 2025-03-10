@@ -6,3 +6,8 @@ export interface ExtWebSocket {
 }
 
 export type WsClient = ServerWebSocket<ExtWebSocket>;
+
+export type ServerCacheData = {
+    current_project: string,
+    current_dir: string
+}
