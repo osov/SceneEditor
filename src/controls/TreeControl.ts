@@ -1,6 +1,6 @@
 import { deepClone } from "../modules/utils";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
-import { NodeAction } from "./ActionsControl";
+import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui } from "./ActionsControl";
 
 declare global {
     const TreeControl: ReturnType<typeof TreeControlCreate>;
@@ -935,57 +935,61 @@ function TreeControlCreate() {
 
     }
     
-    function isNotActiveCMI(action: number): boolean {
-        if (!itemDrag) return false;    
+    function getItemCM(text: string, action: number): contextMenuItem {
+        let not_active = false;
 
         if (action == NodeAction.rename)
-            if (itemDrag?.no_rename || itemDrag?.id == -1) return true;
+            if (itemDrag?.no_rename || itemDrag?.id == -1) not_active = true;
 
         if (action == NodeAction.CTRL_X || action == NodeAction.remove)
-            if (itemDrag?.no_remove || itemDrag?.id == -1) return true;
-
+            if (itemDrag?.no_remove || itemDrag?.id == -1) not_active = true;
+        
         if (action == NodeAction.CTRL_C || action == NodeAction.CTRL_D)
-            if (itemDrag?.id == -1) return true;
-
+            if (itemDrag?.id == -1) not_active = true;
+        
         if (action == NodeAction.CTRL_V || action == NodeAction.CTRL_B) {
             const canPaste = ActionsControl.checkPasteSameWorld(itemDrag) == false;
-            if (itemDrag?.no_drop || canPaste) return true;
+            if (itemDrag?.no_drop || canPaste) not_active = true;
         }
+        
+        if (NodeActionGui.includes(action) && worldGo.includes(itemDrag?.icon)) not_active = true;
+        
+        if (NodeActionGo.includes(action) && worldGui.includes(itemDrag?.icon)) not_active = true;
 
-        return false;        
+        return { text, action, not_active };
     }
     
     function getContextMenuItems(): contextMenuItem[] {
         const cm_list: contextMenuItem [] = [];
-        cm_list.push({ text: 'Переименовать', action: NodeAction.rename, not_active: isNotActiveCMI(NodeAction.rename) });
-        cm_list.push({ text: 'Вырезать', action: NodeAction.CTRL_X, not_active: isNotActiveCMI(NodeAction.rename) });
-        cm_list.push({ text: 'Копировать', action: NodeAction.CTRL_C, not_active: isNotActiveCMI(NodeAction.rename) });
+        cm_list.push(getItemCM('Переименовать', NodeAction.rename));
+        cm_list.push(getItemCM('Вырезать', NodeAction.CTRL_X));
+        cm_list.push(getItemCM('Копировать', NodeAction.CTRL_C));
 
-        cm_list.push({ text: 'Вставить', action: NodeAction.CTRL_V, not_active: isNotActiveCMI(NodeAction.CTRL_V) });
-        cm_list.push({ text: 'Вставить дочерним', action: NodeAction.CTRL_B, not_active: isNotActiveCMI(NodeAction.CTRL_B) });
+        cm_list.push(getItemCM('Вставить', NodeAction.CTRL_V));
+        cm_list.push(getItemCM('Вставить дочерним', NodeAction.CTRL_B));
         
-        cm_list.push({ text: 'Дублировать', action: NodeAction.CTRL_D, not_active: isNotActiveCMI(NodeAction.rename) });
-        cm_list.push({ text: 'Удалить', action: NodeAction.remove, not_active: isNotActiveCMI(NodeAction.rename) });
+        cm_list.push(getItemCM('Дублировать', NodeAction.CTRL_D));
+        cm_list.push(getItemCM('Удалить', NodeAction.remove));
         cm_list.push({ text: 'line' });
 
         cm_list.push({ text: 'Создать UI', children: [
-            { text: 'Добавить контейнер', action: NodeAction.add_gui_container },
-            { text: 'Добавить блок', action: NodeAction.add_gui_box },
-            { text: 'Добавить текст', action: NodeAction.add_gui_text },
+            getItemCM('Добавить контейнер', NodeAction.add_gui_container),
+            getItemCM('Добавить блок', NodeAction.add_gui_box),
+            getItemCM('Добавить текст', NodeAction.add_gui_text),
             { text: 'line' },
             { text: 'Расширенные', children: [
-                { text: 'Добавить кнопку', action: 'none' },
-                { text: 'Добавить прогресс бар', action: 'none' },
-                { text: 'Добавить скрол', action: 'none' },
+                getItemCM('Добавить кнопку', -5),
+                getItemCM('Добавить прогресс бар', -5),
+                getItemCM('Добавить скрол', -5),
             ] },
         ] });
 
         cm_list.push({ text: 'line' });
         cm_list.push({ text: 'Game', children: [
-            { text: 'Добавить контейнер', action: NodeAction.add_go_container },
-            { text: 'Добавить спрайт', action: NodeAction.add_go_sprite_component },
-            { text: 'Добавить надпись', action: NodeAction.add_go_label_component },
-            { text: 'Добавить модель', action: NodeAction.add_go_model_component },
+            getItemCM('Добавить контейнер', NodeAction.add_go_container),
+            getItemCM('Добавить спрайт', NodeAction.add_go_sprite_component),
+            getItemCM('Добавить надпись', NodeAction.add_go_label_component),
+            getItemCM('Добавить модель', NodeAction.add_go_model_component),
         ] });
         
         return cm_list;

@@ -33,6 +33,33 @@ export enum NodeAction {
     new_particles,
 }
 
+export const NodeActionGui: number[] = [
+    NodeAction.add_gui_container,
+    NodeAction.add_gui_box,
+    NodeAction.add_gui_text
+];
+
+export const NodeActionGo: number[] = [
+    NodeAction.add_go_container,
+    NodeAction.add_go_sprite_component,
+    NodeAction.add_go_label_component,
+    NodeAction.add_go_model_component
+];
+
+export const worldGo: string[] = [
+    IObjectTypes.GO_CONTAINER,
+    IObjectTypes.GO_MODEL_COMPONENT,
+    IObjectTypes.GO_SPRITE_COMPONENT,
+    IObjectTypes.GO_LABEL_COMPONENT
+];
+
+export const worldGui: string[] = [
+    IObjectTypes.GUI_CONTAINER,
+    IObjectTypes.GUI_BOX,
+    IObjectTypes.GUI_TEXT
+];
+
+
 function ActionsControlCreate() {
     let copy_mesh_list: any[] = [];
     let is_cut: boolean = false;
@@ -200,10 +227,8 @@ function ActionsControlCreate() {
 
         function getWorldName(type: string): string {
             if (!type) return '';
-            const go = ['go', 'sprite', 'label', 'model'];
-            const gui = ['gui', 'box', 'text'];
-            if (go.includes(type)) return 'go';
-            if (gui.includes(type)) return 'gui';
+            if (worldGo.includes(type)) return 'go';
+            if (worldGui.includes(type)) return 'gui';
             return '';
         }
         
