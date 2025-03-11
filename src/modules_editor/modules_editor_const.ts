@@ -80,10 +80,12 @@ export type AssetsResponses = {
 export type NetMessagesEditor = {
     GET_LOADED_PROJECT: VoidMessage,
     LOADED_PROJECT: { name: string | undefined, current_dir: string },
-    SERVER_FILE_SYSTEM_EVENT: { path: string, project: string, obj_type: FSObjectType, event_type: FSEventType },
+    SERVER_FILE_SYSTEM_EVENTS: { events: FSEvent[] },
 }
 
 export type FileUploadedData = { size: number, path: string, name: string, project: string };
+
+export type FSEvent = { path: string, project: string, obj_type: FSObjectType, event_type: FSEventType };
 
 export type FSObjectType = "folder" | "file" | "null";
 

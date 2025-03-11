@@ -10,10 +10,10 @@ import { get_asset_path, get_full_path } from "./fs_utils";
 import { WsServer } from "./WsServer";
 import { FSWatcher } from "./fs_watcher";
 
-export async function Server(server_port: number, ws_server_port: number) {
+export async function Server(server_port: number, ws_server_port: number, fs_events_interval: number) {
     // const clients = Clients();
     let sockets: WsClient[] = [];
-    const fs_watcher = FSWatcher(get_full_path(""), sockets);
+    const fs_watcher = FSWatcher(get_full_path(""), sockets, fs_events_interval);
     const router = new Router();
     const data_sessions: TDictionary<any> = {};
     const cache = await get_cache();
@@ -151,8 +151,10 @@ export async function Server(server_port: number, ws_server_port: number) {
             }
             if (cmd_id === GET_FOLDER_CMD) {
                 const _params = params as ServerCommands[typeof GET_FOLDER_CMD];
-                current_dir = _params.path as string;    
-                await write_cache({current_dir});     
+                if (current_dir != _params.path) {
+                    current_dir = _params.path as string;    
+                    await write_cache({current_dir});    
+                } 
             }
         }
         return result;

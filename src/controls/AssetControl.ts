@@ -478,10 +478,18 @@ function AssetControlCreate() {
         }
     }
 
-    function on_dir_change(message: Messages['SERVER_FILE_SYSTEM_EVENT']) {
-        if (message.project === current_project && message.path === current_dir) {
-            renew_current_dir();
+    function on_fs_events(message: Messages['SERVER_FILE_SYSTEM_EVENTS']) {
+        const events = message.events;
+        let renew_required = false;
+        if (events && events.length != 0) {
+            events.forEach(event => {
+                if (event.project === current_project && event.path === current_dir) {
+                    renew_required = true;
+                }
+            });
         }
+        if (renew_required)
+            renew_current_dir();
     }
 
     async function draw_empty_project() {
@@ -677,7 +685,7 @@ function AssetControlCreate() {
     EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
-    EventBus.on('SERVER_FILE_SYSTEM_EVENT', on_dir_change);
+    EventBus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
 
     EventBus.on('LOADED_PROJECT', async (m) => {
         if (m.name && m.current_dir) {

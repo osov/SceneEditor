@@ -90,9 +90,9 @@ function ClientAPIModule() {
     }
     
     function on_message_socket<T extends keyof NetMessagesEditor>(id_message: T, _message: NetMessagesEditor[T]) {
-        if (id_message == 'SERVER_FILE_SYSTEM_EVENT') {
-            const message = _message as NetMessagesEditor['SERVER_FILE_SYSTEM_EVENT'];
-            EventBus.trigger('SERVER_FILE_SYSTEM_EVENT', message);
+        if (id_message == 'SERVER_FILE_SYSTEM_EVENTS') {
+            const message = _message as NetMessagesEditor['SERVER_FILE_SYSTEM_EVENTS'];
+            EventBus.trigger('SERVER_FILE_SYSTEM_EVENTS', message);
         }
     }
 
