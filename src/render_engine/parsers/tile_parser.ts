@@ -92,7 +92,7 @@ export async function preload_tiled_textures(map_data: MapData) {
         const tile_set = map_data.tile_info[id_tileset];
         for (const id in tile_set) {
             const tex = tile_set[id];
-            const p = preload_tile_texture(id, tex.url, id_tileset);
+            const p = preload_tile_texture(id, '/' + tex.url, id_tileset);
             list.push(p);
         }
     }
@@ -114,7 +114,7 @@ export function parse_tiled(data: MapData) {
     };
 
     for (const obj_layer of data.objects) {
-       // if (obj_layer.layer_name != 'КрышаКрона') continue;
+        // if (obj_layer.layer_name != 'КрышаКрона') continue;
         render_data.objects_layers.push({
             layer_name: obj_layer.layer_name,
             objects: create_objects(obj_layer)
@@ -129,8 +129,8 @@ function create_objects(obj_layer: ObjectLayer) {
     for (const obj of obj_layer.objects) {
         const new_pos = rotate_point(new Vector2(obj.x, -obj.y), new Vector2(obj.width, obj.height), obj.rotation != undefined ? -obj.rotation : 0);
         const data = {
-            x:new_pos.x+ obj.width / 2,
-            y: new_pos.y+ obj.height / 2,
+            x: new_pos.x + obj.width / 2,
+            y: new_pos.y + obj.height / 2,
             width: obj.width,
             height: obj.height,
             tile_id: obj.tile_id,

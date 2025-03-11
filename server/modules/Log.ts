@@ -3,32 +3,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { appendFileSync } from "node:fs";
 
-export function get_hms() {
-    var now = new Date();
-    var hh: number | string = now.getHours();
-    var mm: number | string = now.getMinutes();
-    var ss: number | string = now.getSeconds();
-    if (hh < 10)
-        hh = '0' + hh;
-    if (mm < 10)
-        mm = '0' + mm;
-    if (ss < 10)
-        ss = '0' + ss;
-    return hh + ":" + mm + ":" + ss;
-}
-
-export function get_dmy() {
-    var now = new Date();
-    var dd: number | string = now.getDate();
-    var mo: number | string = now.getMonth() + 1;
-    var yy = now.getFullYear().toString();
-    if (mo < 10)
-        mo = '0' + mo;
-    if (dd < 10)
-        dd = '0' + dd;
-    return dd + "." + mo + "." + yy;
-}
-
 /*
     Модуль для логирования как в логи редактора, так и в консоль браузера если это хтмл5
     доступен глобальный метод log либо
@@ -44,6 +18,7 @@ export function register_log() {
     (global as any).Log = LogModule();
     (global as any).log = Log.log;
 }
+
 
 
 type LogLevels = 'notice' | 'log' | 'info' | 'warn' | 'error';
@@ -110,3 +85,28 @@ function LogModule(_prefix = '', _log_level: LogLevels = 'notice') {
     return { get_with_prefix, notice, log, warn, error };
 }
 
+export function get_hms() {
+    var now = new Date();
+    var hh: number | string = now.getHours();
+    var mm: number | string = now.getMinutes();
+    var ss: number | string = now.getSeconds();
+    if (hh < 10)
+        hh = '0' + hh;
+    if (mm < 10)
+        mm = '0' + mm;
+    if (ss < 10)
+        ss = '0' + ss;
+    return hh + ":" + mm + ":" + ss;
+}
+
+export function get_dmy() {
+    var now = new Date();
+    var dd: number | string = now.getDate();
+    var mo: number | string = now.getMonth() + 1;
+    var yy = now.getFullYear().toString();
+    if (mo < 10)
+        mo = '0' + mo;
+    if (dd < 10)
+        dd = '0' + dd;
+    return dd + "." + mo + "." + yy;
+}

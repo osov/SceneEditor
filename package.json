@@ -10,6 +10,7 @@
     "server-watch": "bun --watch server/main.ts"
   },
   "devDependencies": {
+    "@types/bun": "^1.2.5",
     "@types/three": "latest",
     "bun-types": "^1.2.4",
     "notyf": "^3.10.0",

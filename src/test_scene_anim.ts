@@ -57,7 +57,7 @@ export async function run_anim_scene() {
     SceneManager.add(t1);
 
 */
-    const map_data = await ResourceManager.load_asset('./parsed_map.json') as MapData;
+    const map_data = await ResourceManager.load_asset('/parsed_map.json') as MapData;
     await preload_tiled_textures(map_data);
     const render_data = parse_tiled(map_data);
 

@@ -1,5 +1,5 @@
 import { WatchEventType } from "fs";
-import { IBaseMeshDataAndThree } from "../render_engine/types";
+import { IBaseEntityAndThree } from "../render_engine/types";
 import { ChangeInfo } from "../controls/InspectorControl";
 import { VoidMessage } from "../modules/modules_const";
 
@@ -9,8 +9,8 @@ export type CommandId = keyof ServerCommands;
 
 export type _SystemMessagesEditor = {
     SYS_INPUT_UNDO: {},
-    SYS_SELECTED_MESH: { mesh: IBaseMeshDataAndThree },
-    SYS_SELECTED_MESH_LIST: { list: IBaseMeshDataAndThree[] },
+    SYS_SELECTED_MESH: { mesh: IBaseEntityAndThree },
+    SYS_SELECTED_MESH_LIST: { list: IBaseEntityAndThree[] },
     SYS_UNSELECTED_MESH_LIST: {},
     SYS_GRAPH_SELECTED: { list: number[] },
     SYS_GRAPH_CHANGE_NAME: { id: number, name: string },
