@@ -1,5 +1,5 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, LineDashedMaterial, BufferGeometry, Line, Object3DEventMap, Scene } from "three";
-import {  IBaseEntityAndThree, IBaseMeshAndThree, PivotX, PivotY } from "../render_engine/types";
+import { IBaseEntityAndThree, IBaseMeshAndThree, PivotX, PivotY } from "../render_engine/types";
 import { AnchorEventData, PositionEventData, SizeEventData, SliceEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { is_base_mesh } from "../render_engine/helpers/utils";
@@ -138,6 +138,7 @@ function SizeControlCreate() {
                             const pivot = index_to_pivot(i);
                             HistoryControl.add('MESH_PIVOT', [{ id_mesh: mesh.mesh_data.id, pivot: mesh.get_pivot() }]);
                             mesh.set_pivot(pivot.x, pivot.y, true);
+                            InspectorControl.refresh([Property.PIVOT]);
                             // для текста почему-то прыгает размер и поэтому bb определяется неверно на ближайших кадрах
                             // поэтому не обновляем draw_debug_bb
                             for (let i = 0; i < pivot_points.length; i++)
@@ -151,8 +152,6 @@ function SizeControlCreate() {
                         }
                     }
                 }
-
-                InspectorControl.refresh([Property.POSITION, Property.PIVOT]);
             }
         })
 
@@ -211,6 +210,7 @@ function SizeControlCreate() {
             if (is_changed_pos) {
                 is_changed_pos = false;
                 HistoryControl.add('MESH_TRANSLATE', old_pos);
+
             }
             if (is_changed_size) {
                 is_changed_size = false;
@@ -310,6 +310,8 @@ function SizeControlCreate() {
 
                         selected_go.set_position(lp.x, lp.y);
                         is_changed_size = true;
+
+                        InspectorControl.refresh([Property.SIZE]);
                     }
                 }
                 if (dir[0] == 0 && dir[1] == 0) {
@@ -341,12 +343,13 @@ function SizeControlCreate() {
                             lp = selected_go.parent.worldToLocal(lp);
                         selected_go.set_position(lp.x, lp.y, lp.z);
                         is_changed_pos = true;
+
+                        InspectorControl.refresh([Property.POSITION]);
                     }
                 }
                 draw_debug_bb(bounds);
 
                 TransformControl.set_proxy_in_average_point(selected_list);
-                InspectorControl.refresh([Property.POSITION, Property.SIZE]);
             }
         });
     }
