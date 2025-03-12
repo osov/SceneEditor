@@ -210,7 +210,6 @@ function SizeControlCreate() {
             if (is_changed_pos) {
                 is_changed_pos = false;
                 HistoryControl.add('MESH_TRANSLATE', old_pos);
-
             }
             if (is_changed_size) {
                 is_changed_size = false;
@@ -311,7 +310,7 @@ function SizeControlCreate() {
                         selected_go.set_position(lp.x, lp.y);
                         is_changed_size = true;
 
-                        InspectorControl.refresh([Property.SIZE]);
+                        InspectorControl.refresh([Property.POSITION, Property.SIZE]);
                     }
                 }
                 if (dir[0] == 0 && dir[1] == 0) {
@@ -343,13 +342,12 @@ function SizeControlCreate() {
                             lp = selected_go.parent.worldToLocal(lp);
                         selected_go.set_position(lp.x, lp.y, lp.z);
                         is_changed_pos = true;
-
-                        InspectorControl.refresh([Property.POSITION]);
                     }
                 }
                 draw_debug_bb(bounds);
 
                 TransformControl.set_proxy_in_average_point(selected_list);
+                InspectorControl.refresh([Property.POSITION]);
             }
         });
     }

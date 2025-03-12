@@ -97,7 +97,7 @@ import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
-import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from './types';
+import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from './types';
 import { TextureInfo } from '../render_engine/resource_manager';
 import { SERVER_URL } from '../config';
 
@@ -283,7 +283,8 @@ function InspectorControlCreate() {
     let _data: ObjectData[];
 
     let _is_first = true;
-    let _refreshed_properies: Property[] = [];
+    let _is_refreshed = false;
+    // let _refreshed_properies: Property[] = [];
 
     function init() {
         _inspector = new Pane({
@@ -469,11 +470,43 @@ function InspectorControlCreate() {
             });
         });
 
-        _refreshed_properies = properties;
+        properties.forEach((property) => {
+            const pane = searchPaneInFolderByProperty(_inspector, property);
+            if (pane) {
+                _is_refreshed = true;
+                pane.refresh();
+            }
+        });
+    }
 
-        console.log("ADD REFRESH PROPERTIES: ", _refreshed_properies);
+    function searchPaneInFolderByProperty(folder: FolderApi, property: Property): Pane | undefined {
+        if (folder.children == undefined) {
+            Log.error("Not folder: ", folder);
+            return undefined;
+        }
 
-        _inspector.refresh();
+        for (const child of folder.children) {
+            if ((child as FolderApi).children != undefined) {
+                const folder = child as FolderApi;
+                const result = searchPaneInFolderByProperty(folder, property);
+                if (result != undefined) return result;
+            }
+
+            let title = '';
+            for (const group of _config) {
+                const item = group.property_list.find((item) => item.name == property);
+                if (item) {
+                    title = item.title;
+                    break;
+                }
+            }
+
+            if (child.element.querySelector('.tp-lblv_l')?.textContent == title) {
+                return child as Pane;
+            }
+        }
+
+        return undefined;
     }
 
     function clear() {
@@ -793,9 +826,9 @@ function InspectorControlCreate() {
 
         if (!property.readonly) {
             entity.onBeforeChange = () => {
-                console.log("TRY BEFORE CHANGES");
+                console.log("TRY CALL BEFORE CHANGES");
 
-                if (!_is_first || wasRefreshed(property)) {
+                if (!_is_first || _is_refreshed) {
                     return;
                 }
 
@@ -811,12 +844,22 @@ function InspectorControlCreate() {
 
             entity.onChange = (event: ChangeEvent) => {
                 // NOTE: не обновляем только что измененные значения из вне(после refresh)
-                if (wasRefreshed(property)) {
-                    removeRefreshed(property);
+                if (_is_refreshed) {//wasRefreshed(property)) {
+                    // removeRefreshed(property);
+                    _is_refreshed = false;
 
                     // NOTE: проверяем нужно ли поставить прочерк после внешнего изменения, в случае разных значений
-                    // - нужно только для позиции, так как в остальных все значения после изменения применяются ко всем полям, всех обьектов
+                    // - нужно только для позиции и размера, так как в остальных все значения после изменения применяются ко всем полям, всех обьектов
                     tryDisabledPositionValueByAxis({
+                        ids,
+                        data: {
+                            field,
+                            property,
+                            event
+                        }
+                    });
+
+                    tryDisabledSizeValueByAxis({
                         ids,
                         data: {
                             field,
@@ -846,26 +889,6 @@ function InspectorControlCreate() {
         }
 
         return entity;
-    }
-
-    function wasRefreshed<T extends PropertyType>(property: PropertyItem<T>) {
-        if (_refreshed_properies.length != 0) {
-            const index = _refreshed_properies.findIndex((prop) => property.name == prop);
-            if (index != -1) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    function removeRefreshed<T extends PropertyType>(property: PropertyItem<T>) {
-        const index = _refreshed_properies.findIndex((prop) => property.name == prop);
-        if (index != -1) {
-            _refreshed_properies.splice(index, 1);
-            console.log('REMOVE REFRESH PROPERTY: ', property.name);
-            console.log('REFRESH PROPERTIES: ', _refreshed_properies);
-        }
     }
 
     function renderEntities(entities: Entities[], place: FolderApi = _inspector) {
@@ -929,6 +952,44 @@ function InspectorControlCreate() {
         if (combX) inputs[0].value = '-';
         if (combY) inputs[1].value = '-';
         if (combZ) inputs[2].value = '-';
+    }
+
+    function tryDisabledSizeValueByAxis(info: ChangeInfo) {
+        if (info.data.field.name != Property.SIZE) {
+            return;
+        }
+
+        let combX, combY;
+
+        // NOTE: ищем несовпадения по осям
+        let prevSize: Vector2;
+        for (let i = 0; i < info.ids.length; i++) {
+            const id = info.ids[i];
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (!mesh) return;
+
+            if (i == 0) {
+                prevSize = new Vector2();
+                prevSize.copy(mesh.get_size());
+            } else {
+                if (!combX) combX = prevSize!.x != mesh.get_size().x;
+                if (!combY) combY = prevSize!.y != mesh.get_size().y;
+
+                if (combX && combY) {
+                    break;
+                }
+
+                prevSize!.copy(mesh.get_size());
+            }
+        }
+
+        // NOTE: рисуем '-' в нужном input теге
+        const inputs = info.data.event.target.controller.view.valueElement.querySelectorAll('input');
+        if (combX) inputs[0].value = '-';
+        if (combY) inputs[1].value = '-';
     }
 
     function saveValue(info: BeforeChangeInfo) {
@@ -1171,6 +1232,7 @@ function InspectorControlCreate() {
     }
 
     function saveSize(ids: number[]) {
+        const oldSizes: SizeEventData[] = [];
         ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1178,12 +1240,10 @@ function InspectorControlCreate() {
 
             if (!mesh) return;
 
-            HistoryControl.add('MESH_SIZE', [{
-                id_mesh: id,
-                position: mesh.get_position(),
-                size: mesh.get_size()
-            }]);
+            oldSizes.push({ id_mesh: id, position: mesh.get_position(), size: mesh.get_size() });
         });
+
+        HistoryControl.add('MESH_SIZE', oldSizes);
     }
 
     function updateSize(value: ChangeInfo) {
