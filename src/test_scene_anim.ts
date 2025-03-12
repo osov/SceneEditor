@@ -96,6 +96,7 @@ export async function run_anim_scene() {
             if (tile.rotation)
                 plane.rotation.z = -tile.rotation! * Math.PI / 180;
             container.add(plane);
+            plane.name = tile_info.name+''+plane.mesh_data.id;
         }
     }
 
