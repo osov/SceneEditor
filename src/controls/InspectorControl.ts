@@ -85,14 +85,14 @@ TODO: попробовать упростить через дженерики, �
 
 
 import { Pane, TpChangeEvent } from 'tweakpane';
-import { BindingApi, BindingParams, ButtonParams, FolderApi } from '@tweakpane/core';
+import { BindingApi, BindingParams, BladeState, ButtonParams, FolderApi } from '@tweakpane/core';
 import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plugin';
-import { Vector2, Vector3, Vector4 } from 'three';
+import { Vector2, Vector3 } from 'three';
 import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
@@ -284,7 +284,7 @@ function InspectorControlCreate() {
 
     let _is_first = true;
     let _is_refreshed = false;
-    // let _refreshed_properies: Property[] = [];
+    let _last_inspector_state: BladeState = {};
 
     function init() {
         _inspector = new Pane({
@@ -377,6 +377,8 @@ function InspectorControlCreate() {
         });
 
         // IDEA: в значение пихать callback который будет отвечать за обновление
+        /* TODO: все значения должны быть копиями, чтобы инспектор не мог их изменять на прямую, а только самому в ивенте обновления
+                 при этом также нужно будет еще обновлять и при рефреше */
         const data = list.map((value) => {
             const fields = [];
 
@@ -385,13 +387,13 @@ function InspectorControlCreate() {
             fields.push({ name: Property.NAME, data: value.name });
             fields.push({ name: Property.VISIBLE, data: value.get_visible() });
             fields.push({ name: Property.ACTIVE, data: value.get_active() });
-            fields.push({ name: Property.POSITION, data: value.position });
+            fields.push({ name: Property.POSITION, data: value.get_position() });
 
             const raw = value.rotation;
             const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
             fields.push({ name: Property.ROTATION, data: rotation });
 
-            fields.push({ name: Property.SCALE, data: value.scale });
+            fields.push({ name: Property.SCALE, data: value.get_scale() });
             fields.push({ name: Property.SIZE, data: value.get_size() });
 
             if ([IObjectTypes.GUI_CONTAINER, IObjectTypes.GUI_BOX, IObjectTypes.GUI_TEXT].includes(value.type)) {
@@ -429,6 +431,8 @@ function InspectorControlCreate() {
 
         clear();
         setData(data);
+
+        _last_inspector_state = deepClone(_inspector.exportState());
     }
 
     function refresh(properties: Property[]) {
@@ -441,25 +445,17 @@ function InspectorControlCreate() {
 
                 // NOTE: для полей которые не по ссылке или требуют обработки
                 switch (property) {
-                    case Property.SIZE:
-                        value.data = item.get_size();
-                        break;
-                    case Property.PIVOT:
-                        value.data = pivotToScreenPreset(item.get_pivot());
-                        break;
-                    case Property.ANCHOR:
-                        value.data = item.get_anchor();
-                        break;
-                    case Property.ANCHOR_PRESET:
-                        value.data = anchorToScreenPreset(item.get_anchor());
-                        break;
-                    case Property.SLICE9:
-                        value.data = (item as Slice9Mesh).get_slice();
-                        break;
+                    case Property.POSITION: value.data = item.get_position(); break;
                     case Property.ROTATION:
                         const raw = item.rotation;
                         value.data = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
                         break;
+                    case Property.SCALE: value.data = item.get_scale(); break;
+                    case Property.SIZE: value.data = item.get_size(); break;
+                    case Property.PIVOT: value.data = pivotToScreenPreset(item.get_pivot()); break;
+                    case Property.ANCHOR: value.data = item.get_anchor(); break;
+                    case Property.ANCHOR_PRESET: value.data = anchorToScreenPreset(item.get_anchor()); break;
+                    case Property.SLICE9: value.data = (item as Slice9Mesh).get_slice(); break;
                     case Property.FONT_SIZE:
                         const delta = new Vector3(1 * item.scale.x, 1 * item.scale.y);
                         const max_delta = Math.max(delta.x, delta.y);
@@ -477,6 +473,8 @@ function InspectorControlCreate() {
                 pane.refresh();
             }
         });
+
+        _last_inspector_state = deepClone(_inspector.exportState());
     }
 
     function searchPaneInFolderByProperty(folder: FolderApi, property: Property): Pane | undefined {
@@ -615,6 +613,7 @@ function InspectorControlCreate() {
                         if (v2p.x) v2p.x.disabled = true;
                         else v2p.x = { disabled: true };
                     } else _unique_fields[index].property.params = { x: { disabled: true } };
+                    unique_field_data.x = (unique_field_data.x + field_data.x) / 2;
                 }
 
                 if (field_data.y != unique_field_data.y) {
@@ -624,6 +623,7 @@ function InspectorControlCreate() {
                         if (v2p.y) v2p.y.disabled = true;
                         else v2p.y = { disabled: true };
                     } else _unique_fields[index].property.params = { y: { disabled: true } };
+                    unique_field_data.y = (unique_field_data.y + field_data.y) / 2;
                 }
             }
 
@@ -639,6 +639,7 @@ function InspectorControlCreate() {
                         if (v3p.z) v3p.z.disabled = true;
                         else v3p.z = { disabled: true };
                     } else _unique_fields[index].property.params = { z: { disabled: true } };
+                    unique_field_data.z = (unique_field_data.z + field_data.z) / 2;
                 }
             }
 
@@ -655,6 +656,7 @@ function InspectorControlCreate() {
                         else v4p.w = { disabled: true };
                     } else _unique_fields[index].property.params = { w: { disabled: true } };
                 }
+                unique_field_data.w = (unique_field_data.w + field_data.w) / 2;
             }
         } else {
             if (field.data != _unique_fields[index].field.data) {
@@ -844,22 +846,10 @@ function InspectorControlCreate() {
 
             entity.onChange = (event: ChangeEvent) => {
                 // NOTE: не обновляем только что измененные значения из вне(после refresh)
-                if (_is_refreshed) {//wasRefreshed(property)) {
-                    // removeRefreshed(property);
+                if (_is_refreshed) {
                     _is_refreshed = false;
 
-                    // NOTE: проверяем нужно ли поставить прочерк после внешнего изменения, в случае разных значений
-                    // - нужно только для позиции и размера, так как в остальных все значения после изменения применяются ко всем полям, всех обьектов
-                    tryDisabledPositionValueByAxis({
-                        ids,
-                        data: {
-                            field,
-                            property,
-                            event
-                        }
-                    });
-
-                    tryDisabledSizeValueByAxis({
+                    tryDisabledValueByAxis({
                         ids,
                         data: {
                             field,
@@ -879,6 +869,17 @@ function InspectorControlCreate() {
                         event
                     }
                 });
+
+                tryDisabledValueByAxis({
+                    ids,
+                    data: {
+                        field,
+                        property,
+                        event
+                    }
+                });
+
+                _last_inspector_state = deepClone(_inspector.exportState());
 
                 // NOTE: после последних изменений, ставим что следующие будут первыми
                 if (event.last) {
@@ -912,6 +913,17 @@ function InspectorControlCreate() {
             if (entity.onBeforeChange) binding.controller.value.emitter.on('beforechange', entity.onBeforeChange);
             if (entity.onChange) binding.on('change', entity.onChange);
         }
+    }
+
+    // NOTE: проверяем нужно ли поставить прочерк в случае разных значений
+    function tryDisabledValueByAxis(info: ChangeInfo) {
+        // TODO: сделать проверку на прочерк для всех векторных полей, использую функцию которя будет возвращать значения из меша по принемаемому Property
+        tryDisabledPositionValueByAxis(info);
+        tryDisabledRotationValueByAxis(info);
+        tryDisabledScaleValueByAxis(info);
+        tryDisabledSizeValueByAxis(info);
+        tryDisabledAnchorValueByAxis(info);
+        tryDisabledSliceValueByAxis(info);
     }
 
     function tryDisabledPositionValueByAxis(info: ChangeInfo) {
@@ -954,6 +966,84 @@ function InspectorControlCreate() {
         if (combZ) inputs[2].value = '-';
     }
 
+    function tryDisabledRotationValueByAxis(info: ChangeInfo) {
+        if (info.data.field.name != Property.ROTATION) {
+            return;
+        }
+
+        let combX, combY, combZ = false;
+
+        // NOTE: ищем несовпадения по осям
+        let prevRotation: Vector3;
+        for (let i = 0; i < info.ids.length; i++) {
+            const id = info.ids[i];
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (!mesh) return;
+
+            if (i == 0) {
+                prevRotation = new Vector3();
+                prevRotation.copy(mesh.rotation);
+            } else {
+                if (!combX) combX = prevRotation!.x != mesh.rotation.x;
+                if (!combY) combY = prevRotation!.y != mesh.rotation.y;
+                if (!combZ) combZ = prevRotation!.z != mesh.rotation.z;
+
+                if (combX && combY && combZ) {
+                    break;
+                }
+
+                prevRotation!.copy(mesh.rotation);
+            }
+        }
+
+        // NOTE: рисуем '-' в нужном input теге
+        const inputs = info.data.event.target.controller.view.valueElement.querySelectorAll('input');
+        if (combX) inputs[0].value = '-';
+        if (combY) inputs[1].value = '-';
+        if (combZ) inputs[2].value = '-';
+    }
+
+    function tryDisabledScaleValueByAxis(info: ChangeInfo) {
+        if (info.data.field.name != Property.SCALE) {
+            return;
+        }
+
+        let combX, combY;
+
+        // NOTE: ищем несовпадения по осям
+        let prevScale: Vector2;
+        for (let i = 0; i < info.ids.length; i++) {
+            const id = info.ids[i];
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (!mesh) return;
+
+            if (i == 0) {
+                prevScale = new Vector2();
+                prevScale.copy(mesh.get_scale());
+            } else {
+                if (!combX) combX = prevScale!.x != mesh.get_scale().x;
+                if (!combY) combY = prevScale!.y != mesh.get_scale().y;
+
+                if (combX && combY) {
+                    break;
+                }
+
+                prevScale!.copy(mesh.get_scale());
+            }
+        }
+
+        // NOTE: рисуем '-' в нужном input теге
+        const inputs = info.data.event.target.controller.view.valueElement.querySelectorAll('input');
+        if (combX) inputs[0].value = '-';
+        if (combY) inputs[1].value = '-';
+    }
+
     function tryDisabledSizeValueByAxis(info: ChangeInfo) {
         if (info.data.field.name != Property.SIZE) {
             return;
@@ -983,6 +1073,82 @@ function InspectorControlCreate() {
                 }
 
                 prevSize!.copy(mesh.get_size());
+            }
+        }
+
+        // NOTE: рисуем '-' в нужном input теге
+        const inputs = info.data.event.target.controller.view.valueElement.querySelectorAll('input');
+        if (combX) inputs[0].value = '-';
+        if (combY) inputs[1].value = '-';
+    }
+
+    function tryDisabledAnchorValueByAxis(info: ChangeInfo) {
+        if (info.data.field.name != Property.ANCHOR) {
+            return;
+        }
+
+        let combX, combY;
+
+        // NOTE: ищем несовпадения по осям
+        let prevAnchor: Vector2;
+        for (let i = 0; i < info.ids.length; i++) {
+            const id = info.ids[i];
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (!mesh) return;
+
+            if (i == 0) {
+                prevAnchor = new Vector2();
+                prevAnchor.copy(mesh.get_anchor());
+            } else {
+                if (!combX) combX = prevAnchor!.x != mesh.get_anchor().x;
+                if (!combY) combY = prevAnchor!.y != mesh.get_anchor().y;
+
+                if (combX && combY) {
+                    break;
+                }
+
+                prevAnchor!.copy(mesh.get_anchor());
+            }
+        }
+
+        // NOTE: рисуем '-' в нужном input теге
+        const inputs = info.data.event.target.controller.view.valueElement.querySelectorAll('input');
+        if (combX) inputs[0].value = '-';
+        if (combY) inputs[1].value = '-';
+    }
+
+    function tryDisabledSliceValueByAxis(info: ChangeInfo) {
+        if (info.data.field.name != Property.SLICE9) {
+            return;
+        }
+
+        let combX, combY;
+
+        // NOTE: ищем несовпадения по осям
+        let prevSlice: Vector2;
+        for (let i = 0; i < info.ids.length; i++) {
+            const id = info.ids[i];
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (!mesh) return;
+
+            if (i == 0) {
+                prevSlice = new Vector2();
+                prevSlice.copy((mesh as Slice9Mesh).get_slice());
+            } else {
+                if (!combX) combX = prevSlice!.x != (mesh as Slice9Mesh).get_slice().x;
+                if (!combY) combY = prevSlice!.y != (mesh as Slice9Mesh).get_slice().y;
+
+                if (combX && combY) {
+                    break;
+                }
+
+                prevSlice!.copy((mesh as Slice9Mesh).get_slice());
             }
         }
 
@@ -1139,16 +1305,49 @@ function InspectorControlCreate() {
         HistoryControl.add("MESH_TRANSLATE", oldPositions);
     }
 
-    function updatePosition(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updatePosition(info: ChangeInfo) {
+        const [isDraggedX, isDraggedY, isDraggedZ] = getDraggedInfo(info);
+
+        const prevPos = searchFieldInLastInspectorState(info.data.property);
+        const pos = info.data.event.value as Vector3;
+
+        const isChangedX = prevPos.x != pos.x;
+        const isChangedY = prevPos.y != pos.y;
+        const isChangedZ = prevPos.z != pos.z;
+
+        const averagePoint = new Vector3();
+        averagePoint.copy(pos);
+
+        // NOTE: вычесляем среднее значение позиции между всеми обьектами
+        if (isDraggedX || isDraggedY || isDraggedZ) {
+            const sum = new Vector3(0, 0, 0);
+            info.ids.forEach((id) => {
+                const mesh = _selected_list.find((item) => {
+                    return item.mesh_data.id == id;
+                });
+
+                if (!mesh) return;
+
+                sum.add(mesh.get_position());
+            });
+
+            averagePoint.copy(sum.divideScalar(info.ids.length));
+        }
+
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const pos = value.data.event.value as Vector3;
-            mesh.set_position(pos.x, pos.y, pos.z);
+            /* NOTE: высчитываем разницу среднего значения позиции и измененного значения в инспекторе
+                     (оно уже там стоит в среднем значени, ставиться на этапе сравнения осей в векторах) */
+            const x = isDraggedX ? mesh.get_position().x + (pos.x - averagePoint.x) : isChangedX ? pos.x : mesh.get_position().x;
+            const y = isDraggedY ? mesh.get_position().y + (pos.y - averagePoint.y) : isChangedY ? pos.y : mesh.get_position().y;
+            const z = isDraggedZ ? mesh.get_position().z + (pos.z - averagePoint.z) : isChangedZ ? pos.z : mesh.get_position().z;
+
+            mesh.set_position(x, y, z);
         });
 
         TransformControl.set_proxy_in_average_point(_selected_list);
@@ -1170,17 +1369,28 @@ function InspectorControlCreate() {
         HistoryControl.add("MESH_ROTATE", oldRotations);
     }
 
-    function updateRotation(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateRotation(info: ChangeInfo) {
+        const prevRawRot = searchFieldInLastInspectorState(info.data.property);
+        const rawRot = info.data.event.value as Vector3;
+
+        const isChangedX = prevRawRot.x != rawRot.x;
+        const isChangedY = prevRawRot.y != rawRot.y;
+        const isChangedZ = prevRawRot.z != rawRot.z;
+
+        const rot = new Vector3(degToRad(rawRot.x), degToRad(rawRot.y), degToRad(rawRot.z));
+
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const raw_rot = value.data.event.value as Vector3;
-            const rot = new Vector3(degToRad(raw_rot.x), degToRad(raw_rot.y), degToRad(raw_rot.z));
-            mesh.rotation.set(rot.x, rot.y, rot.z);
+            const x = isChangedX ? rot.x : mesh.rotation.x;
+            const y = isChangedY ? rot.y : mesh.rotation.y;
+            const z = isChangedZ ? rot.z : mesh.rotation.z;
+
+            mesh.rotation.set(x, y, z);
             mesh.transform_changed();
         });
 
@@ -1203,16 +1413,24 @@ function InspectorControlCreate() {
         HistoryControl.add("MESH_SCALE", oldScales);
     }
 
-    function updateScale(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateScale(info: ChangeInfo) {
+        const prevScale = searchFieldInLastInspectorState(info.data.property);
+        const scale = info.data.event.value as Vector3;
+
+        const isChangedX = prevScale.x != scale.x;
+        const isChangedY = prevScale.y != scale.y;
+
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const scale = value.data.event.value as Vector3;
-            (mesh as any).scale.copy(scale);
+            const x = isChangedX ? scale.x : mesh.get_scale().x;
+            const y = isChangedY ? scale.y : mesh.get_scale().y;
+
+            mesh.scale.set(x, y, 1);
             mesh.transform_changed();
 
             // если это текстовы меш, то от скейла зависит размер шрифта
@@ -1246,16 +1464,44 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_SIZE', oldSizes);
     }
 
-    function updateSize(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateSize(info: ChangeInfo) {
+        const [isDraggedX, isDraggedY] = getDraggedInfo(info);
+
+        const prevSize = searchFieldInLastInspectorState(info.data.property);
+        const size = info.data.event.value as Vector2;
+
+        const isChangedX = prevSize.x != size.x;
+        const isChangedY = prevSize.y != size.y;
+
+        const averageSize = new Vector2();
+        averageSize.copy(size);
+
+        if (isDraggedX || isDraggedY) {
+            const sum = new Vector2(0, 0);
+            info.ids.forEach((id) => {
+                const mesh = _selected_list.find((item) => {
+                    return item.mesh_data.id == id;
+                });
+
+                if (!mesh) return;
+
+                sum.add(mesh.get_size());
+            });
+
+            averageSize.copy(sum.divideScalar(info.ids.length));
+        }
+
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const size = value.data.event.value as Vector2;
-            mesh.set_size(size.x, size.y);
+            const x = isDraggedX ? mesh.get_size().x + (size.x - averageSize.x) : isChangedX ? size.x : mesh.get_size().x;
+            const y = isDraggedY ? mesh.get_size().y + (size.y - averageSize.y) : isChangedY ? size.y : mesh.get_size().y;
+
+            mesh.set_size(x, y);
         });
 
         SizeControl.draw();
@@ -1307,21 +1553,29 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_ANCHOR', anchors);
     }
 
-    function updateAnchor(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateAnchor(info: ChangeInfo) {
+        const prevAnchor = searchFieldInLastInspectorState(info.data.property);
+        const anchor = info.data.event.value as Vector2;
+
+        const isChangedX = prevAnchor.x != anchor.x;
+        const isChangedY = prevAnchor.y != anchor.y;
+
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const anchor = value.data.event.value as Vector2;
-            mesh.set_anchor(anchor.x, anchor.y);
+            const x = isChangedX ? anchor.x : mesh.get_anchor().x;
+            const y = isChangedY ? anchor.y : mesh.get_anchor().y;
+
+            mesh.set_anchor(x, y);
         });
 
         SizeControl.draw();
 
-        if (value.data.event.last) {
+        if (info.data.event.last) {
             refresh([Property.ANCHOR_PRESET]);
         }
     }
@@ -1433,15 +1687,24 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_SLICE', slices);
     }
 
-    function updateSlice(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateSlice(info: ChangeInfo) {
+        const prevSlice = searchFieldInLastInspectorState(info.data.property);
+        const slice = info.data.event.value as Vector2;
+
+        const isChangedX = prevSlice.x != slice.x;
+        const isChangedY = prevSlice.y != slice.y;
+
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
-            const slice = value.data.event.value as Vector2;
-            (mesh as Slice9Mesh).set_slice(slice.x, slice.y);
+
+            const x = isChangedX ? slice.x : (mesh as Slice9Mesh).get_slice().x;
+            const y = isChangedY ? slice.y : (mesh as Slice9Mesh).get_slice().y;
+
+            (mesh as Slice9Mesh).set_slice(x, y);
         });
     }
 
@@ -1564,8 +1827,54 @@ function InspectorControlCreate() {
         });
     }
 
+    function searchFieldInLastInspectorState(property: PropertyItem<PropertyType>) {
+        function search(state: BladeState, property: PropertyItem<PropertyType>) {
+            for (const [key, value] of Object.entries(state)) {
+                if (key == "children") {
+                    for (const child of (value as any)) {
+                        const result = search(child as BladeState, property) as any;
+                        if (result) return result;
+                    }
+                }
+
+                if (value == property.title) {
+                    return (state.binding as any).value;
+                }
+            }
+
+            return undefined;
+
+        }
+
+        return search(_last_inspector_state, property);
+    }
+
     init();
     return { setupConfig, setData, set_selected_list, refresh, detach: clear }
+}
+
+function getDraggedInfo(info: ChangeInfo) {
+    let isDraggedX = false;
+    let isDraggedY = false;
+    let isDraggedZ = false;
+    let isDraggedW = false;
+
+    // NOTE: варинат как получить какие либо значения из tweakpane
+    // учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_ 
+    const valueController = info.data.event.target.controller.labelController.valueController as any;
+    const acs = !valueController.acs_ ? valueController.textC_.acs_ : valueController.acs_;
+    acs.forEach((ac: any, index: number) => {
+        if (ac.is_drag) {
+            switch (index) {
+                case 0: isDraggedX = true; break;
+                case 1: isDraggedY = true; break;
+                case 2: isDraggedZ = true; break;
+                case 3: isDraggedW = true; break;
+            }
+        }
+    });
+
+    return [isDraggedX, isDraggedY, isDraggedZ, isDraggedW];
 }
 
 function pivotToScreenPreset(pivot: Vector2) {
@@ -1698,7 +2007,6 @@ function castTextureInfo(info: TextureInfo) {
     return data;
 }
 
-// TODO: вынести
 export function getDefaultInspectorConfig() {
     return [
         {
