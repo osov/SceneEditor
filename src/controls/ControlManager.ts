@@ -1,6 +1,7 @@
 import { is_base_mesh } from "../render_engine/helpers/utils";
 import { IBaseMeshAndThree } from "../render_engine/types";
 import { TreeItem } from "./TreeControl";
+import { componentsGo } from "./ActionsControl";
 import { HistoryData } from "./HistoryControl";
 import Stats from 'stats.js';
 import { getDefaultInspectorConfig } from "./InspectorControl";
@@ -170,7 +171,10 @@ function ControlManagerCreate() {
                 selected: sel_list_ids.includes(g_item.id),
                 visible: g_item.visible
             };
-            if (g_item.type == 'sprite' || g_item.type == 'label') { item.no_drop = true; }
+            
+            // no_drop для компонентов Go 
+            if (componentsGo.includes(g_item.type)) { item.no_drop = true; }
+
             list.push(item);
         }
         return list;

@@ -53,6 +53,12 @@ export const worldGo: string[] = [
     IObjectTypes.GO_LABEL_COMPONENT
 ];
 
+export const componentsGo: string[] = [
+    IObjectTypes.GO_MODEL_COMPONENT,
+    IObjectTypes.GO_SPRITE_COMPONENT,
+    IObjectTypes.GO_LABEL_COMPONENT
+];
+
 export const worldGui: string[] = [
     IObjectTypes.GUI_CONTAINER,
     IObjectTypes.GUI_BOX,
@@ -77,10 +83,7 @@ function ActionsControlCreate() {
         if (list.length == 0) return;
         const canCopy = fromTheSameWorld(list);
         if (!canCopy) { 
-            Popups.toast.open({
-                type: 'info',
-                message: 'Нельзя одновременно копировать/вырезать/дублировать элементы из GUI и GO!'
-              });
+            showToast('Нельзя одновременно копировать/вырезать/дублировать элементы из GUI и GO!');
             return;
         }
 
@@ -90,21 +93,25 @@ function ActionsControlCreate() {
         }
         
     }
-
-    function paste(asChild: boolean = false) {
-        if (copy_mesh_list.length == 0) return;
+    
+    function paste(asChild: boolean = false, isDuplication: boolean = false) {
+        if (copy_mesh_list.length == 0) {
+            showToast('Нечего вставлять!');
+            return;
+        }
         const selected = SelectControl.get_selected_list();
-        if (checkPasteSameWorld(selected[0]) == false) {
-            Popups.toast.open({
-                type: 'info',
-                message: 'Нельзя элементы из GUI и GO вкладывать друг в друга!'
-            });
+        const preTarget = selected.length ? selected : [RenderEngine.scene];
+        if (!selected.length && !isDuplication) {
+            showToast('Некуда вставлять!');
             return;
         }
 
-        let target: any = selected.length == 1 ? selected[0].parent : RenderEngine.scene;
+        // ctrl_b or ctrl_v
+        let target: any = {};
+        if (preTarget[0]?.type == "Scene") target = preTarget[0];
+        else target = asChild ? preTarget[0] : preTarget[0].parent;
 
-        if(asChild && selected.length == 1) target = selected[0];
+        if (!isValidAction(target, copy_mesh_list, asChild, false, true)) return;
 
         if (is_cut) {
             const id_mlist: number[] = [];
@@ -134,7 +141,7 @@ function ActionsControlCreate() {
 
     function duplication() {
         copy();
-        paste();
+        paste(false, true);
         copy_mesh_list = [];
     }
 
@@ -206,6 +213,22 @@ function ActionsControlCreate() {
         SelectControl.set_selected_list([item]);
     }
 
+    // function getIdNewGuiContainer(pid: number = -1): number {
+    //     const parent0 = SceneManager.get_mesh_by_id(pid);
+    //     if (parent0 && worldGui.includes(parent0.type)) {
+    //         return parent0?.mesh_data?.id ? parent0?.mesh_data?.id : pid;
+    //     }
+    //     const graph = ControlManager.get_tree_graph();
+    //     const parent1 = graph.find(item => item.icon === IObjectTypes.GUI_CONTAINER);
+    //     if (!parent1) {
+    //         add_gui_container(-1);
+    //         const graph2 = ControlManager.get_tree_graph()
+    //         const parent2 = graph2.find(item => item.icon === IObjectTypes.GUI_CONTAINER);
+    //         return parent2 ? parent2.id : pid;
+    //     }
+    //     return parent1 ? parent1.id : pid;
+    // }
+
     function setUniqueNameMeshList(list: TreeItem[]): void {
         if (!list.length) return;
 
@@ -225,8 +248,9 @@ function ActionsControlCreate() {
         });
     }
 
-        function getWorldName(type: string): string {
+        function getWorldName(type: string): string {         
             if (!type) return '';
+            if (['scene', 'Scene'].includes(type)) return 'scene';
             if (worldGo.includes(type)) return 'go';
             if (worldGui.includes(type)) return 'gui';
             return '';
@@ -255,24 +279,90 @@ function ActionsControlCreate() {
             return true;
         }
 
-        function checkPasteSameWorld(itemWhere: any, selected: any = copy_mesh_list) {
-            const listWhat = selected?.length ? selected : [];
-            if (!listWhat.length) return false;
+        function showToast(msg: string) {
+            Popups.toast.open({
+                type: 'info',
+                message: msg
+            });
+        }
 
-            const type = listWhat[0]?.type ? listWhat[0]?.type : listWhat[0]?.icon ? listWhat[0]?.icon : '';
-            const worldS = getWorldName(type);
-            if (!worldS) return false;
-            
+        function checkPasteScene(list: any): boolean {
+            if (list.length == 0) return false;
+            for (let i = 0; i < list.length; i++) {
+                const type = list[i]?.type ? list[i]?.type : list[i].icon ? list[i].icon : '';
+                if ([IObjectTypes.GO_CONTAINER, IObjectTypes.GUI_CONTAINER].includes(type) == false) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        
+        function isValidAction(itemWhere: any, selected: any = copy_mesh_list, asChild: boolean = false, isMove: boolean = false, msg: boolean = false) {
             const icon = itemWhere?.type ? itemWhere?.type : itemWhere?.icon ? itemWhere?.icon : '';
             const worldIW = getWorldName(icon);
-            if (!worldIW) return false;
 
-            return worldS == worldIW;
+            // внутрь sprite\label\model ничего добавлять нельзя
+            if(asChild && componentsGo.includes(icon)) { 
+                if (msg) showToast(`У ${componentsGo[0]}/${componentsGo[1]}/${componentsGo[2]} не может быть дочерних элементов!`);
+                return false;
+            }
+
+            // при вставке gui в worldGui
+            const gui = IObjectTypes.GUI_CONTAINER;
+            const guiC = selected.filter((e:any) => e?.type == gui || e?.icon == gui)
+            if (!isMove && worldIW == gui && guiC.length) {
+                if (msg) showToast('Нельзя GUI контейнер вкладывать в GUI объекты!');
+                return false;
+            }
+
+            // при перетаскивании gui в worldGui
+            if (isMove && worldIW == gui && guiC.length) {
+                if (msg) showToast('Нельзя GUI контейнер перемещать в GUI объекты!');
+                return false;
+            }
+
+            // в корне можно создать\вставить только  GO_CONTAINER \ GUI_CONTAINER
+            if (worldIW == 'scene' && !checkPasteScene(selected)) {
+                if (msg) showToast('В корне могут быть только контейнеры Go и GUI!');
+                return false;
+            }
+
+            if (worldIW == 'scene' && checkPasteScene(selected)) {
+                return true;
+            }
+
+            const listWhat = selected?.length ? selected : [];
+            if (!listWhat.length) {
+                if (msg) showToast('Ничего не выбрано!');
+                return false;
+            }
+            
+            const type = listWhat[0]?.type ? listWhat[0]?.type : listWhat[0]?.icon ? listWhat[0]?.icon : '';
+            const worldS = getWorldName(type);
+            if (!worldS) {
+                if (msg) showToast('Не найдены объекты для вставки!');
+                return false;
+            }
+            
+            if (!worldIW) {
+                if (msg) showToast('Не выбрано место для вставки!');
+                return false;
+            }
+
+            // нельзя Go в Gui || Gui в Go
+            const result = worldS == worldIW;
+            if (!result) {        
+                if (msg) showToast('Нельзя объекты из GUI и GO вкладывать друг в друга!');
+                return result;
+            }
+
+            return result;
         }
 
     return {
+        copy_mesh_list,
         fromTheSameWorld,
-        checkPasteSameWorld,
+        isValidAction,
         cut, copy, paste, duplication, remove,
         add_gui_container,
         add_gui_box,

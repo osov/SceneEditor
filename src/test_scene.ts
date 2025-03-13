@@ -39,6 +39,10 @@ export async function run_debug_scene() {
   const label1 = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, {text:'Надпись'});
   label1.set_font('ShantellSans-Light11');
   go1.add(label1);
+  
+  const model = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
+  model.position.set(220, 220, 1);
+  go1.add(model);
 
   const go2 = SceneManager.create(IObjectTypes.GO_CONTAINER);
   go2.set_position(540 / 2 + 200, -960 / 2);

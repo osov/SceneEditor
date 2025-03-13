@@ -1,6 +1,7 @@
 import { deepClone } from "../modules/utils";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
-import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui } from "./ActionsControl";
+import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui, componentsGo } from "./ActionsControl";
+import { IObjectTypes } from '../render_engine/types';
 
 declare global {
     const TreeControl: ReturnType<typeof TreeControlCreate>;
@@ -198,8 +199,21 @@ function TreeControlCreate() {
     function getIdIco(icon: string) {
         if (!icon) return "cube";
         if (icon === "scene") return "cubes_stacked";
-        if (icon === "text") return "letter_t";
-        if (icon === "box") return "cube";
+
+        if (icon == IObjectTypes.GUI_CONTAINER) return "box_align_top_left";
+        if (icon == IObjectTypes.GUI_BOX) return "rectangle";
+        if (icon == IObjectTypes.GUI_TEXT) return "typography";
+        
+        if (icon == IObjectTypes.GO_CONTAINER) return "cube";
+        if (icon == IObjectTypes.GO_SPRITE_COMPONENT) return "texture";
+        if (icon == IObjectTypes.GO_LABEL_COMPONENT) return "tag";
+        if (icon == IObjectTypes.GO_MODEL_COMPONENT) return "box_model";
+        
+        if (icon == IObjectTypes.EMPTY) return "percentage_0";
+        if (icon == IObjectTypes.ENTITY) return "ghost_3";
+        if (icon == IObjectTypes.SLICE9_PLANE) return "photo_sensor";
+        if (icon == IObjectTypes.TEXT) return "letter_t";
+
         return "cube";
     }
 
@@ -527,7 +541,7 @@ function TreeControlCreate() {
         itemDrop = treeList.find(e => e.id === +currentDroppable?.getAttribute("data-id")) || null;
 
         const itemSelected = treeList.filter((e: any) => e.id == listSelected[0]);
-        const canBeMoved = ActionsControl.checkPasteSameWorld(itemDrop, itemSelected);
+        const canBeMoved = ActionsControl.isValidAction(itemDrop, itemSelected, true, true);
 
         if (
             (listSelected?.length == 1 && currentDroppable === treeItem) 
@@ -562,9 +576,9 @@ function TreeControlCreate() {
         // статус и li.droppable для добавления рядом
         itemDrop = treeList.find(e => e.id === +currentDroppable?.getAttribute("data-id")) || null;
 
-        const itemSelected = treeList.filter((e: any) => e.id == listSelected[0]);
+        const listSelectedFull = treeList.filter((e: any) => listSelected.includes(e.id));
         const parentDrop = treeList.filter((e: any) => e.id == itemDrop?.pid);
-        const canBeMoved = parentDrop[0]?.id > -1 ? ActionsControl.checkPasteSameWorld(parentDrop[0], itemSelected) : true;
+        const canBeMoved = ActionsControl.isValidAction(parentDrop[0], listSelectedFull, false, true);
 
         if (
             (listSelected?.length == 1 && currentDroppable === treeItem)
@@ -572,6 +586,7 @@ function TreeControlCreate() {
             || itemDrag?.no_drag === true 
             || canBeMoved == false
         ) {
+            currentDroppable.classList.remove('success');
             boxDD.classList.remove('pos');
             isDrop = false;
         }
@@ -947,14 +962,46 @@ function TreeControlCreate() {
         if (action == NodeAction.CTRL_C || action == NodeAction.CTRL_D)
             if (itemDrag?.id == -1) not_active = true;
         
-        if (action == NodeAction.CTRL_V || action == NodeAction.CTRL_B) {
-            const canPaste = ActionsControl.checkPasteSameWorld(itemDrag) == false;
-            if (itemDrag?.no_drop || canPaste) not_active = true;
+        if (action == NodeAction.CTRL_V) {
+            let canPaste = ActionsControl.isValidAction(itemDrag) == false;
+            if (itemDrag?.pid == -1) {
+                // если itemDrag в корне сцены, то canPaste c учетом asChild
+                const copyList = ActionsControl.copy_mesh_list;
+                canPaste = ActionsControl.isValidAction(itemDrag, copyList, true) == false;
+            }
+            if (itemDrag?.id == -1) not_active = true;
+            else if (canPaste) not_active = true;
         }
         
+        if (action == NodeAction.CTRL_B) {
+            const canPaste = ActionsControl.isValidAction(itemDrag) == false;
+            if (itemDrag?.id == -1) {
+                if (canPaste) not_active = true;
+            }
+            else { if (itemDrag?.no_drop || canPaste) not_active = true; }
+        }
+        
+        // внутри Go нельзя создавать gui
         if (NodeActionGui.includes(action) && worldGo.includes(itemDrag?.icon)) not_active = true;
         
+        // внутри Gui нельзя создавать Go
         if (NodeActionGo.includes(action) && worldGui.includes(itemDrag?.icon)) not_active = true;
+
+        // внутри gui_container нельзя создавать gui_container
+        if (action == NodeAction.add_gui_container && worldGui.includes(itemDrag?.icon)) not_active = true;
+
+        // внутри sprite\label\model ничего нельзя создавать
+        if ([...NodeActionGui, ...NodeActionGo].includes(action) && componentsGo.includes(itemDrag?.icon)) not_active = true;
+
+        // в корне можно создавать только  GO_CONTAINER \ GUI_CONTAINER
+        const blackList = [
+            NodeAction.add_gui_box,
+            NodeAction.add_gui_text,
+            NodeAction.add_go_sprite_component,
+            NodeAction.add_go_label_component,
+            NodeAction.add_go_model_component
+        ];
+        if (itemDrag?.id == -1 && blackList.includes(action)) not_active = true;
 
         return { text, action, not_active };
     }
@@ -1014,7 +1061,6 @@ function TreeControlCreate() {
         }
         else { 
             cutList.length = 0;
-            log('clear: ', cutList)
         }
     }
 
@@ -1027,36 +1073,31 @@ function TreeControlCreate() {
     }
 
     function menuContextClick(success: boolean, action?: number | string): void {
-        log('menuContextClick:: ', success, action);        
         divTree.classList.remove('no_scrolling');
 
         if(!success || action == undefined || action == null || !copyItemDrag) return;
         
         if (action == NodeAction.CTRL_X) {
-            log(`ActionsControl.cut() , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_X } }`);
             ActionsControl.cut();
         }
         if (action == NodeAction.CTRL_C) {
-            log(`ActionsControl.copy() , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_C } }`);
             ActionsControl.copy();
         }
         if (action == NodeAction.CTRL_V) {
-            log(`ActionsControl.paste() , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_V } }`);
-            ActionsControl.paste();
+            // isDuplication для возможности вставки в корень из меню
+            ActionsControl.paste(false, copyItemDrag?.id == -1);
         }
         if (action == NodeAction.CTRL_B) {
-            log(`ActionsControl.paste(true) , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_B } }`);
-            ActionsControl.paste(true);
+            // isDuplication для возможности вставки в корень из меню
+            ActionsControl.paste(true, copyItemDrag?.id == -1);
         }
         if (action == NodeAction.CTRL_D) {
-            log(`ActionsControl.duplication() , { id: ${copyItemDrag?.id}, list: ${listSelected} key: ${ NodeAction.CTRL_D } }`);
             ActionsControl.duplication();
         }
         if (action == NodeAction.rename) {
             preRename();
         }
         if (action == NodeAction.remove) {
-            log('remove: ', listSelected)
             ActionsControl.remove();
         }
         if (action == NodeAction.add_gui_container) {
