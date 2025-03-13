@@ -823,13 +823,9 @@ function InspectorControlCreate() {
 
         if (!property.readonly) {
             entity.onBeforeChange = () => {
-                console.log("TRY CALL BEFORE CHANGES");
-
                 if (!_is_first || _is_refreshed) {
                     return;
                 }
-
-                console.log("BEFORE CHANGES");
 
                 _is_first = false;
 
@@ -865,18 +861,29 @@ function InspectorControlCreate() {
                     }
                 });
 
-                tryDisabledValueByAxis({
-                    ids,
-                    data: {
-                        field,
-                        property,
-                        event
-                    }
-                });
-
-                // NOTE: после последних изменений, ставим что следующие будут первыми
                 if (event.last) {
-                    console.log("RESET FIRST");
+                    // NOTE: ставим прочерки на осях если разные значения 
+                    tryDisabledValueByAxis({
+                        ids,
+                        data: {
+                            field,
+                            property,
+                            event
+                        }
+                    });
+
+                    // NOTE: еще раз ставим прочерки на изменненой оси, потому что на изменненой оси запись значения будет после этого ивента 
+                    setTimeout(() => {
+                        tryDisabledValueByAxis({
+                            ids,
+                            data: {
+                                field,
+                                property,
+                                event
+                            }
+                        });
+                    });
+
                     _is_first = true;
                 }
             };
@@ -1680,11 +1687,7 @@ function InspectorControlCreate() {
             const x = isChangedX ? slice.x : (mesh as Slice9Mesh).get_slice().x;
             const y = isChangedY ? slice.y : (mesh as Slice9Mesh).get_slice().y;
 
-            console.log("SLICE_UPDATED: ", isChangedX, isChangedY, x, y);
-
             (mesh as Slice9Mesh).set_slice(x, y);
-
-            console.log((mesh as Slice9Mesh).get_slice().x, (mesh as Slice9Mesh).get_slice().y);
         });
     }
 
@@ -1818,7 +1821,6 @@ function getChangedInfo(info: ChangeInfo) {
     let isChangedW = false;
 
     // NOTE: варинат как получить какие либо значения из tweakpane не переписывая половину либы
-    // учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_ 
     const valueController = info.data.event.target.controller.labelController.valueController as any;
 
     // NOTE: для 2D пикера
@@ -1829,6 +1831,7 @@ function getChangedInfo(info: ChangeInfo) {
         return [isChangedX, isChangedY];
     }
 
+    // NOTE: учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_ 
     const acs = !valueController.acs_ ? valueController.textC_.acs_ : valueController.acs_;
     acs.forEach((ac: any, index: number) => {
         if (!ac.is_changed) return;
