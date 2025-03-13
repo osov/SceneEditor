@@ -284,7 +284,6 @@ function InspectorControlCreate() {
 
     let _is_first = true;
     let _is_refreshed = false;
-    let _last_inspector_state: BladeState = {};
 
     function init() {
         _inspector = new Pane({
@@ -431,8 +430,6 @@ function InspectorControlCreate() {
 
         clear();
         setData(data);
-
-        _last_inspector_state = deepClone(_inspector.exportState());
     }
 
     function refresh(properties: Property[]) {
@@ -473,8 +470,6 @@ function InspectorControlCreate() {
                 pane.refresh();
             }
         });
-
-        _last_inspector_state = deepClone(_inspector.exportState());
     }
 
     function searchPaneInFolderByProperty(folder: FolderApi, property: Property): Pane | undefined {
@@ -878,8 +873,6 @@ function InspectorControlCreate() {
                         event
                     }
                 });
-
-                _last_inspector_state = deepClone(_inspector.exportState());
 
                 // NOTE: после последних изменений, ставим что следующие будут первыми
                 if (event.last) {
@@ -1307,13 +1300,9 @@ function InspectorControlCreate() {
 
     function updatePosition(info: ChangeInfo) {
         const [isDraggedX, isDraggedY, isDraggedZ] = getDraggedInfo(info);
+        const [isChangedX, isChangedY, isChangedZ] = getChangedInfo(info);
 
-        const prevPos = searchFieldInLastInspectorState(info.data.property);
         const pos = info.data.event.value as Vector3;
-
-        const isChangedX = prevPos.x != pos.x;
-        const isChangedY = prevPos.y != pos.y;
-        const isChangedZ = prevPos.z != pos.z;
 
         const averagePoint = new Vector3();
         averagePoint.copy(pos);
@@ -1370,13 +1359,9 @@ function InspectorControlCreate() {
     }
 
     function updateRotation(info: ChangeInfo) {
-        const prevRawRot = searchFieldInLastInspectorState(info.data.property);
+        const [isChangedX, isChangedY, isChangedZ] = getChangedInfo(info);
+
         const rawRot = info.data.event.value as Vector3;
-
-        const isChangedX = prevRawRot.x != rawRot.x;
-        const isChangedY = prevRawRot.y != rawRot.y;
-        const isChangedZ = prevRawRot.z != rawRot.z;
-
         const rot = new Vector3(degToRad(rawRot.x), degToRad(rawRot.y), degToRad(rawRot.z));
 
         info.ids.forEach((id) => {
@@ -1414,11 +1399,9 @@ function InspectorControlCreate() {
     }
 
     function updateScale(info: ChangeInfo) {
-        const prevScale = searchFieldInLastInspectorState(info.data.property);
-        const scale = info.data.event.value as Vector3;
+        const [isChangedX, isChangedY] = getChangedInfo(info);
 
-        const isChangedX = prevScale.x != scale.x;
-        const isChangedY = prevScale.y != scale.y;
+        const scale = info.data.event.value as Vector3;
 
         info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
@@ -1466,12 +1449,9 @@ function InspectorControlCreate() {
 
     function updateSize(info: ChangeInfo) {
         const [isDraggedX, isDraggedY] = getDraggedInfo(info);
+        const [isChangedX, isChangedY] = getChangedInfo(info);
 
-        const prevSize = searchFieldInLastInspectorState(info.data.property);
         const size = info.data.event.value as Vector2;
-
-        const isChangedX = prevSize.x != size.x;
-        const isChangedY = prevSize.y != size.y;
 
         const averageSize = new Vector2();
         averageSize.copy(size);
@@ -1554,11 +1534,9 @@ function InspectorControlCreate() {
     }
 
     function updateAnchor(info: ChangeInfo) {
-        const prevAnchor = searchFieldInLastInspectorState(info.data.property);
-        const anchor = info.data.event.value as Vector2;
+        const [isChangedX, isChangedY] = getChangedInfo(info);
 
-        const isChangedX = prevAnchor.x != anchor.x;
-        const isChangedY = prevAnchor.y != anchor.y;
+        const anchor = info.data.event.value as Vector2;
 
         info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
@@ -1688,11 +1666,9 @@ function InspectorControlCreate() {
     }
 
     function updateSlice(info: ChangeInfo) {
-        const prevSlice = searchFieldInLastInspectorState(info.data.property);
-        const slice = info.data.event.value as Vector2;
+        const [isChangedX, isChangedY] = getChangedInfo(info);
 
-        const isChangedX = prevSlice.x != slice.x;
-        const isChangedY = prevSlice.y != slice.y;
+        const slice = info.data.event.value as Vector2;
 
         info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
@@ -1827,30 +1803,40 @@ function InspectorControlCreate() {
         });
     }
 
-    function searchFieldInLastInspectorState(property: PropertyItem<PropertyType>) {
-        function search(state: BladeState, property: PropertyItem<PropertyType>) {
-            for (const [key, value] of Object.entries(state)) {
-                if (key == "children") {
-                    for (const child of (value as any)) {
-                        const result = search(child as BladeState, property) as any;
-                        if (result) return result;
-                    }
-                }
-
-                if (value == property.title) {
-                    return (state.binding as any).value;
-                }
-            }
-
-            return undefined;
-
-        }
-
-        return search(_last_inspector_state, property);
-    }
-
     init();
     return { setupConfig, setData, set_selected_list, refresh, detach: clear }
+}
+
+function getChangedInfo(info: ChangeInfo) {
+    let isChangedX = false;
+    let isChangedY = false;
+    let isChangedZ = false;
+    let isChangedW = false;
+
+    // NOTE: варинат как получить какие либо значения из tweakpane не переписывая половину либы
+    // учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_ 
+    const valueController = info.data.event.target.controller.labelController.valueController as any;
+
+    // NOTE: для 2D пикера
+    const picker = valueController.pickerC_;
+    if (picker && picker.is_changed) {
+        isChangedX = true;
+        isChangedY = true;
+        return [isChangedX, isChangedY];
+    }
+
+    const acs = !valueController.acs_ ? valueController.textC_.acs_ : valueController.acs_;
+    acs.forEach((ac: any, index: number) => {
+        if (!ac.is_changed) return;
+        switch (index) {
+            case 0: isChangedX = true; break;
+            case 1: isChangedY = true; break;
+            case 2: isChangedZ = true; break;
+            case 3: isChangedW = true; break;
+        }
+    });
+
+    return [isChangedX, isChangedY, isChangedZ, isChangedW];
 }
 
 function getDraggedInfo(info: ChangeInfo) {
@@ -1859,18 +1845,17 @@ function getDraggedInfo(info: ChangeInfo) {
     let isDraggedZ = false;
     let isDraggedW = false;
 
-    // NOTE: варинат как получить какие либо значения из tweakpane
+    // NOTE: варинат как получить какие либо значения из tweakpane не переписывая половину либы
     // учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_ 
     const valueController = info.data.event.target.controller.labelController.valueController as any;
     const acs = !valueController.acs_ ? valueController.textC_.acs_ : valueController.acs_;
     acs.forEach((ac: any, index: number) => {
-        if (ac.is_drag) {
-            switch (index) {
-                case 0: isDraggedX = true; break;
-                case 1: isDraggedY = true; break;
-                case 2: isDraggedZ = true; break;
-                case 3: isDraggedW = true; break;
-            }
+        if (!ac.is_drag) return;
+        switch (index) {
+            case 0: isDraggedX = true; break;
+            case 1: isDraggedY = true; break;
+            case 2: isDraggedZ = true; break;
+            case 3: isDraggedW = true; break;
         }
     });
 
