@@ -21,9 +21,10 @@ export type _SystemMessagesEditor = {
     SYS_GRAPH_ADD: { id: number, list: number[], type: string | number },
     SYS_INSPECTOR_UPDATED_VALUE: ChangeInfo,
     SYS_FILE_UPLOADED: FileUploadedData,
-    SYS_CLICK_ON_ASSET: { name: string, path: string },
-    SYS_RENAME_ASSET_CMD: { new_name: string, path: string },
-    SYS_DELETE_ASSET_CMD: { path: string },
+    SYS_ASSET_COPIED: { name: string, path: string, new_path: string },
+    SYS_ASSET_MOVED: { name: string, path: string, new_path: string },
+    SYS_ASSET_DELETED: { name: string, path: string },
+    SYS_CLICK_ON_ASSET: { name: string, path: string, ext: string, button: number },
     SYS_COPY_CMD: { path: string, new_path: string },
     NEW_FOLDER_CMD: { name: string, path: string },
 };
@@ -83,7 +84,7 @@ export type NetMessagesEditor = {
     SERVER_FILE_SYSTEM_EVENTS: { events: FSEvent[] },
 }
 
-export type FileUploadedData = { size: number, path: string, name: string, project: string };
+export type FileUploadedData = { size: number, path: string, name: string, project: string, ext: string };
 
 export type FSEvent = { path: string, project: string, obj_type: FSObjectType, event_type: FSEventType };
 
@@ -113,6 +114,24 @@ export const DEL_INFO_CMD = '/del_info';
 export const FILE_UPLOAD_CMD = '/upload';
 export const PUBLIC = '/public'  // Путь к папке с ассетами проекта
 export const METADATA = '/metadata.txt'  // Путь к файлу с метаинфо проекта
+export const CACHE = '/server_cache.json';
+
+export const CMD_NAME = [
+    GET_LOADED_PROJECT_CMD,
+    GET_PROJECTS_CMD, 
+    NEW_PROJECT_CMD, 
+    NEW_FOLDER_CMD, 
+    GET_FOLDER_CMD, 
+    LOAD_PROJECT_CMD, 
+    SEARCH_CMD, 
+    RENAME_CMD,
+    COPY_CMD,
+    DELETE_CMD, 
+    SAVE_DATA_CMD,
+    GET_DATA_CMD,
+    SAVE_INFO_CMD,
+    GET_INFO_CMD
+]
 
 export const URL_PATHS = {
     TEST: '/test',

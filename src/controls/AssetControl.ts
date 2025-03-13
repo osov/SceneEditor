@@ -19,11 +19,10 @@ function AssetControlCreate() {
     const breadcrumbs = filemanager.querySelector('.breadcrumbs') as HTMLDivElement;
     const assets_list = filemanager.querySelector('.assets_list') as HTMLDivElement;
     let active_asset: Element | undefined = undefined;
+    let selected_assets: Element[] = [];
+    let move_assets_data: {assets: Element[], move_type?: "move" | "copy"} = {assets: []};
     let current_dir: string | undefined = undefined;
     let current_project: string | undefined = undefined;
-    let copy_asset_path: string | undefined = "";
-    let cut_asset_path: string | undefined = "";
-    let moving_asset_name: string | undefined = undefined;
     let drag_now = false;
 
     async function load_project(name: string, folder_content?: FSObject[], to_dir?: string) {
@@ -179,6 +178,7 @@ function AssetControlCreate() {
 
     function generate_breadcrumbs(dir: string) {
         breadcrumbs.innerHTML = "";
+        const asset_type: AssetType = "folder";
         let path = [""];
         if (dir !== "") path = ("/" + dir.replaceAll("\\", "/")).split("/");
         for (let i = 1; i < path.length; i++)
@@ -192,6 +192,7 @@ function AssetControlCreate() {
                 const a_elem = document.createElement("a");
                 const span_elem = _span_elem(name, ["folderName"]);
                 span_elem.setAttribute("data-path", u.replace("/", ""));
+                span_elem.setAttribute("data-type", asset_type);
                 a_elem.setAttribute("href", "javascript:void(0);");
                 a_elem.appendChild(span_elem);
                 breadcrumbs.appendChild(a_elem);
@@ -267,16 +268,16 @@ function AssetControlCreate() {
     };
 
     function open_menu(event: any) {
-        const type = active_asset?.getAttribute('data-type');
-        const assets_menu_list = toggle_menu_options(type as AssetType);
+        const assets_menu_list = toggle_menu_options();
         ContextMenu.open(assets_menu_list, event, menuContextClick);
     }
 
-    function toggle_menu_options(type?: AssetType) {
+    function toggle_menu_options() {
+        const type = active_asset?.getAttribute('data-type');
         const assets_menu_list: contextMenuItem[] = [];
         if (!type) {
             assets_menu_list.push({ text: 'Обновить', action: NodeAction.refresh });
-            if (moving_asset_name)
+            if (move_assets_data.assets.length)
                 assets_menu_list.push({ text: 'Вставить', action: NodeAction.CTRL_V });
             assets_menu_list.push({
                 text: '+ материал', children: [
@@ -286,15 +287,27 @@ function AssetControlCreate() {
             assets_menu_list.push({ text: '+ система частиц', action: NodeAction.new_particles });
             assets_menu_list.push({ text: 'Создать папку', action: NodeAction.new_folder });
         }
+        if (selected_assets.length == 1) {
+            assets_menu_list.push({ text: 'Копировать', action: NodeAction.CTRL_C });
+            assets_menu_list.push({ text: 'Вырезать', action: NodeAction.CTRL_X });
+        }
+        else if (selected_assets.length > 1) {
+            assets_menu_list.push({ text: 'Копир. выделенные', action: NodeAction.CTRL_C });
+            assets_menu_list.push({ text: 'Вырез. выделенные', action: NodeAction.CTRL_X });
+        }
+            
         if (type && type != "folder") {
             assets_menu_list.push({ text: 'Скачать', action: NodeAction.download });
-            assets_menu_list.push({ text: 'Вырезать', action: NodeAction.CTRL_X });
-            assets_menu_list.push({ text: 'Копировать', action: NodeAction.CTRL_C });
             assets_menu_list.push({ text: 'Дублировать', action: NodeAction.CTRL_D });
         }
         if (type) {
             assets_menu_list.push({ text: 'Переименовать', action: NodeAction.rename });
+        }
+        if (selected_assets.length == 1) {
             assets_menu_list.push({ text: 'Удалить', action: NodeAction.remove });
+        }
+        else if (selected_assets.length > 1) {
+            assets_menu_list.push({ text: 'Удал. выделенные', action: NodeAction.remove });
         }
         return assets_menu_list;
     }
@@ -310,36 +323,55 @@ function AssetControlCreate() {
         if (action == NodeAction.new_folder) {
             new_folder_popup(current_dir);
         }
-        if (action == NodeAction.CTRL_V) {
-            paste_asset();
-        }
         if (active_asset) {
             const path = active_asset.getAttribute('data-path') as string;
-            const name = escapeHTML(active_asset.getAttribute('data-name') as string);
-            const ext = active_asset.getAttribute('data-ext');
-            const type = active_asset.getAttribute('data-type') as AssetType | undefined;
+            const name = escapeHTML(active_asset.getAttribute('data-name') as string);  
+            const type = active_asset.getAttribute('data-type') as AssetType | undefined;  
             if (action == NodeAction.download)
                 download_asset(path, name);
 
             if (action == NodeAction.rename) {
                 rename_popup(path, name, type);
             }
+        }
+        if (selected_assets.length > 0) {
+            if (action == NodeAction.remove) {
+                remove_popup();
+            }
             if (action == NodeAction.CTRL_X) {
-                moving_asset_name = name;
-                cut_asset_path = path;
+                move_assets_data.assets = selected_assets.slice();
+                move_assets_data.move_type = "move";
+                log("cut assets, amount = ", move_assets_data.assets.length);
             }
             if (action == NodeAction.CTRL_C) {
-                moving_asset_name = name;
-                copy_asset_path = path;
+                move_assets_data.assets = selected_assets.slice();
+                move_assets_data.move_type = "copy";
+                log("copy assets, amount = ", move_assets_data.assets.length);
             }
             if (action == NodeAction.CTRL_D) {
-                duplicate_asset(path, name);
-            }
-            if (action == NodeAction.remove) {
-                const asset_path = active_asset.getAttribute("data-path") as string;
-                remove_popup(asset_path, name);
+                selected_assets.forEach(element => {
+                    const path = element.getAttribute('data-path') as string;
+                    const name = escapeHTML(element.getAttribute('data-name') as string);                    
+                    duplicate_asset(path, name);
+                });
             }
         }
+        if (move_assets_data.assets.length > 0) {
+            if (action == NodeAction.CTRL_V) {
+                paste_assets()
+            }
+        }
+    }
+
+    function paste_assets() {
+        const move_type = move_assets_data.move_type;
+        move_assets_data.assets.forEach(element => {
+            const name = escapeHTML(element.getAttribute('data-name') as string);  
+            const path = escapeHTML(element.getAttribute("data-path") as string);
+            paste_asset(name, path, move_type);
+        })
+        move_assets_data.assets.splice(0);
+        move_assets_data.move_type = undefined;
     }
 
     function new_folder_popup(current_path: string) {
@@ -379,20 +411,31 @@ function AssetControlCreate() {
         });
     }
 
-    function remove_popup(asset_path: string, name: string, type?: AssetType) {
-        let type_name = "файл";
-        if (type == "folder") type_name = "папку";
+    function remove_popup() {
+        let title = "";
+        let text = "";
+        const name = active_asset?.getAttribute('data-name');
+        const type = active_asset?.getAttribute('data-type');
+        log("active_asset", active_asset)
+        let remove_type: "selected" | "active" | undefined = undefined;
+        if (selected_assets.length > 1) {
+            title = "Удаление файлов";
+            text = "Удалить выбранные файлы?";
+            remove_type = "selected";
+        }
+        else if (active_asset) {
+            title = "Удаление файла";
+            let type_name = "файл";
+            if (type == "folder") type_name = "папку";
+            text = `Удалить ${type_name} ${name}?`;
+            remove_type = "active";
+        } 
         Popups.open({
             type: "Confirm",
-            params: { title: `Удаление файла`, text: `Удалить ${type_name} ${name}?`, button: "Да", buttonNo: "Нет", auto_close: true },
+            params: { title, text, button: "Да", buttonNo: "Нет", auto_close: true },
             callback: async (success) => {
                 if (success) {
-                    const r = await ClientAPI.remove(asset_path);
-                    if (r.result === 0)
-                        error_popup(`Не удалось удалить ${type_name}, ответ сервера: ${r.message}`);
-                    if (r.result && r.data && current_dir) {
-                        await go_to_dir(current_dir, true);
-                    }
+                    await remove_assets(remove_type);
                 }
             }
         });
@@ -417,24 +460,49 @@ function AssetControlCreate() {
         fileLink.click();
     }
 
-    async function paste_asset() {
-        if (!moving_asset_name) return;
-        const move_to = (current_dir) ? `${current_dir as string}/${moving_asset_name}` : moving_asset_name;
-        if (cut_asset_path) {
-            const resp = await ClientAPI.rename(cut_asset_path, move_to);
-            if (resp && resp.result === 1)
+    async function remove_assets(remove_type: "selected" | "active" | undefined) {
+        const to_remove: string[] = [];
+        if (remove_type == "selected") {
+            selected_assets.forEach((elem) => {
+                const path = elem.getAttribute('data-path');
+                if (path)
+                    to_remove.push(path);
+            })
+        }
+        else if (remove_type == "active") {
+            const path = active_asset?.getAttribute('data-path');
+            to_remove.push(path as string);
+        }
+        let result = 1;
+        for (const path of to_remove) {
+            const r = await ClientAPI.remove(path);
+            result == result && r.result;
+        }
+        if (!result)
+            error_popup(`Некоторые файлы не удалось удалить`);
+        if (current_dir) {
+            await go_to_dir(current_dir, true);
+        }
+    }
+
+    async function paste_asset(name: string, path: string, move_type?: string) {
+        const move_to = (current_dir) ? `${current_dir as string}/${name}` : name;
+        if (move_type == "move") {
+            const resp = await ClientAPI.rename(path, move_to);
+            if (resp && resp.result === 1) {
+                EventBus.trigger("SYS_ASSET_MOVED", { name, path, new_path: move_to });
                 await go_to_dir(current_dir as string, true);
+            }
             else if (resp.result === 0) {
                 error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${resp.message}`);
             }
-            moving_asset_name = undefined;
-            cut_asset_path = "";
-            copy_asset_path = "";
         }
-        if (copy_asset_path) {
-            const resp = await ClientAPI.copy(copy_asset_path, move_to);
-            if (resp && resp.result === 1)
+        if (move_type == "copy") {
+            const resp = await ClientAPI.copy(path, move_to);
+            if (resp && resp.result === 1) {
+                EventBus.trigger("SYS_ASSET_COPIED", { name, path, new_path: move_to });
                 await go_to_dir(current_dir as string, true);
+            }
             else if (resp.result === 0) {
                 error_popup(`Не удалось скопировать файл ${name}, ответ сервера: ${resp.message}`);
             }
@@ -497,104 +565,162 @@ function AssetControlCreate() {
         generate_breadcrumbs('')
     }
 
-    function onMouseDown(event: any) {
-        if (!ContextMenu.isVisible()) {
-            active_asset?.classList.remove("active")
-            active_asset = undefined;
-        }
+    async function handle_drop(event: any) {     
+        if (selected_assets.length != 0) {
+            const folder_elem = event.target.closest('.folder.asset');
+            const breadcrumbs_elem = event.target.closest('.folderName');
+            let dir_to: string | undefined = undefined;
+            if (folder_elem) 
+                dir_to = folder_elem.getAttribute('data-path');
+            else if (breadcrumbs_elem)
+                dir_to = breadcrumbs_elem.getAttribute('data-path');
+            if (dir_to) {
+                selected_assets.forEach(async element => {
+                    const asset_path = element.getAttribute('data-path') as string;
+                    const name = element.getAttribute('data-name') as string;
+                    const move_to = `${dir_to}/${name}`;
+                    const resp = await ClientAPI.rename(asset_path, move_to);
+                });
+                await go_to_dir(current_dir as string, true);
+            }
+        }   
+        drag_now = false;
+    }
+
+    function clear_selected() {
+        selected_assets.forEach(element => {
+            element.classList.remove("selected");
+        });
+        selected_assets.splice(0);
+    }
+
+    function add_to_selected(elem: HTMLSpanElement) {
+        if (selected_assets.includes(elem)) return;
+        selected_assets.push(elem);
+        elem.classList.add("selected");
+    }
+
+    function set_active(elem: HTMLSpanElement) {
+        active_asset = elem;
+        active_asset.classList.add("active");
+    }
+
+    function clear_active() {
+        active_asset?.classList.remove("active");
+        active_asset = undefined;
+        
+    }
+
+    function remove_from_selected(elem: HTMLSpanElement) {
+        selected_assets.splice(selected_assets.indexOf(elem), 1);
+        elem.classList.remove("selected");
     }
 
     function onMouseMove(event: any) {
 
     }
 
-    async function onMouseUp(event: any) {
-        if (!current_project || drag_now) return;
+    function onMouseDown(event: any) {
+        const popup_elem = event.target.closest('.bgpopup');
+        const menu_elem = event.target.closest('.wr_menu__context');
+        const menu_popup_elem = event.target.closest('.wr_popup');
+        if (!current_project || menu_elem || popup_elem || menu_popup_elem) return;
+        const folder_elem = event.target.closest('.folder.asset');
+        const file_elem = event.target.closest('.file.asset');
+        const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
         if (event.button === 0 || event.button === 2) {
-            if (!event.target.closest('.filemanager')) {
-                return;
-            }
-            let path = "";
-            const folder_elem = event.target.closest('.folder.asset');
-            if (folder_elem !== null) {
-                folder_elem.classList.add("active");
-                active_asset?.classList.remove("active")
-                active_asset = folder_elem;
-                path = folder_elem.getAttribute('data-path');
+            if (!Input.is_control()) {
+                // При нажатии ЛКМ куда-либо вне меню, делаем сброс всех выбранных ассетов, если ctrl отпущена
                 if (event.button === 0) {
-                    return await go_to_dir(path);
+                    clear_selected();
                 }
+                // Так же делаем сброс при нажатии ПКМ вне всех ассетов либо на ассет не из списка выбранных, если ctrl отпущена
+                else if (event.button === 2 ) {
+                    if (!asset_elem || (asset_elem && !selected_assets.includes(asset_elem)))
+                        clear_selected();
+                }
+                // Если ctrl отпущена, при нажатии ЛКМ или ПКМ на ассет просто добавляем его в список выбранных
+                if (asset_elem && (!ContextMenu.isVisible()))
+                    add_to_selected(asset_elem);  
             }
-            const file_elem = event.target.closest('.file.asset');
-            if (file_elem !== null) {
-                active_asset?.classList.remove("active");
-                active_asset = file_elem;
-                file_elem.classList.add("active");
-                path = file_elem.getAttribute('data-path');
+
+            else if (Input.is_control()) {
+                if (asset_elem && event.button === 0)
+                    // Если ctrl нажата, добавляем ассет в список выбранных при нажатии ЛКМ на него, если его нет в этом списке
+                    if (!selected_assets.includes(asset_elem) && (!ContextMenu.isVisible())) 
+                        add_to_selected(asset_elem);  
+                    // Либо убираем если он уже в списке
+                    else
+                        remove_from_selected(asset_elem);
+            } 
+        }
+    }
+
+    async function onMouseUp(event: any) {
+        const popup_elem = event.target.closest('.bgpopup');
+        const menu_elem = event.target.closest('.wr_menu__context');
+        const menu_popup_elem = event.target.closest('.wr_popup');
+        if (!current_project || menu_elem || popup_elem || menu_popup_elem) return;
+        const folder_elem = event.target.closest('.folder.asset');
+        const file_elem = event.target.closest('.file.asset');
+        if (drag_now && event.button === 0 && event.target.closest('.filemanager')) {
+            return await handle_drop(event);
+        }
+        clear_active();
+        if (event.button === 0 || event.button === 2) {
+            if (folder_elem) {
+                set_active(folder_elem);
+                add_to_selected(folder_elem);
+            }
+            if (file_elem) {
+                set_active(file_elem);
+                add_to_selected(file_elem);
+                const path = file_elem.getAttribute('data-path');
                 const name = file_elem.getAttribute('data-name');
+                const ext = file_elem.getAttribute('data-ext');
                 log(`Клик на ассет файл ${name}, путь ${path}, проект ${current_project}`);
-                EventBus.trigger("SYS_CLICK_ON_ASSET", { name, path });
-            }
-            if (!file_elem && !folder_elem) {
-                active_asset?.classList.remove("active");
-                active_asset = undefined;
+                EventBus.trigger("SYS_CLICK_ON_ASSET", { name, path, ext, button: event.button });
             }
             const breadcrumbs_elem = event.target.closest('a .folderName');
             if (breadcrumbs_elem !== null && event.button === 0) {
-                path = breadcrumbs_elem.getAttribute('data-path');
+                const path = breadcrumbs_elem.getAttribute('data-path');
                 return await go_to_dir(path);
             }
-            if (event.button === 2) {
-                open_menu(event);
-                return;
+        }
+        if (event.button === 0) {
+            if (folder_elem)  {
+                const path = folder_elem.getAttribute('data-path');
+                return await go_to_dir(path);
             }
+        }
+        else if (event.button === 2 && event.target.closest('.filemanager')) {
+            open_menu(event);
+            return;
         }
     }
 
     async function onKeyUp(event: any) {
-        if (Input.is_control() && (event.key == 'i' || event.key == 'ш')) {
-            log(`\ncurrent project: ${current_project}\ncurrent directory: ${current_dir}\nactive asset name: ${name}\nmoving asset name: ${moving_asset_name}`)
-        }
-        if (active_asset) {
+        if (event.key == 'F2' && active_asset) {
             const path = active_asset.getAttribute('data-path') as string;
             const name = active_asset.getAttribute('data-name') as string;
-            if (event.key == 'F2' && active_asset) {
-                rename_popup(path, name);
-            }
-            if (Input.is_control() && (event.key == 'c' || event.key == 'с')) {
-                moving_asset_name = name;
-                copy_asset_path = path;
-            }
-            if (Input.is_control() && (event.key == 'x' || event.key == 'ч')) {
-                moving_asset_name = name;
-                cut_asset_path = path;
-            }
+            rename_popup(path, name);
+        }
+        if (event.key == 'Delete') {
+            remove_popup();
+        }
+        if (Input.is_control() && (event.key == 'c' || event.key == 'с') && selected_assets.length) {
+            move_assets_data.assets = selected_assets.slice();
+            move_assets_data.move_type = "copy";
+            log("cut assets, amount = ", move_assets_data.assets.length);
+        }
+        if (Input.is_control() && (event.key == 'x' || event.key == 'ч') && selected_assets.length) {
+            move_assets_data.assets = selected_assets.slice();
+            move_assets_data.move_type = "move";
+            log("copy assets, amount = ", move_assets_data.assets.length);
+        }
 
-            if (Input.is_control() && (event.key == 'v' || event.key == 'м') && moving_asset_name) {
-                const move_to = `${current_dir}/${moving_asset_name}`;
-                if (cut_asset_path) {
-                    const resp = await ClientAPI.rename(cut_asset_path, move_to);
-                    if (resp && resp.result === 1)
-                        await go_to_dir(current_dir as string, true);
-                    else if (resp.result === 0) {
-                        error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${resp.message}`);
-                    }
-                    moving_asset_name = undefined;
-                    cut_asset_path = "";
-                    copy_asset_path = "";
-                }
-                if (copy_asset_path) {
-                    const resp = await ClientAPI.copy(copy_asset_path, move_to);
-                    if (resp && resp.result === 1)
-                        await go_to_dir(current_dir as string, true);
-                    else if (resp.result === 0) {
-                        error_popup(`Не удалось скопировать файл ${name}, ответ сервера: ${resp.message}`);
-                    }
-                }
-            }
-            if (event.key == 'Delete') {
-                remove_popup(path, name);
-            }
+        if (Input.is_control() && (event.key == 'v' || event.key == 'м') && move_assets_data.assets.length) {
+            paste_assets()
         }
     }
 
@@ -628,12 +754,12 @@ function AssetControlCreate() {
         });
 
         dropZone.addEventListener("drop", async function (e) {
+            drag_now = false;
             e.preventDefault();
             if (current_project == undefined || current_dir == undefined) {
                 Log.warn('Попытка загрузить файл на сервер, но никакой проект не загружен');
                 return;
             }
-            drag_now = false;
             dropZone.classList.remove(hoverClassName);
             if (e.dataTransfer != null) {
 

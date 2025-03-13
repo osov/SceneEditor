@@ -39,3 +39,6 @@ builtins
 *.editor_settings
 *.internal
 bun.lockb
+
+
+server_cache.json

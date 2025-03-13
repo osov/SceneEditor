@@ -1,14 +1,14 @@
 import path from "path";
 import { Router } from "bun-serve-router";
-import { ERROR_TEXT, URL_PATHS, CMD_NAME, LOAD_PROJECT_CMD, GET_FOLDER_CMD, GET_LOADED_PROJECT_CMD } from "./const";
 import { project_name_required, get_file, handle_command, loaded_project_required, get_cache, write_cache } from "./logic";
 import { ExtWebSocket, WsClient } from "./types";
-import { ServerResponses, ServerCommands, NetMessagesEditor as NetMessages, CommandId } from "../../src/modules_editor/modules_editor_const";
+import { ServerResponses, ServerCommands, NetMessagesEditor as NetMessages, CommandId, URL_PATHS, CMD_NAME, GET_LOADED_PROJECT_CMD, LOAD_PROJECT_CMD, GET_FOLDER_CMD } from "../../src/modules_editor/modules_editor_const";
 import { TDictionary } from "../../src/modules_editor/modules_editor_const";
 import { do_response, json_parsable } from "./utils";
 import { get_asset_path, get_full_path } from "./fs_utils";
 import { WsServer } from "./WsServer";
 import { FSWatcher } from "./fs_watcher";
+import { ERROR_TEXT } from "./const";
 
 export async function Server(server_port: number, ws_server_port: number, fs_events_interval: number) {
     // const clients = Clients();
@@ -43,8 +43,9 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
                     if (file_name) {
                         file_path = path.join(dir_path, file_name);
                         name = file_name;
+                        const ext = path.extname(name).slice(1);
                         size = await Bun.write(`${get_asset_path(project, file_path)}`, file);
-                        const response: ServerResponses['/upload'] = {result: 1, data: {size, path: file_path, name, project}};
+                        const response: ServerResponses['/upload'] = {result: 1, data: {size, path: file_path, name, project, ext}};
                         return do_response(response);   
                     }
                 }

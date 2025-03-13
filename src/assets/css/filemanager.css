@@ -30,7 +30,8 @@
 
 
 .filemanager .assets_list li {
-	border-radius: 3px;
+	border: 1px solid transparent;
+	border-radius: 6px;
 	width: 190px;
 	height: 60px;
 	list-style-type: none;
@@ -45,9 +46,16 @@
 	transition: 0.3s background-color;
 }
 
-.filemanager .assets_list li:hover, .filemanager .assets_list li.active {
-	background-color: #2c393c;
+.filemanager .assets_list li:hover, .filemanager .assets_list li.selected:hover {
+	background-color: #335057;
+}
 
+.filemanager .assets_list li.active {
+	border-color: #859e9e88;
+}
+
+.filemanager .assets_list li.selected {
+	background-color: #2c393c;
 }
 
 .filemanager .assets_list li a {
