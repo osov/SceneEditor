@@ -1680,7 +1680,11 @@ function InspectorControlCreate() {
             const x = isChangedX ? slice.x : (mesh as Slice9Mesh).get_slice().x;
             const y = isChangedY ? slice.y : (mesh as Slice9Mesh).get_slice().y;
 
+            console.log("SLICE_UPDATED: ", isChangedX, isChangedY, x, y);
+
             (mesh as Slice9Mesh).set_slice(x, y);
+
+            console.log((mesh as Slice9Mesh).get_slice().x, (mesh as Slice9Mesh).get_slice().y);
         });
     }
 
