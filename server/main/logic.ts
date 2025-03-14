@@ -28,7 +28,7 @@ const loaded_project_required_commands = [
 ]
 
 const allowed_ext = ['mtr', 'prt', 'pss', 'txt', 'jpg','jpeg','png','gif','gltf','glb','obj','mtr','smpl','prt','fbx','mp3','ogg'];
-const texture_ext = ['jpg','jpeg','png', 'gif'];
+const texture_ext = ['jpg','jpeg','png'];
 
 
 export async function handle_command<T extends CommandId>(project: string, cmd_id: T, params: object) {
