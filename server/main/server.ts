@@ -131,9 +131,9 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
             return result;
         }
         
-        if (!json_parsable(data)) 
+        if (data && !json_parsable(data)) 
             return {message: ERROR_TEXT.WRONG_JSON, result: 0};
-        const params = JSON.parse(data);
+        const params = (data) ? JSON.parse(data) : {};
 
         const resp = await project_name_required(cmd_id, params);
         if (resp) return resp;

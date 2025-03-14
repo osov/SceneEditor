@@ -2,7 +2,7 @@
 import path from "path";
 import { PATH_PARAM_NAME, ERROR_TEXT, NAME_PARAM_NAME, PROJECT_PARAM_NAME, DATA_PARAM_NAME, NEW_PATH_PARAM_NAME } from "./const";
 import { check_dir_exists, exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, read_dir_assets, rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir, get_cache_path } from "./fs_utils";
-import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD, SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD } from "../../src/modules_editor/modules_editor_const";
+import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD, SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD, MOVE_CMD } from "../../src/modules_editor/modules_editor_const";
 import { ServerCacheData } from "./types";
 
 
@@ -99,28 +99,32 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const dir_content = await read_dir_assets(folder_path, root_folder);
         return {result: 1, data: dir_content};
     }
-    
-    async function on_rename(cmd: ServerCommands[typeof RENAME_CMD]): Promise<ServerResponses[typeof RENAME_CMD]> {
-        const old_path = get_asset_path(project, cmd.path);
-        const new_path = get_asset_path(project, cmd.new_path);
-        const file_exists = await exists(old_path);
-        if (!file_exists)
-            return {message: `${ERROR_TEXT.FILE_NOT_EXISTS}: ${old_path}`, result: 0};
-        const ext1 = path.extname(old_path).slice(1);
-        const ext2 = path.extname(new_path).slice(1);
-        // if (!allowed_ext.includes(ext1))
-        //     return {result: 0, message: ERROR_TEXT.WRONG_ORIG_EXTENTION};
-        // if (!allowed_ext.includes(ext2))
-        //     return {result: 0, message: ERROR_TEXT.WRONG_END_EXTENTION};
-        
-        const info = await read_metadata(project, cmd.path);
-        if (info) {
-            await write_metadata(project, cmd.new_path, info);
-            await clear_metadata(project, cmd.path);
-        }
 
-        await rename(old_path, new_path);
-        return {result: 1, data: {new_path}};
+    async function copy_file(old_path: string, new_path: string) {
+        const info = await read_metadata(project, old_path);
+        if (info) {
+            await write_metadata(project, new_path, info);
+        }
+        const full_old_path = get_asset_path(project, old_path);
+        const full_new_path = get_asset_path(project, new_path);
+        await copy(full_old_path, full_new_path);
+    }
+
+    async function copy_folder(old_path: string, new_path: string) {
+        const root_folder = get_assets_folder_path(project);
+        const full_old_path = get_asset_path(project, old_path);
+        const full_new_path = get_asset_path(project, new_path);
+        if (!await check_dir_exists(full_new_path))
+            await mk_dir(full_new_path);
+        const dir_content = await read_dir_assets(full_old_path, root_folder);
+        for (const obj of dir_content) {
+            const old_asset_path = obj.path;
+            const new_asset_path = path.join(new_path, obj.name);
+            if (obj.type == "folder")
+                await copy_folder(old_asset_path, new_asset_path);
+            else
+                await copy_file(old_asset_path, new_asset_path);
+        }
     }
     
     async function on_copy(cmd: ServerCommands[typeof COPY_CMD]): Promise<ServerResponses[typeof COPY_CMD]> {
@@ -128,30 +132,107 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         if (cmd.path === "" || cmd.new_path === "")
             return {message: ERROR_TEXT.COPY_CHANGE_ROOT, result: 0};
         const old_path = get_asset_path(project, cmd.path);
-        let new_path = get_asset_path(project, cmd.new_path);
+        const new_path = get_asset_path(project, cmd.new_path);
         const file_exists = await exists(old_path);
         if (!file_exists)
             return {message: `${ERROR_TEXT.FILE_NOT_EXISTS}: ${old_path}`, result: 0};
+        if (await is_folder(old_path)) {
+            if (!cmd.new_path.includes(cmd.path)) 
+                await copy_folder(cmd.path, cmd.new_path)
+            else 
+                return {message: `${ERROR_TEXT.RECURSIVE_FOLDER_COPYING}: ${old_path}`, result: 0};
+        }
+            
+        else 
+            await copy_file(cmd.path, cmd.new_path);
+        return {result: 1, data: {new_path}};
+    }
 
+    async function move_file(old_path: string, new_path: string) {
+        const info = await read_metadata(project, old_path);
+        if (info) {
+            await write_metadata(project, new_path, info);
+            await clear_metadata(project, old_path);
+        }
+        const full_old_path = get_asset_path(project, old_path);
+        const full_new_path = get_asset_path(project, new_path);
+        await rename(full_old_path, full_new_path);
+    }
+
+    async function move_folder(old_path: string, new_path: string) {
+        const root_folder = get_assets_folder_path(project);
+        const full_old_path = get_asset_path(project, old_path);
+        const full_new_path = get_asset_path(project, new_path);
+        if (!await check_dir_exists(full_new_path))
+            await mk_dir(full_new_path);
+        const dir_content = await read_dir_assets(full_old_path, root_folder);
+        for (const obj of dir_content) {
+            const old_asset_path = obj.path;
+            const new_asset_path = path.join(new_path, obj.name);
+            if (obj.type == "folder")
+                await move_folder(old_asset_path, new_asset_path);
+            else
+                await move_file(old_asset_path, new_asset_path);
+        }
+        await remove_path(full_old_path);
+    }
+
+    async function on_move(cmd: ServerCommands[typeof MOVE_CMD]): Promise<ServerResponses[typeof MOVE_CMD]> {
+        // Не разрешаем делать перемещение корневой папки ассетов проекта
+        if (cmd.path === "" || cmd.new_path === "")
+            return {message: ERROR_TEXT.COPY_CHANGE_ROOT, result: 0};
+        const old_path = get_asset_path(project, cmd.path);
+        const new_path = get_asset_path(project, cmd.new_path);
+        const file_exists = await exists(old_path);
+        if (!file_exists)
+            return {message: `${ERROR_TEXT.FILE_NOT_EXISTS}: ${old_path}`, result: 0};
+        if (await is_folder(old_path)) {
+            if (!cmd.new_path.includes(cmd.path)) 
+                await move_folder(cmd.path, cmd.new_path)
+            else 
+                return {message: `${ERROR_TEXT.RECURSIVE_FOLDER_COPYING}: ${old_path}`, result: 0};
+        }
+        else 
+            await move_file(cmd.path, cmd.new_path);
+        return {result: 1, data: {new_path}};
+    }
+    
+    async function on_rename(cmd: ServerCommands[typeof RENAME_CMD]): Promise<ServerResponses[typeof RENAME_CMD]> {
+        // Не разрешаем делать переименование корневой папки ассетов проекта
+        if (cmd.path === "" || cmd.new_path === "")
+            return {message: ERROR_TEXT.COPY_CHANGE_ROOT, result: 0};
+        const old_path = get_asset_path(project, cmd.path);
+        const new_path = get_asset_path(project, cmd.new_path);
+        const file_exists = await exists(old_path);
+        if (!file_exists)
+            return {message: `${ERROR_TEXT.FILE_NOT_EXISTS}: ${old_path}`, result: 0};
+        if (!await is_folder(old_path)) {
+            const ext1 = path.extname(old_path).slice(1);
+            const ext2 = path.extname(new_path).slice(1);
+            if (!allowed_ext.includes(ext1))
+                return {result: 0, message: ERROR_TEXT.WRONG_ORIG_EXTENTION};
+            if (!allowed_ext.includes(ext2))
+                return {result: 0, message: ERROR_TEXT.WRONG_END_EXTENTION};
+        }
         const info = await read_metadata(project, cmd.path);
         if (info) {
             await write_metadata(project, cmd.new_path, info);
+            await clear_metadata(project, cmd.path);
         }
-
-        await copy(old_path, new_path);
+        await rename(old_path, new_path);
         return {result: 1, data: {new_path}};
     }
     
     async function on_delete(cmd: ServerCommands[typeof DELETE_CMD]): Promise<ServerResponses[typeof DELETE_CMD]> {
         const asset_path = get_asset_path(project, cmd.path);
-        const root_dir_content = await remove_path(asset_path);
+        const path = await remove_path(asset_path);
 
         const info = await read_metadata(project, cmd.path);
         if (info) {
             await clear_metadata(project, cmd.path);
         }
 
-        return {result: 1, data: {path: root_dir_content}};
+        return {result: 1, data: {path}};
     }
     
     async function on_save_info(cmd: ServerCommands[typeof SAVE_INFO_CMD]): Promise<ServerResponses[typeof SAVE_INFO_CMD]> {
@@ -162,7 +243,11 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
     }
     
     async function on_get_info(cmd: ServerCommands[typeof GET_INFO_CMD]): Promise<ServerResponses[typeof GET_INFO_CMD]> {
-        const data = await read_metadata(project, cmd.path);
+        let data: TRecursiveDict | undefined = undefined;
+        if (cmd.path)   
+            data = await read_metadata(project, cmd.path);
+        else 
+            data = await get_all_metadata(project);
         return {result: 1, data};
     }
 
@@ -205,6 +290,10 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         return await on_copy(params as ServerCommands[typeof COPY_CMD]);
     }
 
+    if (cmd_id == MOVE_CMD) {
+        return await on_move(params as ServerCommands[typeof MOVE_CMD]);
+    }
+
     if (cmd_id == DELETE_CMD) {
         return await on_delete(params as ServerCommands[typeof DELETE_CMD]);
     }
@@ -236,36 +325,36 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
     return {message: ERROR_TEXT.COMMAND_NOT_FOUND, result: 0}
 }
 
-async function read_metadata(project_name: string, dir: string) {
+async function get_all_metadata(project_name: string) {
     const data_file_path = get_metadata_path(project_name);
     const file_exists = await exists(data_file_path);
     if (!file_exists) await Bun.write(data_file_path, "{}");
     const data_file = Bun.file(data_file_path);
     const data_string = await data_file.text();
     const all_metadata = JSON.parse(data_string);
-    const asset_metadata = all_metadata[dir] ? all_metadata[dir] as TRecursiveDict : undefined;
+    return all_metadata
+}
+
+async function read_metadata(project_name: string, dir: string) {
+    const all_metadata = await get_all_metadata(project_name);
+    const key = dir.replaceAll(path.sep, "/");
+    const asset_metadata = all_metadata[key] ? all_metadata[key] as TRecursiveDict : undefined;
     return asset_metadata;
 }
 
 async function clear_metadata(project_name: string, dir: string) {
     const data_file_path = get_metadata_path(project_name);
-    const file_exists = await exists(data_file_path);
-    if (!file_exists) return;
-    const data_file = Bun.file(data_file_path);
-    const data_string = await data_file.text();
-    const all_metadata = JSON.parse(data_string);
-    delete all_metadata[dir];
+    const all_metadata = await get_all_metadata(project_name);
+    const key = dir.replaceAll(path.sep, "/");
+    delete all_metadata[key];
     await Bun.write(data_file_path, JSON.stringify(all_metadata));    
 }
 
 async function write_metadata(project_name: string, dir: string, data: TRecursiveDict) {
     const data_file_path = get_metadata_path(project_name);
-    const file_exists = await exists(data_file_path);
-    if (!file_exists) await Bun.write(data_file_path, "{}");
-    const data_file = Bun.file(data_file_path);
-    const data_string = await data_file.text();
-    const all_metadata = JSON.parse(data_string);
-    all_metadata[dir] = data;
+    const all_metadata = await get_all_metadata(project_name);
+    const key = dir.replaceAll(path.sep, "/");
+    all_metadata[key] = data;
     await Bun.write(data_file_path, JSON.stringify(all_metadata));
 }
 
@@ -327,7 +416,7 @@ export function check_fields(cmd_id: CommandId, params: any) {
     if (cmd_id === GET_DATA_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME]);
     if (cmd_id === GET_INFO_CMD)
-        wrong_fields = _check_fields(params, [PATH_PARAM_NAME]);
+        wrong_fields = _check_fields(params, []);
     if (cmd_id === SAVE_DATA_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME, DATA_PARAM_NAME]);
     if (cmd_id === SAVE_INFO_CMD)
@@ -340,11 +429,12 @@ export function check_fields(cmd_id: CommandId, params: any) {
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME, NAME_PARAM_NAME]);
     if (cmd_id === RENAME_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME, NEW_PATH_PARAM_NAME]);
+    if (cmd_id === MOVE_CMD)
+        wrong_fields = _check_fields(params, [PATH_PARAM_NAME, NEW_PATH_PARAM_NAME]);
     if (cmd_id === COPY_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME, NEW_PATH_PARAM_NAME]);
     if (cmd_id === DELETE_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME]);
-
     if (wrong_fields.length > 0) return {result: 0, message: `${ERROR_TEXT.SOME_FIELDS_WRONG}: ${wrong_fields}`}
 
     function _check_fields(data: any, fields: string[]) {

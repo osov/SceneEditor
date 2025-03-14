@@ -40,9 +40,10 @@ export type AssetsCommands = {
     // [SEARCH_CMD]: { name: string },
     [RENAME_CMD]: { path: string, new_path: string },
     [COPY_CMD]: { path: string, new_path: string },
+    [MOVE_CMD]: { path: string, new_path: string },
     [DELETE_CMD]: { path: string },
     [SAVE_INFO_CMD]: { path: string, data: TRecursiveDict },
-    [GET_INFO_CMD]: { path: string },
+    [GET_INFO_CMD]: { path?: string },
     [DEL_INFO_CMD]: { path: string },
     [SAVE_DATA_CMD]: { path: string, data: string },
     [GET_DATA_CMD]: { path: string },
@@ -69,6 +70,7 @@ export type AssetsResponses = {
     [LOAD_PROJECT_CMD]: BaseResp<{ assets: FSObject[], name: string }>,
     [RENAME_CMD]: BaseResp<VoidMessage>,
     [COPY_CMD]: BaseResp<VoidMessage>,
+    [MOVE_CMD]: BaseResp<VoidMessage>,
     [DELETE_CMD]: BaseResp<VoidMessage>,
     [SAVE_INFO_CMD]: BaseResp<VoidMessage>,
     [GET_INFO_CMD]: BaseResp<TRecursiveDict>,
@@ -105,6 +107,7 @@ export const LOAD_PROJECT_CMD = '/load_project';
 export const SEARCH_CMD = '/search';
 export const RENAME_CMD = '/rename';
 export const COPY_CMD = '/copy';
+export const MOVE_CMD = '/move';
 export const DELETE_CMD = '/delete';
 export const SAVE_DATA_CMD = '/save_data';
 export const GET_DATA_CMD = '/get_data';
@@ -126,11 +129,13 @@ export const CMD_NAME = [
     SEARCH_CMD, 
     RENAME_CMD,
     COPY_CMD,
+    MOVE_CMD,
     DELETE_CMD, 
     SAVE_DATA_CMD,
     GET_DATA_CMD,
     SAVE_INFO_CMD,
-    GET_INFO_CMD
+    GET_INFO_CMD,
+    DEL_INFO_CMD,
 ]
 
 export const URL_PATHS = {

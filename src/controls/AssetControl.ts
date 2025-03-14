@@ -23,7 +23,8 @@ function AssetControlCreate() {
     let move_assets_data: {assets: Element[], move_type?: "move" | "copy"} = {assets: []};
     let current_dir: string | undefined = undefined;
     let current_project: string | undefined = undefined;
-    let drag_now = false;
+    let drag_for_upload_now = false;
+    let drag_asset_now = false;
 
     async function load_project(name: string, folder_content?: FSObject[], to_dir?: string) {
         current_project = name;
@@ -103,10 +104,10 @@ function AssetControlCreate() {
                 folder_elem.appendChild(icon_elem);
                 folder_elem.appendChild(name_elem);
                 folder_elem.appendChild(details_elem);
-                folder_elem.addEventListener("drop", async function (e) {
-                    await drop_into_folder(e, folder_elem);
-                });
-
+                folder_elem.addEventListener("drop", async (e) => {
+                    if (drag_asset_now) 
+                        await handle_asset_drop(_path);
+                })
                 assets_list.appendChild(folder_elem);
             });
         }
@@ -145,7 +146,9 @@ function AssetControlCreate() {
                 file_elem.appendChild(icon_elem);
                 file_elem.appendChild(name_elem);
                 file_elem.appendChild(details_elem);
-
+                file_elem.addEventListener("dragstart", function(e) {
+                    drag_asset_now = true;
+                })
                 assets_list.appendChild(file_elem);
             });
         }
@@ -191,12 +194,17 @@ function AssetControlCreate() {
                 const arrow = _span_elem("→", ["arrow"]);
                 const a_elem = document.createElement("a");
                 const span_elem = _span_elem(name, ["folderName"]);
-                span_elem.setAttribute("data-path", u.replace("/", ""));
+                const _path = u.replace("/", "");
+                span_elem.setAttribute("data-path", _path);
                 span_elem.setAttribute("data-type", asset_type);
                 a_elem.setAttribute("href", "javascript:void(0);");
                 a_elem.appendChild(span_elem);
                 breadcrumbs.appendChild(a_elem);
                 breadcrumbs.appendChild(arrow);
+                span_elem.addEventListener("drop", async (e) => {
+                    if (drag_asset_now) 
+                        await handle_asset_drop(_path);
+                })
             }
             else {
                 const span_elem = _span_elem(name, ["folderName"]);
@@ -368,6 +376,8 @@ function AssetControlCreate() {
         move_assets_data.assets.forEach(element => {
             const name = escapeHTML(element.getAttribute('data-name') as string);  
             const path = escapeHTML(element.getAttribute("data-path") as string);
+            // TODO: Сейчас сервер не может копировать папки. Если будет нужно реализовать, придётся копировать 
+            // каждый файл в папке и подпапках, и не забыть реализовать перенос мета инфы всех файлов на новые пути
             paste_asset(name, path, move_type);
         })
         move_assets_data.assets.splice(0);
@@ -488,7 +498,7 @@ function AssetControlCreate() {
     async function paste_asset(name: string, path: string, move_type?: string) {
         const move_to = (current_dir) ? `${current_dir as string}/${name}` : name;
         if (move_type == "move") {
-            const resp = await ClientAPI.rename(path, move_to);
+            const resp = await ClientAPI.move(path, move_to);
             if (resp && resp.result === 1) {
                 EventBus.trigger("SYS_ASSET_MOVED", { name, path, new_path: move_to });
                 await go_to_dir(current_dir as string, true);
@@ -565,26 +575,23 @@ function AssetControlCreate() {
         generate_breadcrumbs('')
     }
 
-    async function handle_drop(event: any) {     
+    async function handle_asset_drop(dir_to: string) { 
+        drag_asset_now = false;
         if (selected_assets.length != 0) {
-            const folder_elem = event.target.closest('.folder.asset');
-            const breadcrumbs_elem = event.target.closest('.folderName');
-            let dir_to: string | undefined = undefined;
-            if (folder_elem) 
-                dir_to = folder_elem.getAttribute('data-path');
-            else if (breadcrumbs_elem)
-                dir_to = breadcrumbs_elem.getAttribute('data-path');
-            if (dir_to) {
-                selected_assets.forEach(async element => {
-                    const asset_path = element.getAttribute('data-path') as string;
-                    const name = element.getAttribute('data-name') as string;
-                    const move_to = `${dir_to}/${name}`;
-                    const resp = await ClientAPI.rename(asset_path, move_to);
-                });
-                await go_to_dir(current_dir as string, true);
-            }
+            log("selected_assets", selected_assets)
+            selected_assets.forEach(async element => {
+                const asset_path = element.getAttribute('data-path') as string;
+                const name = element.getAttribute('data-name') as string;
+                const move_to = `${dir_to}/${name}`;
+                const r = await ClientAPI.move(asset_path, move_to);
+                if (r && r.result === 1)
+                    // обновляем текущую папку, чтобы отобразить изменившееся число файлов в той папке, куда переместили файл
+                    await go_to_dir(current_dir as string, true);
+                else {
+                    error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${r.message}`);
+                }
+            });
         }   
-        drag_now = false;
     }
 
     function clear_selected() {
@@ -630,15 +637,9 @@ function AssetControlCreate() {
         const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
         if (event.button === 0 || event.button === 2) {
             if (!Input.is_control()) {
-                // При нажатии ЛКМ куда-либо вне меню, делаем сброс всех выбранных ассетов, если ctrl отпущена
-                if (event.button === 0) {
-                    clear_selected();
-                }
-                // Так же делаем сброс при нажатии ПКМ вне всех ассетов либо на ассет не из списка выбранных, если ctrl отпущена
-                else if (event.button === 2 ) {
-                    if (!asset_elem || (asset_elem && !selected_assets.includes(asset_elem)))
+                // При нажатии ЛКМ / ПКМ вне всех ассетов либо на ассет не из списка выбранных, и ctrl отпущена, делаем сброс всех выбранных ассетов
+                if (!asset_elem || (asset_elem && !selected_assets.includes(asset_elem)))
                         clear_selected();
-                }
                 // Если ctrl отпущена, при нажатии ЛКМ или ПКМ на ассет просто добавляем его в список выбранных
                 if (asset_elem && (!ContextMenu.isVisible()))
                     add_to_selected(asset_elem);  
@@ -663,9 +664,6 @@ function AssetControlCreate() {
         if (!current_project || menu_elem || popup_elem || menu_popup_elem) return;
         const folder_elem = event.target.closest('.folder.asset');
         const file_elem = event.target.closest('.file.asset');
-        if (drag_now && event.button === 0 && event.target.closest('.filemanager')) {
-            return await handle_drop(event);
-        }
         clear_active();
         if (event.button === 0 || event.button === 2) {
             if (folder_elem) {
@@ -724,69 +722,41 @@ function AssetControlCreate() {
         }
     }
 
-    const dropZone = document.getElementById("drop_zone");
-    if (dropZone) {
-        let hoverClassName = 'hover';
-
-        dropZone.addEventListener("dragenter", function (e) {
+    if (filemanager) {
+        filemanager.addEventListener("dragenter", function (e) {
             e.preventDefault();
-            drag_now = true;
-            dropZone.classList.add(hoverClassName);
-        });
-        dropZone.addEventListener("dragstart", function (e) {
-            const elem = e.target as HTMLInputElement;
-            const path = elem.getAttribute("data-path");
-            const name = elem.getAttribute("data-name");
-            if (path && name && e.dataTransfer) {
-                e.dataTransfer.setData("data-path", path);
-                e.dataTransfer.setData("data-name", name);
-            }
+            drag_for_upload_now = true;
         });
 
-        dropZone.addEventListener("dragover", function (e) {
+        filemanager.addEventListener("dragover", function (e) {
             e.preventDefault();
-            dropZone.classList.add(hoverClassName);
+            if (e.dataTransfer)
+                e.dataTransfer.dropEffect = 'copy'; 
         });
 
-        dropZone.addEventListener("dragleave", function (e) {
+        filemanager.addEventListener("dragleave", function (e) {
             e.preventDefault();
-            dropZone.classList.remove(hoverClassName);
         });
 
-        dropZone.addEventListener("drop", async function (e) {
-            drag_now = false;
+        filemanager.addEventListener("drop", async function (e) {
             e.preventDefault();
-            if (current_project == undefined || current_dir == undefined) {
-                Log.warn('Попытка загрузить файл на сервер, но никакой проект не загружен');
-                return;
-            }
-            dropZone.classList.remove(hoverClassName);
-            if (e.dataTransfer != null) {
-
-                // const files = await getFileAsync(e.dataTransfer);
-                const files = Array.from(e.dataTransfer.files);
-                if (files.length > 0) {
-                    upload_files(files);
-                }
-            }
+            await handle_upload_drop(e);
         });
     }
 
-    async function drop_into_folder(e: DragEvent, target: HTMLElement) {
-        if (e.dataTransfer != null && current_dir != undefined) {
-            const type = target.getAttribute("data-type") as AssetType;
-            const target_path = target.getAttribute("data-path");
-            if (type == "folder" && target_path) {
-                const _path = e.dataTransfer.getData("data-path");
-                const name = e.dataTransfer.getData("data-name");
-                const move_to = `${target_path}/${name}`;
-                const r = await ClientAPI.rename(_path, move_to);
-                if (r && r.result === 1)
-                    // обновляем текущую папку, чтобы отобразить изменившееся число файлов в той папке, куда переместили файл
-                    await go_to_dir(current_dir, true);
-                else {
-                    error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${r.message}`);
-                }
+    async function handle_upload_drop(event: DragEvent) {
+        if (!drag_for_upload_now) return;
+        drag_for_upload_now = false;
+        if (current_project == undefined || current_dir == undefined) {
+            Log.warn('Попытка загрузить файл на сервер, но никакой проект не загружен');
+            return;
+        }
+        if (event.dataTransfer != null) {
+            log(event.dataTransfer)
+            // const files = await getFileAsync(e.dataTransfer);
+            const files = Array.from(event.dataTransfer.files);
+            if (files.length > 0) {
+                upload_files(files);
             }
         }
     }

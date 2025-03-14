@@ -29,8 +29,9 @@ export const ERROR_TEXT = {
     CANT_UPLOAD_FILE: 'Could not upload file',
     NO_NEW_PATH: 'New path not received!',
     NO_NEW_NEW: 'New name not received!',
-    COPY_CHANGE_ROOT: `Trying copy or change the project's assets' root folder!`,
+    COPY_CHANGE_ROOT: `Trying change, copy or rename the project's assets' root folder!`,
     SOME_FIELDS_WRONG: `Some of the command's required params are missing or empty`,
     WRONG_ORIG_EXTENTION: `Wrong extention of the initial file`,
     WRONG_END_EXTENTION: `Wrong extention of the destination file`,
+    RECURSIVE_FOLDER_COPYING: `Can't put a copy of a folder into its subfolder`,
 }
