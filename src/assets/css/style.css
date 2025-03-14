@@ -553,7 +553,7 @@ li:not(.active)>.tree__btn .use_trgl {
   display: none;
   width: auto;
   height: auto;
-  min-width: 505px;
+  /* min-width: 505px; */
   top: -500px;
   left: -500px;
   /* min-height: min(385px, calc(100vh - 28px)); */
