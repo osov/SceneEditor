@@ -437,15 +437,17 @@ function AssetControlCreate() {
             text = `Удалить ${type_name} ${name}?`;
             remove_type = "active";
         } 
-        Popups.open({
-            type: "Confirm",
-            params: { title, text, button: "Да", buttonNo: "Нет", auto_close: true },
-            callback: async (success) => {
-                if (success) {
-                    await remove_assets(remove_type);
+        if (remove_type) {
+            Popups.open({
+                type: "Confirm",
+                params: { title, text, button: "Да", buttonNo: "Нет", auto_close: true },
+                callback: async (success) => {
+                    if (success) {
+                        await remove_assets(remove_type);
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     function error_popup(message: string) {
@@ -575,7 +577,6 @@ function AssetControlCreate() {
     async function handle_asset_drop(dir_to: string) { 
         drag_asset_now = false;
         if (selected_assets.length != 0) {
-            log("selected_assets", selected_assets)
             selected_assets.forEach(async element => {
                 const asset_path = element.getAttribute('data-path') as string;
                 const name = element.getAttribute('data-name') as string;
@@ -749,8 +750,6 @@ function AssetControlCreate() {
             return;
         }
         if (event.dataTransfer != null) {
-            log(event.dataTransfer)
-            // const files = await getFileAsync(e.dataTransfer);
             const files = Array.from(event.dataTransfer.files);
             if (files.length > 0) {
                 upload_files(files);
@@ -761,7 +760,7 @@ function AssetControlCreate() {
     async function upload_files(files: File[],) {
         for (const file of files) {
             const data = new FormData();
-            console.log(`trying upload a file: ${file.name} in dir ${current_dir}`);
+            log(`trying upload a file: ${file.name} in dir ${current_dir}`);
             data.append('file', file, file.name);
             data.append('path', current_dir as string);
             const resp = await api.POST(URL_PATHS.UPLOAD, [], data);
