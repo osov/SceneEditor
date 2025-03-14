@@ -60,6 +60,8 @@ export type BaseResp<T> = {
     error_code?: number,
 }
 
+export type ProjectLoadData = { assets: FSObject[], name: string, textures_paths: string[] }
+
 export type AssetsResponses = {
     [GET_LOADED_PROJECT_CMD]: BaseResp<{ name?: string, current_dir: string }>,
     [GET_PROJECTS_CMD]: BaseResp<string[]>,
@@ -67,7 +69,7 @@ export type AssetsResponses = {
     [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
     [GET_FOLDER_CMD]: BaseResp<FSObject[]>,
     // [SEARCH_CMD]: BaseResp<string>,
-    [LOAD_PROJECT_CMD]: BaseResp<{ assets: FSObject[], name: string }>,
+    [LOAD_PROJECT_CMD]: BaseResp<ProjectLoadData>,
     [RENAME_CMD]: BaseResp<VoidMessage>,
     [COPY_CMD]: BaseResp<VoidMessage>,
     [MOVE_CMD]: BaseResp<VoidMessage>,

@@ -26,21 +26,24 @@ export async function remove_path(path: string) {
     return path
 }
 
-export async function read_dir_assets(dir: string, root_dir?: string) {
+export async function read_dir_assets(dir: string, root_dir?: string, recursive = false) {
     const list: FSObject[] = [];
     const items = await fs.readdir(dir);
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const item_path = path.join(dir, item);
-        const rel_path = path.relative(root_dir ? root_dir : dir, item_path);
+        const rel_path = path.relative(root_dir ? root_dir : dir, item_path).replaceAll(path.sep, "/");
         const stats = await fs.stat(item_path);
         const is_file = stats.isFile();
         const num_files = is_file ? 0 : await get_files_amount(item_path);
         const ext = is_file ?  path.extname(item).slice(1) : undefined;
-        const src = is_file ?  path.join(URL_PATHS.ASSETS, rel_path) : undefined;
+        const src = is_file ?  path.join(URL_PATHS.ASSETS, rel_path).replaceAll(path.sep, "/") : undefined;
         const info: FSObject = {name: item, type: is_file ? "file" : "folder", size: stats.size, path: rel_path, num_files, ext, src};
         list.push(info);
-        
+        if (stats.isDirectory() && recursive) {
+            const sub_list = await read_dir_assets(item_path, root_dir ? root_dir : dir, true);
+            list.push(...sub_list);
+        } 
     }
     return list;
 }

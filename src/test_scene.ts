@@ -1,6 +1,8 @@
 import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, Vector3 } from 'three'
 import { IObjectTypes } from './render_engine/types';
 import { run_debug_filemanager } from './controls/AssetControl';
+import { SERVER_URL } from './config';
+import { URL_PATHS } from './modules_editor/modules_editor_const';
 
 export async function run_debug_scene() {
   (window as any).scene = RenderEngine.scene;
@@ -83,6 +85,7 @@ export async function run_debug_scene() {
 
 
   
+  ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
   run_debug_filemanager();
   ControlManager.update_graph(!true);
 

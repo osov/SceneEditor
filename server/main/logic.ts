@@ -28,6 +28,8 @@ const loaded_project_required_commands = [
 ]
 
 const allowed_ext = ['mtr', 'prt', 'pss', 'txt', 'jpg','jpeg','png','gif','gltf','glb','obj','mtr','smpl','prt','fbx','mp3','ogg'];
+const texture_ext = ['jpg','jpeg','png', 'gif'];
+
 
 export async function handle_command<T extends CommandId>(project: string, cmd_id: T, params: object) {
     log('cmd_id:', cmd_id, 'params: ', params)
@@ -46,8 +48,15 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
     
     async function on_load_project(cmd: ServerCommands[typeof LOAD_PROJECT_CMD]): Promise<ServerResponses[typeof LOAD_PROJECT_CMD]> {
         const assets_folder_path = get_assets_folder_path(cmd.project);
-        const assets = await read_dir_assets(assets_folder_path);
-        return {result: 1, data: {assets, name: cmd.project}};
+        const root_folder_assets = await read_dir_assets(assets_folder_path);
+        const all_assets = await read_dir_assets(assets_folder_path, assets_folder_path, true);
+        const textures_paths: string[] = [];
+        all_assets.forEach(element => {
+            if (element.ext && texture_ext.includes(element.ext))
+                textures_paths.push(element.path);
+        });
+        log("textures_paths", textures_paths)
+        return {result: 1, data: {assets: root_folder_assets, name: cmd.project, textures_paths}};
     }
     
     async function on_new_project(cmd: ServerCommands[typeof NEW_PROJECT_CMD]): Promise<ServerResponses[typeof NEW_PROJECT_CMD]> {

@@ -7,8 +7,8 @@ import { IObjectTypes } from "./render_engine/types";
 
 export async function run_anim_scene() {
     await ResourceManager.preload_texture('./img/2.png');
-    run_debug_filemanager();
     ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
+    await run_debug_filemanager();
 
 
 

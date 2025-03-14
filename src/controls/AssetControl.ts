@@ -1,5 +1,5 @@
 import { SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
-import { AssetType, FILE_UPLOAD_CMD, FSObject, ServerResponses, TRecursiveDict, URL_PATHS } from "../modules_editor/modules_editor_const";
+import { AssetType, FILE_UPLOAD_CMD, FSObject, ProjectLoadData, ServerResponses, TRecursiveDict, URL_PATHS } from "../modules_editor/modules_editor_const";
 import { _span_elem, json_parsable } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
@@ -215,7 +215,6 @@ function AssetControlCreate() {
 
     async function getFileAsync(dataTranfer: DataTransfer) {
         const files = [];
-        log('length', dataTranfer.items.length)
         for (var i = 0; i < dataTranfer.items.length; i++) {
             const item = dataTranfer.items[i];
             if (item.kind === 'file') {
@@ -376,8 +375,6 @@ function AssetControlCreate() {
         move_assets_data.assets.forEach(element => {
             const name = escapeHTML(element.getAttribute('data-name') as string);  
             const path = escapeHTML(element.getAttribute("data-path") as string);
-            // TODO: Сейчас сервер не может копировать папки. Если будет нужно реализовать, придётся копировать 
-            // каждый файл в папке и подпапках, и не забыть реализовать перенос мета инфы всех файлов на новые пути
             paste_asset(name, path, move_type);
         })
         move_assets_data.assets.splice(0);
@@ -861,13 +858,16 @@ export async function run_debug_filemanager() {
         if (names.includes(project_to_load)) {
             const r = await ClientAPI.load_project(project_to_load);
             if (r.result === 1) {
-                const data = r.data as { assets: FSObject[], name: string };
+                const data = r.data as ProjectLoadData;
                 let assets: FSObject[] | undefined = data.assets;
                 let go_to_dir: string | undefined = undefined;
                 // Если project_to_load это последний открытый проект, будем переходить в последнюю открытую папку
                 if (project_to_load === last_project_data.name) {
                     assets = undefined;
                     go_to_dir = last_project_data.current_dir;
+                }
+                for (const path of data.textures_paths) {
+                    await ResourceManager.preload_texture("/" + path);
                 }
                 AssetControl.load_project(data.name, assets, go_to_dir);
                 log('Project loaded', data.name);
