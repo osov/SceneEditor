@@ -381,48 +381,50 @@ function InspectorControlCreate() {
         const data = list.map((value) => {
             const fields = [];
 
-            fields.push({ name: Property.ID, data: value.mesh_data.id });
-            fields.push({ name: Property.TYPE, data: value.type });
             fields.push({ name: Property.NAME, data: value.name });
             fields.push({ name: Property.VISIBLE, data: value.get_visible() });
             fields.push({ name: Property.ACTIVE, data: value.get_active() });
-            fields.push({ name: Property.POSITION, data: value.get_position() });
 
-            const raw = value.rotation;
-            const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
-            fields.push({ name: Property.ROTATION, data: rotation });
+            if (value.type != IObjectTypes.GUI_CONTAINER) {
 
-            fields.push({ name: Property.SCALE, data: value.get_scale() });
-            fields.push({ name: Property.SIZE, data: value.get_size() });
+                fields.push({ name: Property.POSITION, data: value.get_position() });
 
-            if ([IObjectTypes.GUI_CONTAINER, IObjectTypes.GUI_BOX, IObjectTypes.GUI_TEXT].includes(value.type)) {
-                const pivot_preset = pivotToScreenPreset(value.get_pivot());
-                fields.push({ name: Property.PIVOT, data: pivot_preset });
-            }
+                const raw = value.rotation;
+                const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
+                fields.push({ name: Property.ROTATION, data: rotation });
 
-            const anchor_preset = anchorToScreenPreset(value.get_anchor());
-            fields.push({ name: Property.ANCHOR_PRESET, data: anchor_preset });
-            fields.push({ name: Property.ANCHOR, data: value.get_anchor() });
+                fields.push({ name: Property.SCALE, data: value.get_scale() });
 
-            if ([IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT].includes(value.type)) {
-                fields.push({ name: Property.COLOR, data: value.get_color() });
-            }
+                if ([IObjectTypes.GUI_BOX, IObjectTypes.GUI_TEXT].includes(value.type)) {
+                    fields.push({ name: Property.SIZE, data: value.get_size() });
 
-            if ([IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT].includes(value.type)) {
-                fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
-                fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
-            }
+                    const pivot_preset = pivotToScreenPreset(value.get_pivot());
+                    fields.push({ name: Property.PIVOT, data: pivot_preset });
 
-            if ([IObjectTypes.TEXT, IObjectTypes.GUI_TEXT, IObjectTypes.GO_LABEL_COMPONENT].includes(value.type)) {
-                fields.push({ name: Property.TEXT, data: (value as TextMesh).text });
-                fields.push({ name: Property.FONT, data: (value as TextMesh).font || '' });
+                    const anchor_preset = anchorToScreenPreset(value.get_anchor());
+                    fields.push({ name: Property.ANCHOR_PRESET, data: anchor_preset });
+                    fields.push({ name: Property.ANCHOR, data: value.get_anchor() });
+                } else if (IObjectTypes.GO_SPRITE_COMPONENT == value.type) {
+                    fields.push({ name: Property.SIZE, data: value.get_size() });
+                }
 
-                const delta = new Vector3(1 * value.scale.x, 1 * value.scale.y);
-                const max_delta = Math.max(delta.x, delta.y);
-                const font_size = (value as TextMesh).fontSize * max_delta;
+                if ([IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT].includes(value.type)) {
+                    fields.push({ name: Property.COLOR, data: value.get_color() });
+                    fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
+                    fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
+                }
 
-                fields.push({ name: Property.FONT_SIZE, data: font_size });
-                fields.push({ name: Property.TEXT_ALIGN, data: (value as TextMesh).textAlign });
+                if ([IObjectTypes.TEXT, IObjectTypes.GUI_TEXT, IObjectTypes.GO_LABEL_COMPONENT].includes(value.type)) {
+                    fields.push({ name: Property.TEXT, data: (value as TextMesh).text });
+                    fields.push({ name: Property.FONT, data: (value as TextMesh).font || '' });
+
+                    const delta = new Vector3(1 * value.scale.x, 1 * value.scale.y);
+                    const max_delta = Math.max(delta.x, delta.y);
+                    const font_size = (value as TextMesh).fontSize * max_delta;
+
+                    fields.push({ name: Property.FONT_SIZE, data: font_size });
+                    fields.push({ name: Property.TEXT_ALIGN, data: (value as TextMesh).textAlign });
+                }
             }
 
             return { id: value.mesh_data.id, data: fields };
@@ -2005,8 +2007,6 @@ export function getDefaultInspectorConfig() {
             name: 'base',
             title: '',
             property_list: [
-                { name: Property.ID, title: 'ID', type: PropertyType.NUMBER, readonly: true, params: { format: (v: number) => v.toFixed(0) } },
-                { name: Property.TYPE, title: 'Тип', type: PropertyType.STRING, readonly: true },
                 { name: Property.NAME, title: 'Название', type: PropertyType.STRING },
                 { name: Property.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN },
                 { name: Property.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN }
@@ -2086,7 +2086,7 @@ export function getDefaultInspectorConfig() {
         },
         {
             name: 'graphics',
-            title: 'Настройки визуала',
+            title: 'Визуал',
             property_list: [
                 { name: Property.COLOR, title: 'Цвет', type: PropertyType.COLOR },
                 {
@@ -2102,7 +2102,7 @@ export function getDefaultInspectorConfig() {
         },
         {
             name: 'text',
-            title: 'Настройки текста',
+            title: 'Текст',
             property_list: [
                 { name: Property.TEXT, title: 'Текст', type: PropertyType.LOG_DATA },
                 {
