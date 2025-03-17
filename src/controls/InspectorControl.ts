@@ -1956,7 +1956,7 @@ function screenPresetToAnchorValue(preset: ScreenPointPreset) {
 function castTextureInfo(info: TextureInfo) {
     const data = {
         value: `${info.atlas}/${info.name}`,
-        src: (info.data.texture as any).path
+        src: (info.data.texture as any).path ?? ''
     } as any;
 
     if (info.atlas != '') {
