@@ -842,7 +842,7 @@ export async function run_debug_filemanager() {
     if (server_ok) {
         WsClient.set_reconnect_timer(WS_SERVER_URL, WS_RECONNECT_INTERVAL);
         const projects = await ClientAPI.get_projects();
-        const project_to_load = 'ExampleProject';
+        const project_to_load = 'SceneEditor_ExampleProject';
         const names: string[] = [];
         // Ищем проект с именем project_to_load и пробуем его загрузить
         for (const project of projects) {

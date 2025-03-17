@@ -98,42 +98,42 @@ export async function run_anim_scene() {
 
     ControlManager.update_graph(true, 'anim_scene');
 
-    /*
-      ResourceManager.preload_model('cow.glb');
-        const am = SceneManager.create(IObjectTypes.ANIMATED_MESH, { width: 50, height: 50 });
-        am.set_mesh('cow');
-        am.children[0].scale.setScalar(100);
-        am.add_animation('Armature|idle1', 'idle');
-        am.rotateX(0.6)
-        am.position.set(3121, -1692, 5)
-        SceneManager.add(am);
     
-    
-        await ResourceManager.preload_texture('T_GreatHornedOwl_BaseColor.jpg');
-        await ResourceManager.preload_model('SK_GreatHornedOwl2Sided.FBX');
-        await ResourceManager.preload_model('GreatHornedOwl@IdleLookAroundGrounded.FBX');
-        let mesh = SceneManager.create(IObjectTypes.ANIMATED_MESH, { width: 50, height: 50 });
-        mesh.set_mesh('SK_GreatHornedOwl2Sided');
-        mesh.children[0].scale.setScalar(1.5);
-        mesh.add_animation('GreatHornedOwl@IdleLookAroundGrounded', 'idle');
-        mesh.set_texture('T_GreatHornedOwl_BaseColor');
-        mesh.rotateX(0.6)
-        mesh.rotateY(0.6)
-        mesh.set_position(3155, -1692, 5)
-        SceneManager.add(mesh);
-    
-    
-        await ResourceManager.preload_texture('T_Duck_Legacy.jpg');
-        await ResourceManager.preload_model('SK_Duck.FBX');
-        await ResourceManager.preload_model('Duck@IdlePickGround.FBX');
-        mesh = SceneManager.create(IObjectTypes.ANIMATED_MESH, { width: 50, height: 50 });
-        mesh.set_mesh('SK_Duck');
-        mesh.children[0].scale.setScalar(2);
-        mesh.add_animation('Duck@IdlePickGround', 'idle');
-        mesh.set_texture('T_Duck_Legacy');
-        mesh.rotateX(0.6)
-        mesh.rotateY(-0.9)
-        mesh.set_position(3121, -1792, 25)
-        SceneManager.add(mesh);
-        */
+   await ResourceManager.preload_model('/models/cow.glb');
+    const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
+    am.set_mesh('cow');
+    am.children[0].scale.setScalar(100);
+    am.add_animation('Armature|idle1', 'idle');
+    am.rotateX(0.6)
+    am.position.set(3121, -1692, 5)
+    SceneManager.add(am);
+/*
+
+    await ResourceManager.preload_texture('T_GreatHornedOwl_BaseColor.jpg');
+    await ResourceManager.preload_model('SK_GreatHornedOwl2Sided.FBX');
+    await ResourceManager.preload_model('GreatHornedOwl@IdleLookAroundGrounded.FBX');
+    let mesh = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
+    mesh.set_mesh('SK_GreatHornedOwl2Sided');
+    mesh.children[0].scale.setScalar(1.5);
+    mesh.add_animation('GreatHornedOwl@IdleLookAroundGrounded', 'idle');
+    mesh.set_texture('T_GreatHornedOwl_BaseColor');
+    mesh.rotateX(0.6)
+    mesh.rotateY(0.6)
+    mesh.set_position(3155, -1692, 5)
+    SceneManager.add(mesh);
+
+
+    await ResourceManager.preload_texture('T_Duck_Legacy.jpg');
+    await ResourceManager.preload_model('SK_Duck.FBX');
+    await ResourceManager.preload_model('Duck@IdlePickGround.FBX');
+    mesh = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
+    mesh.set_mesh('SK_Duck');
+    mesh.children[0].scale.setScalar(2);
+    mesh.add_animation('Duck@IdlePickGround', 'idle');
+    mesh.set_texture('T_Duck_Legacy');
+    mesh.rotateX(0.6)
+    mesh.rotateY(-0.9)
+    mesh.set_position(3121, -1792, 25)
+    SceneManager.add(mesh);
+*/
 }
