@@ -1,5 +1,5 @@
 import { WatchEventType } from "fs";
-import {  IBaseMeshAndThree } from "../render_engine/types";
+import {  IBaseEntityData, IBaseMeshAndThree } from "../render_engine/types";
 import { ChangeInfo } from "../controls/InspectorControl";
 import { VoidMessage } from "../modules/modules_const";
 
@@ -9,6 +9,8 @@ export type CommandId = keyof ServerCommands;
 
 export type _SystemMessagesEditor = {
     SYS_INPUT_UNDO: {},
+    SYS_INPUT_SAVE: {},
+    SYS_INPUT_DBL_CLICK: {},
     SYS_SELECTED_MESH: { mesh: IBaseMeshAndThree },
     SYS_SELECTED_MESH_LIST: { list: IBaseMeshAndThree[] },
     SYS_UNSELECTED_MESH_LIST: {},
@@ -31,13 +33,13 @@ export type _SystemMessagesEditor = {
 
 
 export type AssetsCommands = {
-    [GET_LOADED_PROJECT_CMD]: VoidMessage,
+    [GET_CURRENT_PROJECT_CMD]: VoidMessage,
+    [SET_CURRENT_SCENE_CMD]: { path: string }, 
     [GET_PROJECTS_CMD]: VoidMessage,
     [NEW_PROJECT_CMD]: { project: string },
     [LOAD_PROJECT_CMD]: { project: string },
     [NEW_FOLDER_CMD]: { name: string, path: string },
     [GET_FOLDER_CMD]: { path: string },
-    // [SEARCH_CMD]: { name: string },
     [RENAME_CMD]: { path: string, new_path: string },
     [COPY_CMD]: { path: string, new_path: string },
     [MOVE_CMD]: { path: string, new_path: string },
@@ -45,12 +47,10 @@ export type AssetsCommands = {
     [SAVE_INFO_CMD]: { path: string, data: TRecursiveDict },
     [GET_INFO_CMD]: { path?: string },
     [DEL_INFO_CMD]: { path: string },
-    [SAVE_DATA_CMD]: { path: string, data: string },
+    [SAVE_DATA_CMD]: { path: string, data: TRecursiveDict | TDictionary<IBaseEntityData[]> | string },
     [GET_DATA_CMD]: { path: string },
     // [NEW_MATERIAL]: {name: string, path: string, data: IDictionary<string>},
     // [GET_MATERIAL]: {name: string, path: string},
-    // [SET_INFO]: {name: string, path: string, data: IDictionary<string>},
-    // [GET_INFO]: {name: string, path: string},
 }
 
 export type BaseResp<T> = {
@@ -61,14 +61,15 @@ export type BaseResp<T> = {
 }
 
 export type ProjectLoadData = { assets: FSObject[], name: string, textures_paths: string[] }
+export type ProjectCache = { name?: string, current_dir: string, current_scene: { name?: string, path?: string } }
 
 export type AssetsResponses = {
-    [GET_LOADED_PROJECT_CMD]: BaseResp<{ name?: string, current_dir: string }>,
+    [GET_CURRENT_PROJECT_CMD]: BaseResp<ProjectCache>,
+    [SET_CURRENT_SCENE_CMD]: BaseResp<{ name?: string, path?: string }>, 
     [GET_PROJECTS_CMD]: BaseResp<string[]>,
     [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
     [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
     [GET_FOLDER_CMD]: BaseResp<FSObject[]>,
-    // [SEARCH_CMD]: BaseResp<string>,
     [LOAD_PROJECT_CMD]: BaseResp<ProjectLoadData>,
     [RENAME_CMD]: BaseResp<VoidMessage>,
     [COPY_CMD]: BaseResp<VoidMessage>,
@@ -78,7 +79,7 @@ export type AssetsResponses = {
     [GET_INFO_CMD]: BaseResp<TRecursiveDict>,
     [DEL_INFO_CMD]: BaseResp<VoidMessage>,
     [SAVE_DATA_CMD]: BaseResp<VoidMessage>,
-    [GET_DATA_CMD]: BaseResp<string>,
+    [GET_DATA_CMD]: BaseResp<TRecursiveDict | TDictionary<IBaseEntityData[]> | string>,
     [FILE_UPLOAD_CMD]: BaseResp<FileUploadedData>
 }
 
@@ -100,7 +101,8 @@ export type FSEventType = WatchEventType | "removed";
 
 export interface FSObject { name: string, type: FSObjectType, size: number, path: string, ext?: string, num_files?: number, src?: string };
 
-export const GET_LOADED_PROJECT_CMD = '/get_loaded_project'
+export const GET_CURRENT_PROJECT_CMD = '/get_current_project';
+export const SET_CURRENT_SCENE_CMD = '/set_current_scene';
 export const GET_PROJECTS_CMD = '/get_projects';
 export const NEW_PROJECT_CMD = '/new_project';
 export const NEW_FOLDER_CMD = '/new_folder';
@@ -118,11 +120,13 @@ export const GET_INFO_CMD = '/get_info';
 export const DEL_INFO_CMD = '/del_info';
 export const FILE_UPLOAD_CMD = '/upload';
 export const PUBLIC = '/public'  // Путь к папке с ассетами проекта
-export const METADATA = '/metadata.txt'  // Путь к файлу с метаинфо проекта
+export const METADATA = '/metadata.json'  // Путь к файлу с метаинфо проекта
 export const CACHE = '/server_cache.json';
+export const SCENE_EXT = `scn`;
 
 export const CMD_NAME = [
-    GET_LOADED_PROJECT_CMD,
+    GET_CURRENT_PROJECT_CMD,
+    SET_CURRENT_SCENE_CMD,
     GET_PROJECTS_CMD, 
     NEW_PROJECT_CMD, 
     NEW_FOLDER_CMD, 

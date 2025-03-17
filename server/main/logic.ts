@@ -2,7 +2,7 @@
 import path from "path";
 import { PATH_PARAM_NAME, ERROR_TEXT, NAME_PARAM_NAME, PROJECT_PARAM_NAME, DATA_PARAM_NAME, NEW_PATH_PARAM_NAME } from "./const";
 import { check_dir_exists, exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, read_dir_assets, rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir, get_cache_path } from "./fs_utils";
-import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD, SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD, MOVE_CMD } from "../../src/modules_editor/modules_editor_const";
+import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD, SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, SCENE_EXT } from "../../src/modules_editor/modules_editor_const";
 import { ServerCacheData } from "./types";
 
 
@@ -55,7 +55,6 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
             if (element.ext && texture_ext.includes(element.ext))
                 textures_paths.push(element.path);
         });
-        log("textures_paths", textures_paths)
         return {result: 1, data: {assets: root_folder_assets, name: cmd.project, textures_paths}};
     }
     
@@ -65,6 +64,14 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         if (project_exists) return {message: ERROR_TEXT.PROJECT_ALREADY_EXISTS, result: 0};
         new_project(cmd.project);
         return {result: 1};
+    }
+
+    async function on_set_current_scene(cmd: ServerCommands[typeof SET_CURRENT_SCENE_CMD]): Promise<ServerResponses[typeof SET_CURRENT_SCENE_CMD]> {
+        const asset_path = get_asset_path(project, cmd.path);
+        const scene_exists = await check_dir_exists(asset_path);
+        if (!scene_exists) return {message: ERROR_TEXT.SCENE_NOT_EXIST, result: 0};
+        const name = path.basename(asset_path, `.${SCENE_EXT}`);
+        return {result: 1, data: { name, path: cmd.path }};
     }
     
     async function on_save_data(cmd: ServerCommands[typeof SAVE_DATA_CMD]): Promise<ServerResponses[typeof SAVE_DATA_CMD]> {
@@ -83,9 +90,10 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const data_path = get_data_file_path(project, cmd.path);
         const file_exists = await exists(data_path);
         if (!file_exists)
-            return {message: ERROR_TEXT.FILE_NOT_EXISTS, result: 0};
+            return {message: ERROR_TEXT.FILE_NOT_EXIST, result: 0};
         const data_file = Bun.file(data_path);
-        const data = await data_file.text();
+        const text = await data_file.text();
+        const data = JSON.parse(text)
         return {result: 1, data};
     }
     
@@ -144,7 +152,7 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const new_path = get_asset_path(project, cmd.new_path);
         const file_exists = await exists(old_path);
         if (!file_exists)
-            return {message: `${ERROR_TEXT.FILE_NOT_EXISTS}: ${old_path}`, result: 0};
+            return {message: `${ERROR_TEXT.FILE_NOT_EXIST}: ${old_path}`, result: 0};
         if (await is_folder(old_path)) {
             if (!cmd.new_path.includes(cmd.path)) 
                 await copy_folder(cmd.path, cmd.new_path)
@@ -194,7 +202,7 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const new_path = get_asset_path(project, cmd.new_path);
         const file_exists = await exists(old_path);
         if (!file_exists)
-            return {message: `${ERROR_TEXT.FILE_NOT_EXISTS}: ${old_path}`, result: 0};
+            return {message: `${ERROR_TEXT.FILE_NOT_EXIST}: ${old_path}`, result: 0};
         if (await is_folder(old_path)) {
             if (!cmd.new_path.includes(cmd.path)) 
                 await move_folder(cmd.path, cmd.new_path)
@@ -214,7 +222,7 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const new_path = get_asset_path(project, cmd.new_path);
         const file_exists = await exists(old_path);
         if (!file_exists)
-            return {message: `${ERROR_TEXT.FILE_NOT_EXISTS}: ${old_path}`, result: 0};
+            return {message: `${ERROR_TEXT.FILE_NOT_EXIST}: ${old_path}`, result: 0};
         if (!await is_folder(old_path)) {
             const ext1 = path.extname(old_path).slice(1);
             const ext2 = path.extname(new_path).slice(1);
@@ -257,7 +265,10 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
             data = await read_metadata(project, cmd.path);
         else 
             data = await get_all_metadata(project);
-        return {result: 1, data};
+        if (data)
+            return {result: 1, data};
+        else
+            return {result: 0, message: ERROR_TEXT.METAINFO_NOT_FOUND};
     }
 
     async function on_del_info(cmd: ServerCommands[typeof DEL_INFO_CMD]): Promise<ServerResponses[typeof DEL_INFO_CMD]> {
@@ -281,6 +292,10 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
 
     if (cmd_id === LOAD_PROJECT_CMD) {
         return await on_load_project(params as ServerCommands[typeof LOAD_PROJECT_CMD]);
+    }
+    
+    if (cmd_id == SET_CURRENT_SCENE_CMD) {
+        return await on_set_current_scene(params as ServerCommands[typeof SET_CURRENT_SCENE_CMD]);
     }
 
     if (cmd_id === NEW_FOLDER_CMD) {
@@ -422,6 +437,8 @@ export function check_fields(cmd_id: CommandId, params: any) {
         wrong_fields = _check_fields(params, [PROJECT_PARAM_NAME]);
     if (cmd_id === LOAD_PROJECT_CMD)
         wrong_fields = _check_fields(params, [PROJECT_PARAM_NAME]);
+    if (cmd_id === SET_CURRENT_SCENE_CMD)
+        wrong_fields = _check_fields(params, [PATH_PARAM_NAME]);
     if (cmd_id === GET_DATA_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME]);
     if (cmd_id === GET_INFO_CMD)
