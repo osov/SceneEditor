@@ -1169,16 +1169,19 @@ function TreeControlCreate() {
 
         const data = event.dataTransfer.getData("text/plain");
         if (data.length == 0 || data.includes('undefined/undefined')) return;
-         
+
+        const texture = data.split("/")[1];
+        const atlas = data.split("/")[0];
+        
         const go = ['scene', IObjectTypes.GO_CONTAINER];
         if (go.includes(icon)) {
-            ActionsControl.add_go_with_sprite_component(itemId, data.slice(1));
+            ActionsControl.add_go_with_sprite_component(itemId, texture, atlas);
             return;
         }
         
         const gui = [IObjectTypes.GUI_CONTAINER, IObjectTypes.GUI_BOX, IObjectTypes.GUI_TEXT];
         if (gui.includes(icon)) {
-            ActionsControl.add_gui_box(itemId, data.slice(1));
+            ActionsControl.add_gui_box(itemId, texture, atlas);
         }
 
     }
