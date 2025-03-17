@@ -5,6 +5,7 @@ import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction } from "./ActionsControl";
 import { api } from "../modules_editor/ClientAPI";
+import { TextureData } from "../render_engine/resource_manager";
 
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
@@ -865,9 +866,10 @@ export async function run_debug_filemanager() {
                     assets = undefined;
                     go_to_dir = last_project_data.current_dir;
                 }
-                for (const path of data.textures_paths) {
-                    await ResourceManager.preload_texture("/" + path);
-                }
+                const list:Promise<TextureData>[] = [];
+                for (const path of data.textures_paths) 
+                    list.push(ResourceManager.preload_texture("/" + path));
+                await Promise.all(list);
                 AssetControl.load_project(data.name, assets, go_to_dir);
                 log('Project loaded', data.name);
                 return;

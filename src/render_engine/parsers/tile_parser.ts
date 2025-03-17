@@ -1,5 +1,5 @@
-import { Vector2 } from "three";
-import { get_file_name } from "../helpers/utils";
+import { Vector2, Vector3 } from "three";
+import { get_file_name, rotate_point } from "../helpers/utils";
 import { IBaseEntityAndThree } from "../types";
 
 // Флаги Tiled для отражения и вращения
@@ -12,8 +12,8 @@ export const TILE_FLIP_MASK = 0x1FFFFFFF;
 interface Chunk {
     x: number;
     y: number;
-    width: number;
-    height: number;
+    w: number;
+    h: number;
     tiles: number[];
 }
 
@@ -24,15 +24,24 @@ interface Layer {
 
 interface TileData {
     url: string;
+    w: number;
+    h: number;
 }
 
-interface TileObject {
+interface LoadedTileInfo {
+    name: string;
+    atlas: string;
+    w: number;
+    h: number;
+}
+
+export interface TileObject {
     x: number;
     y: number;
-    width: number;
-    height: number
-    tile_id: number
-    rotation?: number
+    w: number;
+    h: number
+    tid: number
+    r?: number
 }
 
 interface ObjectLayer {
@@ -58,45 +67,50 @@ interface RenderLayer {
     tiles: RenderTileData[];
 }
 
-type RenderTileObject = TileObject;
+export interface RenderTileObject {
+    x: number;
+    y: number;
+    width: number;
+    height: number
+    tile_id: number
+    rotation?: number
+}
 
 interface RenderObjectLayer {
     layer_name: string;
     objects: RenderTileObject[]
 }
 
+
 export interface RenderMapData {
     layers: RenderLayer[]
     objects_layers: RenderObjectLayer[]
 }
 
+
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
     return id_layer * 2 - (y - height / 2) * 0.001;
 }
 
-const tiled_textures_data: Record<string, [string, string]> = {};
-function preload_tile_texture(id: string, path: string, atlas: string) {
-    const p = ResourceManager.preload_texture(path, atlas);
-    p.then(_ => tiled_textures_data[id] = [get_file_name(path), atlas]);
-    return p;
-}
 
+const tiled_textures_data: { [k: string]: LoadedTileInfo } = {};
+function preload_tile_texture(id: string, path: string, atlas: string, w: number, h: number) {
+    tiled_textures_data[id] = { name: get_file_name(path), atlas: get_file_name(atlas), w, h };
+}
 export function get_tile_texture(id: number) {
-    const data = tiled_textures_data[id];
-    return { name: data[0], atlas: data[1] };
+    const data = tiled_textures_data[id + ''];
+    return data;
 }
 
-export async function preload_tiled_textures(map_data: MapData) {
-    const list = [];
+
+export function preload_tiled_textures(map_data: MapData) {
     for (const id_tileset in map_data.tile_info) {
         const tile_set = map_data.tile_info[id_tileset];
         for (const id in tile_set) {
             const tex = tile_set[id];
-            const p = preload_tile_texture(id, '/' + tex.url, id_tileset);
-            list.push(p);
+            preload_tile_texture(id, tex.url, id_tileset, tex.w, tex.h);
         }
     }
-    await Promise.all(list);
 }
 
 export function parse_tiled(data: MapData) {
@@ -105,38 +119,35 @@ export function parse_tiled(data: MapData) {
         objects_layers: []
     };
 
-
     for (const layer of data.layers) {
         render_data.layers.push({
             layer_name: layer.layer_name,
             tiles: create_layer(layer)
-        })
-    };
+        });
+    }
 
     for (const obj_layer of data.objects) {
-        // if (obj_layer.layer_name != 'КрышаКрона') continue;
         render_data.objects_layers.push({
             layer_name: obj_layer.layer_name,
             objects: create_objects(obj_layer)
-        })
-    };
-
+        });
+    }
     return render_data;
 }
 
 function create_objects(obj_layer: ObjectLayer) {
     const objects: RenderTileObject[] = [];
     for (const obj of obj_layer.objects) {
-        const new_pos = rotate_point(new Vector2(obj.x, -obj.y), new Vector2(obj.width, obj.height), obj.rotation != undefined ? -obj.rotation : 0);
+        const new_pos = rotate_point(new Vector3(obj.x, -obj.y, 0), new Vector2(obj.w, obj.h), obj.r != undefined ? -obj.r : 0);
         const data = {
-            x: new_pos.x + obj.width / 2,
-            y: new_pos.y + obj.height / 2,
-            width: obj.width,
-            height: obj.height,
-            tile_id: obj.tile_id,
-            rotation: obj.rotation
+            x: new_pos.x + obj.w / 2,
+            y: new_pos.y + obj.h / 2,
+            width: obj.w,
+            height: obj.h,
+            tile_id: obj.tid,
+            rotation: obj.r
         };
-        objects.push(data)
+        objects.push(data);
     }
     return objects;
 }
@@ -152,18 +163,19 @@ function create_layer(layer: Layer) {
 
 // Генерация тайлов для одного чанка
 function create_chunk(chunk: Chunk) {
-    const { x: chunkX, y: chunkY, width, height, tiles } = chunk;
+    const { x: chunkX, y: chunkY, w, h, tiles } = chunk;
     const data: RenderTileData[] = [];
     for (let i = 0; i < tiles.length; i++) {
         const tile_mask = tiles[i];
-        if (tile_mask === 0) continue; // Пропускаем пустые тайлы
-        // Вычисляем глобальные координаты
-        const localX = i % width;
-        const localY = Math.floor(i / width);
+        if (tile_mask != 0) {
+            // Вычисляем глобальные координаты
+            const localX = i % w;
+            const localY = Math.floor(i / h);
 
-        const posX = (chunkX + localX);
-        const posY = -(chunkY + localY); // Отрицательный y для корректного рендеринга
-        data.push({ x: posX, y: posY, id: tile_mask });
+            const posX = (chunkX + localX);
+            const posY = -(chunkY + localY); // Отрицательный y для корректного рендеринга
+            data.push({ x: posX, y: posY, id: tile_mask });
+        }
     }
     return data;
 }
@@ -184,15 +196,13 @@ export function apply_tile_transform(mesh: IBaseEntityAndThree, tile_id: number)
 
 }
 
-export function apply_object_transform(mesh: IBaseEntityAndThree, tile: TileObject): void {
+export function apply_object_transform(mesh: IBaseEntityAndThree, tile: RenderTileObject): void {
     const tile_id = tile.tile_id;
     const flipDiagonally = (tile_id & FLIP_DIAGONALLY_FLAG) !== 0;
-    let flipHorizontally = (tile_id & FLIP_HORIZONTALLY_FLAG) !== 0;
-    let flipVertically = (tile_id & FLIP_VERTICALLY_FLAG) !== 0;
+    const flipHorizontally = (tile_id & FLIP_HORIZONTALLY_FLAG) !== 0;
+    const flipVertically = (tile_id & FLIP_VERTICALLY_FLAG) !== 0;
 
     if (flipDiagonally) {
-        flipHorizontally = true;
-        flipVertically = true;
         //mesh.rotation.z = Math.PI / 2; // Поворот на 90 градусов
     }
 
@@ -208,28 +218,8 @@ export function apply_object_transform(mesh: IBaseEntityAndThree, tile: TileObje
         //mesh.set_position(pos.x, pos.y - tile.height);
     }
 
+    if (tile.rotation)
+        mesh.rotation.z = -tile.rotation! * Math.PI / 180;
+
 }
 
-export function rotate_point(point: Vector2, size: Vector2, angle_deg: number) {
-    // Нижняя левая точка (pivot)
-    const pivot = { x: point.x - size.x / 2, y: point.y - size.y / 2 };
-
-    // Переводим угол из градусов в радианы
-    const angle = angle_deg * (Math.PI / 180);
-    const cosA = Math.cos(angle);
-    const sinA = Math.sin(angle);
-
-    // Перемещение точки в начало координат относительно pivot
-    const xTranslated = point.x - pivot.x;
-    const yTranslated = point.y - pivot.y;
-
-    // Поворот
-    const xRotated = xTranslated * cosA - yTranslated * sinA;
-    const yRotated = xTranslated * sinA + yTranslated * cosA;
-
-    // Обратное перемещение
-    const xNew = xRotated + pivot.x;
-    const yNew = yRotated + pivot.y;
-
-    return { x: xNew, y: yNew };
-}

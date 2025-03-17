@@ -238,7 +238,7 @@ export function ResourceManagerModule() {
             for (let i = 0; i < anim_list.length; i++) {
                 const clip = anim_list[i];
                 let cur_anim_name = has_mesh ? clip.name : model_name;
-                if (cur_anim_name == 'mixamo.com')
+                if (cur_anim_name.includes('mixamo.com'))
                     cur_anim_name = model_name
                 if (find_animation(cur_anim_name, model_name))
                     Log.warn('animation exists already', cur_anim_name, model_name);

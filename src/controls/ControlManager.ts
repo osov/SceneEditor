@@ -18,6 +18,8 @@ type ButtonsList = 'translate_transform_btn' | 'scale_transform_btn' | 'rotate_t
 
 function ControlManagerCreate() {
     let active_control = '';
+    let current_scene_name = 'Сцена';
+
     function init() {
         bind_btn('translate_transform_btn', () => set_active_control('translate_transform_btn'));
         bind_btn('scale_transform_btn', () => set_active_control('scale_transform_btn'));
@@ -160,7 +162,7 @@ function ControlManagerCreate() {
         const graph = SceneManager.make_graph();
         const sel_list_ids = SelectControl.get_selected_list().map(m => m.mesh_data.id);
         const list: TreeItem[] = [];
-        list.push({ id: -1, pid: -2, name: 'Сцена', icon: 'scene', selected: false, visible: true });
+        list.push({ id: -1, pid: -2, name:current_scene_name, icon: 'scene', selected: false, visible: true });
         for (let i = 0; i < graph.length; i++) {
             const g_item = graph[i];
             const item: TreeItem = {
@@ -171,7 +173,7 @@ function ControlManagerCreate() {
                 selected: sel_list_ids.includes(g_item.id),
                 visible: g_item.visible
             };
-            
+
             // no_drop для компонентов Go 
             if (componentsGo.includes(g_item.type)) { item.no_drop = true; }
 
@@ -180,9 +182,9 @@ function ControlManagerCreate() {
         return list;
     }
 
-    function update_graph(is_first = false) {
-        if (is_first) TreeControl.draw_graph(ControlManager.get_tree_graph(), 'test_scene', true);
-        else TreeControl.draw_graph(ControlManager.get_tree_graph(), 'test_scene');
+    function update_graph(is_first = false, name = '') {
+        if (name) current_scene_name = name;
+        TreeControl.draw_graph(ControlManager.get_tree_graph(), 'test_scene', is_first);
     }
 
     init();
