@@ -1956,7 +1956,7 @@ function screenPresetToAnchorValue(preset: ScreenPointPreset) {
 function castTextureInfo(info: TextureInfo) {
     const data = {
         value: `${info.atlas}/${info.name}`,
-        src: (info.data.texture as any).path
+        src: (info.data.texture as any).path ?? ''
     } as any;
 
     if (info.atlas != '') {
@@ -2039,12 +2039,6 @@ export function getDefaultInspectorConfig() {
                     }
                 },
                 {
-                    name: Property.SIZE, title: 'Размер', type: PropertyType.VECTOR_2, params: {
-                        x: { format: (v: number) => v.toFixed(2) },
-                        y: { format: (v: number) => v.toFixed(2) },
-                    }
-                },
-                {
                     name: Property.PIVOT, title: 'Точка опоры', type: PropertyType.LIST_TEXT, params: {
                         'Центр': ScreenPointPreset.CENTER,
                         'Левый Верхний': ScreenPointPreset.TOP_LEFT,
@@ -2090,6 +2084,12 @@ export function getDefaultInspectorConfig() {
             name: 'graphics',
             title: 'Визуал',
             property_list: [
+                {
+                    name: Property.SIZE, title: 'Размер', type: PropertyType.VECTOR_2, params: {
+                        x: { format: (v: number) => v.toFixed(2) },
+                        y: { format: (v: number) => v.toFixed(2) },
+                    }
+                },
                 { name: Property.COLOR, title: 'Цвет', type: PropertyType.COLOR },
                 {
                     name: Property.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: ResourceManager.get_all_textures().map(castTextureInfo)

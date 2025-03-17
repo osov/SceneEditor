@@ -24,7 +24,7 @@ export const ERROR_TEXT = {
     NO_FILE_NAME: 'No file name received!',
     WRONG_JSON: 'Request with wrong JSON!',
     NO_DATA: 'No data to save!',
-    FILE_NOT_EXISTS: 'File does not exists',
+    FILE_NOT_EXIST: 'File does not exist',
     CANT_WRITE_FILE: 'Could not write file',
     CANT_UPLOAD_FILE: 'Could not upload file',
     NO_NEW_PATH: 'New path not received!',
@@ -34,4 +34,6 @@ export const ERROR_TEXT = {
     WRONG_ORIG_EXTENTION: `Wrong extention of the initial file`,
     WRONG_END_EXTENTION: `Wrong extention of the destination file`,
     RECURSIVE_FOLDER_COPYING: `Can't put a copy of a folder into its subfolder`,
+    SCENE_NOT_EXIST: `Scene not found on that path!`,
+    METAINFO_NOT_FOUND: `No metainfo found!`,
 }

@@ -29,8 +29,8 @@ export enum NodeAction {
     refresh,
     download,
     new_folder,
+    new_scene,
     material_base,
-    new_particles,
 }
 
 export const NodeActionGui: number[] = [

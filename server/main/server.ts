@@ -2,7 +2,7 @@ import path from "path";
 import { Router } from "bun-serve-router";
 import { project_name_required, get_file, handle_command, loaded_project_required, get_cache, write_cache } from "./logic";
 import { ExtWebSocket, WsClient } from "./types";
-import { ServerResponses, ServerCommands, NetMessagesEditor as NetMessages, CommandId, URL_PATHS, CMD_NAME, GET_LOADED_PROJECT_CMD, LOAD_PROJECT_CMD, GET_FOLDER_CMD } from "../../src/modules_editor/modules_editor_const";
+import { ServerResponses, ServerCommands, NetMessagesEditor as NetMessages, CommandId, URL_PATHS, CMD_NAME, GET_CURRENT_PROJECT_CMD, LOAD_PROJECT_CMD, GET_FOLDER_CMD, SET_CURRENT_SCENE_CMD } from "../../src/modules_editor/modules_editor_const";
 import { TDictionary } from "../../src/modules_editor/modules_editor_const";
 import { do_response, json_parsable } from "./utils";
 import { get_asset_path, get_full_path } from "./fs_utils";
@@ -19,6 +19,7 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
     const cache = await get_cache();
     let current_project: string | undefined = (cache) ? cache.current_project : undefined;
     let current_dir = (cache) ? cache.current_dir : "";
+    const current_scene = (cache) ? {name: cache.current_scene.name, path: cache.current_scene.path} : {};
 
     router.add("GET", `${URL_PATHS.TEST}`, (request, params) => {
         return test_func();
@@ -126,11 +127,10 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
 
 
     async function on_command(cmd_id: CommandId, data: string) {
-        if (cmd_id == GET_LOADED_PROJECT_CMD) {
-            const result: ServerResponses[typeof GET_LOADED_PROJECT_CMD] = {result: 1, data: {name: current_project, current_dir}};
+        if (cmd_id == GET_CURRENT_PROJECT_CMD) {
+            const result: ServerResponses[typeof GET_CURRENT_PROJECT_CMD] = {result: 1, data: {name: current_project, current_dir, current_scene: {name: current_scene.name, path: current_scene.path}}};
             return result;
-        }
-        
+        }        
         if (data && !json_parsable(data)) 
             return {message: ERROR_TEXT.WRONG_JSON, result: 0};
         const params = (data) ? JSON.parse(data) : {};
@@ -155,6 +155,15 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
                 if (current_dir != _params.path) {
                     current_dir = _params.path as string;    
                     await write_cache({current_dir});    
+                } 
+            }
+            if (cmd_id === SET_CURRENT_SCENE_CMD) {
+                const _params = params as ServerCommands[typeof SET_CURRENT_SCENE_CMD];
+                const _result = result as ServerResponses[typeof SET_CURRENT_SCENE_CMD];
+                if (current_scene.path != _params.path) {
+                    current_scene.path = _params.path as string;    
+                    current_scene.name = _result.data?.name as string;    
+                    await write_cache({current_scene});    
                 } 
             }
         }

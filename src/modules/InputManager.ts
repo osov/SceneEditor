@@ -36,6 +36,9 @@ function InputModule() {
             }
             if (_is_alt)
                 e.preventDefault(); // alt перехватывал браузер
+            if (e.ctrlKey && (e.key == 's' || e.key == 'ы')) {
+                e.preventDefault();
+            }
         });
 
         body.addEventListener('keyup', (e) => {
@@ -44,6 +47,9 @@ function InputModule() {
             EventBus.trigger('SYS_VIEW_INPUT_KEY_UP', { key: e.key, target: e.target }, false);
             if (e.ctrlKey && (e.key == 'z' || e.key == 'я'))
                 EventBus.trigger('SYS_INPUT_UNDO');
+            if (e.ctrlKey && (e.key == 's' || e.key == 'ы')) {
+                EventBus.trigger('SYS_INPUT_SAVE');
+            }
         });
 
         body.addEventListener('pointermove', (e) => {
@@ -61,6 +67,11 @@ function InputModule() {
         body.addEventListener('mouseup', (e) => {
             update_state_ext_keys(e);
             EventBus.trigger('SYS_INPUT_POINTER_UP', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, button: e.button, target: e.target }, false);
+        });
+
+        body.addEventListener('dblclick', (e) => {
+            update_state_ext_keys(e);
+            EventBus.trigger('SYS_INPUT_DBL_CLICK', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, button: e.button, target: e.target }, false);
         });
     }
 
