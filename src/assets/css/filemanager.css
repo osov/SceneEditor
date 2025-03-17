@@ -9,6 +9,15 @@
 	line-height: 35px;
 }
 
+.filemanager .breadcrumbs a span {
+	border-radius: 4px;
+	border: 2px solid transparent;
+}
+
+.filemanager .breadcrumbs a .marked {
+	border-color: #32ff43;
+}
+
 .filemanager .breadcrumbs a:link, .breadcrumbs a:visited {
 	color: #ffffff;
 	text-decoration: none;
