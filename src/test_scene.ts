@@ -3,6 +3,7 @@ import { IObjectTypes } from './render_engine/types';
 import { run_debug_filemanager } from './controls/AssetControl';
 import { SERVER_URL } from './config';
 import { URL_PATHS } from './modules_editor/modules_editor_const';
+import { convert_scene } from './converter/tests/test';
 
 export async function run_debug_scene() {
   (window as any).scene = RenderEngine.scene;
@@ -38,10 +39,10 @@ export async function run_debug_scene() {
   spr1.set_texture('arrow1', 'example_atlas');
   go1.add(spr1);
 
-  const label1 = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, {text:'Надпись'});
+  const label1 = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, { text: 'Надпись' });
   label1.set_font('ShantellSans-Light11');
   go1.add(label1);
-  
+
   const model = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
   model.position.set(220, 220, 1);
   go1.add(model);
@@ -84,10 +85,12 @@ export async function run_debug_scene() {
   gui1.add(box1);
 
 
-  
+
   ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
   run_debug_filemanager();
   ControlManager.update_graph(!true);
 
-  
+
+
+  convert_scene(SceneManager.save_scene());
 }

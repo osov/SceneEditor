@@ -257,7 +257,16 @@ export interface IDefoldSpineModel {
 
 const typecache: Record<string, Type> = {};
 const protos = new Root();
-const root = protos.loadSync("src/converter/ddf/proto/ddf.proto", { keepCase: true });
+
+let root: Root | undefined;
+protos.load("src/converter/ddf/proto/ddf.proto", { keepCase: true }, (e: (Error | null), r?: Root) => {
+    if (e) {
+        console.error(e);
+        return;
+    }
+
+    root = r;
+});
 
 function findMessage(name: string, message: Namespace, path: string): Type | undefined {
     for (const m of message.nestedArray) {
@@ -278,6 +287,11 @@ function findMessage(name: string, message: Namespace, path: string): Type | und
 
 function getMessage(name: string): Type | undefined {
     if (typecache[name]) return typecache[name];
+    if (root == undefined) {
+        console.error('Undefined root');
+        return undefined;
+    }
+
     for (const proto of root.nestedArray) {
         if (proto instanceof Namespace) {
             const message = findMessage(name, proto, `${proto.fullName}`);
@@ -287,6 +301,7 @@ function getMessage(name: string): Type | undefined {
             }
         }
     }
+
     console.error(`Unable to find message ${name}`);
     return undefined
 }
@@ -360,53 +375,105 @@ export function encode(t: Object, message: Type): string {
 }
 
 export function encodeCollection(t: IDefoldCollection): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmGameObjectDDF.CollectionDesc"));
 }
 
 export function encodePrototype(t: IDefoldPrototype): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmGameObjectDDF.PrototypeDesc"));
 }
 
 export function encodeSprite(t: IDefoldSprite): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmGameSystemDDF.SpriteDesc"))
 }
 
 export function encodeLabel(t: IDefoldLabel): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmGameSystemDDF.LabelDesc"));
 }
 
 export function encodeGui(t: IDefoldGui): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmGuiDDF.SceneDesc"));
 }
 
 export function encodeFont(t: IDefoldFontFile): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmRenderDDF.FontDesc"));
 }
 
 export function encodeAtlas(t: IDefoldAtlas): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmGameSystemDDF.Atlas"));
 }
 
 export function encodeSpineScene(t: IDefoldSpineScene): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmGameSystemDDF.SpineSceneDesc"));
 }
 
 export function encodeSpineModel(t: IDefoldSpineModel): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmGameSystemDDF.SpineModelDesc"));
 }
 
 export function encodeSound(t: IDefoldSound): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmSoundDDF.SoundDesc"));
 }
 
 export function encodeCollectionFactory(t: IDefoldFactory): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmGameSystemDDF.CollectionFactoryDesc"));
 };
 
 export function encodeCollectionProxy(t: IDefoldCollectionProxy): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmGameSystemDDF.CollectionProxyDesc"));
 }
 
 export function encodeFactory(t: IDefoldFactory): string {
+    if (root == undefined) {
+        console.error('Undefined root');
+        return '';
+    }
     return encode(t, root.lookupType("dmGameSystemDDF.FactoryDesc"));
 }
