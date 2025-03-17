@@ -58,9 +58,6 @@ export interface IBaseEntityData {
     position: Vector3Tuple;
     rotation: Vector4Tuple;
     scale: Vector3Tuple;
-    // pivot: Vector2;
-    // size: number[];
-    // color: string;
     children?: IBaseEntityData[];
     other_data: any;
 }

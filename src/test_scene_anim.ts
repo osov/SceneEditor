@@ -1,7 +1,9 @@
+import { Vector3, Vector2 } from "three";
 import { SERVER_URL } from "./config";
 import { run_debug_filemanager } from "./controls/AssetControl";
 import { URL_PATHS } from "./modules_editor/modules_editor_const";
-import { apply_object_transform,  apply_tile_transform,  get_depth, get_tile_texture, MapData, parse_tiled, preload_tiled_textures,  TILE_FLIP_MASK } from "./render_engine/parsers/tile_parser";
+import { rotate_point } from "./render_engine/helpers/utils";
+import { apply_tile_transform, get_all_tiled_textures, get_depth, get_tile_texture, MapData, parse_tiled, preload_tiled_textures, TILE_FLIP_MASK } from "./render_engine/parsers/tile_parser";
 import { IObjectTypes } from "./render_engine/types";
 
 
@@ -11,27 +13,29 @@ export async function run_anim_scene() {
     await run_debug_filemanager();
 
 
-/*
-    await ResourceManager.preload_model('/male/idle_walk.fbx');
-    const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
-    am.set_mesh('idle_walk');
-    am.set_texture('PolygonExplorers_Texture_01_A')
-    am.add_animation('idle_walk', 'idle');
-    am.rotateX(0.6)
-    am.position.set(250, -500, 1)
-    am.children[0].scale.setScalar(0.3)
-    SceneManager.add(am);
-*/
-
-    
-    CameraControl.set_position(250, -500, false);
-    CameraControl.set_zoom(2, false)
-    ControlManager.update_graph(true);
-
+    /*
+        await ResourceManager.preload_model('/male/idle_walk.fbx');
+        const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
+        am.set_mesh('idle_walk');
+        am.set_texture('PolygonExplorers_Texture_01_A')
+        am.add_animation('idle_walk', 'idle');
+        am.rotateX(0.6)
+        am.position.set(250, -500, 1)
+        am.children[0].scale.setScalar(0.3)
+        SceneManager.add(am);
+    */
 
 
     const map_data = await ResourceManager.load_asset('/tiled/parsed_map.json') as MapData;
-    await preload_tiled_textures(map_data);
+    preload_tiled_textures(map_data);
+    // hack atlases
+    const all = get_all_tiled_textures();
+    for (const id in all) {
+        const tex = all[id];
+        ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
+    }
+    // ------------
+
     const render_data = parse_tiled(map_data);
 
     const tileSize = 256;
@@ -53,15 +57,23 @@ export async function run_anim_scene() {
                 Log.warn('fix tile_info.h', tile_info);
             }
 
-            const plane = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: tile_info.w, height: tile_info.h });
-            plane.position.set(tile.x * tileSize + tileSize / 2, tile.y * tileSize - tileSize / 2, get_depth(tile.x, tile.y, id_layer, 0, 0));
+            // Вычисляем коррекцию
+            let x = tile.x * tileSize;
+            let y = tile.y * tileSize - tileSize;
+            const new_pos = rotate_point(new Vector3(x, y, 0), new Vector2(tile_info.w, tile_info.h), 0);
+            x = new_pos.x + tile_info.w / 2;
+            y = new_pos.y + tile_info.h / 2;
+
+            const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_info.w, height: tile_info.h });
+            plane.position.set(x, y, get_depth(x, y, id_layer, tile_info.w, tile_info.h));
             plane.set_texture(tile_info.name, tile_info.atlas);
-            apply_tile_transform(plane, tile_id);
+            apply_tile_transform(plane, tile.id);
             container.add(plane);
+            plane.name = tile_info.name + '' + plane.mesh_data.id;
         }
     }
 
-    /*
+
     for (let object_layer of render_data.objects_layers) {
         id_layer++;
         let id_object = -1;
@@ -71,23 +83,20 @@ export async function run_anim_scene() {
         for (let tile of object_layer.objects) {
             id_object++;
             const tile_id = tile.tile_id & TILE_FLIP_MASK;
-            const plane = SceneManager.create(IObjectTypes.SLICE9_PLANE, { width: tile.width, height: tile.height });
+            const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile.width, height: tile.height });
             plane.position.set(tile.x, tile.y, get_depth(tile.x, tile.y, id_layer, tile.width, tile.height));
             const tile_info = get_tile_texture(tile_id);
             plane.set_texture(tile_info.name, tile_info.atlas);
-            apply_object_transform(plane, tile);
+            apply_tile_transform(plane, tile.tile_id);
+            if (tile.rotation)
+                plane.rotation.z = -tile.rotation! * Math.PI / 180;
             container.add(plane);
-            plane.name = tile_info.name+''+plane.mesh_data.id;
+            plane.name = tile_info.name + '' + plane.mesh_data.id;
         }
     }
-        */
 
 
-
-    CameraControl.set_position(3251, -2039, false);
-    CameraControl.set_zoom(0.2, false)
     ControlManager.update_graph(true);
-    log("Ready");
 
     /*
       ResourceManager.preload_model('cow.glb');

@@ -1,5 +1,5 @@
 import { Vector2, Vector3 } from "three";
-import { get_file_name, rotate_point } from "../helpers/utils";
+import { flip_geometry_x, flip_geometry_xy, flip_geometry_y, get_file_name, rotate_point } from "../helpers/utils";
 import { IBaseEntityAndThree } from "../types";
 
 // Флаги Tiled для отражения и вращения
@@ -102,6 +102,10 @@ export function get_tile_texture(id: number) {
     return data;
 }
 
+export function get_all_tiled_textures() {
+    return tiled_textures_data;
+}
+
 
 export function preload_tiled_textures(map_data: MapData) {
     for (const id_tileset in map_data.tile_info) {
@@ -181,45 +185,17 @@ function create_chunk(chunk: Chunk) {
 }
 
 export function apply_tile_transform(mesh: IBaseEntityAndThree, tile_id: number): void {
+    const geometry = (mesh as any).geometry;
+
     const flipHorizontally = (tile_id & FLIP_HORIZONTALLY_FLAG) !== 0;
     const flipVertically = (tile_id & FLIP_VERTICALLY_FLAG) !== 0;
     const flipDiagonally = (tile_id & FLIP_DIAGONALLY_FLAG) !== 0;
-
-    if (flipDiagonally)
-        mesh.rotation.z = Math.PI / 2; // Поворот на 90 градусов
 
     if (flipHorizontally)
-        mesh.scale.x *= -1;
-
+        flip_geometry_x(geometry);
     if (flipVertically)
-        mesh.scale.y *= -1;
+        flip_geometry_y(geometry);
+    if (flipDiagonally)
+        flip_geometry_xy(geometry);
 
 }
-
-export function apply_object_transform(mesh: IBaseEntityAndThree, tile: RenderTileObject): void {
-    const tile_id = tile.tile_id;
-    const flipDiagonally = (tile_id & FLIP_DIAGONALLY_FLAG) !== 0;
-    const flipHorizontally = (tile_id & FLIP_HORIZONTALLY_FLAG) !== 0;
-    const flipVertically = (tile_id & FLIP_VERTICALLY_FLAG) !== 0;
-
-    if (flipDiagonally) {
-        //mesh.rotation.z = Math.PI / 2; // Поворот на 90 градусов
-    }
-
-    if (flipHorizontally) {
-        mesh.scale.x *= -1;
-        //const pos = mesh.get_position();
-        //mesh.set_position(pos.x + tile.width, pos.y);
-    }
-
-    if (flipVertically) {
-        mesh.scale.y *= -1;
-        //const pos = mesh.get_position();
-        //mesh.set_position(pos.x, pos.y - tile.height);
-    }
-
-    if (tile.rotation)
-        mesh.rotation.z = -tile.rotation! * Math.PI / 180;
-
-}
-

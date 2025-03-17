@@ -309,6 +309,18 @@ export function ResourceManagerModule() {
             Log.error('Texture not found', name, atlas);
     }
 
+    function override_atlas_texture(old_atlas: string, new_atlas: string, name: string) {
+        if (!has_texture_name(name, old_atlas)) {
+            Log.error('Texture not found', name, old_atlas);
+            return;
+        }
+        const tex = atlases[old_atlas][name];
+        delete atlases[old_atlas][name];
+        if (!atlases[new_atlas])
+            atlases[new_atlas] = {};
+        atlases[new_atlas][name] = tex;
+    }
+
     init();
-    return { load_asset, add_texture, load_texture, preload_atlas, preload_texture, preload_font, get_all_fonts, get_atlas, get_texture, get_font, free_texture, get_all_textures, set_project_path, preload_model, get_model, find_animation, get_animations_by_model };
+    return { load_asset, add_texture, load_texture, preload_atlas, preload_texture, preload_font, get_all_fonts, get_atlas, get_texture, get_font, free_texture, get_all_textures, set_project_path, preload_model, get_model, find_animation, get_animations_by_model, override_atlas_texture };
 };

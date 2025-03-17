@@ -84,10 +84,27 @@ export function set_pivot_with_sync_pos(mesh: IBaseMeshAndThree, width: number, 
     }
 }
 
+export function flip_geometry_x(geometry: BufferGeometry) {
+    const uv = geometry.attributes.uv;
+    for (let i = 0; i < uv.count; i++)
+        uv.setX(i, 1 - uv.getX(i));
+    return geometry;
+}
+
 export function flip_geometry_y(geometry: BufferGeometry) {
     const uv = geometry.attributes.uv;
-    for (let i = 0; i < uv.count; i++) 
+    for (let i = 0; i < uv.count; i++)
         uv.setY(i, 1 - uv.getY(i));
+    return geometry;
+}
+
+export function flip_geometry_xy(geometry: BufferGeometry) {
+    const uv = geometry.attributes.uv;
+    for (let i = 0; i < uv.count; i++) {
+        const tempX = uv.getX(i);
+        uv.setX(i, 1 - uv.getY(i)); // Меняем X на Y
+        uv.setY(i, 1 - tempX);      // Меняем Y на X
+    }
     return geometry;
 }
 

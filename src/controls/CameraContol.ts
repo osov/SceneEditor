@@ -1,6 +1,6 @@
 // https://github.com/yomotsu/camera-controls
 import CameraControls from 'camera-controls';
-import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster, GridHelper, } from 'three';
+import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster } from 'three';
 
 declare global {
     const CameraControl: ReturnType<typeof CameraControlCreate>;
@@ -11,6 +11,7 @@ export function register_camera_control() {
 }
 
 function CameraControlCreate() {
+    let active_scene = '';
     const subsetOfTHREE = {
         Vector2: Vector2,
         Vector3: Vector3,
@@ -35,12 +36,11 @@ function CameraControlCreate() {
         control.dollyToCursor = true;
         control.zoomTo(0.9);
         set_position(540 / 2, -960 / 2);
-        //const gridHelper = new GridHelper(5000, 100);
-        //gridHelper.position.z = -49;
-        //gridHelper.rotateX(Math.PI / 2);
-        //RenderEngine.scene.add(gridHelper);
 
         EventBus.on('SYS_ON_UPDATE', (e) => control.update(e.dt));
+
+        control.addEventListener('controlend', () => save_state())
+        control.addEventListener('sleep', () => save_state());
     }
 
     function set_position(x: number, y: number, is_transition = false) {
@@ -49,10 +49,24 @@ function CameraControlCreate() {
     }
 
     function set_zoom(zoom: number, is_transition = false) {
-        control.zoomTo(zoom,is_transition);
+        control.zoomTo(zoom, is_transition);
     }
 
-    /*
+    function save_state() {
+        const state = save();
+        const key = 'camera_control-' + active_scene;
+        localStorage.setItem(key, JSON.stringify(state));
+    }
+
+    function load_state(name:string) {
+        active_scene = name;
+        const key = 'camera_control-' + active_scene;
+        const state = localStorage.getItem(key);
+        if (state === null) return;
+        const state_json = JSON.parse(state);
+        restore(state_json);
+    }
+
     function save() {
         const up = new Vector3();
         const target = new Vector3();
@@ -66,13 +80,8 @@ function CameraControlCreate() {
         return { up, target, pos, zoom, focal };
     }
 
-    function restore() {
-        const up = new Vector3();
-        const target = new Vector3();
-        const pos = new Vector3();
-        const zoom = 1;
-        const focal = new Vector3();
-        //
+    function restore(data: { up: Vector3, target: Vector3, pos: Vector3, zoom: number, focal: Vector3 }) {
+        const { up, target, pos, zoom, focal } = data;
         control.camera.up.copy(up);
         control.updateCameraUp();
         control.setPosition(pos.x, pos.y, pos.z);
@@ -80,8 +89,8 @@ function CameraControlCreate() {
         control.setFocalOffset(focal.x, focal.y, focal.z);
         control.zoomTo(zoom);
     }
-    */
+
 
     init();
-    return { set_position,set_zoom };
+    return { set_position, set_zoom, load_state };
 }
