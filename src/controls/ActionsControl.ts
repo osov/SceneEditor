@@ -81,7 +81,7 @@ function ActionsControlCreate() {
     function copy() {
         const list = format_list_without_children(SelectControl.get_selected_list());
         if (list.length == 0) return;
-        const canCopy = fromTheSameWorld(list);
+        const canCopy = from_the_same_world(list);
         if (!canCopy) { 
             showToast('Нельзя одновременно копировать/вырезать/дублировать элементы из GUI и GO!');
             return;
@@ -111,7 +111,7 @@ function ActionsControlCreate() {
         if (preTarget[0]?.type == "Scene") target = preTarget[0];
         else target = asChild ? preTarget[0] : preTarget[0].parent;
 
-        if (!isValidAction(target, copy_mesh_list, asChild, false, true)) return;
+        if (!is_valid_action(target, copy_mesh_list, asChild, false, true)) return;
 
         if (is_cut) {
             const id_mlist: number[] = [];
@@ -163,12 +163,12 @@ function ActionsControlCreate() {
         sceneAddItem(container, pid);
     }
     
-    function add_gui_box(pid: number = -1) {
+    function add_gui_box(pid: number = -1, texture: string = '2', atlas: string = '') {
         const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: 128, height: 32 });
         box.scale.setScalar(1);
         box.position.set(200, -200, 0);
         box.set_color('#0f0')
-        box.set_texture('2');
+        box.set_texture(texture, atlas);
         box.set_slice(8, 8);
         sceneAddItem(box, pid);
     }
@@ -213,21 +213,16 @@ function ActionsControlCreate() {
         SelectControl.set_selected_list([item]);
     }
 
-    // function getIdNewGuiContainer(pid: number = -1): number {
-    //     const parent0 = SceneManager.get_mesh_by_id(pid);
-    //     if (parent0 && worldGui.includes(parent0.type)) {
-    //         return parent0?.mesh_data?.id ? parent0?.mesh_data?.id : pid;
-    //     }
-    //     const graph = ControlManager.get_tree_graph();
-    //     const parent1 = graph.find(item => item.icon === IObjectTypes.GUI_CONTAINER);
-    //     if (!parent1) {
-    //         add_gui_container(-1);
-    //         const graph2 = ControlManager.get_tree_graph()
-    //         const parent2 = graph2.find(item => item.icon === IObjectTypes.GUI_CONTAINER);
-    //         return parent2 ? parent2.id : pid;
-    //     }
-    //     return parent1 ? parent1.id : pid;
-    // }
+    function add_go_with_sprite_component(pid: number = -1, texture: string = '', atlas: string = '') {
+        const go = SceneManager.create(IObjectTypes.GO_CONTAINER);
+        go.set_position(540 / 2, -960 / 2);
+        
+        const spr = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT);
+        spr.set_texture(texture, atlas);
+        
+        go.add(spr);
+        sceneAddItem(go, pid);
+    }
 
     function setUniqueNameMeshList(list: TreeItem[]): void {
         if (!list.length) return;
@@ -256,7 +251,7 @@ function ActionsControlCreate() {
             return '';
         }
         
-        function fromTheSameWorld(listS: any, treeList: TreeItem[] = []) {
+        function from_the_same_world(listS: any, treeList: TreeItem[] = []) {
             if (listS.length <= 1) return true;
     
             const worldMap: any = [];
@@ -297,7 +292,7 @@ function ActionsControlCreate() {
             return true;
         }
         
-        function isValidAction(itemWhere: any, selected: any = copy_mesh_list, asChild: boolean = false, isMove: boolean = false, msg: boolean = false) {
+        function is_valid_action(itemWhere: any, selected: any = copy_mesh_list, asChild: boolean = false, isMove: boolean = false, msg: boolean = false) {
             const icon = itemWhere?.type ? itemWhere?.type : itemWhere?.icon ? itemWhere?.icon : '';
             const worldIW = getWorldName(icon);
 
@@ -361,8 +356,8 @@ function ActionsControlCreate() {
 
     return {
         copy_mesh_list,
-        fromTheSameWorld,
-        isValidAction,
+        from_the_same_world,
+        is_valid_action,
         cut, copy, paste, duplication, remove,
         add_gui_container,
         add_gui_box,
@@ -371,5 +366,6 @@ function ActionsControlCreate() {
         add_go_sprite_component,
         add_go_label_component,
         add_go_model_component,
+        add_go_with_sprite_component,
     };
 }

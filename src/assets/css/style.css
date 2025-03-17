@@ -17,6 +17,7 @@
   --menu_bg: #364346;
   --menu_border: 1px solid #6d6d6d;
   --tree_width: 200px;
+  --tree_item_bg: #313a3d;
   --ml_min_w: 240px;
   --ml_w: calc(var(--tree_width) + 20px);
   --mm_w: 45px;
@@ -407,7 +408,11 @@ a.tree__item.droppable.bg:not(.success) {
 .tree__btn:hover+a.tree__item:not(.bottom, .top) .tree__item_bg,
 a.tree__item:not(.bottom, .top):hover .tree__item_bg,
 a.tree__item:not(.bottom, .top) .tree__item_bg:hover {
-  background-color: #313a3d;
+  background-color: var(--tree_item_bg);
+}
+a.tree__item.drop_texture .tree__item_bg {
+  background-color: var(--tree_item_bg);
+  border: 1px dashed var(--tp-plugin-thumbnail-list-dragging-color);
 }
 
 .li_line:not(.active) ul .tree__item_bg {

@@ -287,7 +287,7 @@ function TreeControlCreate() {
 
             if (treeItem && _is_dragging) {
                 countMove++;
-                const canMove = ActionsControl.fromTheSameWorld(listSelected, treeList);
+                const canMove = ActionsControl.from_the_same_world(listSelected, treeList);
                 if (!canMove && countMove == 2) {
                     Popups.toast.open({
                         type: 'info',
@@ -541,7 +541,7 @@ function TreeControlCreate() {
         itemDrop = treeList.find(e => e.id === +currentDroppable?.getAttribute("data-id")) || null;
 
         const itemSelected = treeList.filter((e: any) => e.id == listSelected[0]);
-        const canBeMoved = ActionsControl.isValidAction(itemDrop, itemSelected, true, true);
+        const canBeMoved = ActionsControl.is_valid_action(itemDrop, itemSelected, true, true);
 
         if (
             (listSelected?.length == 1 && currentDroppable === treeItem) 
@@ -578,7 +578,7 @@ function TreeControlCreate() {
 
         const listSelectedFull = treeList.filter((e: any) => listSelected.includes(e.id));
         const parentDrop = treeList.filter((e: any) => e.id == itemDrop?.pid);
-        const canBeMoved = ActionsControl.isValidAction(parentDrop[0], listSelectedFull, false, true);
+        const canBeMoved = ActionsControl.is_valid_action(parentDrop[0], listSelectedFull, false, true);
 
         if (
             (listSelected?.length == 1 && currentDroppable === treeItem)
@@ -963,18 +963,18 @@ function TreeControlCreate() {
             if (itemDrag?.id == -1) not_active = true;
         
         if (action == NodeAction.CTRL_V) {
-            let canPaste = ActionsControl.isValidAction(itemDrag) == false;
+            let canPaste = ActionsControl.is_valid_action(itemDrag) == false;
             if (itemDrag?.pid == -1) {
                 // если itemDrag в корне сцены, то canPaste c учетом asChild
                 const copyList = ActionsControl.copy_mesh_list;
-                canPaste = ActionsControl.isValidAction(itemDrag, copyList, true) == false;
+                canPaste = ActionsControl.is_valid_action(itemDrag, copyList, true) == false;
             }
             if (itemDrag?.id == -1) not_active = true;
             else if (canPaste) not_active = true;
         }
         
         if (action == NodeAction.CTRL_B) {
-            const canPaste = ActionsControl.isValidAction(itemDrag) == false;
+            const canPaste = ActionsControl.is_valid_action(itemDrag) == false;
             if (itemDrag?.id == -1) {
                 if (canPaste) not_active = true;
             }
@@ -1125,6 +1125,67 @@ function TreeControlCreate() {
         copyItemDrag = null;
     }
 
+    function toggleEventListenerTexture(add: boolean = true) {
+        const selector = '.tree__item[data-icon="scene"], .tree__item[data-icon="go"], .tree__item[data-icon="gui"], .tree__item[data-icon="box"], .tree__item[data-icon="text"]';
+        const listDrop = document.querySelectorAll(selector);
+        if (listDrop) {
+            listDrop.forEach((item) => {
+                if (add) {
+                    const noDrop = item.getAttribute('data-no_drop');
+                    if (!noDrop) {
+                        item.addEventListener("dragover", allowDropTexture);
+                        item.addEventListener("dragleave", onDragLeaveTexture);
+                        item.addEventListener("drop", onDropTexture);
+                    }
+                }
+                else {
+                    item.removeEventListener("dragover", allowDropTexture);
+                    item.removeEventListener("dragleave", onDragLeaveTexture);
+                    item.removeEventListener("drop", onDropTexture);
+                }
+            });
+        }
+    }
+    
+    function allowDropTexture(event: any) {
+        event.preventDefault();
+        const item = event.target.closest('.tree__item');
+        if (item) item.classList.add('drop_texture');
+    }
+    
+    function onDragLeaveTexture(event: any) {
+        event.preventDefault();
+        const item = event.target.closest('.tree__item');
+        if (item) item.classList.remove('drop_texture');
+    }
+    function onDropTexture(event: any) {
+        event.preventDefault();
+        const item = event.target.closest('.tree__item');
+        if (!item) return;
+        item.classList.remove('drop_texture');
+        const icon = item.getAttribute('data-icon');
+        const itemId = item.getAttribute('data-id');
+        if (!icon || !itemId) return;
+
+        const data = event.dataTransfer.getData("text/plain");
+        if (data.length == 0 || data.includes('undefined/undefined')) return;
+
+        const texture = data.split("/")[1];
+        const atlas = data.split("/")[0];
+        
+        const go = ['scene', IObjectTypes.GO_CONTAINER];
+        if (go.includes(icon)) {
+            ActionsControl.add_go_with_sprite_component(itemId, texture, atlas);
+            return;
+        }
+        
+        const gui = [IObjectTypes.GUI_CONTAINER, IObjectTypes.GUI_BOX, IObjectTypes.GUI_TEXT];
+        if (gui.includes(icon)) {
+            ActionsControl.add_gui_box(itemId, texture, atlas);
+        }
+
+    }
+    
     function updateDaD(): void {
 
         // устанавливаем ширину для span.tree__item_bg и .menu_left
@@ -1157,6 +1218,9 @@ function TreeControlCreate() {
         paintIdentical(); 
 
         paintSearchNode("color_green");
+
+        // вешаем обработчики для дроп текстуры
+        toggleEventListenerTexture();
 
     }
 
