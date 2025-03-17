@@ -88,7 +88,7 @@ export async function run_debug_scene() {
 
   ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
   run_debug_filemanager();
-  ControlManager.update_graph(!true);
+  ControlManager.update_graph(true, 'test');
 
 
 

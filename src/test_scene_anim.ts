@@ -96,7 +96,7 @@ export async function run_anim_scene() {
     }
 
 
-    ControlManager.update_graph(true);
+    ControlManager.update_graph(true, 'anim_scene');
 
     /*
       ResourceManager.preload_model('cow.glb');
