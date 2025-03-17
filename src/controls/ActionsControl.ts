@@ -160,13 +160,18 @@ function ActionsControlCreate() {
 
     function add_gui_container(pid: number = -1) {
         const container = SceneManager.create(IObjectTypes.GUI_CONTAINER);
+        if (!container) return;
+        const parent = SceneManager.get_mesh_by_id(pid);
+        if (parent) container.set_position(parent?.position.x + 30, parent?.position.y - 20);
         sceneAddItem(container, pid);
     }
     
     function add_gui_box(pid: number = -1, texture: string = '2', atlas: string = '') {
         const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: 128, height: 32 });
+        if (!box) return;
+        const parent = SceneManager.get_mesh_by_id(pid);
+        if (parent) box.set_position(parent?.position.x + 20, parent?.position.y - 15);
         box.scale.setScalar(1);
-        box.position.set(200, -200, 0);
         box.set_color('#0f0')
         box.set_texture(texture, atlas);
         box.set_slice(8, 8);
@@ -175,6 +180,9 @@ function ActionsControlCreate() {
 
     function add_gui_text(pid: number = -1) {
         const txt = SceneManager.create(IObjectTypes.GUI_TEXT, { text: 'Text', width: 250, height: 50 });
+        if (!txt) return;
+        const parent = SceneManager.get_mesh_by_id(pid);
+        if (parent) txt.set_position(parent?.position.x + 10, parent?.position.y - 7);
         txt.set_color('#0f0');
         txt.scale.setScalar(0.5);
         txt.set_font('ShantellSans-Light11');
@@ -183,25 +191,35 @@ function ActionsControlCreate() {
 
     function add_go_container(pid: number = -1) {
         const container = SceneManager.create(IObjectTypes.GO_CONTAINER);
-        container.set_position(540 / 2, -960 / 2);
+        if (!container) return;
+        const parent = SceneManager.get_mesh_by_id(pid);
+        if (parent) container.set_position(parent?.position.x + 30, parent?.position.y - 20);
         sceneAddItem(container, pid);
     }
 
-    function add_go_sprite_component(pid: number = -1) {
+    function add_go_sprite_component(pid: number = -1, texture: string = 'arrow1', atlas: string = 'example_atlas') {
         const sprite = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT);
-        sprite.set_texture('arrow1', 'example_atlas');
+        if (!sprite) return;
+        const parent = SceneManager.get_mesh_by_id(pid);
+        if (parent) sprite.set_position(parent?.position.x + 30, parent?.position.y - 20);
+        sprite.set_texture(texture, atlas);
         sceneAddItem(sprite, pid);
     }
 
     function add_go_label_component(pid: number = -1) {
         const label = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, {text:'label'});
+        if (!label) return;
+        const parent = SceneManager.get_mesh_by_id(pid);
+        if (parent) label.set_position(parent?.position.x + 30, parent?.position.y - 20);
         label.set_font('ShantellSans-Light11');
         sceneAddItem(label, pid);
     }
 
     function add_go_model_component(pid: number = -1) {
         const model = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
-        model.position.set(250, 250, 1);
+        if (!model) return;
+        const parent = SceneManager.get_mesh_by_id(pid);
+        if (parent) model.set_position(parent?.position.x + 30, parent?.position.y - 20);
         sceneAddItem(model, pid);
     }
 
@@ -215,9 +233,10 @@ function ActionsControlCreate() {
 
     function add_go_with_sprite_component(pid: number = -1, texture: string = '', atlas: string = '') {
         const go = SceneManager.create(IObjectTypes.GO_CONTAINER);
-        go.set_position(540 / 2, -960 / 2);
-        
         const spr = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT);
+        if (!spr || !go) return;
+        
+        if (go?.position) spr.set_position(go?.position.x + 30, go?.position.y - 20);
         spr.set_texture(texture, atlas);
         
         go.add(spr);
@@ -354,8 +373,25 @@ function ActionsControlCreate() {
             return result;
         }
 
+        function focus(): void {
+            log("Focus...")
+            const selected_list = SelectControl.get_selected_list();
+            log({selected_list});
+            if (selected_list.length == 1) {
+                CameraControl.set_zoom(0.8, true);
+                const [x, y] = selected_list[0].position;
+                // const [width, height] = selList[0].parameters;
+                log({x, y});
+                CameraControl.set_position(x, y, true);
+            }
+            if (selected_list.length > 0) {
+                // CameraControl.set_focus(x, y);
+            }
+        }
+
     return {
         copy_mesh_list,
+        focus,
         from_the_same_world,
         is_valid_action,
         cut, copy, paste, duplication, remove,

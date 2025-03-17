@@ -26,6 +26,10 @@ function ViewControlCreate() {
                 TreeControl.preRename();
             }
             
+            if (e.key == 'f' || e.key == 'а') {
+                ActionsControl.focus();
+            }
+            
             if (Input.is_control() && (e.key == 'c' || e.key == 'с')) {
                 ActionsControl.copy();
             }
