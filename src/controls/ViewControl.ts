@@ -27,7 +27,7 @@ function ViewControlCreate() {
             }
             
             if (e.key == 'f' || e.key == 'а') {
-                ActionsControl.focus();
+                CameraControl.focus();
             }
             
             if (Input.is_control() && (e.key == 'c' || e.key == 'с')) {

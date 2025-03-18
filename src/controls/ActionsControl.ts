@@ -373,25 +373,8 @@ function ActionsControlCreate() {
             return result;
         }
 
-        function focus(): void {
-            log("Focus...")
-            const selected_list = SelectControl.get_selected_list();
-            log({selected_list});
-            if (selected_list.length == 1) {
-                CameraControl.set_zoom(0.8, true);
-                const [x, y] = selected_list[0].position;
-                // const [width, height] = selList[0].parameters;
-                log({x, y});
-                CameraControl.set_position(x, y, true);
-            }
-            if (selected_list.length > 0) {
-                // CameraControl.set_focus(x, y);
-            }
-        }
-
     return {
         copy_mesh_list,
-        focus,
         from_the_same_world,
         is_valid_action,
         cut, copy, paste, duplication, remove,

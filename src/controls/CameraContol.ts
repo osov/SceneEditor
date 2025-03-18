@@ -90,7 +90,41 @@ function CameraControlCreate() {
         control.zoomTo(zoom);
     }
 
+    function get_bounds_from_list(list: any) {
+        if (list.length == 0)
+            return [0, 0, 0, 0];
+        const bb = list[0].get_bounds();
+        log('bb1: ', bb)
+        for (let i = 1; i < list.length; i++) {
+            const b = list[i].get_bounds();
+            bb[0] = Math.min(bb[0], b[0]);
+            bb[1] = Math.max(bb[1], b[1]);
+            bb[2] = Math.max(bb[2], b[2]);
+            bb[3] = Math.min(bb[3], b[3]);
+        }
+        return bb;
+    }
+    
+    function focus() {
+        const selected_list = SelectControl.get_selected_list();
+        if (selected_list.length > 0) {
+            const wp = new Vector3();
+            selected_list[0].getWorldPosition(wp);
+            const bb = get_bounds_from_list(selected_list);
+            const x = bb[0] + Math.abs(bb[2] - bb[0]) / 2;
+            const y = bb[1] - Math.abs(bb[3] - bb[1]) / 2;
+            set_position(x, y, true);
+
+            const width = Math.abs(bb[2] - bb[0]);
+            const height = Math.abs(bb[3] - bb[1]);
+            const zoomWidth = window.innerWidth / width;
+            const zoomHeight = window.innerHeight / height;
+            const zoom = Math.min(zoomWidth, zoomHeight);
+            const k_zoom = true ? zoom * 0.5 : zoom;
+            set_zoom(k_zoom, true);
+        }
+    }
 
     init();
-    return { set_position, set_zoom, load_state };
+    return { set_position, set_zoom, load_state, focus };
 }
