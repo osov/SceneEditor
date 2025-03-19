@@ -464,6 +464,24 @@ function AssetControlCreate() {
         });
     }
 
+    function save_graph_popup(current_path: string, data: any) {
+        const currentName = data.name;
+        Popups.open({
+            type: "Rename",
+            params: { title: "Сохранить элемент сцены:", button: "Ok", currentName, auto_close: true },
+            callback: async (success, name) => {
+                if (success && name) {
+                    const path = `${current_path}/${name}.${SCENE_EXT}`;
+                    const r = await ClientAPI.save_data(path, {scene_data: [data]}) 
+                    if (r && r.result)
+                        Popups.toast.success(`Объект ${name} сохранён, путь: ${path}`);
+                    else
+                        return Popups.toast.error(`Не удалось сохранить объект ${name}`);
+                }
+            }
+        });
+    }
+
     function rename_popup(asset_path: string, name: string, type?: AssetType) {
         let type_name = "файл";
         if (type == "folder") type_name = "папку";
@@ -831,23 +849,13 @@ function AssetControlCreate() {
         
     }
 
-    async function on_graph_drop(data: {list: number[]}) {
-        const list = [];
-        for (const id of data.list) {
-            const scene_object = SceneManager.get_mesh_by_id(id);
-            if (scene_object) {
-                const data = SceneManager.serialize_mesh(scene_object);
-                const name = data.name;
-                const path = `${current_dir}/${name}.${SCENE_EXT}`;
-                list.push(ClientAPI.save_data(path, data).then(function(r) {
-                    if (r && r.result)
-                        Popups.toast.success(`Объект ${name} сохранён, путь: ${path}`);
-                    else
-                        return Popups.toast.error(`Не удалось сохранить объект ${name}`);
-                }));
-            }
-        }
-        await Promise.all(list);
+    async function on_graph_drop(id: number) {
+         
+        const scene_object = SceneManager.get_mesh_by_id(id);
+        if (scene_object) {
+            const data = SceneManager.serialize_mesh(scene_object);
+            save_graph_popup(current_dir as string, data);
+        }        
     }
 
     if (filemanager) {

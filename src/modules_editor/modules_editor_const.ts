@@ -21,7 +21,7 @@ export type _SystemMessagesEditor = {
     SYS_GRAPH_REMOVE: { id: number, list: number[] },
     SYS_GRAPH_KEY_COM_PRESSED: { id: number, list: number[], key: string | number },
     SYS_GRAPH_ADD: { id: number, list: number[], type: string | number },
-    SYS_GRAPH_DROP_IN_ASSETS: { list: number[] },
+    SYS_GRAPH_DROP_IN_ASSETS: number,
     SYS_INSPECTOR_UPDATED_VALUE: ChangeInfo,
     SYS_FILE_UPLOADED: FileUploadedData,
     SYS_ASSET_COPIED: { name: string, path: string, new_path: string },

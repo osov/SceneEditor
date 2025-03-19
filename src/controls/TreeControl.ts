@@ -320,8 +320,8 @@ function TreeControlCreate() {
 
         if ((event.button === 0 || event.button === 2)) {
 
-            if (itemDrag && event.target.closest('.filemanager')) {
-                EventBus.trigger("SYS_GRAPH_DROP_IN_ASSETS", {list: listSelected});
+            if (event.target.closest('.filemanager') && itemDrag && listSelected.length == 1) {
+                EventBus.trigger("SYS_GRAPH_DROP_IN_ASSETS", listSelected[0]);
             }
 
             if (!event.target.closest('.tree_div')) {

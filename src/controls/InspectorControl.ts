@@ -99,8 +99,6 @@ import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
 import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from './types';
 import { TextureInfo } from '../render_engine/resource_manager';
-import { SERVER_URL } from '../config';
-import { URL_PATHS } from '../modules_editor/modules_editor_const';
 
 
 declare global {
