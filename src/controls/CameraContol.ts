@@ -115,13 +115,13 @@ function CameraControlCreate() {
             const y = bb[1] - Math.abs(bb[3] - bb[1]) / 2;
             set_position(x, y, true);
 
-            const width = Math.abs(bb[2] - bb[0]);
-            const height = Math.abs(bb[3] - bb[1]);
-            const zoomWidth = window.innerWidth / width;
-            const zoomHeight = window.innerHeight / height;
-            const zoom = Math.min(zoomWidth, zoomHeight);
-            const k_zoom = true ? zoom * 0.5 : zoom;
-            set_zoom(k_zoom, true);
+            //const width = Math.abs(bb[2] - bb[0]);
+            //const height = Math.abs(bb[3] - bb[1]);
+            //const zoomWidth = window.innerWidth / width;
+            //const zoomHeight = window.innerHeight / height;
+            //const zoom = Math.min(zoomWidth, zoomHeight);
+            //const k_zoom = true ? zoom * 0.5 : zoom;
+            //set_zoom(k_zoom, true);
         }
     }
 
