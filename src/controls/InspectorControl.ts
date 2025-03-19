@@ -100,6 +100,7 @@ import { radToDeg } from 'three/src/math/MathUtils';
 import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from './types';
 import { TextureInfo } from '../render_engine/resource_manager';
 import { SERVER_URL } from '../config';
+import { URL_PATHS } from '../modules_editor/modules_editor_const';
 
 
 declare global {
@@ -340,22 +341,6 @@ function InspectorControlCreate() {
         if (tp_slo) tp_slo.classList.add('my_scroll');
         const tp_to = document.querySelector('.tp-thumbv_ovl') as HTMLDivElement;
         if (tp_to) tp_to.classList.add('my_scroll');
-
-        const textureFiles = document.querySelectorAll<HTMLElement>(".file");
-        textureFiles.forEach((file) => {
-            file.addEventListener("dragstart", (event: DragEvent) => {
-                if (!event.dataTransfer)
-                    return;
-                event.dataTransfer.clearData();
-
-                const path = file.getAttribute("data-path") || '';
-                const data = ResourceManager.get_all_textures().find((info) => {
-                    return (info.data.texture as any).path == `${SERVER_URL}/assets/${path}`;
-                });
-
-                event.dataTransfer.setData("text/plain", `${data?.atlas}/${data?.name}`);
-            });
-        });
     }
 
     function set_selected_list(list: IBaseMeshAndThree[]) {

@@ -27,6 +27,7 @@ export enum NodeAction {
     add_go_label_component,
     add_go_model_component,
     refresh,
+    open_in_explorer,
     download,
     new_folder,
     new_scene,

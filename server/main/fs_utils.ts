@@ -1,4 +1,5 @@
 import * as fs from 'fs/promises';
+import { openExplorer } from 'explorer-opener';
 import path from 'path';
 import { CACHE, FSObject, METADATA, PUBLIC, URL_PATHS } from '../../src/modules_editor/modules_editor_const';
 import { working_folder_path } from '../config';
@@ -99,4 +100,16 @@ export async function new_project(name: string) {
     const full_path = get_full_path(name);
     mk_dir(full_path);
     mk_dir(path.join(full_path, PUBLIC));
+}
+
+export async function open_explorer(project_name: string, dir: string) {
+    const full_path = get_asset_path(project_name, dir);
+    // require('child_process').exec(`start "" "${full_path}"`);
+    return openExplorer(full_path)
+    .then(() => {
+        return true;
+    })
+    .catch((error) => {
+        return false;
+    });    
 }

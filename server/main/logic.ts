@@ -1,8 +1,8 @@
 
 import path from "path";
 import { PATH_PARAM_NAME, ERROR_TEXT, NAME_PARAM_NAME, PROJECT_PARAM_NAME, DATA_PARAM_NAME, NEW_PATH_PARAM_NAME } from "./const";
-import { check_dir_exists, exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, read_dir_assets, rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir, get_cache_path } from "./fs_utils";
-import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD, SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, SCENE_EXT } from "../../src/modules_editor/modules_editor_const";
+import { check_dir_exists, exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, read_dir_assets, rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir, get_cache_path, open_explorer } from "./fs_utils";
+import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD, SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, SCENE_EXT, OPEN_EXPLORER_CMD, allowed_ext, texture_ext } from "../../src/modules_editor/modules_editor_const";
 import { ServerCacheData } from "./types";
 
 
@@ -25,10 +25,8 @@ const loaded_project_required_commands = [
     COPY_CMD,
     RENAME_CMD,
     DELETE_CMD,
+    OPEN_EXPLORER_CMD,
 ]
-
-const allowed_ext = ['mtr', 'prt', 'pss', 'txt', 'jpg','jpeg','png','gif','gltf','glb','obj','mtr','smpl','prt','fbx','mp3','ogg'];
-const texture_ext = ['jpg','jpeg','png'];
 
 
 export async function handle_command<T extends CommandId>(project: string, cmd_id: T, params: object) {
@@ -342,6 +340,16 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         return await on_get_data(params as ServerCommands[typeof SAVE_DATA_CMD]);
     }
 
+    if (cmd_id == OPEN_EXPLORER_CMD) {
+        const data = params as ServerCommands[typeof OPEN_EXPLORER_CMD];
+        const path = data.path;
+        const result = await open_explorer(project, path);
+        if (result)
+            return {result: 1} as ServerResponses[typeof OPEN_EXPLORER_CMD];
+        else
+            return {result: 0} as ServerResponses[typeof OPEN_EXPLORER_CMD];
+    }
+
     // if (cmd_id === SEARCH_CMD) {
     // }
 
@@ -460,6 +468,8 @@ export function check_fields(cmd_id: CommandId, params: any) {
     if (cmd_id === COPY_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME, NEW_PATH_PARAM_NAME]);
     if (cmd_id === DELETE_CMD)
+        wrong_fields = _check_fields(params, [PATH_PARAM_NAME]);
+    if (cmd_id === OPEN_EXPLORER_CMD)
         wrong_fields = _check_fields(params, [PATH_PARAM_NAME]);
     if (wrong_fields.length > 0) return {result: 0, message: `${ERROR_TEXT.SOME_FIELDS_WRONG}: ${wrong_fields}`}
 

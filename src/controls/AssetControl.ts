@@ -1,5 +1,5 @@
 import { SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
-import { AssetType, FILE_UPLOAD_CMD, FSObject, ProjectCache, ProjectLoadData, SCENE_EXT, ServerResponses, TDictionary, TRecursiveDict, URL_PATHS } from "../modules_editor/modules_editor_const";
+import { AssetType, FILE_UPLOAD_CMD, FSObject, ProjectCache, ProjectLoadData, SCENE_EXT, ServerResponses, TDictionary, texture_ext, TRecursiveDict, URL_PATHS } from "../modules_editor/modules_editor_const";
 import { _span_elem, json_parsable } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
@@ -161,6 +161,22 @@ function AssetControlCreate() {
                 assets_list.appendChild(file_elem);
             });
         }
+        const texture_type: AssetType = "texture";
+        const textureFiles = document.querySelectorAll<HTMLElement>(`[data-type=${texture_type}]`);
+        textureFiles.forEach((file) => {
+            file.addEventListener("dragstart", (event: DragEvent) => {
+                if (!event.dataTransfer)
+                    return;
+                event.dataTransfer.clearData();
+
+                const path = file.getAttribute("data-path") || '';
+                const data = ResourceManager.get_all_textures().find((info) => {
+                    return (info.data.texture as any).path == `${SERVER_URL}${URL_PATHS.ASSETS}/${path}`;
+                });
+
+                event.dataTransfer.setData("text/plain", `${data?.atlas}/${data?.name}`);
+            });
+        });
         assets_list.hidden = false;
     }
 
@@ -301,6 +317,7 @@ function AssetControlCreate() {
         const assets_menu_list: contextMenuItem[] = [];
         if (!type) {
             assets_menu_list.push({ text: 'Обновить', action: NodeAction.refresh });
+            assets_menu_list.push({ text: 'Показать', action: NodeAction.open_in_explorer });
             if (move_assets_data.assets.length)
                 assets_menu_list.push({ text: 'Вставить', action: NodeAction.CTRL_V });
             assets_menu_list.push({
@@ -341,6 +358,9 @@ function AssetControlCreate() {
         if (!success || action == undefined || action == null || current_dir === undefined) return;
         if (action == NodeAction.refresh) {
             await go_to_dir(current_dir, true);
+        }
+        if (action == NodeAction.open_in_explorer) {
+            await ClientAPI.open_explorer(current_dir);
         }
         if (action == NodeAction.material_base) {
             // open_material_popup(asset_path);
@@ -804,10 +824,30 @@ function AssetControlCreate() {
         const name = current_scene.name as string;
         const data = SceneManager.save_scene();
         const r = await ClientAPI.save_data(path, {scene_data: data});
-        if (!r || r.result === 0)
-            return Popups.toast.error(`Не удалось сохранить сцену ${name}, путь: ${path}: ${r.message}`);
-        else
+        if (r && r.result)
             return Popups.toast.success(`Сцена ${name} сохранена, путь: ${path}`);
+        else
+            return Popups.toast.error(`Не удалось сохранить сцену ${name}, путь: ${path}: ${r.message}`);
+        
+    }
+
+    async function on_graph_drop(data: {list: number[]}) {
+        const list = [];
+        for (const id of data.list) {
+            const scene_object = SceneManager.get_mesh_by_id(id);
+            if (scene_object) {
+                const data = SceneManager.serialize_mesh(scene_object);
+                const name = data.name;
+                const path = `${current_dir}/${name}.${SCENE_EXT}`;
+                list.push(ClientAPI.save_data(path, data).then(function(r) {
+                    if (r && r.result)
+                        Popups.toast.success(`Объект ${name} сохранён, путь: ${path}`);
+                    else
+                        return Popups.toast.error(`Не удалось сохранить объект ${name}`);
+                }));
+            }
+        }
+        await Promise.all(list);
     }
 
     if (filemanager) {
@@ -833,17 +873,18 @@ function AssetControlCreate() {
     }
 
     async function handle_upload_drop(event: DragEvent) {
-        if (!drag_for_upload_now) return;
-        drag_for_upload_now = false;
-        if (current_project == undefined || current_dir == undefined) {
-            Log.warn('Попытка загрузить файл на сервер, но никакой проект не загружен');
-            return;
-        }
-        if (event.dataTransfer != null) {
-            const files = Array.from(event.dataTransfer.files);
-            if (files.length > 0) {
-                upload_files(files);
+        if (drag_for_upload_now) {
+            drag_for_upload_now = false;
+            if (current_project == undefined || current_dir == undefined) {
+                Log.warn('Попытка загрузить файл на сервер, но никакой проект не загружен');
+                return;
             }
+            if (event.dataTransfer != null) {
+                const files = Array.from(event.dataTransfer.files);
+                if (files.length > 0) {
+                    upload_files(files);
+                }
+            }            
         }
     }
 
@@ -868,6 +909,7 @@ function AssetControlCreate() {
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
     EventBus.on('SYS_INPUT_DBL_CLICK', onDblClick);
     EventBus.on('SYS_INPUT_SAVE', save_current_scene);
+    EventBus.on('SYS_GRAPH_DROP_IN_ASSETS', on_graph_drop);
 
     EventBus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
 
@@ -922,7 +964,7 @@ function getFilePath(path: string) {
 
 function fileIsImg(path: string) {
     var ext = getFileExt(path);
-    return (['png', 'jpg', 'jpeg', 'gif'].includes(ext));
+    return (texture_ext.includes(ext));
 }
 
 export async function run_debug_filemanager() {

@@ -1,5 +1,5 @@
 import { SERVER_URL } from "../config";
-import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, GET_CURRENT_PROJECT_CMD, ProtocolWrapper, TRecursiveDict, DEL_INFO_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD } from "./modules_editor_const";
+import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, GET_CURRENT_PROJECT_CMD, ProtocolWrapper, TRecursiveDict, DEL_INFO_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, OPEN_EXPLORER_CMD } from "./modules_editor_const";
 
 
 declare global {
@@ -92,7 +92,11 @@ function ClientAPIModule() {
     async function del_info(path: string): Promise<AssetsResponses[typeof DEL_INFO_CMD]> {
         const command_id = DEL_INFO_CMD;
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
-        
+    }
+
+    async function open_explorer(path: string): Promise<AssetsResponses[typeof OPEN_EXPLORER_CMD]> {
+        const command_id = OPEN_EXPLORER_CMD;
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
     }
 
     async function test_server_ok() {
@@ -114,7 +118,7 @@ function ClientAPIModule() {
         on_message_socket(data.id as keyof NetMessagesEditor, data.message);
     });
 
-    return { get_current_project, set_current_scene, get_projects, load_project, new_project, new_folder, get_folder, copy, move, rename, remove, test_server_ok, save_info, get_info, del_info, save_data, get_data}
+    return { get_current_project, set_current_scene, get_projects, load_project, new_project, new_folder, get_folder, copy, move, rename, remove, test_server_ok, save_info, get_info, del_info, save_data, get_data, open_explorer }
 }
 
 

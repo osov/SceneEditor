@@ -21,6 +21,7 @@ export type _SystemMessagesEditor = {
     SYS_GRAPH_REMOVE: { id: number, list: number[] },
     SYS_GRAPH_KEY_COM_PRESSED: { id: number, list: number[], key: string | number },
     SYS_GRAPH_ADD: { id: number, list: number[], type: string | number },
+    SYS_GRAPH_DROP_IN_ASSETS: { list: number[] },
     SYS_INSPECTOR_UPDATED_VALUE: ChangeInfo,
     SYS_FILE_UPLOADED: FileUploadedData,
     SYS_ASSET_COPIED: { name: string, path: string, new_path: string },
@@ -49,6 +50,7 @@ export type AssetsCommands = {
     [DEL_INFO_CMD]: { path: string },
     [SAVE_DATA_CMD]: { path: string, data: TRecursiveDict | TDictionary<IBaseEntityData[]> | string },
     [GET_DATA_CMD]: { path: string },
+    [OPEN_EXPLORER_CMD]: { path: string },
     // [NEW_MATERIAL]: {name: string, path: string, data: IDictionary<string>},
     // [GET_MATERIAL]: {name: string, path: string},
 }
@@ -80,6 +82,7 @@ export type AssetsResponses = {
     [DEL_INFO_CMD]: BaseResp<VoidMessage>,
     [SAVE_DATA_CMD]: BaseResp<VoidMessage>,
     [GET_DATA_CMD]: BaseResp<TRecursiveDict | TDictionary<IBaseEntityData[]> | string>,
+    [OPEN_EXPLORER_CMD]: BaseResp<VoidMessage>,
     [FILE_UPLOAD_CMD]: BaseResp<FileUploadedData>
 }
 
@@ -118,6 +121,7 @@ export const GET_DATA_CMD = '/get_data';
 export const SAVE_INFO_CMD = '/save_info';
 export const GET_INFO_CMD = '/get_info';
 export const DEL_INFO_CMD = '/del_info';
+export const OPEN_EXPLORER_CMD = '/open_explorer';
 export const FILE_UPLOAD_CMD = '/upload';
 export const PUBLIC = '/public'  // Путь к папке с ассетами проекта
 export const METADATA = '/metadata.json'  // Путь к файлу с метаинфо проекта
@@ -142,7 +146,11 @@ export const CMD_NAME = [
     SAVE_INFO_CMD,
     GET_INFO_CMD,
     DEL_INFO_CMD,
+    OPEN_EXPLORER_CMD,
 ]
+
+export const allowed_ext = ['mtr', 'prt', 'pss', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'gltf', 'glb', 'obj', 'mtr', 'smpl', 'prt', 'fbx', 'mp3', 'ogg'];
+export const texture_ext = ['jpg', 'jpeg', 'png'];
 
 export const URL_PATHS = {
     TEST: '/test',
