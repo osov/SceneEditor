@@ -1,7 +1,8 @@
 import { deepClone } from "../modules/utils";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
-import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui, componentsGo } from "./ActionsControl";
+import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui, componentsGo, paramsTexture } from "./ActionsControl";
 import { IObjectTypes } from '../render_engine/types';
+import { Vector2 } from "three";
 
 declare global {
     const TreeControl: ReturnType<typeof TreeControlCreate>;
@@ -1108,7 +1109,7 @@ function TreeControlCreate() {
             ActionsControl.add_gui_container(copyItemDrag?.id);
         }
         if (action == NodeAction.add_gui_box) {
-            ActionsControl.add_gui_box(copyItemDrag?.id);
+            ActionsControl.add_gui_box({id: copyItemDrag?.id, texture: '2', atlas: '', pos: {x: 0, y: 0}});
         }
         if (action == NodeAction.add_gui_text) {
             ActionsControl.add_gui_text(copyItemDrag?.id);
@@ -1117,7 +1118,7 @@ function TreeControlCreate() {
             ActionsControl.add_go_container(copyItemDrag?.id);
         }
         if (action == NodeAction.add_go_sprite_component) {
-            ActionsControl.add_go_sprite_component(copyItemDrag?.id);
+            ActionsControl.add_go_sprite_component({id: copyItemDrag?.id, texture: 'arrow1', atlas: 'example_atlas', pos: {x: 0, y: 0}});
         }
         if (action == NodeAction.add_go_label_component) {
             ActionsControl.add_go_label_component(copyItemDrag?.id);
@@ -1162,6 +1163,7 @@ function TreeControlCreate() {
         const item = event.target.closest('.tree__item');
         if (item) item.classList.remove('drop_texture');
     }
+
     function onDropTexture(event: any) {
         event.preventDefault();
         const item = event.target.closest('.tree__item');
@@ -1171,23 +1173,71 @@ function TreeControlCreate() {
         const itemId = item.getAttribute('data-id');
         if (!icon || !itemId) return;
 
-        const data = event.dataTransfer.getData("text/plain");
-        if (data.length == 0 || data.includes('undefined/undefined')) return;
+        addNodeTexture(event, false, icon, itemId);
+    }
 
-        const texture = data.split("/")[1];
-        const atlas = data.split("/")[0];
+    function getMousePos(event: any) {
+        const canvas = document.querySelector(`canvas#scene`)!;
+        const mp_n = new Vector2();
+        mp_n.set((event.pageX / canvas.clientWidth) * 2 - 1, - (event.pageY / canvas.clientHeight) * 2 + 1);
+        return Camera.screen_to_world(mp_n.x, mp_n.y) || {};
+    }
+
+    function canvasDropTexture() {
+        const canvas = document.querySelector(`canvas#scene`)!;
+        canvas.addEventListener("dragover", (e) => e.preventDefault());
+        canvas.addEventListener("drop", onDropTextureCanvas);
+    }
+
+    function onDropTextureCanvas(event: any) {
+        event.preventDefault();
+        addNodeTexture(event, true);
+    }
+
+    function addNodeTexture(event: any, isPos: boolean, icon: string = '', id: number = -1) {
         
-        const go = ['scene', IObjectTypes.GO_CONTAINER];
-        if (go.includes(icon)) {
-            ActionsControl.add_go_with_sprite_component(itemId, texture, atlas);
+        const data = event.dataTransfer.getData("text/plain");
+        if (data.length == 0 || data.includes('undefined/undefined')) {
+            Popups.toast.open({type: 'info', message: "Нет текстуры!"});
             return;
         }
         
-        const gui = [IObjectTypes.GUI_CONTAINER, IObjectTypes.GUI_BOX, IObjectTypes.GUI_TEXT];
-        if (gui.includes(icon)) {
-            ActionsControl.add_gui_box(itemId, texture, atlas);
+        const list = SelectControl.get_selected_list();
+        if (list.length > 1 && isPos) {
+            Popups.toast.open({type: 'info', message: "Для этого действия нужно выбрать только 1 объект!"});
+            return;
         }
 
+        const nType = isPos && list.length ? list[0]?.type : icon;
+        const mouseUpPos = getMousePos(event);
+        const nPos = isPos && mouseUpPos ? {x: mouseUpPos?.x, y: mouseUpPos?.y} : {x: 0, y: 0};
+        const nId = isPos ? list[0]?.mesh_data.id : id;
+
+        const pt: paramsTexture = {
+            id: nId,
+            texture: data.split("/")[1],
+            atlas: data.split("/")[0],
+            pos: nPos
+        }
+
+        const noDrop = treeList.find((i) => i.id == pt.id && i.no_drop);
+        if (noDrop) {
+            Popups.toast.open({type: 'info', message: "В текущий объект запрещено добавлять дочерние!"});
+            return; 
+        }
+
+        const go = ['scene', IObjectTypes.GO_CONTAINER];
+        if (list.length == 0 || go.includes(nType)) {
+            ActionsControl.add_go_with_sprite_component(pt);
+            return;
+        }
+
+        if (worldGui.includes(nType)) {
+            ActionsControl.add_gui_box(pt);
+            return;
+        }
+
+        Popups.toast.open({type: 'info', message: "Этому объекту нельзя добавлять текстуру!"});
     }
     
     function updateDaD(): void {
@@ -1232,6 +1282,9 @@ function TreeControlCreate() {
     
     // поиск по дереву, вешаем обработчик  1 раз
     paintIdenticalLive(".searchInTree", "#wr_tree .tree__item_name", "color_green", 777);
+
+    // drop texture
+    canvasDropTexture();
 
     EventBus.on('SYS_INPUT_POINTER_UP', (event: any) => {
         // show/hide block menu

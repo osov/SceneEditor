@@ -66,6 +66,12 @@ export const worldGui: string[] = [
     IObjectTypes.GUI_TEXT
 ];
 
+export type paramsTexture  = {
+    id: number,
+    texture: string,
+    atlas: string,
+    pos: {x: number, y: number}
+};
 
 function ActionsControlCreate() {
     let copy_mesh_list: any[] = [];
@@ -167,16 +173,16 @@ function ActionsControlCreate() {
         sceneAddItem(container, pid);
     }
     
-    function add_gui_box(pid: number = -1, texture: string = '2', atlas: string = '') {
+    function add_gui_box(data: paramsTexture) {
         const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: 128, height: 32 });
         if (!box) return;
-        const parent = SceneManager.get_mesh_by_id(pid);
-        if (parent) box.set_position(parent?.position.x + 20, parent?.position.y - 15);
+        box.set_position(data.pos.x, data?.pos.y, 0);
+        SceneManager.move_mesh(box, data.id);
         box.scale.setScalar(1);
         box.set_color('#0f0')
-        box.set_texture(texture, atlas);
+        box.set_texture(data?.texture, data?.atlas);
         box.set_slice(8, 8);
-        sceneAddItem(box, pid);
+        sceneAddItem(box, data?.id);
     }
 
     function add_gui_text(pid: number = -1) {
@@ -198,13 +204,13 @@ function ActionsControlCreate() {
         sceneAddItem(container, pid);
     }
 
-    function add_go_sprite_component(pid: number = -1, texture: string = 'arrow1', atlas: string = 'example_atlas') {
+    function add_go_sprite_component(data: paramsTexture) {
         const sprite = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT);
         if (!sprite) return;
-        const parent = SceneManager.get_mesh_by_id(pid);
+        const parent = SceneManager.get_mesh_by_id(data?.id);
         if (parent) sprite.set_position(parent?.position.x + 30, parent?.position.y - 20);
-        sprite.set_texture(texture, atlas);
-        sceneAddItem(sprite, pid);
+        sprite.set_texture(data?.texture, data?.atlas);
+        sceneAddItem(sprite, data?.id);
     }
 
     function add_go_label_component(pid: number = -1) {
@@ -232,16 +238,18 @@ function ActionsControlCreate() {
         SelectControl.set_selected_list([item]);
     }
 
-    function add_go_with_sprite_component(pid: number = -1, texture: string = '', atlas: string = '') {
+    function add_go_with_sprite_component(data: paramsTexture) {
         const go = SceneManager.create(IObjectTypes.GO_CONTAINER);
         const spr = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT);
         if (!spr || !go) return;
         
-        if (go?.position) spr.set_position(go?.position.x + 30, go?.position.y - 20);
-        spr.set_texture(texture, atlas);
+        go.set_position(data.pos.x, data?.pos.y, 0);
+        SceneManager.move_mesh(go, data.id);
+        spr.set_position(0, 0);
+        spr.set_texture(data?.texture, data?.atlas);
         
         go.add(spr);
-        sceneAddItem(go, pid);
+        sceneAddItem(go, data?.id);
     }
 
     function setUniqueNameMeshList(list: TreeItem[]): void {

@@ -94,7 +94,6 @@ function CameraControlCreate() {
         if (list.length == 0)
             return [0, 0, 0, 0];
         const bb = list[0].get_bounds();
-        log('bb1: ', bb)
         for (let i = 1; i < list.length; i++) {
             const b = list[i].get_bounds();
             bb[0] = Math.min(bb[0], b[0]);
