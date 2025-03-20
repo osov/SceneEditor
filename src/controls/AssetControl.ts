@@ -1,5 +1,5 @@
 import { SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
-import { AssetType, FILE_UPLOAD_CMD, FSObject, ProjectCache, ProjectLoadData, SCENE_EXT, ServerResponses, TDictionary, texture_ext, TRecursiveDict, URL_PATHS } from "../modules_editor/modules_editor_const";
+import { ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, AssetType, FILE_UPLOAD_CMD, FSObject, ProjectCache, ProjectLoadData, SCENE_EXT, ServerResponses, TDictionary, texture_ext, TRecursiveDict, URL_PATHS } from "../modules_editor/modules_editor_const";
 import { _span_elem, json_parsable } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
@@ -136,11 +136,12 @@ function AssetControlCreate() {
                 const details_elem = _span_elem(file_size, ["details"]);
                 icon_elem.classList.add("drag", `f-${ext}`);
                 const name_elem = _span_elem(name, ["name"]);
-                if (file_type == "mtr") {
-                    asset_type = "material";
-                }
+                if (file_type == "mtr")
+                    asset_type = ASSET_MATERIAL;
+                else if (file_type == SCENE_EXT) 
+                    asset_type = ASSET_SCENE_GRAPH;
                 else if (fileIsImg(_path)) {
-                    asset_type = "texture";
+                    asset_type = ASSET_TEXTURE;
                     icon_elem = document.createElement("img");
                     icon_elem.setAttribute("src", src_url.toString());
                     icon_elem.setAttribute("draggable", "false");
@@ -161,20 +162,32 @@ function AssetControlCreate() {
                 assets_list.appendChild(file_elem);
             });
         }
-        const texture_type: AssetType = "texture";
-        const textureFiles = document.querySelectorAll<HTMLElement>(`[data-type=${texture_type}]`);
-        textureFiles.forEach((file) => {
+        const texture_files = document.querySelectorAll<HTMLElement>(`[data-type=${ASSET_TEXTURE}]`);
+        texture_files.forEach((file) => {
             file.addEventListener("dragstart", (event: DragEvent) => {
                 if (!event.dataTransfer)
                     return;
                 event.dataTransfer.clearData();
-
                 const path = file.getAttribute("data-path") || '';
                 const data = ResourceManager.get_all_textures().find((info) => {
                     return (info.data.texture as any).path == `${SERVER_URL}${URL_PATHS.ASSETS}/${path}`;
-                });
-
+                });                
                 event.dataTransfer.setData("text/plain", `${data?.atlas}/${data?.name}`);
+                event.dataTransfer.setData("asset_type", ASSET_TEXTURE);
+                event.dataTransfer.setData("path", path);
+            });
+        });
+        const scene_elem_files = document.querySelectorAll<HTMLElement>(`[data-type=${ASSET_SCENE_GRAPH}]`);
+        scene_elem_files.forEach((file) => {
+            file.addEventListener("dragstart", (event: DragEvent) => {
+                if (!event.dataTransfer)
+                    return;
+                event.dataTransfer.clearData();
+                const path = file.getAttribute("data-path") || '';
+                if (path) {
+                    event.dataTransfer.setData("asset_type", ASSET_SCENE_GRAPH);
+                    event.dataTransfer.setData("path", path);
+                }
             });
         });
         assets_list.hidden = false;
@@ -703,11 +716,11 @@ function AssetControlCreate() {
         elem.classList.remove("selected");
     }
 
-    function onMouseMove(event: any) {
+    function on_mouse_move(event: any) {
 
     }
 
-    function onMouseDown(event: any) {
+    function on_mouse_down(event: any) {
         const popup_elem = event.target.closest('.bgpopup');
         const menu_elem = event.target.closest('.wr_menu__context');
         const menu_popup_elem = event.target.closest('.wr_popup');
@@ -737,7 +750,8 @@ function AssetControlCreate() {
         }
     }
 
-    async function onMouseUp(event: any) {
+    async function on_mouse_up(event: any) {
+        drag_asset_now = false;
         const popup_elem = event.target.closest('.bgpopup');
         const menu_elem = event.target.closest('.wr_menu__context');
         const menu_popup_elem = event.target.closest('.wr_popup');
@@ -777,7 +791,7 @@ function AssetControlCreate() {
         }
     }
 
-    async function onKeyUp(event: any) {
+    async function on_key_up(event: any) {
         if (event.key == 'F2' && active_asset) {
             const path = active_asset.getAttribute('data-path') as string;
             const name = active_asset.getAttribute('data-name') as string;
@@ -803,7 +817,7 @@ function AssetControlCreate() {
         }
     }
 
-    async function onDblClick(event: any) {
+    async function on_dbl_click(event: any) {
         const file_elem = event.target.closest('.file.asset');
         if (file_elem) {
             const path = file_elem.getAttribute('data-path');
@@ -858,41 +872,38 @@ function AssetControlCreate() {
         }        
     }
 
-    if (filemanager) {
-        drop_zone.addEventListener("dragenter", function (e) {
-            e.preventDefault();
-            drag_for_upload_now = true;
-        });
+    drop_zone.addEventListener("dragenter", function (e) {
+        e.preventDefault();
+        drag_for_upload_now = true;
+    });
 
-        filemanager.addEventListener("dragover", function (e) {
-            e.preventDefault();
-            if (e.dataTransfer)
-                e.dataTransfer.dropEffect = 'copy'; 
-        });
+    filemanager.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        if (e.dataTransfer)
+            e.dataTransfer.dropEffect = 'copy'; 
+    });
 
-        drop_zone.addEventListener("dragleave", function (e) {
-            e.preventDefault();
-        });
+    drop_zone.addEventListener("dragleave", function (e) {
+        e.preventDefault();
+    });
 
-        drop_zone.addEventListener("drop", async function (e) {
-            e.preventDefault();
-            await handle_upload_drop(e);
-        });
-    }
+    drop_zone.addEventListener("drop", async function (e) {
+        e.preventDefault();
+        if (drag_for_upload_now) 
+            await on_drop_upload(e);
+    });
 
-    async function handle_upload_drop(event: DragEvent) {
-        if (drag_for_upload_now) {
-            drag_for_upload_now = false;
-            if (current_project == undefined || current_dir == undefined) {
-                Log.warn('Попытка загрузить файл на сервер, но никакой проект не загружен');
-                return;
+    async function on_drop_upload(event: DragEvent) {
+        drag_for_upload_now = false;
+        if (current_project == undefined || current_dir == undefined) {
+            Log.warn('Попытка загрузить файл на сервер, но никакой проект не загружен');
+            return;
+        }
+        if (event.dataTransfer != null) {
+            const files = Array.from(event.dataTransfer.files);
+            if (files.length > 0) {
+                upload_files(files);
             }
-            if (event.dataTransfer != null) {
-                const files = Array.from(event.dataTransfer.files);
-                if (files.length > 0) {
-                    upload_files(files);
-                }
-            }            
         }
     }
 
@@ -911,11 +922,11 @@ function AssetControlCreate() {
     document.querySelector('.filemanager')?.addEventListener('contextmenu', (event: any) => {
         event.preventDefault();
     });
-    EventBus.on('SYS_VIEW_INPUT_KEY_UP', onKeyUp);
-    EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
-    EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
-    EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
-    EventBus.on('SYS_INPUT_DBL_CLICK', onDblClick);
+    EventBus.on('SYS_VIEW_INPUT_KEY_UP', on_key_up);
+    EventBus.on('SYS_INPUT_POINTER_DOWN', on_mouse_down);
+    EventBus.on('SYS_INPUT_POINTER_MOVE', on_mouse_move);
+    EventBus.on('SYS_INPUT_POINTER_UP', on_mouse_up);
+    EventBus.on('SYS_INPUT_DBL_CLICK', on_dbl_click);
     EventBus.on('SYS_INPUT_SAVE', save_current_scene);
     EventBus.on('SYS_GRAPH_DROP_IN_ASSETS', on_graph_drop);
 
@@ -977,7 +988,6 @@ function fileIsImg(path: string) {
 
 export async function run_debug_filemanager() {
     let server_ok = false;
-    let project_loaded = false;
     const resp = await ClientAPI.test_server_ok();
     if (resp) {
         const text_response = await resp.text();

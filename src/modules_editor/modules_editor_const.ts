@@ -98,12 +98,15 @@ export type FSEvent = { path: string, project: string, obj_type: FSObjectType, e
 
 export type FSObjectType = "folder" | "file" | "null";
 
-export type AssetType = "folder" | "material" | "texture" | "other";
+export type AssetType = "folder" | "material" | "texture" | "scene_graph" | "other";
 
 export type FSEventType = WatchEventType | "removed";
 
 export interface FSObject { name: string, type: FSObjectType, size: number, path: string, ext?: string, num_files?: number, src?: string };
 
+export const ASSET_TEXTURE: AssetType = "texture";
+export const ASSET_SCENE_GRAPH: AssetType = "scene_graph";
+export const ASSET_MATERIAL: AssetType = "material";
 export const GET_CURRENT_PROJECT_CMD = '/get_current_project';
 export const SET_CURRENT_SCENE_CMD = '/set_current_scene';
 export const GET_PROJECTS_CMD = '/get_projects';

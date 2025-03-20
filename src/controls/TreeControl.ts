@@ -3,6 +3,7 @@ import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui, componentsGo, paramsTexture } from "./ActionsControl";
 import { IObjectTypes } from '../render_engine/types';
 import { Vector2 } from "three";
+import { ASSET_SCENE_GRAPH } from "../modules_editor/modules_editor_const";
 
 declare global {
     const TreeControl: ReturnType<typeof TreeControlCreate>;
@@ -1197,6 +1198,21 @@ function TreeControlCreate() {
     function addNodeTexture(event: any, isPos: boolean, icon: string = '', id: number = -1) {
         
         const data = event.dataTransfer.getData("text/plain");
+
+        // Перетаскиваемый ассет может быть не текстурой, а сохранённым в файл .scn графом сцены
+        const asset_type = event.dataTransfer.getData("asset_type");
+        if (asset_type == ASSET_SCENE_GRAPH) {
+            // const path = event.dataTransfer.getData("path");
+            // ClientAPI.get_data(path).then((resp) => {
+            //     if (resp.result) {
+            //         const data = resp.data as TDictionary<IBaseEntityData[]>;
+            //         const obj_data = data.scene_data[0];
+            //         const obj = SceneManager.deserialize_mesh(obj_data, false);
+            //     }
+            // })
+            return;
+        }
+
         if (data.length == 0 || data.includes('undefined/undefined')) {
             Popups.toast.open({type: 'info', message: "Нет текстуры!"});
             return;
