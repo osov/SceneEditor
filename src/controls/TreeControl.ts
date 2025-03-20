@@ -297,7 +297,7 @@ function TreeControlCreate() {
                       });
                 }
                 if(canMove) moveAt(event.offset_x, event.offset_y);
-                myScrollTo(divTree, startY, event);
+                // scrollToWhileMoving(divTree, startY, event);
 
                 // отмены не происходит, если выбрано больше одного
                 if (Input.is_control() && listSelected?.length > 0) { 
@@ -410,19 +410,22 @@ function TreeControlCreate() {
         return null;
     }
 
-    function myScrollTo(block: HTMLElement, startY: number, event: any) {
-
-        const scrollSpeed = 5;
-        const tree_div_height: any = block?.clientHeight;   // Высота области для прокрутки
-        const tree_height: any = block.querySelector('.tree')?.clientHeight;   // Высота содержимого
-
+    function scrollToWhileMoving(block: HTMLElement, startY: number, event: any) {
+        const scrollSpeed = 8;
+        const tree_div_height = block?.clientHeight;   // Высота области для прокрутки
+        // const tree_height = block.querySelector('.tree')?.clientHeight;   // Высота содержимого
+    
+        // const currentY = event.clientY - block.getBoundingClientRect().top;
         const currentY = event.offset_y;
         const direction = currentY < startY ? -1 : 1;
-
-        if (currentY < tree_div_height) {
-            block.scrollBy(0, direction * scrollSpeed);
-        } else if (currentY > tree_height - tree_div_height) {
-            block.scrollBy(0, direction * scrollSpeed);
+    
+        const topThreshold = tree_div_height * 0.15; // Верхние 15% от высоты блока
+        const bottomThreshold = tree_div_height - tree_div_height * 0.07; // Нижние 7% от высоты блока
+    
+        if (currentY < topThreshold) {
+            block.scrollBy(0, -scrollSpeed); // Прокрутка вверх
+        } else if (currentY > bottomThreshold) {
+            block.scrollBy(0, scrollSpeed); // Прокрутка вниз
         }
     }
 
@@ -1229,10 +1232,15 @@ function TreeControlCreate() {
         const nPos = isPos && mouseUpPos ? {x: mouseUpPos?.x, y: mouseUpPos?.y} : {x: 0, y: 0};
         const nId = isPos ? list[0]?.mesh_data.id : id;
 
+        const arrSize = event.dataTransfer.getData("textureSize").split("x");
+        const tWidth = +arrSize[0];
+        const tHeight = +arrSize[1];
+        const arrData = data.split("/");
         const pt: paramsTexture = {
             id: nId,
-            texture: data.split("/")[1],
-            atlas: data.split("/")[0],
+            texture: arrData[1],
+            atlas: arrData[0],
+            size: { w: tWidth || 128, h: tHeight || 128 },
             pos: nPos
         }
 
@@ -1243,7 +1251,7 @@ function TreeControlCreate() {
         }
 
         const go = ['scene', IObjectTypes.GO_CONTAINER];
-        if (list.length == 0 || go.includes(nType)) {
+        if ((list.length == 0 && isPos) || go.includes(nType)) {
             ActionsControl.add_go_with_sprite_component(pt);
             return;
         }
