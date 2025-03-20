@@ -253,7 +253,7 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
     async function on_save_info(cmd: ServerCommands[typeof SAVE_INFO_CMD]): Promise<ServerResponses[typeof SAVE_INFO_CMD]> {
         const current = await read_metadata(project, cmd.path);
         const updated = {...current, ...cmd.data};
-        write_metadata(project, cmd.path, updated);
+        await write_metadata(project, cmd.path, updated);
         return {result: 1};
     }
     
