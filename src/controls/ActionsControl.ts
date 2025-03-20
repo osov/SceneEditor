@@ -70,6 +70,7 @@ export type paramsTexture  = {
     id: number,
     texture: string,
     atlas: string,
+    size: {w: number, h: number},
     pos: {x: number, y: number}
 };
 
@@ -174,7 +175,7 @@ function ActionsControlCreate() {
     }
     
     function add_gui_box(data: paramsTexture) {
-        const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: 128, height: 32 });
+        const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: data?.size?.w || 128, height: data?.size?.h || 32 });
         if (!box) return;
         box.set_position(data.pos.x, data?.pos.y, 0);
         SceneManager.move_mesh(box, data.id);
@@ -205,7 +206,7 @@ function ActionsControlCreate() {
     }
 
     function add_go_sprite_component(data: paramsTexture) {
-        const sprite = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT);
+        const sprite = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: data?.size?.w || 32, height: data?.size?.h || 32 });
         if (!sprite) return;
         const parent = SceneManager.get_mesh_by_id(data?.id);
         if (parent) sprite.set_position(parent?.position.x + 30, parent?.position.y - 20);
@@ -240,7 +241,7 @@ function ActionsControlCreate() {
 
     function add_go_with_sprite_component(data: paramsTexture) {
         const go = SceneManager.create(IObjectTypes.GO_CONTAINER);
-        const spr = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT);
+        const spr = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: data?.size?.w || 32, height: data?.size?.h || 32 });
         if (!spr || !go) return;
         
         go.set_position(data.pos.x, data?.pos.y, 0);

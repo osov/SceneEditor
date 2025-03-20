@@ -1229,10 +1229,15 @@ function TreeControlCreate() {
         const nPos = isPos && mouseUpPos ? {x: mouseUpPos?.x, y: mouseUpPos?.y} : {x: 0, y: 0};
         const nId = isPos ? list[0]?.mesh_data.id : id;
 
+        const arrSize = event.dataTransfer.getData("textureSize").split("x");
+        const tWidth = +arrSize[0];
+        const tHeight = +arrSize[1];
+        const arrData = data.split("/");
         const pt: paramsTexture = {
             id: nId,
-            texture: data.split("/")[1],
-            atlas: data.split("/")[0],
+            texture: arrData[1],
+            atlas: arrData[0],
+            size: { w: tWidth || 128, h: tHeight || 128 },
             pos: nPos
         }
 
@@ -1243,7 +1248,7 @@ function TreeControlCreate() {
         }
 
         const go = ['scene', IObjectTypes.GO_CONTAINER];
-        if (list.length == 0 || go.includes(nType)) {
+        if ((list.length == 0 && isPos) || go.includes(nType)) {
             ActionsControl.add_go_with_sprite_component(pt);
             return;
         }

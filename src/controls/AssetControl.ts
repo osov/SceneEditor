@@ -171,8 +171,9 @@ function AssetControlCreate() {
                 const path = file.getAttribute("data-path") || '';
                 const data = ResourceManager.get_all_textures().find((info) => {
                     return (info.data.texture as any).path == `${SERVER_URL}${URL_PATHS.ASSETS}/${path}`;
-                });                
+                });
                 event.dataTransfer.setData("text/plain", `${data?.atlas}/${data?.name}`);
+                event.dataTransfer.setData("textureSize", `${data?.data?.size?.x}x${data?.data?.size?.y}`);
                 event.dataTransfer.setData("asset_type", ASSET_TEXTURE);
                 event.dataTransfer.setData("path", path);
             });
