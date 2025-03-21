@@ -124,6 +124,14 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
     get_color() { return '' }
 
 
+    set_texture(name: string, atlas = '') {
+        this.parameters.texture = name;
+        this.parameters.atlas = atlas;
+    }
+
+    get_texture() {
+        return [this.parameters.texture, this.parameters.atlas];
+    }
     serialize() {
         return {};
     }

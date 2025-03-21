@@ -13,7 +13,6 @@ import { deepClone } from "../modules/utils";
 import { GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
 import { AnimatedMesh } from "./objects/animated_mesh";
 import { EntityBase } from "./objects/entity_base";
-import { EntityPlane } from "./objects/entity_plane";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;

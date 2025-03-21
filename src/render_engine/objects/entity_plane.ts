@@ -54,15 +54,6 @@ export class EntityPlane extends EntityBase implements IBaseMesh {
         return new Vector2(this.parameters.slice_width, this.parameters.slice_height);
     }
 
-    set_texture(name: string, atlas = '') {
-        this.parameters.texture = name;
-        this.parameters.atlas = atlas;
-    }
-
-    get_texture() {
-        return [this.parameters.texture, this.parameters.atlas];
-    }
-
 
     serialize() {
         return {

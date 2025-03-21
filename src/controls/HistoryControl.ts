@@ -1,6 +1,6 @@
 import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
-import { IBaseMeshDataAndThree } from "../render_engine/types";
+import { IBaseMeshAndThree } from "../render_engine/types";
 import { TextMesh } from "../render_engine/objects/text";
 
 declare global {
@@ -62,7 +62,7 @@ function HistoryControlCreate() {
             return;
         const last = ctx.pop()!;
         const type = last.type;
-        const list_mesh: IBaseMeshDataAndThree[] = [];
+        const list_mesh: IBaseMeshAndThree[] = [];
 
         console.log("UNDO: ", type, last);
 
