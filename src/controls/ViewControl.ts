@@ -9,16 +9,11 @@ export function register_view_control() {
 function ViewControlCreate() {
 
     function init() {
-        //const geometry = new RingGeometry(4.5, 5, 12);
-        //const material = new MeshBasicMaterial({ color: 0xffff00, side: DoubleSide });
-        //const mesh = new Mesh(geometry, material); 
-        //mesh.position.set(300, -200, 49);
-        //mesh.scale.setScalar(5)
-        //RenderEngine.scene.add(mesh);
 
         EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e: any) => {
             if (
                 e.target?.closest("input") || 
+                e.target?.closest("textarea") || 
                 e.target?.closest('.tree__item_name[contenteditable="true"]')
             ) { return; }
             
