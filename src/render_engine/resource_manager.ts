@@ -1,10 +1,11 @@
-import { AnimationAction, AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, SkinnedMesh, Texture, TextureLoader, Vector2 } from 'three';
+import { AnimationAction, AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2 } from 'three';
 import { get_file_name } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -273,6 +274,18 @@ export function ResourceManagerModule() {
                         models[model_name] = gltf.scene;
                     add_animations(gltf.animations, has_mesh, path);
                     resolve(gltf.scene);
+                });
+            })
+        }
+        else if (path.toLowerCase().endsWith('.dae') ) {
+            return new Promise<Scene>(async (resolve, _) => {
+                const loader = new ColladaLoader(manager);
+                loader.load(path, (collada) => {
+                    //log(collada)
+                    const has_mesh = has_skinned_mesh(collada.scene);
+                    if (has_mesh)
+                        models[model_name] = collada.scene;
+                    resolve(collada.scene);
                 });
             })
         }
