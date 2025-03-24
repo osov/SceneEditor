@@ -62,7 +62,15 @@ export type BaseResp<T> = {
     error_code?: number,
 }
 
-export type ProjectLoadData = { assets: FSObject[], name: string, textures_paths: string[] }
+export type LoadAtlasData = { atlas: string, texture: string }
+
+export type ProjectPathsData = {
+    textures: string[],
+    fonts: string[],
+    atlases: LoadAtlasData[],
+    models: string[],
+}
+export type ProjectLoadData = { assets: FSObject[], name: string, paths: ProjectPathsData }
 export type ProjectCache = { name?: string, current_dir: string, current_scene: { name?: string, path?: string } }
 
 export type AssetsResponses = {
@@ -130,6 +138,8 @@ export const PUBLIC = '/public'  // Путь к папке с ассетами �
 export const METADATA = '/metadata.json'  // Путь к файлу с метаинфо проекта
 export const CACHE = '/server_cache.json';
 export const SCENE_EXT = `scn`;
+export const ATLAS_EXT = `tpsheet`;
+export const FONT_EXT = `ttf`;
 
 export const CMD_NAME = [
     GET_CURRENT_PROJECT_CMD,
@@ -152,8 +162,9 @@ export const CMD_NAME = [
     OPEN_EXPLORER_CMD,
 ]
 
-export const allowed_ext = ['mtr', 'prt', 'pss', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'gltf', 'glb', 'obj', 'mtr', 'smpl', 'prt', 'fbx', 'mp3', 'ogg'];
+export const allowed_ext = ['mtr', 'prt', 'pss', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'gltf', 'glb', 'obj', 'smpl', 'prt', 'fbx', 'mp3', 'ogg', 'tpsheet', 'fbx', 'ttf'];
 export const texture_ext = ['jpg', 'jpeg', 'png'];
+export const model_ext = ['gltf', 'glb', `fbx`, ];
 
 export const URL_PATHS = {
     TEST: '/test',

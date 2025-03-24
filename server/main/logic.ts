@@ -1,8 +1,12 @@
 
 import path from "path";
 import { PATH_PARAM_NAME, ERROR_TEXT, NAME_PARAM_NAME, PROJECT_PARAM_NAME, DATA_PARAM_NAME, NEW_PATH_PARAM_NAME } from "./const";
-import { check_dir_exists, exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, read_dir_assets, rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir, get_cache_path, open_explorer } from "./fs_utils";
-import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD, SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, SCENE_EXT, OPEN_EXPLORER_CMD, allowed_ext, texture_ext } from "../../src/modules_editor/modules_editor_const";
+import { check_dir_exists, exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, read_dir_assets, 
+    rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir, get_cache_path, open_explorer } from "./fs_utils";
+import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD, 
+    SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD, 
+    MOVE_CMD, SET_CURRENT_SCENE_CMD, SCENE_EXT, OPEN_EXPLORER_CMD, allowed_ext, texture_ext, FSObject, ProjectPathsData, model_ext, 
+    FONT_EXT, ATLAS_EXT, LoadAtlasData } from "../../src/modules_editor/modules_editor_const";
 import { ServerCacheData } from "./types";
 
 
@@ -28,7 +32,6 @@ const loaded_project_required_commands = [
     OPEN_EXPLORER_CMD,
 ]
 
-
 export async function handle_command<T extends CommandId>(project: string, cmd_id: T, params: object) {
     log('cmd_id:', cmd_id, 'params: ', params)
 
@@ -48,12 +51,34 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const assets_folder_path = get_assets_folder_path(cmd.project);
         const root_folder_assets = await read_dir_assets(assets_folder_path);
         const all_assets = await read_dir_assets(assets_folder_path, assets_folder_path, true);
-        const textures_paths: string[] = [];
-        all_assets.forEach(element => {
-            if (element.ext && texture_ext.includes(element.ext))
-                textures_paths.push(element.path);
-        });
-        return {result: 1, data: {assets: root_folder_assets, name: cmd.project, textures_paths}};
+        const paths: ProjectPathsData = await gather_paths(all_assets);
+        return {result: 1, data: {assets: root_folder_assets, name: cmd.project, paths}};
+    }
+
+    async function gather_paths(assets: FSObject[]) {
+        const paths: ProjectPathsData = {textures: [], atlases: [], models: [], fonts: []};
+        const atlases_textures: string[] = [];
+        assets.forEach(async element => {
+            if (element.ext && model_ext.includes(element.ext)) 
+                paths.models.push(element.path);
+            if (element.ext == FONT_EXT) 
+                paths.fonts.push(element.path);
+            if (element.ext == ATLAS_EXT) {
+                for (const ext of texture_ext) {
+                    const texture_path = element.path.replace(`.${ATLAS_EXT}`, `.${ext}`);
+                    if (await exists(get_asset_path(project, texture_path))) {
+                        const load_atlas_data: LoadAtlasData = {atlas: element.path, texture: texture_path};
+                        paths.atlases.push(load_atlas_data);
+                        atlases_textures.push(texture_path);
+                    }
+                }
+            }
+        })
+        assets.forEach(element => {
+            if (element.ext && texture_ext.includes(element.ext) && !(atlases_textures.includes(element.path)))
+                paths.textures.push(element.path);
+        })
+        return paths;
     }
     
     async function on_new_project(cmd: ServerCommands[typeof NEW_PROJECT_CMD]): Promise<ServerResponses[typeof NEW_PROJECT_CMD]> {

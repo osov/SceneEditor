@@ -10,7 +10,8 @@ import { IObjectTypes } from "./render_engine/types";
 export async function run_anim_scene() {
     await ResourceManager.preload_texture('./img/2.png');
     ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
-    await run_debug_filemanager();
+    const project_to_load = 'SceneEditor_ExampleProject';
+    await run_debug_filemanager(project_to_load);
 
 
     /*
@@ -99,7 +100,7 @@ export async function run_anim_scene() {
     ControlManager.update_graph(true, 'anim_scene');
 
     
-   await ResourceManager.preload_model('/models/cow.glb');
+    await ResourceManager.preload_model('/models/cow.glb');
     const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
     am.set_mesh('cow');
     am.children[0].scale.setScalar(100);

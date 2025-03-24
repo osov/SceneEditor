@@ -75,7 +75,9 @@ export function json_parsable(str: string) {
     return true;
 }
 
-export function _span_elem(text: string, class_list: string[] = []) {
+export const get_keys = Object.keys as <T extends object>(obj: T) => (keyof T)[];
+
+export function span_elem(text: string, class_list: string[] = []) {
     const elem = document.createElement("span");
     elem.classList.add(...class_list);
     elem.innerHTML = text;

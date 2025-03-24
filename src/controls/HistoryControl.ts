@@ -1,7 +1,8 @@
 import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
-import { IBaseMeshAndThree } from "../render_engine/types";
+import { IBaseMeshDataAndThree } from "../render_engine/types";
 import { TextMesh } from "../render_engine/objects/text";
+import { get_keys } from "../modules/utils";
 
 declare global {
     const HistoryControl: ReturnType<typeof HistoryControlCreate>;
@@ -46,8 +47,33 @@ function HistoryControlCreate() {
         EventBus.on('SYS_INPUT_UNDO', () => undo());
     }
 
+    function clear(ctx_name?: string) {
+        const current_scene_path = AssetControl.get_current_scene().path;
+        const _ctx_name: string | undefined = (ctx_name) ? ctx_name : (current_scene_path) ? current_scene_path : undefined;
+        if (_ctx_name && context_data[_ctx_name]) {
+            context_data[_ctx_name].splice(0);
+            console.log('HISTORY CLEARED: ', _ctx_name);
+        }
+    }
+
+    function clear_all() {
+        for (const key of get_keys(context_data)) {
+            context_data[key].splice(0);
+        }
+    }
+
+    function get_history(ctx_name?: string) {
+        const current_scene_path = AssetControl.get_current_scene().path;
+        const _ctx_name: string | undefined = (ctx_name) ? ctx_name : (current_scene_path) ? current_scene_path : undefined;
+        if (_ctx_name && context_data[_ctx_name]) {
+            return context_data[_ctx_name];
+        }
+        return [];
+    }
+
     function add<T extends HistoryDataKeys>(type: T, data_list: HistoryData[T][],) {
-        const ctx_name = 'test';
+        const current_scene_path = AssetControl.get_current_scene().path;
+        const ctx_name = (current_scene_path) ? current_scene_path : 'test';
         let ctx = context_data[ctx_name];
         if (ctx == undefined)
             context_data[ctx_name] = [];
@@ -56,13 +82,14 @@ function HistoryControlCreate() {
     }
 
     function undo() {
-        const ctx_name = 'test';
+        const current_scene_path = AssetControl.get_current_scene().path;
+        const ctx_name = (current_scene_path) ? current_scene_path : 'test';
         let ctx = context_data[ctx_name];
         if (!ctx || ctx.length == 0)
             return;
         const last = ctx.pop()!;
         const type = last.type;
-        const list_mesh: IBaseMeshAndThree[] = [];
+        const list_mesh: IBaseMeshDataAndThree[] = [];
 
         console.log("UNDO: ", type, last);
 
@@ -231,5 +258,5 @@ function HistoryControlCreate() {
     }
 
     init();
-    return { add, undo };
+    return { add, undo, clear, clear_all, get_history };
 }
