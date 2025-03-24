@@ -169,15 +169,14 @@ function ActionsControlCreate() {
     function add_gui_container(pid: number = -1) {
         const container = SceneManager.create(IObjectTypes.GUI_CONTAINER);
         if (!container) return;
-        const parent = SceneManager.get_mesh_by_id(pid);
-        if (parent) container.set_position(parent?.position.x + 30, parent?.position.y - 20);
+        container.set_position(0, 0);
         sceneAddItem(container, pid);
     }
     
     function add_gui_box(data: paramsTexture) {
-        const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: data?.size?.w || 128, height: data?.size?.h || 32 });
+        const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: data?.size?.w, height: data?.size?.h });
         if (!box) return;
-        box.set_position(data.pos.x, data?.pos.y, 0);
+        box.set_position(data.pos.x, data?.pos.y);
         SceneManager.move_mesh(box, data.id);
         box.scale.setScalar(1);
         box.set_color('#0f0')
@@ -187,12 +186,11 @@ function ActionsControlCreate() {
     }
 
     function add_gui_text(pid: number = -1) {
-        const txt = SceneManager.create(IObjectTypes.GUI_TEXT, { text: 'Text', width: 250, height: 50 });
+        const txt = SceneManager.create(IObjectTypes.GUI_TEXT, { text: 'Text', width: 128, height: 40 });
         if (!txt) return;
-        const parent = SceneManager.get_mesh_by_id(pid);
-        if (parent) txt.set_position(parent?.position.x + 10, parent?.position.y - 7);
+        txt.set_position(0, 0);
         txt.set_color('#0f0');
-        txt.scale.setScalar(0.5);
+        txt.scale.setScalar(1);
         txt.set_font('ShantellSans-Light11');
         sceneAddItem(txt, pid);
     }
@@ -200,16 +198,14 @@ function ActionsControlCreate() {
     function add_go_container(pid: number = -1) {
         const container = SceneManager.create(IObjectTypes.GO_CONTAINER);
         if (!container) return;
-        const parent = SceneManager.get_mesh_by_id(pid);
-        if (parent) container.set_position(parent?.position.x + 30, parent?.position.y - 20);
+        container.set_position(0, 0);
         sceneAddItem(container, pid);
     }
 
     function add_go_sprite_component(data: paramsTexture) {
-        const sprite = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: data?.size?.w || 32, height: data?.size?.h || 32 });
+        const sprite = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: data?.size?.w, height: data?.size?.h });
         if (!sprite) return;
-        const parent = SceneManager.get_mesh_by_id(data?.id);
-        if (parent) sprite.set_position(parent?.position.x + 30, parent?.position.y - 20);
+        sprite.set_position(0, 0);
         sprite.set_texture(data?.texture, data?.atlas);
         sceneAddItem(sprite, data?.id);
     }
@@ -217,8 +213,7 @@ function ActionsControlCreate() {
     function add_go_label_component(pid: number = -1) {
         const label = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, {text:'label'});
         if (!label) return;
-        const parent = SceneManager.get_mesh_by_id(pid);
-        if (parent) label.set_position(parent?.position.x + 30, parent?.position.y - 20);
+        label.set_position(0, 0);
         label.set_font('ShantellSans-Light11');
         sceneAddItem(label, pid);
     }
@@ -226,8 +221,7 @@ function ActionsControlCreate() {
     function add_go_model_component(pid: number = -1) {
         const model = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
         if (!model) return;
-        const parent = SceneManager.get_mesh_by_id(pid);
-        if (parent) model.set_position(parent?.position.x + 30, parent?.position.y - 20);
+        model.set_position(0, 0);
         sceneAddItem(model, pid);
     }
 
@@ -244,7 +238,7 @@ function ActionsControlCreate() {
         const spr = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: data?.size?.w || 32, height: data?.size?.h || 32 });
         if (!spr || !go) return;
         
-        go.set_position(data.pos.x, data?.pos.y, 0);
+        go.set_position(data.pos.x, data?.pos.y);
         SceneManager.move_mesh(go, data.id);
         spr.set_position(0, 0);
         spr.set_texture(data?.texture, data?.atlas);

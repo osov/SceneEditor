@@ -410,24 +410,24 @@ function TreeControlCreate() {
         return null;
     }
 
-    function scrollToWhileMoving(block: HTMLElement, startY: number, event: any) {
-        const scrollSpeed = 8;
-        const tree_div_height = block?.clientHeight;   // Высота области для прокрутки
-        // const tree_height = block.querySelector('.tree')?.clientHeight;   // Высота содержимого
+    // function scrollToWhileMoving(block: HTMLElement, startY: number, event: any) {
+    //     const scrollSpeed = 8;
+    //     const tree_div_height = block?.clientHeight;   // Высота области для прокрутки
+    //     // const tree_height = block.querySelector('.tree')?.clientHeight;   // Высота содержимого
     
-        // const currentY = event.clientY - block.getBoundingClientRect().top;
-        const currentY = event.offset_y;
-        const direction = currentY < startY ? -1 : 1;
+    //     // const currentY = event.clientY - block.getBoundingClientRect().top;
+    //     const currentY = event.offset_y;
+    //     const direction = currentY < startY ? -1 : 1;
     
-        const topThreshold = tree_div_height * 0.15; // Верхние 15% от высоты блока
-        const bottomThreshold = tree_div_height - tree_div_height * 0.07; // Нижние 7% от высоты блока
+    //     const topThreshold = tree_div_height * 0.15; // Верхние 15% от высоты блока
+    //     const bottomThreshold = tree_div_height - tree_div_height * 0.07; // Нижние 7% от высоты блока
     
-        if (currentY < topThreshold) {
-            block.scrollBy(0, -scrollSpeed); // Прокрутка вверх
-        } else if (currentY > bottomThreshold) {
-            block.scrollBy(0, scrollSpeed); // Прокрутка вниз
-        }
-    }
+    //     if (currentY < topThreshold) {
+    //         block.scrollBy(0, -scrollSpeed); // Прокрутка вверх
+    //     } else if (currentY > bottomThreshold) {
+    //         block.scrollBy(0, scrollSpeed); // Прокрутка вниз
+    //     }
+    // }
 
     function switchClassItem(elem: any, pageX: number, pageY: number): void {
 
@@ -1113,7 +1113,7 @@ function TreeControlCreate() {
             ActionsControl.add_gui_container(copyItemDrag?.id);
         }
         if (action == NodeAction.add_gui_box) {
-            ActionsControl.add_gui_box({id: copyItemDrag?.id, texture: '2', atlas: '', pos: {x: 0, y: 0}});
+            ActionsControl.add_gui_box({id: copyItemDrag?.id, texture: '2', atlas: '', pos: {x: 0, y: 0}, size: {w: 128, h: 40}});
         }
         if (action == NodeAction.add_gui_text) {
             ActionsControl.add_gui_text(copyItemDrag?.id);
@@ -1122,7 +1122,7 @@ function TreeControlCreate() {
             ActionsControl.add_go_container(copyItemDrag?.id);
         }
         if (action == NodeAction.add_go_sprite_component) {
-            ActionsControl.add_go_sprite_component({id: copyItemDrag?.id, texture: 'arrow1', atlas: 'example_atlas', pos: {x: 0, y: 0}});
+            ActionsControl.add_go_sprite_component({id: copyItemDrag?.id, texture: 'arrow1', atlas: 'example_atlas', pos: {x: 0, y: 0}, size: {w: 64, h: 64}});
         }
         if (action == NodeAction.add_go_label_component) {
             ActionsControl.add_go_label_component(copyItemDrag?.id);
