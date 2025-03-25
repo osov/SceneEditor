@@ -2,6 +2,7 @@
 import { Intersection, Object3D, Object3DEventMap, Vector2 } from "three";
 import { IBaseEntityAndThree, IBaseMeshAndThree } from "../render_engine/types";
 import { filter_list_base_mesh } from "../render_engine/helpers/utils";
+import { WORLD_SCALAR } from "../config";
 
 
 declare global {
@@ -41,7 +42,7 @@ function SelectControlCreate() {
             const old_pos = Camera.screen_to_world(click_point.x, click_point.y);
             const cur_pos = Camera.screen_to_world(pointer.x, pointer.y);
             const len = cur_pos.sub(old_pos).length();
-            if (len > 5)
+            if (len > 5 * WORLD_SCALAR)
                 return;
             const intersects = RenderEngine.raycast_scene(pointer);
             set_selected_intersect(intersects);

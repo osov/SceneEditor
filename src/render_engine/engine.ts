@@ -9,6 +9,7 @@ https://stackoverflow.com/questions/76514035/how-to-render-1000-2d-text-labels-u
 */
 import { Clock, Color, Object3D, OrthographicCamera, Raycaster, Scene, Vector2, WebGLRenderer, } from 'three'
 import { resize_renderer_to_display_size } from './helpers/window_utils'
+import { CAMERA_FAR, CAMERA_Z } from '../config';
 declare global {
     const RenderEngine: ReturnType<typeof RenderEngineModule>;
 }
@@ -24,7 +25,7 @@ export function RenderEngineModule() {
     const scene = new Scene();
     scene.background = new Color('#222');
     const clock = new Clock();
-    const camera = new OrthographicCamera(-1, 1, -1, 1, 0, 100);
+    const camera = new OrthographicCamera(-1, 1, -1, 1, 0, CAMERA_FAR);
     const camera_gui = new OrthographicCamera(-1, 1, -1, 1, 0, 100);
     const raycaster = new Raycaster();
     let is_active_gui_camera = false;
@@ -33,8 +34,8 @@ export function RenderEngineModule() {
     function init() {
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
         renderer.autoClear = false
-        camera.position.set(0, 0, 50)
-        camera_gui.position.set(0, 0, 50)
+        camera.position.set(0, 0, CAMERA_Z)
+        camera_gui.position.set(0, 0, CAMERA_Z)
         camera_gui.layers.disable(0)
         camera_gui.layers.enable(1)
     }

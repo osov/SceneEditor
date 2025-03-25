@@ -89,7 +89,8 @@ export interface RenderMapData {
 
 
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
-    return id_layer * 2 - (y - height / 2) * 0.001;
+   // return id_layer * 2 - (y - height / 2) * 0.001;
+     return id_layer * 500 - (y - height / 2) * 5;
 }
 
 

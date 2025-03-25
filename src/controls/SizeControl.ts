@@ -1,9 +1,10 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, LineDashedMaterial, BufferGeometry, Line, Object3DEventMap, Scene } from "three";
-import { IBaseEntityAndThree, IBaseMeshAndThree, PivotX, PivotY } from "../render_engine/types";
+import { IBaseMeshAndThree, PivotX, PivotY } from "../render_engine/types";
 import { AnchorEventData, PositionEventData, SizeEventData, SliceEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { is_base_mesh } from "../render_engine/helpers/utils";
 import { Property } from "./InspectorControl";
+import { CAMERA_Z, WORLD_SCALAR } from "../config";
 
 declare global {
     const SizeControl: ReturnType<typeof SizeControlCreate>;
@@ -18,7 +19,7 @@ export function register_size_control() {
 
 function SizeControlCreate() {
     const scene = RenderEngine.scene;
-    const editor_z = 49;
+    const editor_z = CAMERA_Z - 1;
     let debug_center: Mesh;
     const bb_points: Mesh<SphereGeometry, MeshBasicMaterial, Object3DEventMap>[] = [];
     const pivot_points: Mesh<CircleGeometry, MeshBasicMaterial, Object3DEventMap>[] = [];
@@ -315,7 +316,7 @@ function SizeControlCreate() {
                 }
                 if (dir[0] == 0 && dir[1] == 0) {
                     // если маленькое смещение и при этом не выделен никакой меш
-                    if (offset_move < 10) {
+                    if (offset_move < 10 * WORLD_SCALAR) {
                         let is_select = false;
                         for (let i = 0; i < selected_list.length; i++) {
                             const selected_go = selected_list[i];
@@ -353,6 +354,8 @@ function SizeControlCreate() {
     }
 
     function get_cursor_dir(wp: Vector3, bounds: number[], range = 5) {
+        const dist = Math.abs(bounds[2] - bounds[0]);
+        range *= (dist / 150);
         const tmp_dir = [0, 0];
         document.body.style.cursor = 'default';
         tmp_dir[0] = 0;
@@ -445,6 +448,14 @@ function SizeControlCreate() {
     }
 
     function draw_debug_bb(bb: number[]) {
+        const dist = Math.abs(bb[2] - bb[0]);
+        const SUB_SCALAR = Math.max(dist / 250, 0.1);
+        for (let i = 0; i < bb_points.length; i++)
+            bb_points[i].scale.setScalar(SUB_SCALAR);
+        for (let i = 0; i < pivot_points.length; i++)
+            pivot_points[i].scale.setScalar(SUB_SCALAR);
+        debug_center.scale.setScalar(SUB_SCALAR);
+
         // left top, right top, right bottom, left bottom
         bb_points[0].position.set(bb[0], bb[1], editor_z);
         bb_points[1].position.set(bb[2], bb[1], editor_z);

@@ -16,8 +16,8 @@ const shader = {
        vUv = uv; 
        vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);
 
-       worldPosition.z /= 10000.0;
-       worldPosition.z += offsetZ;
+      // worldPosition.z /= 10000.0;
+     //  worldPosition.z += offsetZ;
        gl_Position = projectionMatrix * viewMatrix * worldPosition;
      }
 `,

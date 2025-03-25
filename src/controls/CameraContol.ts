@@ -1,6 +1,7 @@
 // https://github.com/yomotsu/camera-controls
 import CameraControls from 'camera-controls';
 import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster } from 'three';
+import { CAMERA_Z } from '../config';
 
 declare global {
     const CameraControl: ReturnType<typeof CameraControlCreate>;
@@ -45,7 +46,7 @@ function CameraControlCreate() {
 
     function set_position(x: number, y: number, is_transition = false) {
         control.setTarget(x, y, 0, is_transition);
-        control.setPosition(x, y, 50, is_transition);
+        control.setPosition(x, y, CAMERA_Z, is_transition);
     }
 
     function set_zoom(zoom: number, is_transition = false) {
@@ -84,8 +85,8 @@ function CameraControlCreate() {
         const { up, target, pos, zoom, focal } = data;
         control.camera.up.copy(up);
         control.updateCameraUp();
-        control.setPosition(pos.x, pos.y, pos.z);
-        control.setLookAt(pos.x, pos.y, pos.z, target.x, target.y, target.z);
+        control.setPosition(pos.x, pos.y, CAMERA_Z);
+        control.setLookAt(pos.x, pos.y, CAMERA_Z, target.x, target.y, target.z);
         control.setFocalOffset(focal.x, focal.y, focal.z);
         control.zoomTo(zoom);
     }
