@@ -656,7 +656,7 @@ function AssetControlCreate() {
         let renew_required = false;
         if (events && events.length != 0) {
             events.forEach(event => {
-                if (event.project === current_project && event.path === current_dir) {
+                if (event.project === current_project && event.folder_path === current_dir) {
                     renew_required = true;
                 }
             });

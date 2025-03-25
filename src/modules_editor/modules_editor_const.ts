@@ -102,7 +102,7 @@ export type NetMessagesEditor = {
 
 export type FileUploadedData = { size: number, path: string, name: string, project: string, ext: string };
 
-export type FSEvent = { path: string, project: string, obj_type: FSObjectType, event_type: FSEventType };
+export type FSEvent = { path: string, folder_path: string, project: string, obj_type: FSObjectType, event_type: FSEventType };
 
 export type FSObjectType = "folder" | "file" | "null";
 

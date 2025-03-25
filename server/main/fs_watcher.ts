@@ -23,7 +23,7 @@ export function FSWatcher(dir: string, sockets: WsClient[], fs_events_interval: 
         { recursive: true }, 
         async (_event, filename) => {
             if (filename !== null) {
-                const _dir = path.dirname(get_full_path(filename));
+                const _dir = get_full_path(filename);
                 const exists = await fs.exists(_dir);
                 let obj_type: FSObjectType = "null";
                 let event_type: FSEventType = _event;
@@ -37,8 +37,13 @@ export function FSWatcher(dir: string, sockets: WsClient[], fs_events_interval: 
                 const full_rel_path = path.relative(get_full_path(""), _dir);  // Путь относительно папки со всеми проектами
                 const project = full_rel_path.split(path.sep)[0];    // Достаём название проекта
                 const rel_path = path.relative(path.join(project, PUBLIC), full_rel_path);  // Путь относительно папки public этого проекта
-                const event = {path: rel_path, project, obj_type, event_type};
-                // log("fs event:", rel_path, event_type, filename, obj_type);
+                const event: FSEvent = {
+                    path: rel_path.replaceAll(path.sep, "/"), 
+                    folder_path: path.dirname(rel_path).replaceAll(path.sep, "/"), 
+                    project, 
+                    obj_type, 
+                    event_type
+                };
                 events_cache.push(event);
             }
         }
