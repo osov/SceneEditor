@@ -458,21 +458,28 @@ function AssetControlCreate() {
     async function new_scene(path: string, name: string) {
         const scene_path = `${path}/${name}.${SCENE_EXT}`
         const r = await ClientAPI.save_data(scene_path, {scene_data: []});
-        if (r.result === 0)
+        if (r.result === 0) {
             error_popup(`Не удалось создать сцену, ответ сервера: ${r.message}`);
+            return;
+        }
         if (r.result && r.data) {
             await go_to_dir(path, true);
         }
         return scene_path;
     }
 
-    function new_scene_popup(current_path: string) {
+    function new_scene_popup(current_path: string, set_scene_current = false, save_scene = false) {
         Popups.open({
             type: "Rename",
             params: { title: "Новая сцена:", button: "Ok", auto_close: true },
             callback: async (success, name) => {
                 if (success && name) {
-                    await new_scene(current_path, name);
+                    const scene_path = await new_scene(current_path, name);
+                    if (scene_path != undefined && set_scene_current) {
+                        const scene_is_set = await set_current_scene(scene_path);
+                        if (scene_is_set && save_scene)
+                            save_current_scene();
+                    }
                 }
             }
         });
@@ -873,9 +880,14 @@ function AssetControlCreate() {
         SceneManager.load_scene(data.scene_data);
         ControlManager.update_graph(true, current_scene.name);
     }
-    
+
     async function save_current_scene(event?: any) {
-        if (!current_scene.name) return;
+        if (!current_scene.name && current_dir != undefined) {
+            // Если у AssetControl нет данных о текущем открытом файле сцены, создаём новый файл сцены, указаем его 
+            // как текущую сцену и сохраняем туда данные из SceneManager
+            new_scene_popup(current_dir, true, true);
+            return;
+        };
         const path = current_scene.path as string;
         const name = current_scene.name as string;
         const data = SceneManager.save_scene();
@@ -975,7 +987,7 @@ function AssetControlCreate() {
     });
 
     return { 
-        load_project, new_scene, open_scene, set_current_scene, save_current_scene, draw_assets, get_file_data, save_file_data, save_meta_info, 
+        load_project, new_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_meta_info, 
         get_meta_info, del_meta_info, draw_empty_project, get_current_scene, 
     };
 }
@@ -1078,16 +1090,7 @@ export async function run_debug_filemanager(project_to_load: string, scene_to_se
                 return;
             }
         }
-        // Если не удалось загрузить project_to_load, пробуем загрузить последний открытый проект
-        if (last_project_data.name) {
-            AssetControl.load_project(last_project_data.name, undefined, last_project_data.current_dir);
-            if (scene_to_set)
-                await AssetControl.set_current_scene(scene_to_set);
-            log('Previously opened project loaded', last_project_data.name);
-            return;
-        }
-
-        log('Failed to load any project!');
+        log(`Failed to load project ${project_to_load}`);
     }
     else {
         log('Server does not respond, cannot run debug filemanager');

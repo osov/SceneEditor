@@ -33,7 +33,7 @@ const loaded_project_required_commands = [
 ]
 
 export async function handle_command<T extends CommandId>(project: string, cmd_id: T, params: object) {
-    log('cmd_id:', cmd_id, 'params: ', params)
+    log('cmd_id:', cmd_id)
 
     async function on_get_projects() {
         const projects_list: string[] = []
@@ -86,7 +86,7 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const project_exists = await check_dir_exists(assets_folder_path);
         if (project_exists) return {message: ERROR_TEXT.PROJECT_ALREADY_EXISTS, result: 0};
         new_project(cmd.project);
-        return {result: 1};
+        return {result: 1, data: {}};
     }
 
     async function on_set_current_scene(cmd: ServerCommands[typeof SET_CURRENT_SCENE_CMD]): Promise<ServerResponses[typeof SET_CURRENT_SCENE_CMD]> {
@@ -102,7 +102,7 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const new_data = cmd.data;
         try {
             await Bun.write(data_path, JSON.stringify(new_data));
-            return {result: 1};
+            return {result: 1, data: {}};
     
         } catch (e) {
             return {result: 0, message: `${ERROR_TEXT.CANT_WRITE_FILE}: ${e}`};
@@ -279,7 +279,7 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const current = await read_metadata(project, cmd.path);
         const updated = {...current, ...cmd.data};
         await write_metadata(project, cmd.path, updated);
-        return {result: 1};
+        return {result: 1, data: {}};
     }
     
     async function on_get_info(cmd: ServerCommands[typeof GET_INFO_CMD]): Promise<ServerResponses[typeof GET_INFO_CMD]> {
@@ -298,7 +298,7 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const current = await read_metadata(project, cmd.path);
         if (current)
             await clear_metadata(project, cmd.path);
-        return {result: 1};
+        return {result: 1, data: {}};
     }
 
     const resp = check_fields(cmd_id, params);
@@ -370,9 +370,9 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const path = data.path;
         const result = await open_explorer(project, path);
         if (result)
-            return {result: 1} as ServerResponses[typeof OPEN_EXPLORER_CMD];
+            return {result: 1, data: {}} as ServerResponses[typeof OPEN_EXPLORER_CMD];
         else
-            return {result: 0} as ServerResponses[typeof OPEN_EXPLORER_CMD];
+            return {result: 0, data: {}} as ServerResponses[typeof OPEN_EXPLORER_CMD];
     }
 
     // if (cmd_id === SEARCH_CMD) {

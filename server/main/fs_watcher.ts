@@ -35,11 +35,13 @@ export function FSWatcher(dir: string, sockets: WsClient[], fs_events_interval: 
                     event_type = "removed";
                 }
                 const full_rel_path = path.relative(get_full_path(""), _dir);  // Путь относительно папки со всеми проектами
+                const full_folder_path = path.dirname(full_rel_path);
                 const project = full_rel_path.split(path.sep)[0];    // Достаём название проекта
                 const rel_path = path.relative(path.join(project, PUBLIC), full_rel_path);  // Путь относительно папки public этого проекта
+                const rel_folder_path = path.relative(path.join(project, PUBLIC), full_folder_path);
                 const event: FSEvent = {
                     path: rel_path.replaceAll(path.sep, "/"), 
-                    folder_path: path.dirname(rel_path).replaceAll(path.sep, "/"), 
+                    folder_path: rel_folder_path.replaceAll(path.sep, "/"), 
                     project, 
                     obj_type, 
                     event_type
