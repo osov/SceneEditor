@@ -8,8 +8,8 @@ export class GuiContainer extends EntityBase  {
 
     constructor() {
         super();
-        this.layers.disable(0);
-        this.layers.disable(1);
+        this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
+        this.layers.disable(RenderEngine.DC_LAYERS.GUI_LAYER);
     }
 
     set_position(x: number, y: number, z?: number): void { }
@@ -22,8 +22,8 @@ export class GoContainer extends EntityBase {
 
     constructor() {
         super();
-        this.layers.disable(0);
-        this.layers.disable(1);
+        this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
+        this.layers.disable(RenderEngine.DC_LAYERS.GUI_LAYER);
     }
 }
 

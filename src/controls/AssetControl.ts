@@ -874,9 +874,9 @@ function AssetControlCreate() {
 
     async function load_scene(path: string) {
         const r2 = await ClientAPI.get_data(path);
-        if (!r2 || r2.result === 0)
+        if (!r2 || r2.result === 0 || !r2.data)
             return Popups.toast.error(`Не удалось получить данные сцены: ${r2.message}`);
-        const data = r2.data as TDictionary<IBaseEntityData[]>;
+        const data = JSON.parse(r2.data) as TDictionary<IBaseEntityData[]>;
         SceneManager.load_scene(data.scene_data);
         ControlManager.update_graph(true, current_scene.name);
     }

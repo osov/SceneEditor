@@ -21,7 +21,7 @@ export function register_engine() {
 
 export function RenderEngineModule() {
     const canvas = document.querySelector(`canvas#scene`)!;
-    const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false,  })
+    const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true })
     const scene = new Scene();
     scene.background = new Color('#222');
     const clock = new Clock();
@@ -30,14 +30,25 @@ export function RenderEngineModule() {
     const raycaster = new Raycaster();
     let is_active_gui_camera = false;
     const raycast_list: Object3D[] = [];
+    let is_active_render = true;
+
+    enum DC_LAYERS {
+        GO_LAYER = 0, // Сцена
+        GUI_LAYER = 1, // Гуи камера
+        CONTROLS_LAYER = 30, // контролы
+        RAYCAST_LAYER = 31, // можно рейкастить
+    }
 
     function init() {
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-        renderer.autoClear = false
+       // renderer.autoClear = false;
+        renderer.autoClearColor = false
+      //  renderer.autoClearDepth = false
+       // renderer.autoClearStencil = false
         camera.position.set(0, 0, CAMERA_Z)
         camera_gui.position.set(0, 0, CAMERA_Z)
-        camera_gui.layers.disable(0)
-        camera_gui.layers.enable(1)
+        camera_gui.layers.disable(DC_LAYERS.GO_LAYER)
+        camera_gui.layers.enable(DC_LAYERS.GUI_LAYER)
     }
 
     function animate() {
@@ -46,11 +57,18 @@ export function RenderEngineModule() {
         if (resize_renderer_to_display_size(renderer))
             on_resize();
         EventBus.trigger('SYS_ON_UPDATE', { dt: delta }, false);
-        renderer.clear();
-        renderer.render(scene, camera);
-        if (is_active_gui_camera) {
+        if (is_active_render) {
+            renderer.clear();
+            renderer.render(scene, camera);
+            if (is_active_gui_camera) {
+                renderer.clearDepth();
+                renderer.render(scene, camera_gui);
+            }
+            const mask = camera.layers.mask;
+            camera.layers.set(DC_LAYERS.CONTROLS_LAYER);
             renderer.clearDepth();
-            renderer.render(scene, camera_gui);
+            renderer.render(scene, camera);
+            camera.layers.mask = mask;
         }
         EventBus.trigger('SYS_ON_UPDATE_END', { dt: delta }, false);
     }
@@ -67,7 +85,7 @@ export function RenderEngineModule() {
 
     function raycast_scene(n_pos: Vector2) {
         raycaster.setFromCamera(n_pos, camera);
-        raycaster.layers.enable(31);
+        raycaster.layers.enable(DC_LAYERS.RAYCAST_LAYER);
         const list = raycaster.intersectObjects(scene.children);
         if (raycast_list.length > 0) {
             for (let i = 0; i < raycast_list.length; i++) {
@@ -92,5 +110,9 @@ export function RenderEngineModule() {
         is_active_gui_camera = is_active;
     }
 
-    return { init, animate, get_render_size, raycast_scene, is_intersected_mesh, set_active_gui_camera, scene, camera, camera_gui, raycaster, renderer, raycast_list };
+    function set_active_render(is_active: boolean) {
+        is_active_render = is_active;
+    }
+
+    return { DC_LAYERS, init, animate, get_render_size, raycast_scene, is_intersected_mesh, set_active_gui_camera, set_active_render, scene, camera, camera_gui, raycaster, renderer, raycast_list };
 }

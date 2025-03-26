@@ -1,9 +1,4 @@
-/*
-Layers:
- 0 - Го камера
- 1 - Гуи камера
- 31 - можно рейкастить
-*/
+
 import { Object3D, Quaternion, Vector3 } from "three";
 import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
@@ -105,7 +100,7 @@ export function SceneManagerModule() {
             mesh.mesh_data.id = get_unique_id();
         }
         mesh.name = type + mesh.mesh_data.id;
-        mesh.layers.enable(31);
+        mesh.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
         return mesh as IMeshTypes[T];
     }
 

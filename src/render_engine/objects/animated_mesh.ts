@@ -44,8 +44,8 @@ export class AnimatedMesh extends EntityPlane {
 
   constructor(width = 1, height = 1) {
     super();
-    this.layers.disable(0)
-    this.layers.enable(31)
+    this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
+    this.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
     this.set_size(width, height);
     EventBus.on('SYS_ON_UPDATE', this.on_mixer_update.bind(this));
   }

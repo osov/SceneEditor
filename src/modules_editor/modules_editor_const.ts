@@ -89,7 +89,7 @@ export type AssetsResponses = {
     [GET_INFO_CMD]: BaseResp<TRecursiveDict>,
     [DEL_INFO_CMD]: BaseResp<VoidMessage>,
     [SAVE_DATA_CMD]: BaseResp<VoidMessage>,
-    [GET_DATA_CMD]: BaseResp<TRecursiveDict | TDictionary<IBaseEntityData[]> | string>,
+    [GET_DATA_CMD]: BaseResp<string>,
     [OPEN_EXPLORER_CMD]: BaseResp<VoidMessage>,
     [FILE_UPLOAD_CMD]: BaseResp<FileUploadedData>
 }

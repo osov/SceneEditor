@@ -116,8 +116,8 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
             return {message: ERROR_TEXT.FILE_NOT_EXIST, result: 0};
         const data_file = Bun.file(data_path);
         const text = await data_file.text();
-        const data = JSON.parse(text)
-        return {result: 1, data};
+        //const data = JSON.parse(text)
+        return {result: 1, data: text};
     }
     
     async function on_new_folder(cmd: ServerCommands[typeof NEW_FOLDER_CMD]): Promise<ServerResponses[typeof NEW_FOLDER_CMD]> {

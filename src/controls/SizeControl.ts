@@ -19,7 +19,7 @@ export function register_size_control() {
 
 function SizeControlCreate() {
     const scene = RenderEngine.scene;
-    const editor_z = CAMERA_Z - 1;
+    const editor_z = 0;
     let debug_center: Mesh;
     const bb_points: Mesh<SphereGeometry, MeshBasicMaterial, Object3DEventMap>[] = [];
     const pivot_points: Mesh<CircleGeometry, MeshBasicMaterial, Object3DEventMap>[] = [];
@@ -44,6 +44,7 @@ function SizeControlCreate() {
     let is_changed_slice = false;
     let is_changed_anchor = false;
     const dir = [0, 0];
+    const layer_control = RenderEngine.DC_LAYERS.CONTROLS_LAYER;
 
     function init() {
         const geometry = new SphereGeometry(8, 4, 2);
@@ -51,6 +52,7 @@ function SizeControlCreate() {
         for (let i = 0; i < 4; i++) {
             const sphere = new Mesh(geometry, material);
             sphere.visible = false;
+            sphere.layers.set(layer_control);
             scene.add(sphere)
             bb_points.push(sphere);
         }
@@ -59,12 +61,14 @@ function SizeControlCreate() {
             const geometry = new CircleGeometry(7, 4);
             const mesh = new Mesh(geometry, material);
             mesh.visible = false;
+            mesh.layers.set(layer_control);
             scene.add(mesh)
             pivot_points.push(mesh);
         }
 
         anchor_mesh = new Mesh(new CircleGeometry(15, 12), new MeshBasicMaterial({ color: 0xffff00, transparent: true }));
         anchor_mesh.position.set(300, -220, editor_z);
+        anchor_mesh.layers.set(layer_control);
         ResourceManager.preload_texture('img/target.png', 'editor').then(() => {
             anchor_mesh.material.map = ResourceManager.get_texture('target', 'editor').texture;
             anchor_mesh.material.needsUpdate = true;
@@ -84,11 +88,13 @@ function SizeControlCreate() {
         slice_box = new Line(new BufferGeometry().setFromPoints(points), new LineDashedMaterial({ color: 0xffaa00, dashSize: 0.1, gapSize: 0.05 }));
         slice_box.computeLineDistances();
         slice_box.position.set(0, 0, editor_z);
+        slice_box.layers.set(layer_control);
         scene.add(slice_box)
         slice_box.visible = false;
         slice_box_range = new Line(new BufferGeometry().setFromPoints(points), new LineDashedMaterial({ color: 0xffaaff, dashSize: 0.1, gapSize: 0.05 }));
         slice_box_range.computeLineDistances();
         slice_box_range.position.set(0, 0, editor_z);
+        slice_box_range.layers.set(layer_control);
         scene.add(slice_box_range)
 
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
@@ -159,6 +165,7 @@ function SizeControlCreate() {
         debug_center = new Mesh(geometry, new MeshBasicMaterial({ color: 0xff0000 }));
         debug_center.visible = false;
         debug_center.scale.setScalar(0.5)
+        debug_center.layers.set(layer_control);
         scene.add(debug_center);
 
 
