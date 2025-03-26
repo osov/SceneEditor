@@ -2003,8 +2003,8 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 {
                     name: Property.POSITION, title: 'Позиция', type: PropertyType.VECTOR_3, params: {
-                        x: { format: (v: number) => v.toFixed(2) },
-                        y: { format: (v: number) => v.toFixed(2) },
+                        x: { format: (v: number) => v.toFixed(2), step: 0.1 },
+                        y: { format: (v: number) => v.toFixed(2), step: 0.1 },
                         z: { step: 0.001, format: (v: number) => v.toFixed(3) }
                     }
                 },
