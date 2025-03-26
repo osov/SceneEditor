@@ -2,7 +2,7 @@
 import { Object3D, Quaternion, Vector3 } from "three";
 import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
-import { IBaseEntityAndThree, IBaseEntityData, IObjectTypes } from "./types";
+import { IBaseEntityAndThree, IBaseEntityData, IBaseMeshAndThree, IObjectTypes } from "./types";
 import { TextMesh } from "./objects/text";
 import { deepClone } from "../modules/utils";
 import { GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
@@ -108,9 +108,9 @@ export function SceneManagerModule() {
         const wp = new Vector3();
         const ws = new Vector3();
         const wr = new Quaternion();
-        m.getWorldPosition(wp);
-        m.getWorldScale(ws);
-        m.getWorldQuaternion(wr);
+        wp.copy(m.position);
+        ws.copy(m.scale);
+        wr.copy(m.quaternion);
         const pid = m.parent ? (is_base_mesh(m.parent) ? (m.parent as IBaseEntityAndThree).mesh_data.id : -1) : -1;
         const data: IBaseEntityData = {
             id: m.mesh_data.id,
@@ -375,5 +375,24 @@ export function SceneManagerModule() {
         id_counter = data.id_counter;
     }
 
-    return { get_unique_id, create, add, add_to_mesh, remove, get_mesh_by_id, move_mesh, move_mesh_id, find_next_id_mesh, make_graph, debug_graph, save_editor, load_editor, serialize_mesh, deserialize_mesh, save_scene, load_scene };
+    return {
+        get_unique_id,
+        create,
+        add,
+        add_to_mesh,
+        remove,
+        get_mesh_by_id,
+        move_mesh,
+        move_mesh_id,
+        find_next_id_mesh,
+        make_graph,
+        debug_graph,
+        save_editor,
+        load_editor,
+        serialize_mesh,
+        deserialize_mesh,
+        save_scene,
+        load_scene,
+        get_scene_list,
+    };
 }
