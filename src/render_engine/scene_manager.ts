@@ -134,21 +134,12 @@ export function SceneManagerModule() {
 
     function deserialize_mesh(data: IBaseEntityData, with_id = false, parent?: Object3D) {
         const mesh = create(data.type, data.other_data, with_id ? data.id : -1);
-        if (parent) {
-            const lp = parent.worldToLocal(new Vector3(data.position[0], data.position[1], data.position[2]));
-            mesh.position.copy(lp);
-            const ws = new Vector3();
-            parent.getWorldScale(ws);
-            mesh.scale.set(data.scale[0] / ws.x, data.scale[1] / ws.y, data.scale[2] / ws.z);
-        }
-        else {
-            if (data.position)
-                mesh.position.set(data.position[0], data.position[1], data.position[2]);
-            if (data.rotation)
-                mesh.quaternion.set(data.rotation[0], data.rotation[1], data.rotation[2], data.rotation[3]);
-            if (data.scale)
-                mesh.scale.set(data.scale[0], data.scale[1], data.scale[2]);
-        }
+        if (data.position)
+            mesh.position.set(data.position[0], data.position[1], data.position[2]);
+        if (data.rotation)
+            mesh.quaternion.set(data.rotation[0], data.rotation[1], data.rotation[2], data.rotation[3]);
+        if (data.scale)
+            mesh.scale.set(data.scale[0], data.scale[1], data.scale[2]);
         mesh.name = data.name;
         mesh.visible = data.visible;
 

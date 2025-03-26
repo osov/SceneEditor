@@ -1,4 +1,4 @@
-import { FloatType, NearestFilter, RGBAFormat, Vector2, Vector3, WebGLRenderTarget } from 'three'
+import { AdditiveBlending, FloatType, MeshBasicMaterial, NearestFilter, RGBAFormat, Vector2, Vector3, WebGLRenderTarget } from 'three'
 import { run_debug_filemanager } from './controls/AssetControl';
 import { SERVER_URL, WORLD_SCALAR } from './config';
 import { URL_PATHS } from './modules_editor/modules_editor_const';
@@ -45,7 +45,7 @@ export async function run_debug_scene_light() {
 
     const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
     am.set_mesh('Unarmed Idle');
-    am.children[0].scale.setScalar(1 / 200 * WORLD_SCALAR);
+    am.children[0].scale.setScalar(1 / 150 * WORLD_SCALAR);
     am.add_animation('Unarmed Idle', 'idle');
     am.set_texture('PolygonExplorers_Texture_01_A')
     am.rotateX(30 / 180 * Math.PI)
@@ -59,7 +59,7 @@ export async function run_debug_scene_light() {
             const light = lights.children[i];
             light.layers.enable(2);
             light.layers.disable(0);
-            // ((light as any).material as MeshBasicMaterial).blending = AdditiveBlending;
+            ((light as any).material as MeshBasicMaterial).blending = AdditiveBlending;
         }
     }
     EventBus.on('SYS_SELECTED_MESH_LIST', rebuild_light);
