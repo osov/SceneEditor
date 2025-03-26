@@ -41,6 +41,9 @@ function AssetControlCreate() {
         else if (to_dir != undefined) {
             await go_to_dir(to_dir);
         }
+
+        await ResourceManager.update_from_metadata();
+        await ResourceManager.write_metadata();
     }
 
     async function go_to_dir(path: string, renew = false) {
@@ -468,7 +471,7 @@ function AssetControlCreate() {
             await go_to_dir(path, true);
         }
         return scene_path;
-    }
+    }  
 
     function new_scene_popup(current_path: string, set_scene_current = false, save_scene = false) {
         Popups.open({
@@ -698,16 +701,29 @@ function AssetControlCreate() {
     }
 
     function clear_selected() {
+        if(selected_assets.length == 0) return;
+        
         selected_assets.forEach(element => {
             element.classList.remove("selected");
         });
         selected_assets.splice(0);
+
+        EventBus.trigger("SYS_ASSETS_CLEAR_SELECTED");
     }
 
     function add_to_selected(elem: HTMLSpanElement) {
         if (selected_assets.includes(elem)) return;
         selected_assets.push(elem);
         elem.classList.add("selected");
+
+        const textures_paths = get_selected_textures();
+        EventBus.trigger("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
+    }
+
+    function get_selected_textures() {
+        const textures = selected_assets.filter(asset => asset.getAttribute('data-type') === ASSET_TEXTURE);
+        const textures_paths = textures.map(asset => asset.getAttribute('data-path') || '');
+        return textures_paths;
     }
 
     function set_active(elem: HTMLSpanElement) {
@@ -718,12 +734,14 @@ function AssetControlCreate() {
     function clear_active() {
         active_asset?.classList.remove("active");
         active_asset = undefined;
-        
     }
 
     function remove_from_selected(elem: HTMLSpanElement) {
         selected_assets.splice(selected_assets.indexOf(elem), 1);
         elem.classList.remove("selected");
+        
+        const textures_paths = get_selected_textures();
+        EventBus.trigger("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
     }
 
     function on_mouse_move(event: any) {
@@ -734,7 +752,8 @@ function AssetControlCreate() {
         const popup_elem = event.target.closest('.bgpopup');
         const menu_elem = event.target.closest('.wr_menu__context');
         const menu_popup_elem = event.target.closest('.wr_popup');
-        if (!current_project || menu_elem || popup_elem || menu_popup_elem) return;
+        const inspector_elem = event.target.closest('.inspector__body');
+        if (!current_project || menu_elem || popup_elem || menu_popup_elem || inspector_elem) return;
         const folder_elem = event.target.closest('.folder.asset');
         const file_elem = event.target.closest('.file.asset');
         const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
@@ -1097,6 +1116,5 @@ export async function run_debug_filemanager(project_to_load: string) {
         log('Server does not respond, cannot run debug filemanager');
         AssetControl.draw_empty_project();
     }
-
 }
 

@@ -3,8 +3,8 @@ import { IBaseMeshAndThree } from "../render_engine/types";
 import { TreeItem } from "./TreeControl";
 import { componentsGo } from "./ActionsControl";
 import { HistoryData } from "./HistoryControl";
+import { cbDataItem, Action } from "../modules_editor/Popups";
 import Stats from 'stats.js';
-import { getDefaultInspectorConfig } from "./InspectorControl";
 
 declare global {
     const ControlManager: ReturnType<typeof ControlManagerCreate>;
@@ -26,13 +26,10 @@ function ControlManagerCreate() {
         bind_btn('rotate_transform_btn', () => set_active_control('rotate_transform_btn'));
         bind_btn('size_transform_btn', () => set_active_control('size_transform_btn'));
 
-        InspectorControl.setupConfig(getDefaultInspectorConfig());
-
         EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
             (window as any).selected = e.list[0];
             TransformControl.set_selected_list(e.list);
             SizeControl.set_selected_list(e.list);
-            InspectorControl.set_selected_list(e.list);
             update_graph();
         });
 
@@ -40,7 +37,6 @@ function ControlManagerCreate() {
             (window as any).selected = null;
             TransformControl.detach();
             SizeControl.detach();
-            InspectorControl.detach();
             update_graph();
         });
 
@@ -55,7 +51,7 @@ function ControlManagerCreate() {
             SelectControl.set_selected_list(list);
             if (list.length == 0)
                 EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
-        })
+        });
 
         EventBus.on('SYS_GRAPH_MOVED_TO', (e) => {
             // save history
@@ -194,7 +190,47 @@ function ControlManagerCreate() {
     function get_current_scene_name() {
         return current_scene_name;
     }
+    
+    function open_atlas_manager() {
+        const atlases = ResourceManager.get_all_atlases();
+        const emptyIndex = atlases.findIndex((atlas) => atlas == '');
+        atlases.splice(emptyIndex, 1);
+        const list = atlases.map((title, id) => {
+            return { id: id.toString(), title, can_delete: true };
+        });
+
+        Log.log('open_atlas_manager', list);
+
+        Popups.open({
+            type: "Layers",
+            params: {
+                title: "Atlas",
+                button: "Add",
+                list
+            },
+            callback: (success: boolean, data?: cbDataItem) => {
+                if (!success) {
+                    return;
+                }
+
+                switch (data?.action) {
+                    case Action.ADD:
+                        const added_item = data.item;
+                        ResourceManager.add_atlas(added_item.title);
+                        ResourceManager.write_metadata();
+                        break;
+                    case Action.DELETE:
+                        const deleted_item = data.item;
+                        ResourceManager.del_atlas(deleted_item.title);
+                        ResourceManager.write_metadata();
+                        break;
+                }
+
+                EventBus.trigger('SYS_CHANGED_ATLAS_DATA');
+            }
+        });
+    }
 
     init();
-    return { clear_all_controls, set_active_control, get_tree_graph, update_graph, get_current_scene_name };
+    return { clear_all_controls, set_active_control, get_tree_graph, update_graph, get_current_scene_name, open_atlas_manager };
 }

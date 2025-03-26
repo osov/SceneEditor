@@ -1,6 +1,5 @@
 import { WatchEventType } from "fs";
 import { IBaseMeshAndThree } from "../render_engine/types";
-import { ChangeInfo } from "../controls/InspectorControl";
 import { VoidMessage } from "../modules/modules_const";
 
 export type ServerCommands = AssetsCommands;
@@ -22,7 +21,6 @@ export type _SystemMessagesEditor = {
     SYS_GRAPH_KEY_COM_PRESSED: { id: number, list: number[], key: string | number },
     SYS_GRAPH_ADD: { id: number, list: number[], type: string | number },
     SYS_GRAPH_DROP_IN_ASSETS: number,
-    SYS_INSPECTOR_UPDATED_VALUE: ChangeInfo,
     SYS_FILE_UPLOADED: FileUploadedData,
     SYS_ASSET_COPIED: { name: string, path: string, new_path: string },
     SYS_ASSET_MOVED: { name: string, path: string, new_path: string },
@@ -30,6 +28,9 @@ export type _SystemMessagesEditor = {
     SYS_CLICK_ON_ASSET: { name: string, path: string, ext: string, button: number },
     SYS_COPY_CMD: { path: string, new_path: string },
     NEW_FOLDER_CMD: { name: string, path: string },
+    SYS_ASSETS_SELECTED_TEXTURES: { paths: string[] },
+    SYS_ASSETS_CLEAR_SELECTED: {},
+    SYS_CHANGED_ATLAS_DATA: {},
 };
 
 

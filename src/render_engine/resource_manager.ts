@@ -1,4 +1,4 @@
-import { AnimationAction, AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2 } from 'three';
+import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2 } from 'three';
 import { get_file_name } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
@@ -6,6 +6,8 @@ import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
+import { TRecursiveDict } from '../modules_editor/modules_editor_const';
+import { IObjectTypes } from './types';
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -38,7 +40,7 @@ interface AnimationInfo {
 }
 
 export function ResourceManagerModule() {
-    const font_characters = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~йцукенгшщзхфывапролджэячсмитьбюЙЦУКЕНГШЩЗХФЫВАПРОЛДЖЯЧСМИТЬБЮЭ";
+    const font_characters = " !\"#$%&'()*+,-./0123456789:;<=> ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~йцукенгшщзхфывапролджэячсмитьбюЙЦУКЕНГШЩЗХФЫВАПРОЛДЖЯЧСМИТЬБЮЭ";
     const texture_loader = new TextureLoader();
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
@@ -74,7 +76,7 @@ export function ResourceManagerModule() {
     }
 
     function has_texture_name(name: string, atlas = '') {
-        if (!atlases[atlas]) return false;
+        if (!has_atlas(atlas)) return false;
         return (atlases[atlas][name] != undefined);
     }
 
@@ -96,26 +98,36 @@ export function ResourceManagerModule() {
             return atlases[atlas][name].data;
         }
         const texture = await load_texture(path);
-        if (!atlases[atlas])
-            atlases[atlas] = {};
-        if (atlases[atlas][name])
+        if(!has_atlas(atlas)) {
+            add_atlas(atlas);
+        }
+        if (atlases[atlas][name]) {
             Log.warn('texture exists already', name, atlas);
+        }
         atlases[atlas][name] = { data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
-        //log('Texture preloaded:', path);
+
         return atlases[atlas][name].data;
     }
 
     function add_texture(path: string, atlas = '', texture: Texture, override = false) {
         const name = get_file_name(path);
         if (!override && has_texture_name(name, atlas)) {
-            Log.warn('texture exists', name, atlas);
+            Log.warn('Texture already exists', name, atlas);
             return atlases[atlas][name].data;
         }
-        if (!atlases[atlas])
-            atlases[atlas] = {};
-        if (atlases[atlas][name])
-            Log.warn('texture exists already', name, atlas);
+
+        Log.log('[add_texture] Try add texture', name, atlas);
+
+        if (!has_atlas(atlas)) {
+            add_atlas(atlas);
+            Log.log('[add_texture] Atlas added', atlas);
+        }
+
+        if (atlases[atlas][name]) {
+            Log.warn('Texture already exists', name, atlas);
+        }
         atlases[atlas][name] = { data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
+
         return atlases[atlas][name].data;
     }
 
@@ -130,9 +142,10 @@ export function ResourceManagerModule() {
         const texture = await load_texture(texture_path);
         const texture_data = parse_tp_data_to_uv(data, texture.image.width, texture.image.height);
 
-        if (atlases[name])
-            Log.warn('atlas exists already', name);
-        atlases[name] = {};
+        if(!has_atlas(name)) {
+            add_atlas(name);
+        }
+
         for (const texture_name in texture_data) {
             const tex_data = texture_data[texture_name];
             atlases[name][texture_name] = {
@@ -192,6 +205,48 @@ export function ResourceManagerModule() {
         return values[0].data.texture;
     }
 
+    function get_all_atlases() {
+        return Object.keys(atlases);
+    }
+
+    function get_atlas_by_texture_name(texture_name: string): string | null {
+        for (const [atlas_name, textures] of Object.entries(atlases)) {
+            if (textures[texture_name]) {
+                return atlas_name;
+            }
+        }
+        return null;
+    }
+
+    function add_atlas(name: string) {
+        if(has_atlas(name)) {
+            Log.warn(`Atlas ${name} already exist!`)
+        }
+        
+        atlases[name] = {};
+    }
+
+    function has_atlas(name: string) {
+        return atlases[name] != undefined;
+    }
+
+    function del_atlas(name: string) {
+        if(!atlases[name]) {
+            Log.warn(`Atlas ${name} not found!`);
+        }
+
+        if(!has_atlas('')) {
+            add_atlas('');
+        }
+
+        const textures = atlases[name];
+        Object.entries(textures).forEach(([texture, data]) => {
+            atlases[''][texture] = data;
+        });
+
+        delete atlases[name];
+    }
+
     function get_all_textures() {
         const list: TextureInfo[] = [];
         for (const k in atlases) {
@@ -202,8 +257,6 @@ export function ResourceManagerModule() {
         }
         return list;
     }
-
-
 
     function find_animation(name_anim: string, model_name: string) {
         const list_anim = [];
@@ -318,22 +371,119 @@ export function ResourceManagerModule() {
             tex_data.texture.dispose();
             log('Texture free', name, atlas);
         }
-        else
+        else {
             Log.error('Texture not found', name, atlas);
+        }
     }
 
+    // NOTE: чтобы не вызывать write_metadata отдельно после каждого применения, можно сделать две функции, для одинарной перезаписи и для множественной перезаписи
+    // чтобы писать в metadata сразу же здесь
+    // Но при этом обязательно нужна будет пометка что функцию для одинарной перезаписи нельзя использовать паралельно
+    // для таких случаев нужно будет использовать функцию для множественной перезаписи, передавая список
+    // иначе будет проблема с одновременной записью в metadata!
     function override_atlas_texture(old_atlas: string, new_atlas: string, name: string) {
         if (!has_texture_name(name, old_atlas)) {
             Log.error('Texture not found', name, old_atlas);
             return;
         }
-        const tex = atlases[old_atlas][name];
+
+        const texture = atlases[old_atlas][name];
         delete atlases[old_atlas][name];
-        if (!atlases[new_atlas])
-            atlases[new_atlas] = {};
-        atlases[new_atlas][name] = tex;
+
+        if(!has_atlas(new_atlas)) {
+            add_atlas(new_atlas);
+        }
+
+        atlases[new_atlas][name] = texture;
+    }
+    
+    // NOTE: считываем всю информацию из metadata и обновляем ресурсы
+    async function update_from_metadata() {
+        Log.log('Update resource manager from metadata');
+        try {
+            const metadata = await ClientAPI.get_info('atlases');
+            if(!metadata.result) {
+                if(metadata.data == undefined) {
+                    Log.log('Update resource manager from metadata: atlases not found!');
+                    return;
+                }
+                Log.warn('Update resource manager from metadata: failed on get atlases!');
+                return;
+            }
+            const metadata_atlases = metadata.data as TRecursiveDict;
+            for(const [atlas_name, textures] of Object.entries(metadata_atlases)) {
+                Log.log('atlas_name', atlas_name);
+                if(!has_atlas(atlas_name)) {
+                    add_atlas(atlas_name);
+                }
+                for(const texture_name of Object.keys(textures)) {
+                    const old_atlas = get_atlas_by_texture_name(texture_name);
+                    Log.log('update', texture_name, old_atlas, atlas_name);
+                    override_atlas_texture(old_atlas || '', atlas_name, texture_name);
+                }
+            }
+        } catch (error) {
+            Log.error('Error updating resource manager:', error);
+        }
+    }
+
+    // NOTE: записываем всю информацию из ресурсов в metadata
+    async function write_metadata() {
+        try {
+            const metadata = await ClientAPI.get_info('atlases');
+            if(!metadata.result) {
+                if(metadata.data != undefined) {
+                    throw new Error('Failed on get atlases metadata!');
+                }
+            }
+            const metadata_atlases = {} as TRecursiveDict;
+            // NOTE: для каждого атласа создаём отдельный объект в metadata_atlases
+            for (const [atlas_name, textures] of Object.entries(atlases)) {
+                if(!metadata_atlases[atlas_name]) {
+                    metadata_atlases[atlas_name] = {} as TRecursiveDict;
+                }
+                const metadata_atlas = metadata_atlases[atlas_name] as TRecursiveDict;
+                for (const [texture_name, texture] of Object.entries(textures)) {
+                    // NOTE: записываем путь до исходника текстуры
+                    metadata_atlas[texture_name] = (texture.data.texture as any).path;
+                }
+            }
+            const save_result = await ClientAPI.save_info('atlases', metadata_atlases);
+            if(!save_result.result) {
+                throw new Error('Failed on save atlases metadata!');
+            }
+        } catch (error) {
+            Log.error('Error writing metadata:', error);
+        }
     }
 
     init();
-    return { load_asset, add_texture, load_texture, preload_atlas, preload_texture, preload_font, get_all_fonts, get_atlas, get_texture, get_font, free_texture, get_all_textures, set_project_path, preload_model, get_model, find_animation, get_animations_by_model, override_atlas_texture };
-};
+    return {
+        load_asset,
+        add_texture,
+        load_texture,
+        has_texture_name,
+        preload_atlas,
+        preload_texture,
+        preload_font,
+        get_all_fonts,
+        get_font,
+        get_texture,
+        free_texture,
+        get_atlas,
+        get_all_atlases,
+        get_atlas_by_texture_name,
+        add_atlas,
+        has_atlas,
+        del_atlas,
+        get_all_textures,
+        set_project_path,
+        preload_model,
+        get_model,
+        find_animation,
+        get_animations_by_model,
+        override_atlas_texture,
+        update_from_metadata,
+        write_metadata
+    };
+}

@@ -1,8 +1,9 @@
-import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from "./types";
+import { ActiveEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
-import { TextMesh } from "../render_engine/objects/text";
 import { get_keys } from "../modules/utils";
 import { IBaseMeshAndThree } from "../render_engine/types";
+import { TextMesh } from "../render_engine/objects/text";
+import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 
 declare global {
     const HistoryControl: ReturnType<typeof HistoryControlCreate>;
@@ -32,6 +33,7 @@ export type HistoryData = {
     MESH_FONT: FontEventData
     MESH_FONT_SIZE: FontSizeEventData
     MESH_TEXT_ALIGN: TextAlignEventData
+    MESH_ATLAS: AtlasEventData
 }
 
 type HistoryDataKeys = keyof HistoryData;
@@ -78,7 +80,7 @@ function HistoryControlCreate() {
         if (ctx == undefined)
             context_data[ctx_name] = [];
         context_data[ctx_name].push({ type, data: data_list });
-        console.log('WRITE: ', type, data_list);
+        Log.log('WRITE: ', type, data_list);
     }
 
     function undo() {
@@ -91,7 +93,7 @@ function HistoryControlCreate() {
         const type = last.type;
         const list_mesh: IBaseMeshAndThree[] = [];
 
-        console.log("UNDO: ", type, last);
+        Log.log("UNDO: ", type, last);
 
         if (type == 'MESH_TRANSLATE') {
             for (let i = 0; i < last.data.length; i++) {
@@ -152,7 +154,7 @@ function HistoryControlCreate() {
                     Log.error('parent is null', data);
                     return;
                 }
-                const m = SceneManager.deserialize_mesh(mdata, true, parent);
+                const m = SceneManager.deserialize_mesh(mdata, true, parent) as IBaseMeshAndThree;
                 parent.add(m);
                 SceneManager.move_mesh(m, mdata.pid, data.next_id);
                 list_mesh.push(m);
@@ -247,6 +249,14 @@ function HistoryControlCreate() {
                 (mesh as TextMesh).textAlign = data.text_align;
                 list_mesh.push(mesh);
             }
+        } else if (type == 'MESH_ATLAS') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_ATLAS'];
+                const texture_name = get_file_name(get_basename(data.texture_path));
+                const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+                ResourceManager.override_atlas_texture(old_atlas || '', data.atlas, texture_name);
+            }
+            ResourceManager.write_metadata();
         }
         if (list_mesh.length > 0) {
             for (let i = 0; i < list_mesh.length; i++)

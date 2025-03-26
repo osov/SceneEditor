@@ -53,31 +53,11 @@ Slice9* vec2 | метод get_slice/set_slice, минимум 0
 Размер шрифта** int | шаг 1, минимум 8 делаем как в дефолде, как бы управляем тут числом, но по факту меняем scale пропорционально, а отталкиваться от стартового значения из свойства fontSize, скажем шрифт 32 по умолчанию. и пишем тут что сейчас стоит скажем 32, но если начнем крутить то скейлим уже, но свойство не трогаем
 Выравнивание** string выпадающий из списка - [center, left, right, justify]/[Центр, Слева, Справа, По ширине] | свойство textAlign
  
-TODO: возможно лучше было бы если на обновлении конкретных полей просто отправлялся ивент
-    и уже необходимый контрол слушал изменения  (вне зависимости активный он или нет)
-    и обновлял информацию в своей зоне ответсвенности
-
-    + Меньше связанность
-    + Не будут торчать лишьние методы наружу у контролов
-    + Инспектор будет отвечать только за изменение и обновления своих полей не зная о других контролах
-
-    Где будут обновляться поля которые не контролируются контролами ? (color, textures и тп.)
-        Оставить изменение таких полей напрямую в инспекторе
-        Предоставить callback-и которые будут обвновлять такие поля
-        В отдельном контроле/ах для таких полей
-
-TODO: определять полей из списка выделенных обьектов за пределами инспектора
+TODO: определять поля из списка выделенных обьектов за пределами инспектора
     + Меньше связанность, инспектор не будет знать о внешних типах и будет получать только список обьектов ObjectData
 
 TODO: вынести обновление конкретных полей
     (которые нужно обновлять вручную / вызывать функции для получения обновленных данных mesh-а) в отдельный callback
-
-- в цвете кроме хекс кода и зоны выбора цвета не нужен раздел снизу где можно переключить RGB/HSL
-- slice9 тож можно сделать с зоной выбора
-- размер шрифта шаг должен был 1, а щас не целый
-- при выборе любого свойства(цвет, выпадающий) - он не отменяется при клике на пустое место, 
-    если открыть например шрифт и выбор не отменяется, затем можно еще и открыть выравнивание, те получается
-    что раскрыто два списка как баг
 
 TODO: попробовать упростить через дженерики, как минимум для записи в историю по типу
 
@@ -85,8 +65,8 @@ TODO: попробовать упростить через дженерики, �
 
 
 import { Pane, TpChangeEvent } from 'tweakpane';
-import { BindingApi, BindingParams, BladeState, ButtonParams, FolderApi } from '@tweakpane/core';
-import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
+import { BindingApi, BindingParams, ButtonParams, FolderApi } from '@tweakpane/core';
+import { IBaseMesh, IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
@@ -97,8 +77,9 @@ import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
-import { ActiveEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from './types';
+import { ActiveEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from './types';
 import { TextureInfo } from '../render_engine/resource_manager';
+import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 
 
 declare global {
@@ -128,7 +109,9 @@ export enum Property {
     TEXT = 'text',
     FONT = 'font',
     FONT_SIZE = 'font_size',
-    TEXT_ALIGN = 'text_align'
+    TEXT_ALIGN = 'text_align',
+    ATLAS = 'atlas',
+    ATLAS_BUTTON = 'atlas_button'
 }
 
 export enum ScreenPointPreset {
@@ -278,7 +261,8 @@ function InspectorControlCreate() {
     let _config: InspectorGroup[];
     let _inspector: Pane;
     let _unique_fields: { ids: number[], field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }[];
-    let _selected_list: IBaseMeshAndThree[];
+    let _selected_list: IBaseMeshAndThree[] = [];
+    let _selected_textures: string[] = [];
     let _data: ObjectData[];
 
     let _is_first = true;
@@ -286,77 +270,130 @@ function InspectorControlCreate() {
 
     function init() {
         _inspector = new Pane({
-            container: document.querySelector('.menu_right .inspector__body') as HTMLDivElement
+            container: document.querySelector('.inspector__body') as HTMLElement,
         });
+
         _inspector.registerPlugin(TweakpaneImagePlugin);
         _inspector.registerPlugin(TweakpaneSearchListPlugin);
         _inspector.registerPlugin(TextareaPlugin);
         _inspector.registerPlugin(ExtendedPointNdInputPlugin);
         _inspector.registerPlugin(TweakpaneExtendedBooleanPlugin);
+
+        setupConfig(getDefaultInspectorConfig());
+        subscribe_events();
     }
 
-    function setupConfig(config: InspectorGroup[]) { //, type: ComponentType) {
+    function setupConfig(config: InspectorGroup[]) {
         _config = config;
     }
 
+    function subscribe_events() {
+        EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
+            log('SYS_SELECTED_MESH_LIST', e);
+            set_selected_list(e.list);
+        }); 
+
+        EventBus.on('SYS_UNSELECTED_MESH_LIST', clear);
+
+        EventBus.on('SYS_ASSETS_SELECTED_TEXTURES', (data: { paths: string[] }) => {
+            log('SYS_ASSETS_SELECTED_TEXTURES', data);
+            set_selected_textures(data.paths);
+        });
+
+        EventBus.on('SYS_ASSETS_CLEAR_SELECTED', clear);
+
+        EventBus.on('SYS_CHANGED_ATLAS_DATA', () => {
+            if(_selected_textures.length > 0) {
+                // NOTE: пока просто пересоздаем поля занаво, так как нет возможности обновить параметры биндинга
+                clear();
+                set_selected_textures(_selected_textures);
+            }
+        });
+    }
+
     function setData(list_data: ObjectData[]) {
+        Log.log('setData', list_data);
+
         _unique_fields = [];
         _data = list_data;
 
         list_data.forEach((obj, index) => {
             const info: ObjectInfo[] = [];
             for (const field of obj.data) {
-                // ищем информацию о поле в соответсвующем конфиге
+                // NOTE: ищем информацию о поле в соответсвующем конфиге
                 const property: PropertyItem<PropertyType> | undefined = getPropertyItemByName(field.name);
                 if (!property) continue; // пропускаем в случае ошибки
 
                 info.push({ field, property });
             }
 
-            // удаляем предыдущие поля если их нету в текущем обьекте
+            // NOTE: удаляем предыдущие поля если их нету в текущем обьекте
             filterUniqueFields(info);
 
             info.forEach((data) => {
-                // запоминаем поле с проверкой на то что все поля между объектами одинаковые
+                // NOTE: запоминаем поле с проверкой на то что все поля между объектами одинаковые
                 tryAddToUniqueField(index, obj, data.field, data.property);
             });
         });
 
         const entities: Entities[] = [];
         for (const unique_field of _unique_fields) {
-            // перобразование полей
+            // NOTE: перобразование полей
             const entity = castProperty(unique_field.ids, unique_field.field, unique_field.property);
             if (!entity) continue; // пропускаем в случае ошибки
 
-            // формирование групп
+            // NOTE: формирование групп
             addToFolder(unique_field.field, entity, entities);
         }
 
-        // добавляем поля в инспектор
+        // NOTE: добавляем поля в инспектор
         renderEntities(entities);
 
+        // NOTE: правки после рендеринга
+        afterRenderEntities();
+    }
+
+    function afterRenderEntities() {
         const tp_slo = document.querySelector('.tp-search-listv_options') as HTMLDivElement;
         if (tp_slo) tp_slo.classList.add('my_scroll');
         const tp_to = document.querySelector('.tp-thumbv_ovl') as HTMLDivElement;
         if (tp_to) tp_to.classList.add('my_scroll');
     }
 
+    // NOTE: возможно лучше принимать имена текстур вместо путей
+    function set_selected_textures(textures_paths: string[]) {
+        _selected_textures = textures_paths;
+
+        // NOTE: обновляем конфиг атласов
+        update_atlas_options();
+
+        const data = _selected_textures.map((path) => {
+            // TODO: нужно найти к какому атласу относится эта текстура ClientAPI.get_info()
+            const texture_name = get_file_name(get_basename(path));
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            return {id: 0, data: [
+                { name: Property.ATLAS, data: atlas || ''},
+                {
+                    name: Property.ATLAS_BUTTON, data: () => {
+                        ControlManager.open_atlas_manager();
+                        // TODO: нужно обновить config чтобы отобразился измененный список атласов
+                    }
+                }
+            ]}; 
+        });
+        
+        clear();
+        setData(data);
+    }
+
     function set_selected_list(list: IBaseMeshAndThree[]) {
         _selected_list = list;
 
-        // обновляем конфиг текстур
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.TEXTURE);
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXTURES]) = ResourceManager.get_all_textures().map(castTextureInfo);
-        });
+        // NOTE: обновляем конфиг текстур
+        update_texture_options();
 
-        // обновляем конфиг шрифтов
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.FONT);
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = ResourceManager.get_all_fonts();
-        });
+        // NOTE: обновляем конфиг шрифтов
+        update_font_options();
 
         // IDEA: в значение пихать callback который будет отвечать за обновление
         /* TODO: все значения должны быть копиями, чтобы инспектор не мог их изменять на прямую, а только самому в ивенте обновления
@@ -418,6 +455,32 @@ function InspectorControlCreate() {
         setData(data);
     }
 
+    function update_atlas_options() {
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.ATLAS);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = castAtlases(ResourceManager.get_all_atlases());
+        });
+
+        refresh([Property.ATLAS]);
+    }
+
+    function update_texture_options() {
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.TEXTURE);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXTURES]) = ResourceManager.get_all_textures().map(castTextureInfo);
+        });
+    }
+
+    function update_font_options() {
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.FONT);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = ResourceManager.get_all_fonts();
+        });
+    }
+
     function refresh(properties: Property[]) {
         _selected_list.forEach((item) => {
             const obj = _data.find((obj) => obj.id == item.mesh_data.id);
@@ -453,6 +516,7 @@ function InspectorControlCreate() {
             const pane = searchPaneInFolderByProperty(_inspector, property);
             if (pane) {
                 _is_refreshed = true;
+                Log.log('REFRESH', property);
                 pane.refresh();
             }
         });
@@ -824,6 +888,7 @@ function InspectorControlCreate() {
             entity.onChange = (event: ChangeEvent) => {
                 // NOTE: не обновляем только что измененные значения из вне(после refresh)
                 if (_is_refreshed) {
+                    Log.log('ON_CHANGE_AFTER_REFHRESH');
                     _is_refreshed = false;
 
                     tryDisabledValueByAxis({
@@ -1145,7 +1210,7 @@ function InspectorControlCreate() {
     }
 
     function saveValue(info: BeforeChangeInfo) {
-        console.log("SAVED: ", info);
+        Log.log("SAVED: ", info);
 
         switch (info.field.name) {
             case Property.NAME: saveName(info.ids); break;
@@ -1165,11 +1230,12 @@ function InspectorControlCreate() {
             case Property.FONT: saveFont(info.ids); break;
             case Property.FONT_SIZE: saveFontSize(info.ids); break;
             case Property.TEXT_ALIGN: saveTextAlign(info.ids); break;
+            case Property.ATLAS: saveAtlas(info.ids); break;
         }
     }
 
     function updatedValue(info: ChangeInfo) {
-        console.log("UPDATED: ", info);
+        Log.log("UPDATED: ", info);
 
         switch (info.data.field.name) {
             case Property.NAME: updateName(info); break;
@@ -1189,6 +1255,7 @@ function InspectorControlCreate() {
             case Property.FONT: updateFont(info); break;
             case Property.FONT_SIZE: updateFontSize(info); break;
             case Property.TEXT_ALIGN: updateTextAlign(info); break;
+            case Property.ATLAS: updateAtlas(info); break;
         }
     }
 
@@ -1207,15 +1274,15 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_NAME', names);
     }
 
-    function updateName(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateName(info: ChangeInfo) {
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            mesh.name = value.data.event.value as string;
+            mesh.name = info.data.event.value as string;
             ControlManager.update_graph();
         });
     }
@@ -1235,15 +1302,15 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_ACTIVE', actives);
     }
 
-    function updateActive(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateActive(info: ChangeInfo) {
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const state = value.data.event.value as boolean;
+            const state = info.data.event.value as boolean;
             mesh.set_active(state);
         });
     }
@@ -1263,15 +1330,15 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_VISIBLE', visibles);
     }
 
-    function updateVisible(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateVisible(info: ChangeInfo) {
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const state = value.data.event.value as boolean;
+            const state = info.data.event.value as boolean;
             mesh.set_visible(state);
         });
     }
@@ -1495,15 +1562,15 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_PIVOT', pivots);
     }
 
-    function updatePivot(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updatePivot(info: ChangeInfo) {
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const pivot_preset = value.data.event.value as ScreenPointPreset;
+            const pivot_preset = info.data.event.value as ScreenPointPreset;
             const pivot = screenPresetToPivotValue(pivot_preset);
             mesh.set_pivot(pivot.x, pivot.y, true);
         });
@@ -1549,6 +1616,8 @@ function InspectorControlCreate() {
         if (info.data.event.last) {
             refresh([Property.ANCHOR_PRESET]);
         }
+        
+        refresh([Property.ANCHOR]);
     }
 
     function saveAnchorPreset(ids: number[]) {
@@ -1566,15 +1635,15 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_ANCHOR', anchors);
     }
 
-    function updateAnchorPreset(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateAnchorPreset(info: ChangeInfo) {
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const anchor = screenPresetToAnchorValue(value.data.event.value as ScreenPointPreset);
+            const anchor = screenPresetToAnchorValue(info.data.event.value as ScreenPointPreset);
             if (anchor) {
                 mesh.set_anchor(anchor.x, anchor.y);
             }
@@ -1599,14 +1668,14 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_COLOR', colors);
     }
 
-    function updateColor(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateColor(info: ChangeInfo) {
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
-            const color = value.data.event.value as string;
+            const color = info.data.event.value as string;
             (mesh as Slice9Mesh).set_color(color);
         });
     }
@@ -1627,17 +1696,17 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_TEXTURE', textures);
     }
 
-    function updateTexture(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateTexture(info: ChangeInfo) {
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            if (value.data.event.value) {
-                const atlas = (value.data.event.value as string).split('/')[0];
-                const texture = (value.data.event.value as string).split('/')[1];
+            if (info.data.event.value) {
+                const atlas = (info.data.event.value as string).split('/')[0];
+                const texture = (info.data.event.value as string).split('/')[1];
                 (mesh as Slice9Mesh).set_texture(texture, atlas);
             } else (mesh as Slice9Mesh).set_texture('');
         });
@@ -1692,15 +1761,15 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_TEXT', texts);
     }
 
-    function updateText(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateText(info: ChangeInfo) {
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const text = value.data.event.value as string;
+            const text = info.data.event.value as string;
             (mesh as TextMesh).text = text;
         });
     }
@@ -1721,15 +1790,15 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_FONT', fonts);
     }
 
-    function updateFont(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateFont(info: ChangeInfo) {
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const font = value.data.event.value as string;
+            const font = info.data.event.value as string;
             (mesh as TextMesh).font = font;
         });
     }
@@ -1750,15 +1819,15 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_FONT_SIZE', fontSizes);
     }
 
-    function updateFontSize(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateFontSize(info: ChangeInfo) {
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
             if (!mesh) return;
 
-            const font_size = value.data.event.value as number;
+            const font_size = info.data.event.value as number;
             const delta = font_size / (mesh as TextMesh).fontSize;
 
             mesh.scale.set(1 * delta, 1 * delta, mesh.scale.z);
@@ -1784,20 +1853,56 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_TEXT_ALIGN', textAligns);
     }
 
-    function updateTextAlign(value: ChangeInfo) {
-        value.ids.forEach((id) => {
+    function updateTextAlign(info: ChangeInfo) {
+        info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
             if (!mesh) return;
 
-            const text_align = value.data.event.value as any;;
+            const text_align = info.data.event.value as any;
             (mesh as TextMesh).textAlign = text_align;
         });
     }
 
+    function saveAtlas(ids: number[]) {
+        const atlases: AtlasEventData[] = [];
+        ids.forEach((id) => {
+            const texture_path = _selected_textures[id];
+            if (!texture_path) return;
+
+            const texture_name = get_file_name(get_basename(texture_path));
+            const oldAtlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            atlases.push({ texture_path, atlas: oldAtlas ? oldAtlas : '' });
+        });
+
+        HistoryControl.add('MESH_ATLAS', atlases);
+    }
+
+    function updateAtlas (info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const path = _selected_textures[id];
+            Log.log('UPDATE ATLAS', path, info.data.event.value);
+            const atlas = info.data.event.value as string;
+            const texture_name = get_file_name(get_basename(path));
+            const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            ResourceManager.override_atlas_texture(old_atlas || '', atlas, texture_name);
+            // NOTE: возможно обновление текстур в мешах должно быть в override_atlas_texture
+            SceneManager.get_scene_list().forEach((mesh) => {
+                const is_type = mesh.type == IObjectTypes.GO_SPRITE_COMPONENT || mesh.type == IObjectTypes.GUI_BOX;
+                if(!is_type) return;
+                const is_atlas = (mesh as IBaseMesh).get_texture().includes(atlas);
+                const is_texture = (mesh as IBaseMesh).get_texture().includes(texture_name);
+                if(is_atlas && is_texture) {
+                    mesh.set_texture(texture_name, atlas);
+                }
+            });
+        });
+        ResourceManager.write_metadata();
+    }
+
     init();
-    return { setupConfig, setData, set_selected_list, refresh, detach: clear }
+    return { setupConfig, setData, set_selected_textures, set_selected_list, refresh, clear }
 }
 
 function getChangedInfo(info: ChangeInfo) {
@@ -1985,6 +2090,14 @@ function castTextureInfo(info: TextureInfo) {
     return data;
 }
 
+function castAtlases(atlases: string[]) {
+    const data: {[key in string]: string} = {};
+    atlases.forEach((atlas) => {
+        return data[atlas == '' ? 'Not set' : atlas] = atlas;
+    });
+    return data;
+}
+
 export function getDefaultInspectorConfig() {
     return [
         {
@@ -1994,7 +2107,11 @@ export function getDefaultInspectorConfig() {
                 { name: Property.TYPE, title: 'Тип', type: PropertyType.STRING, readonly: true },
                 { name: Property.NAME, title: 'Название', type: PropertyType.STRING },
                 { name: Property.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN },
-                { name: Property.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN }
+                { name: Property.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN },
+                {
+                    name: Property.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: castAtlases(ResourceManager.get_all_atlases())
+                },
+                { name: Property.ATLAS_BUTTON, title: 'Атлас менеджер', type: PropertyType.BUTTON },
             ]
         },
         {

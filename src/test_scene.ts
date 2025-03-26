@@ -3,7 +3,6 @@ import { IObjectTypes } from './render_engine/types';
 import { run_debug_filemanager } from './controls/AssetControl';
 import { SERVER_URL } from './config';
 import { URL_PATHS } from './modules_editor/modules_editor_const';
-import { convert_scene } from './converter/tests/test';
 
 export async function run_debug_scene() {
   (window as any).scene = RenderEngine.scene;
@@ -90,8 +89,4 @@ export async function run_debug_scene() {
   const project_to_load = 'SceneEditor_ExampleProject';
   await run_debug_filemanager(project_to_load);
   ControlManager.update_graph(true, 'test');
-
-
-
-  convert_scene(SceneManager.save_scene());
 }

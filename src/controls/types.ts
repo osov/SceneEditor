@@ -83,3 +83,8 @@ export type TextAlignEventData = {
     id_mesh: number;
     text_align: 'left' | 'right' | 'center' | 'justify';
 };
+
+export type AtlasEventData = {
+    texture_path: string;
+    atlas: string;
+};
