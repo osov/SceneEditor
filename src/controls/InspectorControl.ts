@@ -2150,6 +2150,12 @@ export function getDefaultInspectorConfig() {
                         'Центр Снизу': ScreenPointPreset.BOTTOM_CENTER,
                         'Правый Нижний': ScreenPointPreset.BOTTOM_RIGHT
                     }
+                },
+                {
+                    name: Property.SIZE, title: 'Размер', type: PropertyType.VECTOR_2, params: {
+                        x: { min: 0, format: (v: number) => v.toFixed(2) },
+                        y: { min: 0, format: (v: number) => v.toFixed(2) },
+                    }
                 }
             ]
         },
@@ -2184,12 +2190,6 @@ export function getDefaultInspectorConfig() {
             name: 'graphics',
             title: 'Визуал',
             property_list: [
-                {
-                    name: Property.SIZE, title: 'Размер', type: PropertyType.VECTOR_2, params: {
-                        x: { format: (v: number) => v.toFixed(2) },
-                        y: { format: (v: number) => v.toFixed(2) },
-                    }
-                },
                 { name: Property.COLOR, title: 'Цвет', type: PropertyType.COLOR },
                 {
                     name: Property.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: ResourceManager.get_all_textures().map(castTextureInfo)
@@ -2199,7 +2199,7 @@ export function getDefaultInspectorConfig() {
                         x: { min: 0, max: 100, format: (v: number) => v.toFixed(2) },
                         y: { min: 0, max: 100, format: (v: number) => v.toFixed(2) }
                     }
-                },
+                }
             ]
         },
         {
@@ -2222,7 +2222,7 @@ export function getDefaultInspectorConfig() {
                         'Справа': TextAlign.RIGHT,
                         'По ширине': TextAlign.JUSTIFY
                     }
-                },
+                }
             ]
         }
     ];
