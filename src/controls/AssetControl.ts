@@ -760,22 +760,10 @@ function AssetControlCreate() {
         if (event.button === 0 || event.button === 2) {
             if (!Input.is_control()) {
                 // При нажатии ЛКМ / ПКМ вне всех ассетов либо на ассет не из списка выбранных, и ctrl отпущена, делаем сброс всех выбранных ассетов
-                if (!asset_elem || (asset_elem && !selected_assets.includes(asset_elem)))
-                        clear_selected();
-                // Если ctrl отпущена, при нажатии ЛКМ или ПКМ на ассет просто добавляем его в список выбранных
-                if (asset_elem && (!ContextMenu.isVisible()))
-                    add_to_selected(asset_elem);  
+                if (!asset_elem || (asset_elem && !selected_assets.includes(asset_elem))) {
+                    clear_selected();
+                }
             }
-
-            else if (Input.is_control()) {
-                if (asset_elem && event.button === 0)
-                    // Если ctrl нажата, добавляем ассет в список выбранных при нажатии ЛКМ на него, если его нет в этом списке
-                    if (!selected_assets.includes(asset_elem) && (!ContextMenu.isVisible())) 
-                        add_to_selected(asset_elem);  
-                    // Либо убираем если он уже в списке
-                    else
-                        remove_from_selected(asset_elem);
-            } 
         }
     }
 
