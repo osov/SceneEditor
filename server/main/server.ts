@@ -1,6 +1,6 @@
 import path from "path";
 import { Router } from "bun-serve-router";
-import { project_name_required, get_file, handle_command, loaded_project_required, get_cache, write_cache } from "./logic";
+import { project_name_required, get_file, handle_command, loaded_project_required } from "./logic";
 import { ExtWebSocket, WsClient } from "./types";
 import { ServerResponses, ServerCommands, NetMessagesEditor as NetMessages, CommandId, URL_PATHS, CMD_NAME, LOAD_PROJECT_CMD, GET_FOLDER_CMD, SET_CURRENT_SCENE_CMD } from "../../src/modules_editor/modules_editor_const";
 import { TDictionary } from "../../src/modules_editor/modules_editor_const";
@@ -16,10 +16,9 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
     const fs_watcher = FSWatcher(get_full_path(""), sockets, fs_events_interval);
     const router = new Router();
     const data_sessions: TDictionary<any> = {};
-    const cache = await get_cache();
-    let current_project: string | undefined = (cache) ? cache.current_project : undefined;
-    let current_dir = (cache) ? cache.current_dir : "";
-    const current_scene = (cache) ? {name: cache.current_scene.name, path: cache.current_scene.path} : {};
+    let current_project: string | undefined = undefined;
+    let current_dir = "";
+    const current_scene: {path?: string, name?: string} = {};
 
     router.add("GET", `${URL_PATHS.TEST}`, (request, params) => {
         return test_func();
@@ -144,13 +143,11 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
                 current_project = _result.data?.name as string;
                 log(`${current_project} is current loaded project`);
                 current_dir = "";
-                await write_cache({current_project, current_dir});
             }
             if (cmd_id === GET_FOLDER_CMD) {
                 const _params = params as ServerCommands[typeof GET_FOLDER_CMD];
                 if (current_dir != _params.path) {
-                    current_dir = _params.path as string;    
-                    await write_cache({current_dir});    
+                    current_dir = _params.path as string;      
                 } 
             }
             if (cmd_id === SET_CURRENT_SCENE_CMD) {
@@ -158,8 +155,7 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
                 const _result = result as ServerResponses[typeof SET_CURRENT_SCENE_CMD];
                 if (current_scene.path != _params.path) {
                     current_scene.path = _params.path as string;    
-                    current_scene.name = _result.data?.name as string;    
-                    await write_cache({current_scene});    
+                    current_scene.name = _result.data?.name as string;
                 } 
             }
         }

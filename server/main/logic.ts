@@ -423,27 +423,6 @@ export async function get_file(project_name: string, asset_path: string) {
         return file;
 }
 
-export async function get_cache(): Promise<ServerCacheData | undefined> {
-    const _path = get_cache_path();
-    const file_exists = await exists(_path);
-    if (!file_exists) {
-        return;
-    }
-    const data_file = Bun.file(_path);
-    const data_string = await data_file.text();
-    return JSON.parse(data_string) as ServerCacheData;
-}
-
-export async function write_cache(data) {
-    const _path = get_cache_path();
-    const file_exists = await exists(_path);
-    if (!file_exists) await Bun.write(_path, "{}");
-    const data_file = Bun.file(_path);
-    const data_string = await data_file.text();
-    const all_data = JSON.parse(data_string);
-    await Bun.write(_path, JSON.stringify({...all_data, ...data}));
-}
-
 export async function project_name_required(cmd_id: CommandId, params: any) {
     if (!project_name_required_commands.includes(cmd_id)) 
         return;
