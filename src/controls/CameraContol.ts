@@ -33,7 +33,7 @@ function CameraControlCreate() {
         control.mouseButtons.middle = CameraControls.ACTION.TRUCK;
         control.mouseButtons.right = CameraControls.ACTION.TRUCK;
         control.truckSpeed = 1;
-        control.dollySpeed = 3;
+        control.dollySpeed = 1;
         control.dollyToCursor = true;
         control.zoomTo(0.9);
         set_position(540 / 2, -960 / 2);

@@ -98,7 +98,7 @@ function TreeControlCreate() {
         listSelected = []; // сбрасываем 
 
         const rootList = deepClone(list);
-        log({ rootList });
+        //log({ rootList });
         
         rootList.forEach((node: any) => {
             treeMap[node.id] = { ...node, children: [] };
@@ -268,7 +268,7 @@ function TreeControlCreate() {
 
             if (treeItem && _is_dragging) {
                 itemDrag = treeList.find(e => e.id === +treeItem?.getAttribute("data-id")) || null;
-                console.log({ itemDrag });
+                //console.log({ itemDrag });
                 itemDragRenameId = itemDrag?.id || null;
                 copyItemDrag = deepClone(itemDrag);
 
@@ -355,7 +355,7 @@ function TreeControlCreate() {
                 if (posInItem) {
                     const movedList = getMovedList(listSelected, itemDrag, itemDrop, posInItem);
                     if(movedList) {
-                        log(`SYS_GRAPH_MOVED_TO`, movedList);
+                        //log(`SYS_GRAPH_MOVED_TO`, movedList);
                         EventBus.trigger("SYS_GRAPH_MOVED_TO", movedList);
                     }
                 }
@@ -394,15 +394,15 @@ function TreeControlCreate() {
         if(!list || !list.length || !drag || !drop || !type || !list.includes(drag?.id)) return null;
 
         if(type === 'top') {
-            log('top')
+            //log('top')
             return { pid: drop?.pid, next_id: drop?.id, id_mesh_list: list };
         }
         if(type === 'bg') {
-            log('bg')
+            //log('bg')
             return itemDrop?.no_drop === true ? null : { pid: drop?.id, next_id: -1, id_mesh_list: list };
         }
         if (type === 'bottom') {
-            log('bottom')
+            //log('bottom')
             const next_id = findNextIdItemByPid(drop?.id, drop?.pid) || -1;
             return { pid: drop?.pid, next_id: next_id, id_mesh_list: list };
         }
@@ -731,7 +731,7 @@ function TreeControlCreate() {
         if (!currentId) return;
                 
         setTimeout(() => { 
-            log({itemDragRenameId, currentId})
+            //log({itemDragRenameId, currentId})
             if (itemDragRenameId != currentId) return; // тк setTimeout сверяем, что это тот же элемент
             preRename();
         }, 1200);
@@ -775,7 +775,7 @@ function TreeControlCreate() {
                 _is_currentOnly = true; // текущий
                 
                 if(isOne) { // ctrl + 1 selected 
-                    log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${[]}})`);
+                    //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${[]}})`);
                     EventBus.trigger('SYS_GRAPH_SELECTED', {list: []});
                 }
             }
@@ -821,18 +821,18 @@ function TreeControlCreate() {
         
         if (!_is_moveItemDrag) { // если движения Не было
             if(Input.is_control()) {
-                log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+                //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
                 EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
                 return;
             }
             if(listSelected?.length > 1 && event.button === 0) {
                 listSelected = [itemDrag?.id];
-                log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+                //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
                 EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
                 return;
             }
             if (!_is_currentOnly && listSelected?.length <= 1) { // trigger   кроме текущего
-                log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+                //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
                 EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
                 return;
             }
@@ -847,7 +847,7 @@ function TreeControlCreate() {
         }
 
         if (!_is_currentOnly && listSelected?.length <= 1 && !isDrop) { 
-            log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+           // log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
             EventBus.trigger('SYS_GRAPH_SELECTED', {list: listSelected});
             return;
         }
@@ -953,7 +953,7 @@ function TreeControlCreate() {
 
             if(name?.length == 0) {return;}
             
-            log('SYS_GRAPH_CHANGE_NAME', { id, name });
+            //log('SYS_GRAPH_CHANGE_NAME', { id, name });
             EventBus.trigger('SYS_GRAPH_CHANGE_NAME', { id, name });
         }
 
@@ -1337,7 +1337,7 @@ function TreeControlCreate() {
             const itemId = item?.getAttribute('data-id');
             if (itemId) {
                 itemDragRenameId = null;
-                log(`SYS_GRAPH_CLICKED, { id: ${itemId} }`);
+                //log(`SYS_GRAPH_CLICKED, { id: ${itemId} }`);
                 EventBus.trigger("SYS_GRAPH_CLICKED", { id: itemId });
             }
         }
