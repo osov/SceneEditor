@@ -1,5 +1,5 @@
 import { SERVER_URL } from "../config";
-import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, GET_CURRENT_PROJECT_CMD, ProtocolWrapper, TRecursiveDict, DEL_INFO_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, OPEN_EXPLORER_CMD } from "./modules_editor_const";
+import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, ProtocolWrapper, TRecursiveDict, DEL_INFO_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, OPEN_EXPLORER_CMD } from "./modules_editor_const";
 
 
 declare global {
@@ -10,11 +10,6 @@ export function register_client_api() {
     (window as any).ClientAPI = ClientAPIModule();
 }
 function ClientAPIModule() {
-    async function get_current_project(): Promise<AssetsResponses[typeof GET_CURRENT_PROJECT_CMD]> {
-        const command_id = GET_CURRENT_PROJECT_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {});
-    }
-
     async function set_current_scene(path: string): Promise<AssetsResponses[typeof SET_CURRENT_SCENE_CMD]> {
         const command_id = SET_CURRENT_SCENE_CMD;
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
@@ -69,7 +64,7 @@ function ClientAPIModule() {
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
     }
 
-    async function save_data(path: string, data: any): Promise<AssetsResponses[typeof SAVE_DATA_CMD]> {
+    async function save_data(path: string, data: string): Promise<AssetsResponses[typeof SAVE_DATA_CMD]> {
         const command_id = SAVE_DATA_CMD;
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, data});
     }
@@ -118,7 +113,7 @@ function ClientAPIModule() {
         on_message_socket(data.id as keyof NetMessagesEditor, data.message);
     });
 
-    return { get_current_project, set_current_scene, get_projects, load_project, new_project, new_folder, get_folder, copy, move, rename, remove, test_server_ok, save_info, get_info, del_info, save_data, get_data, open_explorer }
+    return { set_current_scene, get_projects, load_project, new_project, new_folder, get_folder, copy, move, rename, remove, test_server_ok, save_info, get_info, del_info, save_data, get_data, open_explorer }
 }
 
 

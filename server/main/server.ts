@@ -2,7 +2,7 @@ import path from "path";
 import { Router } from "bun-serve-router";
 import { project_name_required, get_file, handle_command, loaded_project_required, get_cache, write_cache } from "./logic";
 import { ExtWebSocket, WsClient } from "./types";
-import { ServerResponses, ServerCommands, NetMessagesEditor as NetMessages, CommandId, URL_PATHS, CMD_NAME, GET_CURRENT_PROJECT_CMD, LOAD_PROJECT_CMD, GET_FOLDER_CMD, SET_CURRENT_SCENE_CMD } from "../../src/modules_editor/modules_editor_const";
+import { ServerResponses, ServerCommands, NetMessagesEditor as NetMessages, CommandId, URL_PATHS, CMD_NAME, LOAD_PROJECT_CMD, GET_FOLDER_CMD, SET_CURRENT_SCENE_CMD } from "../../src/modules_editor/modules_editor_const";
 import { TDictionary } from "../../src/modules_editor/modules_editor_const";
 import { do_response, json_parsable } from "./utils";
 import { get_asset_path, get_full_path } from "./fs_utils";
@@ -83,7 +83,7 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
         }
         const data = await request.text();
         const result = await on_command(cmd_id, data);
-        return  do_response(result);
+        return do_response(result);
     });
 
     const server = Bun.serve({
@@ -126,11 +126,7 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
     log("Запущен сервер на порту " + server_port);
 
 
-    async function on_command(cmd_id: CommandId, data: string) {
-        if (cmd_id == GET_CURRENT_PROJECT_CMD) {
-            const result: ServerResponses[typeof GET_CURRENT_PROJECT_CMD] = {result: 1, data: {name: current_project, current_dir, current_scene: {name: current_scene.name, path: current_scene.path}}};
-            return result;
-        }        
+    async function on_command(cmd_id: CommandId, data: string) {   
         if (data && !json_parsable(data)) 
             return {message: ERROR_TEXT.WRONG_JSON, result: 0};
         const params = (data) ? JSON.parse(data) : {};

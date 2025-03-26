@@ -32,6 +32,7 @@ function AssetControlCreate() {
 
     async function load_project(name: string, folder_content?: FSObject[], to_dir?: string) {
         current_project = name;
+        localStorage.setItem("current_project", current_project);
         if (folder_content && to_dir == undefined) {
             current_dir = "";
             draw_assets(folder_content);
@@ -47,6 +48,7 @@ function AssetControlCreate() {
         if (current_dir === path && !renew) return;
         const resp = await ClientAPI.get_folder(path);
         if (resp.result === 1 && resp.data != undefined) {
+            localStorage.setItem("current_dir", path);
             const folder_content = resp.data;
             current_dir = path;
             draw_assets(folder_content);
@@ -457,7 +459,7 @@ function AssetControlCreate() {
 
     async function new_scene(path: string, name: string) {
         const scene_path = `${path}/${name}.${SCENE_EXT}`
-        const r = await ClientAPI.save_data(scene_path, {scene_data: []});
+        const r = await ClientAPI.save_data(scene_path, JSON.stringify({scene_data: []}));
         if (r.result === 0) {
             error_popup(`Не удалось создать сцену, ответ сервера: ${r.message}`);
             return;
@@ -493,7 +495,7 @@ function AssetControlCreate() {
             callback: async (success, name) => {
                 if (success && name) {
                     const path = `${current_path}/${name}.${SCENE_EXT}`;
-                    const r = await ClientAPI.save_data(path, {scene_data: [data]}) 
+                    const r = await ClientAPI.save_data(path, JSON.stringify({scene_data: [data]})) 
                     if (r && r.result)
                         Popups.toast.success(`Объект ${name} сохранён, путь: ${path}`);
                     else
@@ -861,22 +863,24 @@ function AssetControlCreate() {
     }
 
     async function set_current_scene(path: string) {
-        const r1 = await ClientAPI.set_current_scene(path);
-        if (!r1 || r1.result === 0) {
-            Popups.toast.error(`Серверу не удалось установить сцену текущей: ${r1.message}`);
+        const resp = await ClientAPI.set_current_scene(path);
+        if (!resp || resp.result === 0) {
+            Popups.toast.error(`Серверу не удалось установить сцену текущей: ${resp.message}`);
             return false;
         }
-        current_scene.name = r1.data?.name as string;
-        current_scene.path = r1.data?.path as string;
+        current_scene.name = resp.data?.name as string;
+        current_scene.path = resp.data?.path as string;
+        localStorage.setItem("current_scene_name", current_scene.name);
+        localStorage.setItem("current_scene_path", current_scene.path);
         history_length_cache[path] = HistoryControl.get_history(current_scene.path).length;
         return true;
     }
 
     async function load_scene(path: string) {
-        const r2 = await ClientAPI.get_data(path);
-        if (!r2 || r2.result === 0 || !r2.data)
-            return Popups.toast.error(`Не удалось получить данные сцены: ${r2.message}`);
-        const data = JSON.parse(r2.data) as TDictionary<IBaseEntityData[]>;
+        const resp = await ClientAPI.get_data(path);
+        if (!resp || resp.result === 0 || !resp.data)
+            return Popups.toast.error(`Не удалось получить данные сцены: ${resp.message}`);
+        const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
         SceneManager.load_scene(data.scene_data);
         ControlManager.update_graph(true, current_scene.name);
     }
@@ -891,7 +895,7 @@ function AssetControlCreate() {
         const path = current_scene.path as string;
         const name = current_scene.name as string;
         const data = SceneManager.save_scene();
-        const r = await ClientAPI.save_data(path, {scene_data: data});
+        const r = await ClientAPI.save_data(path, JSON.stringify({scene_data: data}));
         if (r && r.result) {
             history_length_cache[path] = HistoryControl.get_history(current_scene.path).length;
             return Popups.toast.success(`Сцена ${name} сохранена, путь: ${path}`);
@@ -1017,7 +1021,7 @@ function fileIsImg(path: string) {
     return (texture_ext.includes(ext));
 }
 
-export async function run_debug_filemanager(project_to_load: string, scene_to_set?: string) {
+export async function run_debug_filemanager(project_to_load: string) {
     let server_ok = false;
     const resp = await ClientAPI.test_server_ok();
     if (resp) {
@@ -1034,11 +1038,10 @@ export async function run_debug_filemanager(project_to_load: string, scene_to_se
             names.push(project);
         }
         // Достаём данные о последнем открытом проекте
-        let last_project_data: ProjectCache = { name: undefined, current_dir: "", current_scene: {} };
-        const last_project_r = await ClientAPI.get_current_project();
-        if (last_project_r.result) {
-            last_project_data = last_project_r.data as ProjectCache;
-        }
+        const current_project = localStorage.getItem("current_project");
+        const current_dir = localStorage.getItem("current_dir");
+        const current_scene_name = localStorage.getItem("current_scene_name");
+        const current_scene_path = localStorage.getItem("current_scene_path");
         // Если проект project_to_load существует, пробуем загрузить
         if (names.includes(project_to_load)) {
             const r = await ClientAPI.load_project(project_to_load);
@@ -1047,9 +1050,9 @@ export async function run_debug_filemanager(project_to_load: string, scene_to_se
                 let assets: FSObject[] | undefined = data.assets;
                 let go_to_dir: string | undefined = undefined;
                 // Если project_to_load это последний открытый проект, будем переходить в последнюю открытую папку
-                if (project_to_load === last_project_data.name) {
+                if (project_to_load === current_project && current_dir) {
                     assets = undefined;
-                    go_to_dir = last_project_data.current_dir;
+                    go_to_dir = current_dir;
                 }
                 const list: Promise<any>[] = [];
                 for (const key of get_keys(data.paths)) {
@@ -1084,8 +1087,6 @@ export async function run_debug_filemanager(project_to_load: string, scene_to_se
                 }
                 await Promise.all(list);
                 AssetControl.load_project(data.name, assets, go_to_dir);
-                if (scene_to_set)
-                    await AssetControl.set_current_scene(scene_to_set);
                 log('Project loaded', data.name);
                 return;
             }

@@ -1,5 +1,5 @@
 import { WatchEventType } from "fs";
-import {  IBaseEntityData, IBaseMeshAndThree } from "../render_engine/types";
+import { IBaseMeshAndThree } from "../render_engine/types";
 import { ChangeInfo } from "../controls/InspectorControl";
 import { VoidMessage } from "../modules/modules_const";
 
@@ -34,7 +34,6 @@ export type _SystemMessagesEditor = {
 
 
 export type AssetsCommands = {
-    [GET_CURRENT_PROJECT_CMD]: VoidMessage,
     [SET_CURRENT_SCENE_CMD]: { path: string }, 
     [GET_PROJECTS_CMD]: VoidMessage,
     [NEW_PROJECT_CMD]: { project: string },
@@ -48,7 +47,7 @@ export type AssetsCommands = {
     [SAVE_INFO_CMD]: { path: string, data: TRecursiveDict },
     [GET_INFO_CMD]: { path?: string },
     [DEL_INFO_CMD]: { path: string },
-    [SAVE_DATA_CMD]: { path: string, data: TRecursiveDict | TDictionary<IBaseEntityData[]> | string },
+    [SAVE_DATA_CMD]: { path: string, data: string },
     [GET_DATA_CMD]: { path: string },
     [OPEN_EXPLORER_CMD]: { path: string },
     // [NEW_MATERIAL]: {name: string, path: string, data: IDictionary<string>},
@@ -74,7 +73,6 @@ export type ProjectLoadData = { assets: FSObject[], name: string, paths: Project
 export type ProjectCache = { name?: string, current_dir: string, current_scene: { name?: string, path?: string } }
 
 export type AssetsResponses = {
-    [GET_CURRENT_PROJECT_CMD]: BaseResp<ProjectCache>,
     [SET_CURRENT_SCENE_CMD]: BaseResp<{ name?: string, path?: string }>, 
     [GET_PROJECTS_CMD]: BaseResp<string[]>,
     [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
@@ -115,7 +113,6 @@ export interface FSObject { name: string, type: FSObjectType, size: number, path
 export const ASSET_TEXTURE: AssetType = "texture";
 export const ASSET_SCENE_GRAPH: AssetType = "scene_graph";
 export const ASSET_MATERIAL: AssetType = "material";
-export const GET_CURRENT_PROJECT_CMD = '/get_current_project';
 export const SET_CURRENT_SCENE_CMD = '/set_current_scene';
 export const GET_PROJECTS_CMD = '/get_projects';
 export const NEW_PROJECT_CMD = '/new_project';
@@ -142,7 +139,6 @@ export const ATLAS_EXT = `tpsheet`;
 export const FONT_EXT = `ttf`;
 
 export const CMD_NAME = [
-    GET_CURRENT_PROJECT_CMD,
     SET_CURRENT_SCENE_CMD,
     GET_PROJECTS_CMD, 
     NEW_PROJECT_CMD, 

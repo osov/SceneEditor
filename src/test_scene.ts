@@ -88,8 +88,7 @@ export async function run_debug_scene() {
 
   ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
   const project_to_load = 'SceneEditor_ExampleProject';
-  const scene_to_set = 'test.scn';
-  await run_debug_filemanager(project_to_load, scene_to_set);
+  await run_debug_filemanager(project_to_load);
   ControlManager.update_graph(true, 'test');
 
 

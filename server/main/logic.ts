@@ -101,7 +101,7 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const data_path = get_data_file_path(project, cmd.path);
         const new_data = cmd.data;
         try {
-            await Bun.write(data_path, JSON.stringify(new_data));
+            await Bun.write(data_path, new_data);
             return {result: 1, data: {}};
     
         } catch (e) {
