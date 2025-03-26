@@ -44,7 +44,14 @@ export function hexToRGB(hex: string): Vector3 {
         r = parseInt(hex.slice(0, 2), 16) / 255;
         g = parseInt(hex.slice(2, 4), 16) / 255;
         b = parseInt(hex.slice(4, 6), 16) / 255;
-    } else console.error("Неправильный формат шестнадцатеричного цвета");
+    } else if (hex.length === 3) {
+        r = parseInt(hex[0] + hex[0], 16) / 255;
+        g = parseInt(hex[1] + hex[1], 16) / 255;
+        b = parseInt(hex[2] + hex[2], 16) / 255;
+    } else {
+        console.error("Неправильный формат шестнадцатеричного цвета");
+        return new Vector3(0, 0, 0); // Return black as fallback
+    }
 
     return new Vector3(r, g, b);
 }
