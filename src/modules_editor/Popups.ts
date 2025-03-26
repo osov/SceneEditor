@@ -94,9 +94,9 @@ interface Layers {
     params: {
         title: string,
         button: string,
-        list: LayerItem [],
+        list: LayerItem[],
     },
-    callback: (success: boolean, data?: cbDataItem | cbDataId) => void
+    callback: (success: boolean, data?: cbDataItem) => void
 }
 
 interface LayerItem {
@@ -110,7 +110,7 @@ interface Select {
     params: {
         title: string,
         button: string,
-        list: SelectItem [],
+        list: SelectItem[],
         auto_close?: boolean
     },
     callback: (success: boolean, data?: cbDataId) => void
@@ -122,14 +122,20 @@ interface SelectItem {
     selected?: boolean
 }
 
-interface cbDataId {
-    action: string,
+export enum Action {
+    ADD = 'add',
+    DELETE = 'delete',
+    SELECTED = 'selected'
+}
+
+export interface cbDataId {
+    action: Action,
     itemId: string | number
 }
 
-interface cbDataItem {
-    action: string,
-    item: LayerItem 
+export interface cbDataItem {
+    action: Action,
+    item: LayerItem
 }
 
 function PopupsCreate() {
@@ -143,39 +149,39 @@ function PopupsCreate() {
 
         const noBtn = popup.querySelector('.popup__noBtn') as HTMLInputElement | null;
         if (noBtn && data?.type == 'Confirm') { noBtn.textContent = data?.params?.buttonNo || noBtn.textContent; }
-        
+
         const popupTitle = popup.querySelector('.popup__title span') as HTMLInputElement | null;
         if (popupTitle) { popupTitle.textContent = data?.params?.title; }
 
         const popupText = popup.querySelector('.popup__text') as HTMLInputElement | null;
         if (popupText && (data?.type == 'Notify' || data?.type == 'Confirm')) { popupText.textContent = data?.params?.text || popupText.textContent; }
-        
+
         const inputField = popup.querySelector('.popup__input') as HTMLInputElement | null;
         if (inputField && data?.type == 'Rename') { inputField.value = data?.params?.currentName ? data?.params?.currentName : ''; }
 
         // if (data?.type == 'Layers') {
-            const layer_list: LayerItem [] = (data?.type == 'Layers' && data?.params?.list) ? deepClone(data?.params?.list) : [];
-            const wrLayersList = popup.querySelector('#LayersList') as HTMLElement | null;
-            if (wrLayersList && data?.type == 'Layers') { 
-                wrLayersList.innerHTML = getLayersHtml(layer_list);
-                wrLayersList.addEventListener('click', layerListClick);
-            }
+        const layer_list: LayerItem[] = (data?.type == 'Layers' && data?.params?.list) ? deepClone(data?.params?.list) : [];
+        const wrLayersList = popup.querySelector('#LayersList') as HTMLElement | null;
+        if (wrLayersList && data?.type == 'Layers') {
+            wrLayersList.innerHTML = getLayersHtml(layer_list);
+            wrLayersList.addEventListener('click', layerListClick);
+        }
         // }
 
         // if (data?.type == 'Select') {
-            const select_list: SelectItem [] = (data?.type == 'Select' && data?.params?.list) ? data?.params?.list : [];
-            const wrSelectList = popup.querySelector('#popupSelectList') as HTMLInputElement | null;
-            if (wrSelectList && data?.type == 'Select') wrSelectList.innerHTML = getSelectHtml(select_list);
+        const select_list: SelectItem[] = (data?.type == 'Select' && data?.params?.list) ? data?.params?.list : [];
+        const wrSelectList = popup.querySelector('#popupSelectList') as HTMLInputElement | null;
+        if (wrSelectList && data?.type == 'Select') wrSelectList.innerHTML = getSelectHtml(select_list);
         // }
 
         const closeBg = popup.querySelector('.bgpopup') as HTMLElement | null;
         const closeBtn = popup.querySelector('.popup__close') as HTMLElement | null;
-        
+
         const closeListBtns = data?.type == 'Confirm' ? [closeBg, closeBtn, noBtn] : [closeBg, closeBtn];
         closeListBtns.forEach((elem: any) => {
             if (elem) elem.addEventListener('click', closePopup);
         });
-        
+
         function closePopup() {
             data?.callback(false);
             hidePopup(popup);
@@ -189,19 +195,19 @@ function PopupsCreate() {
             if (closeBtn) closeBtn.removeEventListener('click', closePopup);
             if (wrLayersList) wrLayersList.removeEventListener('click', layerListClick);
         }
-        
+
         if (okBtn) {
             okBtn.addEventListener('click', fClick);
         }
-        
+
         function fClick() {
-            if(!popup) return;
+            if (!popup) return;
 
             if (data?.type == "Notify") {
                 data?.callback(true);
                 if (data.params?.auto_close == true) {
                     hidePopup(popup);
-                    clearClickBtn();  
+                    clearClickBtn();
                 }
             }
 
@@ -218,13 +224,13 @@ function PopupsCreate() {
                 inputField.value = '';
                 if (data.params?.auto_close == true) {
                     hidePopup(popup);
-                    clearClickBtn();  
+                    clearClickBtn();
                 }
             }
 
             if (data?.type == 'Layers' && wrLayersList && inputField && inputField.value.trim().length > 0) {
                 const newItem: LayerItem = { id: Date.now().toString(), title: inputField?.value.trim(), can_delete: true };
-                data?.callback(true, { action: 'add', item: newItem });
+                data?.callback(true, { action: Action.ADD, item: newItem });
                 layer_list.push(newItem);
                 wrLayersList.innerHTML = getLayersHtml(layer_list);
                 inputField.value = '';
@@ -233,10 +239,10 @@ function PopupsCreate() {
             if (data?.type == 'Select' && wrSelectList) {
                 const itemSelected = select_list.findIndex((item: SelectItem) => item.id == wrSelectList?.value);
                 if (wrSelectList?.value && itemSelected > -1) {
-                    data?.callback(true, { action: 'selected', itemId: select_list[itemSelected]?.id });
+                    data?.callback(true, { action: Action.SELECTED, itemId: select_list[itemSelected]?.id });
                     if (data.params?.auto_close == true) {
                         hidePopup(popup);
-                        clearClickBtn();  
+                        clearClickBtn();
                     }
                 }
             }
@@ -244,8 +250,13 @@ function PopupsCreate() {
         }
 
         function removeItemLayer(id: string) {
+            const item = layer_list.find((item: LayerItem) => item.id == id);
+            if (!item) {
+                return;
+            }
+
             layer_list.splice(layer_list.findIndex((item: LayerItem) => item.id == id), 1);
-            if (data?.type == 'Layers') data?.callback(true, { action: 'delete', itemId: id });
+            if (data?.type == 'Layers') data?.callback(true, { action: Action.DELETE, item });
             if (wrLayersList) wrLayersList.innerHTML = getLayersHtml(layer_list);
         }
 
@@ -254,12 +265,12 @@ function PopupsCreate() {
             const btnId = btnRemove?.getAttribute('data-id');
             if (btnId) removeItemLayer(btnId);
         }
-        
+
 
         showPopup(popup);
     }
 
-    function getLayersHtml(list: LayerItem []): string {
+    function getLayersHtml(list: LayerItem[]): string {
         let result = ``;
         list.forEach((item: LayerItem) => {
             result += `<div class="LayersList__item">
@@ -269,14 +280,14 @@ function PopupsCreate() {
         });
         return result;
     }
-    
+
     function getDeleteLayerItemHtml(id: string): string {
         return `<a href="javascript:void(0);" class="LayersList__item_remove" tabindex="-1"  draggable="false" data-id="${id}">
                     <svg class="svg_icon"><use href="./img/sprite.svg#circle_close"></use></svg>
                 </a>`;
     }
-    
-    function getSelectHtml(list: SelectItem []): string {
+
+    function getSelectHtml(list: SelectItem[]): string {
         let result = `<option value="" selected disabled hidden>Choose here</option>`;
         list.forEach((item: SelectItem) => {
             result += `<option value="${item?.id}" ${item?.selected == true ? 'selected' : ''}>${item.title}</option>`;
@@ -319,10 +330,10 @@ function PopupsCreate() {
                 type: 'warning',
                 background: 'orange',
                 icon: {
-                        className: 'material-icons',
-                        tagName: 'i',
-                        text: 'warning'
-                    }
+                    className: 'material-icons',
+                    tagName: 'i',
+                    text: 'warning'
+                }
             },
         ]
     });
