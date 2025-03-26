@@ -1,0 +1,388 @@
+images { 
+  image: "/assets/tiled/Structures/House/Bruchatka.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Dock/Dock.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowBoats.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Dock/Boats.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Steps.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/LibrarySteps.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/StoreThreshold.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/LombardSteps.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/AuctionStages.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Sartir_1.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Kolodec_1.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Dump/Dump.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/ShadowOfTheStatue.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowHouse.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ColumnShadow.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/ShadowBench.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/ThresholdBar.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowOfTheTable.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/Shadow1.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowBarrels.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowHouse_2.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowCarts.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Wheel.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Foundation.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Door.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Column.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Fireplace.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Dock/CrossFence.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Dock/Fence2.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Dock/Fence3.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Dock/Fence1.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Bricks.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Cabinet.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Showcase.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/StoreEntrance.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Contour.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Baseboard.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Corner.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/LibraryDoors.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/LibraryColumn.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/WhiteBrick.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/CornerPawnshop.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/DoorLombard.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/DoorShadow.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/TrimLombard.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/PirilaLombard.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/PlinthusLombard.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/LibraryWindow.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Shop.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/StapikBara.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/BarTable.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/BarNiz.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/FrameBar.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/AuctionColumn.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowPillars.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Kolodec_3.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Kolodec_2.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Sartir_2.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Nature/Barrel.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/HouseDrain_1.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Trolley.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Ladder.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Machine.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/CarDoor.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Dock/CrossFenceMini.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/HouseDrain_2.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Statue.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Anvil.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Sawing.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/PotFlowers.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/BaseboardHome.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/DoorBar.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/WindowBar_1.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/WindowBar_2.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowRoof.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/HouseNumber.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Canopy.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Casting_1.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Casting_2.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/DrainHolder.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/AuctionRoof.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Roof1.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Roof2.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/BarUmbrella.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Kolodec_4.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Sartir_3.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowCherdock.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/AtticShadow.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowForgeRoof.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Attic.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Entrance Roof.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/AtticWindow.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/LogoForge.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Sign.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/AuctionSign.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/StoreSign.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/House/Antenna.png"
+   
+ } 

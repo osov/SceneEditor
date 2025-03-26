@@ -1,0 +1,60 @@
+images { 
+  image: "/assets/tiled/Nature/EarthInTheBushes.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/TreeShade.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowBushes_1.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowBushes_3.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Structures/Shadows/ShadowBushes_2.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Nature/Flowers_4.png"
+   
+ } 
+images { 
+  image: ""
+   
+ } 
+images { 
+  image: "/assets/tiled/Nature/Flowers_1.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Nature/Flowers_3.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Nature/Flowers_2.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Nature/Bushes.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Nature/Bushes2.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Nature/Bushes3.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Nature/Crown.png"
+   
+ } 
+images { 
+  image: "/assets/tiled/Nature/FlowersHome.png"
+   
+ } 

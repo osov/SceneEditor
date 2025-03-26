@@ -150,17 +150,39 @@ export function parseFont(data: IFont): DefoldData {
             output_format: DefoldFontTextureFormat.TYPE_DISTANCE_FIELD,
             alpha: data.alpha,
             size: data.size,
+            all_chars: true
         })
     };
 }
 
-
 function generateCollection(data: INodesList): string {
-    const collection = {} as IDefoldCollection;
-    collection.name = getNameFromPath(data.name);
-    collection.embedded_instances = [];
-    collection.collection_instances = [];
+    const collection = {
+        name: getNameFromPath(data.name),
+        embedded_instances: [] as IDefoldGo[],
+        collection_instances: [] as IDefoldCollectionFile[]
+    } as IDefoldCollection;
 
+    const instances: { [key: number]: IDefoldGo } = {};
+    const embeddedComponents: { [key: number]: IDefoldEmbeddedComponent[] } = {};
+
+    // NOTE: Начальная настройка и сбор данных
+    gatherCollectionData(data, collection, instances, embeddedComponents);
+
+    // NOTE: Связывание дочерних GO с родительскими
+    linkGoChildren(collection, instances, data);
+
+    // NOTE: Создание прототипов для GO со встроенными компонентами
+    createGoPrototypes(instances, embeddedComponents);
+
+    return encodeCollection(collection);
+}
+
+function gatherCollectionData(
+    data: INodesList,
+    collection: IDefoldCollection,
+    instances: { [key: number]: IDefoldGo },
+    embeddedComponents: { [key: number]: IDefoldEmbeddedComponent[] }
+): void {
     for (const node of data.list) {
         switch (node.type) {
             case NodeType.COLLECTION:
@@ -173,23 +195,29 @@ function generateCollection(data: INodesList): string {
                 break;
             case NodeType.GO:
                 const go_id = (node.data as INodeEmpty).id;
-                const go_instance = castNodeEmpty2DefoldGo(node.data as INodeEmpty, getGoChildrens(go_id, data));
-                collection.embedded_instances.push(go_instance);
+                const go_instance = castNodeEmpty2DefoldGo(node.data as INodeEmpty);
+                instances[go_id] = go_instance;
                 break;
             case NodeType.SPRITE:
-                const sprite_id = (node.data as ISprite).id;
-                const sprite_instance = castSprite2DefoldGoSprite(node.data as ISprite, getGoChildrens(sprite_id, data));
-                collection.embedded_instances.push(sprite_instance);
+                const sprite_data = node.data as ISprite;
+                if (!embeddedComponents[sprite_data.pid]) {
+                    embeddedComponents[sprite_data.pid] = [];
+                }
+                embeddedComponents[sprite_data.pid].push(castSprite2DefoldEmbeddedComponent(sprite_data));
                 break;
             case NodeType.LABEL:
-                const lable_id = (node.data as ISprite).id;
-                const lable_instance = castLabel2DefoldGoLabel(node.data as ILabel, getGoChildrens(lable_id, data));
-                collection.embedded_instances.push(lable_instance);
+                const label_data = node.data as ILabel;
+                if (!embeddedComponents[label_data.pid]) {
+                    embeddedComponents[label_data.pid] = [];
+                }
+                embeddedComponents[label_data.pid].push(castLabel2DefoldEmbeddedComponent(label_data));
                 break;
             case NodeType.SPINE_MODEL:
-                const model_id = (node.data as ISpineModel).id;
-                const model_instance = castSpineModel2DefoldGoSpineModel(node.data as ISpineModel, getGoChildrens(model_id, data));
-                collection.embedded_instances.push(model_instance);
+                const spine_data = node.data as ISpineModel;
+                if (!embeddedComponents[spine_data.pid]) {
+                    embeddedComponents[spine_data.pid] = [];
+                }
+                embeddedComponents[spine_data.pid].push(castSpineModel2DefoldEmbeddedComponent(spine_data));
                 break;
             case NodeType.SOUND:
                 const sound_instance = castSound2DefoldGoSound(node.data as ISound);
@@ -209,18 +237,39 @@ function generateCollection(data: INodesList): string {
                 break;
         }
     }
-
-    return encodeCollection(collection);
 }
 
-function getGoChildrens(id: number, data: INodesList): string[] {
-    return data.list.filter((node: NodeData) => {
-        const is_go = node.type == NodeType.GO;
-        const is_parent = (node.data as INodeEmpty).pid == id;
-        return is_go && is_parent;
-    }).map((node: NodeData) => {
-        return (node.data as INodeEmpty).name;
-    });
+function linkGoChildren(
+    collection: IDefoldCollection,
+    instances: { [key: number]: IDefoldGo },
+    data: INodesList
+): void {
+    for (const [id, instance] of Object.entries(instances)) {
+        const node = data.list.find(n => (n.data as any).id === Number(id));
+        if (node && (node.data as any).pid) {
+            const parentId = (node.data as any).pid;
+            const parent = instances[parentId];
+            if (parent) {
+                if (!parent.children) parent.children = [];
+                parent.children.push(instance.id);
+            }
+        }
+        collection.embedded_instances.push(instance);
+    }
+}
+
+function createGoPrototypes(
+    instances: { [key: number]: IDefoldGo },
+    embeddedComponents: { [key: number]: IDefoldEmbeddedComponent[] }
+): void {
+    for (const [goId, go] of Object.entries(instances)) {
+        const components = embeddedComponents[Number(goId)];
+        if (components && components.length > 0) {
+            go.data = encodePrototype({
+                embedded_components: components
+            });
+        }
+    }
 }
 
 function getNodeBoxParent(pid: number, data: INodesList): string {
@@ -241,6 +290,9 @@ function generateGui(data: INodesList): string {
     gui.fonts = [];
     gui.resources = [];
 
+    // NOTE: для уникальности атласов
+    const uniqueAtlases = new Set<string>();
+
     for (const node of data.list) {
         switch (node.type) {
             case NodeType.GUI_BOX:
@@ -250,12 +302,13 @@ function generateGui(data: INodesList): string {
                 gui.nodes.push(box_node);
                 if (box_data.atlas) {
                     const box_node_name = box_data.atlas.split(".")[0];
-                    if (hasDependency(gui, box_node_name))
-                        continue;
-                    gui.textures.push({
-                        name: getNameFromPath(box_node_name),
-                        texture: box_data.atlas
-                    });
+                    if (!uniqueAtlases.has(box_node_name)) {
+                        uniqueAtlases.add(box_node_name);
+                        gui.textures.push({
+                            name: getNameFromPath(box_node_name),
+                            texture: box_data.atlas
+                        });
+                    }
                 }
                 break;
             case NodeType.GUI_TEXT:
@@ -264,12 +317,13 @@ function generateGui(data: INodesList): string {
                 text_node.parent = getNodeBoxParent(text_data.pid, data);
                 gui.nodes.push(text_node);
                 const text_node_name = text_data.font.split(".")[0];
-                if (hasDependency(gui, text_node_name))
-                    continue;
-                gui.fonts.push({
-                    name: getNameFromPath(text_node_name),
-                    font: text_data.font,
-                });
+                if (!uniqueAtlases.has(text_node_name)) {
+                    uniqueAtlases.add(text_node_name);
+                    gui.fonts.push({
+                        name: getNameFromPath(text_node_name),
+                        font: text_data.font,
+                    });
+                }
                 break;
             case NodeType.GUI_SPINE:
                 const spine_data = node.data as IGuiSpine;
@@ -277,29 +331,18 @@ function generateGui(data: INodesList): string {
                 spine_node.parent = getNodeBoxParent(spine_data.pid, data);
                 gui.nodes.push(spine_node);
                 const spine_node_name = spine_data.spine_scene.split(".")[0];
-                if (hasDependency(gui, spine_node_name))
-                    continue;
-                gui.resources.push({
-                    name: getNameFromPath(spine_node_name),
-                    path: spine_data.spine_scene
-                });
+                if (!uniqueAtlases.has(spine_node_name)) {
+                    uniqueAtlases.add(spine_node_name);
+                    gui.resources.push({
+                        name: getNameFromPath(spine_node_name),
+                        path: spine_data.spine_scene
+                    });
+                }
                 break;
         }
     }
 
     return encodeGui(gui);
-}
-
-function hasDependency(gui: IDefoldGui, name: string): boolean {
-    if (!gui.resources)
-        return false;
-
-    for (const res of gui.resources) {
-        if (res.name == name)
-            return true;
-    }
-
-    return false;
 }
 
 function castNodeEmpty2DefoldGo(data: INodeEmpty, children?: string[]): IDefoldGo {
@@ -325,45 +368,6 @@ function castGui2DefoldGo(data: IGuiNode, children?: string[]): IDefoldGo {
                 id: getNameFromPath(data.name),
                 component: data.name + ".gui"
             }]
-        })
-    };
-}
-
-function castSprite2DefoldGoSprite(data: ISprite, children?: string[]): IDefoldGo {
-    return {
-        id: data.name,
-        position: data.position,
-        rotation: eulerToQuaternion(data.rotation),
-        scale3: data.scale,
-        children,
-        data: encodePrototype({
-            embedded_components: [castSprite2DefoldEmbeddedComponent(data)]
-        })
-    };
-}
-
-function castLabel2DefoldGoLabel(data: ILabel, children?: string[]): IDefoldGo {
-    return {
-        id: data.name,
-        position: data.position,
-        rotation: eulerToQuaternion(data.rotation),
-        scale3: data.scale,
-        children,
-        data: encodePrototype({
-            embedded_components: [castLabel2DefoldEmbeddedComponent(data)]
-        })
-    };
-}
-
-function castSpineModel2DefoldGoSpineModel(data: ISpineModel, children?: string[]): IDefoldGo {
-    return {
-        id: data.name,
-        position: data.position,
-        rotation: eulerToQuaternion(data.rotation),
-        scale3: data.scale,
-        children,
-        data: encodePrototype({
-            embedded_components: [castSpineModel2DefoldEmbeddedComponent(data)]
         })
     };
 }
@@ -591,11 +595,11 @@ function castPrefab2DefoldProtorype(prefab: IPrefab): IDefoldPrototype {
         switch (data.type) {
             case PrefabComponentType.SPRITE:
                 const sprite = data.data as ISprite;
-                prototype.embedded_components.push(castSprite2DefoldEmbeddedComponent(sprite, true));
+                prototype.embedded_components.push(castSprite2DefoldEmbeddedComponent(sprite));
                 break;
             case PrefabComponentType.LABEL:
                 const label = data.data as ILabel;
-                prototype.embedded_components.push(castLabel2DefoldEmbeddedComponent(label, true));
+                prototype.embedded_components.push(castLabel2DefoldEmbeddedComponent(label));
                 break;
         }
     }
@@ -603,34 +607,34 @@ function castPrefab2DefoldProtorype(prefab: IPrefab): IDefoldPrototype {
     return prototype;
 }
 
-function castSprite2DefoldEmbeddedComponent(sprite: ISprite, with_transform = false): IDefoldEmbeddedComponent {
+function castSprite2DefoldEmbeddedComponent(sprite: ISprite): IDefoldEmbeddedComponent {
     return {
         id: sprite.name,
-        position: with_transform ? sprite.position : new Vector3(),
-        rotation: with_transform ? eulerToQuaternion(sprite.rotation) : new Vector4(),
-        scale: with_transform ? sprite.scale : new Vector3(1, 1, 1),
+        position: sprite.position,
+        rotation: eulerToQuaternion(sprite.rotation),
+        scale: sprite.scale,
         type: "sprite",
         data: encodeSprite(castSprite2DefoldSprite(sprite))
     };
 }
 
-function castLabel2DefoldEmbeddedComponent(label: ILabel, with_transform = false): IDefoldEmbeddedComponent {
+function castLabel2DefoldEmbeddedComponent(label: ILabel): IDefoldEmbeddedComponent {
     return {
         id: label.name,
-        position: with_transform ? label.position : new Vector3(),
-        rotation: with_transform ? eulerToQuaternion(label.rotation) : new Vector4(),
-        scale: with_transform ? label.scale : new Vector3(1, 1, 1),
+        position: label.position,
+        rotation: eulerToQuaternion(label.rotation),
+        scale: label.scale,
         type: "label",
         data: encodeLabel(castLabel2DefoldLabel(label))
     };
 }
 
-function castSpineModel2DefoldEmbeddedComponent(spine_model: ISpineModel, with_transform = false): IDefoldEmbeddedComponent {
+function castSpineModel2DefoldEmbeddedComponent(spine_model: ISpineModel): IDefoldEmbeddedComponent {
     return {
         id: spine_model.name,
-        position: with_transform ? spine_model.position : new Vector3(),
-        rotation: with_transform ? eulerToQuaternion(spine_model.rotation) : new Vector4(),
-        scale: with_transform ? spine_model.scale : new Vector3(1, 1, 1),
+        position: spine_model.position,
+        rotation: eulerToQuaternion(spine_model.rotation),
+        scale: spine_model.scale,
         type: "spinemodel",
         data: encodeSpineModel(castSpineModel2DefoldSpineModel(spine_model))
     };
