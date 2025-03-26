@@ -25,6 +25,10 @@ function ViewControlCreate() {
                 CameraControl.focus();
             }
             
+            if (e.key == 'i' || e.key == 'ш') {
+                TreeControl.paintIdentical(true);
+            }
+            
             if (Input.is_control() && (e.key == 'c' || e.key == 'с')) {
                 ActionsControl.copy();
             }

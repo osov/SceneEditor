@@ -857,7 +857,8 @@ function TreeControlCreate() {
         return list.filter((item, index) => list.indexOf(item) !== index);
     }
     
-    function paintIdentical(): void {
+    // подсветка идентичных: TreeControl.paintIdentical(true); true - с раскрытием
+    function paintIdentical(expand: boolean = false): void {
         const listName: string[] = [];
         treeList.forEach((item) => listName.push(item?.name));
         const identicalNames = getIdenticalNames(listName);
@@ -868,7 +869,7 @@ function TreeControlCreate() {
         itemsName.forEach((item: any) => {
             if (identicalNames.includes(item?.textContent)) {
                 item.classList.add("color_red");
-                addClassActive(item.closest(".li_line"), item.closest(".tree__item")?.getAttribute("data-pid"));
+                if (expand) addClassActive(item.closest(".li_line"), item.closest(".tree__item")?.getAttribute("data-pid")); // раскрываем все, где есть идентичные имена
             }
             else {
                 item.classList.remove("color_red");
@@ -1353,6 +1354,6 @@ function TreeControlCreate() {
     EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
 
-    return { draw_graph, preRename, setCutList };
+    return { draw_graph, preRename, setCutList, paintIdentical };
 
 }
