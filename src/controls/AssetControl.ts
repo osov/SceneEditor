@@ -838,7 +838,8 @@ function AssetControlCreate() {
         const popup_elem = event.target.closest('.bgpopup');
         const menu_elem = event.target.closest('.wr_menu__context');
         const menu_popup_elem = event.target.closest('.wr_popup');
-        if (!current_project || menu_elem || popup_elem || menu_popup_elem) return;
+        const inspector_elem = event.target.closest('.inspector__body');
+        if (!current_project || menu_elem || popup_elem || menu_popup_elem || inspector_elem) return;
         const folder_elem = event.target.closest('.folder.asset');
         const file_elem = event.target.closest('.file.asset');
         const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
