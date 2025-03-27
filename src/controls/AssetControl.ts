@@ -1,11 +1,12 @@
 import { SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
-import { ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, AssetType, FILE_UPLOAD_CMD, FSObject, LoadAtlasData, ProjectCache, ProjectLoadData, SCENE_EXT, ServerResponses, TDictionary, texture_ext, TRecursiveDict, URL_PATHS } from "../modules_editor/modules_editor_const";
+import { ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, AssetType, FILE_UPLOAD_CMD, FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectCache, ProjectLoadData, SCENE_EXT, ServerResponses, TDictionary, texture_ext, TRecursiveDict, URL_PATHS } from "../modules_editor/modules_editor_const";
 import { span_elem, json_parsable, get_keys } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction } from "./ActionsControl";
 import { api } from "../modules_editor/ClientAPI";
 import { IBaseEntityData } from "../render_engine/types";
+import { get_file_name } from "../render_engine/helpers/utils";
 
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
@@ -30,8 +31,8 @@ function AssetControlCreate() {
     let drag_asset_now = false;
     let history_length_cache: TDictionary<number> = {};
 
-    async function load_project(name: string, folder_content?: FSObject[], to_dir?: string) {
-        current_project = name;
+    async function load_project(data: ProjectLoadData, folder_content?: FSObject[], to_dir?: string) {
+        current_project = data.name;
         localStorage.setItem("current_project", current_project);
         if (folder_content && to_dir == undefined) {
             current_dir = "";
@@ -42,6 +43,38 @@ function AssetControlCreate() {
             await go_to_dir(to_dir);
         }
 
+        const list: Promise<any>[] = [];
+        for (const key of get_keys(data.paths)) {
+            const paths = data.paths[key];
+            let func: (...args: any[]) => Promise<any>;
+            if (key == "textures") {
+                func = (path: string) => {
+                    return ResourceManager.preload_texture("/" + path);
+                }
+            }
+            else if (key == "fonts") {
+                func = (path: string) => {
+                    return ResourceManager.preload_font("/" + path);
+                }
+            }
+            else if (key == "models") {
+                func = (path: string) => {
+                    return ResourceManager.preload_model("/" + path);
+                }
+            }
+            else if (key == "atlases") {
+                func = (paths: LoadAtlasData) => {
+                    return ResourceManager.preload_atlas("/" + paths.atlas, "/" + paths.texture);
+                }
+            }
+            else func = async () => {};
+            if (func != undefined) {
+                for (const path of paths) {
+                    list.push(func(path))
+                }
+            }
+        }
+        await Promise.all(list);
         await ResourceManager.update_from_metadata();
         await ResourceManager.write_metadata();
     }
@@ -520,8 +553,19 @@ function AssetControlCreate() {
                     const r = await ClientAPI.rename(asset_path, new_path);
                     if (r.result === 0)
                         error_popup(`Не удалось переименовать ${type_name}, ответ сервера: ${r.message}`);
-                    if (r.result && r.data && current_dir) {
-                        await go_to_dir(current_dir, true);
+                    if (r.result) {
+                        const ext = getFileExt(name);
+                        if (texture_ext.includes(ext)) {
+                            ResourceManager.preload_texture("/" + new_path);
+                        }
+                        if (model_ext.includes(ext)) {
+                            ResourceManager.preload_model("/" + new_path);
+                        }
+                        if (ext == FONT_EXT) {
+                            ResourceManager.preload_font("/" + new_path);
+                        }
+                        if (current_dir)
+                            await go_to_dir(current_dir, true);
                     }
                 }
             }
@@ -668,8 +712,30 @@ function AssetControlCreate() {
         let renew_required = false;
         if (events && events.length != 0) {
             events.forEach(event => {
-                if (event.project === current_project && event.folder_path === current_dir) {
-                    renew_required = true;
+                if (event.project === current_project) {
+                    if (event.folder_path === current_dir) {
+                        renew_required = true;
+                    }
+                    if (event.ext) {
+                        if (event.event_type == "change") {
+                            if (texture_ext.includes(event.ext))
+                                ResourceManager.preload_texture("/" + event.path);
+                            if (model_ext.includes(event.ext))
+                                ResourceManager.preload_model("/" + event.path);
+                            if (event.ext == FONT_EXT)
+                                ResourceManager.preload_font("/" + event.path);
+                        }
+                        else if (event.event_type == "remove") {
+                            if (texture_ext.includes(event.ext)) {
+                                const name = get_file_name(event.path);
+                                ResourceManager.free_texture(name);
+                            }
+                            // if (model_ext.includes(event.ext)) {
+                            //     const name = get_file_name(event.path);
+                            //     ResourceManager.free_model(name);
+                            // }
+                        }
+                    }
                 }
             });
         }
@@ -761,7 +827,7 @@ function AssetControlCreate() {
             if (!Input.is_control()) {
                 // При нажатии ЛКМ / ПКМ вне всех ассетов либо на ассет не из списка выбранных, и ctrl отпущена, делаем сброс всех выбранных ассетов
                 if (!asset_elem || (asset_elem && !selected_assets.includes(asset_elem))) {
-                    clear_selected();
+                    // clear_selected();
                 }
             }
         }
@@ -775,15 +841,24 @@ function AssetControlCreate() {
         if (!current_project || menu_elem || popup_elem || menu_popup_elem) return;
         const folder_elem = event.target.closest('.folder.asset');
         const file_elem = event.target.closest('.file.asset');
+        const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
         clear_active();
         if (event.button === 0 || event.button === 2) {
-            if (folder_elem) {
-                set_active(folder_elem);
-                add_to_selected(folder_elem);
-            }
+            if (asset_elem)  
+                set_active(asset_elem);
+            if (!Input.is_control()) {
+                clear_selected(); 
+                if (asset_elem)  
+                    add_to_selected(asset_elem);
+            }   
+            else if (Input.is_control()) {
+                if (asset_elem)
+                    if (selected_assets.includes(asset_elem))  
+                        remove_from_selected(asset_elem);
+                    else
+                        add_to_selected(asset_elem);
+            }       
             if (file_elem) {
-                set_active(file_elem);
-                add_to_selected(file_elem);
                 const path = file_elem.getAttribute('data-path');
                 const name = file_elem.getAttribute('data-name');
                 const ext = file_elem.getAttribute('data-ext');
@@ -809,12 +884,12 @@ function AssetControlCreate() {
     }
 
     async function on_key_up(event: any) {
-        if (event.key == 'F2' && active_asset) {
+        if (event.key == 'F2' && active_asset && !Popups.is_visible()) {
             const path = active_asset.getAttribute('data-path') as string;
             const name = active_asset.getAttribute('data-name') as string;
             rename_popup(path, name);
         }
-        if (event.key == 'Delete') {
+        if (event.key == 'Delete' && !Popups.is_visible()) {
             remove_popup();
         }
         if (Input.is_control()) {
@@ -971,6 +1046,22 @@ function AssetControlCreate() {
         }
     }
 
+    async function reload_current_project() {
+        if (current_project) {
+            const load_project_resp = await ClientAPI.load_project(current_project);
+            if (load_project_resp.result !== 1) {
+                log(`Failed to reload current project (${current_project})`);
+                return;
+            }
+            const data = load_project_resp.data as ProjectLoadData;
+            let to_dir = (current_dir) ? current_dir : "";
+
+            await load_project(data, undefined, to_dir);
+            if (current_scene.path) 
+                await set_current_scene(current_scene.path);
+        }
+    }
+
     document.querySelector('.filemanager')?.addEventListener('contextmenu', (event: any) => {
         event.preventDefault();
     });
@@ -983,19 +1074,7 @@ function AssetControlCreate() {
     EventBus.on('SYS_GRAPH_DROP_IN_ASSETS', on_graph_drop);
 
     EventBus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
-
-    EventBus.on('LOADED_PROJECT', async (m) => {
-        if (m.name && m.current_dir) {
-            const load_project_resp = await ClientAPI.load_project(m.name);
-            if (load_project_resp.result !== 1) {
-                log(`Failed to load previously loaded project ${m.name}`);
-                return;
-            }
-            const data = load_project_resp.data as ProjectLoadData;
-            // Устанавливаем текущий проект для ассет менеждера
-            AssetControl.load_project(data.name, undefined, m.current_dir);
-        }
-    });
+    EventBus.on('ON_WS_CONNECTED', reload_current_project);
 
     return { 
         load_project, new_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_meta_info, 
@@ -1061,39 +1140,7 @@ export async function run_debug_filemanager(project_to_load: string) {
                     assets = undefined;
                     go_to_dir = current_dir;
                 }
-                const list: Promise<any>[] = [];
-                for (const key of get_keys(data.paths)) {
-                    const paths = data.paths[key];
-                    let func: (...args: any[]) => Promise<any>;
-                    if (key == "textures") {
-                        func = (path: string) => {
-                            return ResourceManager.preload_texture("/" + path);
-                        }
-                    }
-                    else if (key == "fonts") {
-                        func = (path: string) => {
-                            return ResourceManager.preload_font("/" + path);
-                        }
-                    }
-                    else if (key == "models") {
-                        func = (path: string) => {
-                            return ResourceManager.preload_model("/" + path);
-                        }
-                    }
-                    else if (key == "atlases") {
-                        func = (paths: LoadAtlasData) => {
-                            return ResourceManager.preload_atlas("/" + paths.atlas, "/" + paths.texture);
-                        }
-                    }
-                    else func = async () => {};
-                    if (func != undefined) {
-                        for (const path of paths) {
-                            list.push(func(path))
-                        }
-                    }
-                }
-                await Promise.all(list);
-                AssetControl.load_project(data.name, assets, go_to_dir);
+                AssetControl.load_project(data, assets, go_to_dir);
                 log('Project loaded', data.name);
                 return;
             }

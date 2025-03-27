@@ -51,11 +51,11 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
         const assets_folder_path = get_assets_folder_path(cmd.project);
         const root_folder_assets = await read_dir_assets(assets_folder_path);
         const all_assets = await read_dir_assets(assets_folder_path, assets_folder_path, true);
-        const paths: ProjectPathsData = await gather_paths(all_assets);
+        const paths: ProjectPathsData = await gather_paths(cmd.project, all_assets);
         return {result: 1, data: {assets: root_folder_assets, name: cmd.project, paths}};
     }
 
-    async function gather_paths(assets: FSObject[]) {
+    async function gather_paths(project: string, assets: FSObject[]) {
         const paths: ProjectPathsData = {textures: [], atlases: [], models: [], fonts: []};
         const atlases_textures: string[] = [];
         assets.forEach(async element => {

@@ -32,7 +32,7 @@ export function FSWatcher(dir: string, sockets: WsClient[], fs_events_interval: 
                     obj_type = stats.isFile() ? "file" : "folder";
                 }
                 else {
-                    event_type = "removed";
+                    event_type = "remove";
                 }
                 const full_rel_path = path.relative(get_full_path(""), _dir);  // Путь относительно папки со всеми проектами
                 const full_folder_path = path.dirname(full_rel_path);
@@ -44,8 +44,11 @@ export function FSWatcher(dir: string, sockets: WsClient[], fs_events_interval: 
                     folder_path: rel_folder_path.replaceAll(path.sep, "/"), 
                     project, 
                     obj_type, 
-                    event_type
+                    event_type,
                 };
+                const ext = path.extname(rel_path).replace(".", "");
+                if (ext)
+                    event.ext = ext;
                 events_cache.push(event);
             }
         }

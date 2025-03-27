@@ -101,13 +101,13 @@ export type NetMessagesEditor = {
 
 export type FileUploadedData = { size: number, path: string, name: string, project: string, ext: string };
 
-export type FSEvent = { path: string, folder_path: string, project: string, obj_type: FSObjectType, event_type: FSEventType };
+export type FSEvent = { path: string, folder_path: string, project: string, obj_type: FSObjectType, event_type: FSEventType, ext?: string };
 
 export type FSObjectType = "folder" | "file" | "null";
 
 export type AssetType = "folder" | "material" | "texture" | "scene_graph" | "other";
 
-export type FSEventType = WatchEventType | "removed";
+export type FSEventType = WatchEventType | "remove";
 
 export interface FSObject { name: string, type: FSObjectType, size: number, path: string, ext?: string, num_files?: number, src?: string };
 

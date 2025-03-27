@@ -139,7 +139,8 @@ export interface cbDataItem {
 }
 
 function PopupsCreate() {
-
+    let visible = false;
+    
     function open(data: Notify | Confirm | Rename | Layers | Select) {
         const popup = document.querySelector(`#popup${data?.type}`) as HTMLInputElement | null;
         if (!popup) return;
@@ -296,11 +297,13 @@ function PopupsCreate() {
     }
 
     function showPopup(popup: any): void {
+        visible = true;
         popup.querySelector('.bgpopup')?.classList.add('active');
         popup.querySelector('.popup')?.classList.add('active');
     }
 
     function hidePopup(popup: any): void {
+        visible = false;
         popup.querySelector('.bgpopup')?.classList.remove('active');
         popup.querySelector('.popup')?.classList.remove('active');
     }
@@ -338,6 +341,9 @@ function PopupsCreate() {
         ]
     });
 
+    function is_visible() {
+        return visible;
+    }
 
-    return { open, toast };
+    return { open, toast, is_visible };
 }
