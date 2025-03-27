@@ -131,18 +131,19 @@ export async function run_debug_scene_light() {
             lightPass.material.needsUpdate = true;
         }
     });
-
+    
     scene.background = null;
     RenderEngine.set_active_render(false);
 
-    EventBus.on('SYS_ON_UPDATE_END', (e) => {
+    EventBus.on('SYS_ON_UPDATE', (e) => {
         const old = camera.layers.mask;
-
+        ControlManager.clear_draw_calls();
         // Рендерим сцену в текстуру
         renderer.setRenderTarget(sceneRenderTarget);
         renderer.setClearColor(0x000000, 1);
         renderer.clear();
         renderer.render(scene, camera);
+        ControlManager.inc_draw_calls(renderer.info.render.calls);
 
         // Рендерим светящиеся объекты в другую текстуру
         camera.layers.set(2);
@@ -150,6 +151,7 @@ export async function run_debug_scene_light() {
         renderer.setClearColor(0x222222, 1);
         renderer.clear();
         renderer.render(scene, camera);
+        ControlManager.inc_draw_calls(renderer.info.render.calls);
         camera.layers.mask = old;
 
 
