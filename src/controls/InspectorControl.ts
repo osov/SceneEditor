@@ -2147,8 +2147,8 @@ export function getDefaultInspectorConfig() {
                 },
                 {
                     name: Property.SIZE, title: 'Размер', type: PropertyType.VECTOR_2, params: {
-                        x: { min: 0, format: (v: number) => v.toFixed(2) },
-                        y: { min: 0, format: (v: number) => v.toFixed(2) },
+                        x: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
+                        y: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
                     }
                 }
             ]
