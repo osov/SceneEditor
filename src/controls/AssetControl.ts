@@ -30,6 +30,7 @@ function AssetControlCreate() {
     let drag_for_upload_now = false;
     let drag_asset_now = false;
     let history_length_cache: TDictionary<number> = {};
+    let mouse_down_on_asset = false;
 
     async function load_project(data: ProjectLoadData, folder_content?: FSObject[], to_dir?: string) {
         current_project = data.name;
@@ -824,10 +825,13 @@ function AssetControlCreate() {
         const file_elem = event.target.closest('.file.asset');
         const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
         if (event.button === 0 || event.button === 2) {
+            if (asset_elem) {
+                mouse_down_on_asset = true;
+            }
             if (!Input.is_control()) {
                 // При нажатии ЛКМ / ПКМ вне всех ассетов либо на ассет не из списка выбранных, и ctrl отпущена, делаем сброс всех выбранных ассетов
                 if (!asset_elem || (asset_elem && !selected_assets.includes(asset_elem))) {
-                    // clear_selected();
+                    clear_selected();
                 }
             }
         }
@@ -845,26 +849,29 @@ function AssetControlCreate() {
         const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
         clear_active();
         if (event.button === 0 || event.button === 2) {
-            if (asset_elem)
-                set_active(asset_elem);
-            if (!Input.is_control()) {
-                clear_selected();
+            if(mouse_down_on_asset) {
+                mouse_down_on_asset = false;
                 if (asset_elem)
-                    add_to_selected(asset_elem);
-            }
-            else if (Input.is_control()) {
-                if (asset_elem)
-                    if (selected_assets.includes(asset_elem))
-                        remove_from_selected(asset_elem);
-                    else
+                    set_active(asset_elem);
+                if (!Input.is_control()) {
+                    clear_selected();
+                    if (asset_elem)
                         add_to_selected(asset_elem);
-            }
-            if (file_elem) {
-                const path = file_elem.getAttribute('data-path');
-                const name = file_elem.getAttribute('data-name');
-                const ext = file_elem.getAttribute('data-ext');
-                log(`Клик на ассет файл ${name}, путь ${path}, проект ${current_project}`);
-                EventBus.trigger("SYS_CLICK_ON_ASSET", { name, path, ext, button: event.button }, false);
+                }
+                else if (Input.is_control()) {
+                    if (asset_elem)
+                        if (selected_assets.includes(asset_elem))
+                            remove_from_selected(asset_elem);
+                        else
+                            add_to_selected(asset_elem);
+                }
+                if (file_elem) {
+                    const path = file_elem.getAttribute('data-path');
+                    const name = file_elem.getAttribute('data-name');
+                    const ext = file_elem.getAttribute('data-ext');
+                    log(`Клик на ассет файл ${name}, путь ${path}, проект ${current_project}`);
+                    EventBus.trigger("SYS_CLICK_ON_ASSET", { name, path, ext, button: event.button }, false);
+                }
             }
             const breadcrumbs_elem = event.target.closest('a .folderName');
             if (breadcrumbs_elem !== null && event.button === 0) {
