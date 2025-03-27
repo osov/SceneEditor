@@ -711,19 +711,19 @@ function AssetControlCreate() {
         const events = message.events;
         let renew_required = false;
         if (events && events.length != 0) {
-            events.forEach(event => {
+            events.forEach(async event => {
                 if (event.project === current_project) {
                     if (event.folder_path === current_dir) {
                         renew_required = true;
                     }
                     if (event.ext) {
-                        if (event.event_type == "change") {
+                        if (event.event_type == "change" || event.event_type == "rename") {
                             if (texture_ext.includes(event.ext))
-                                ResourceManager.preload_texture("/" + event.path);
+                                await ResourceManager.preload_texture("/" + event.path);
                             if (model_ext.includes(event.ext))
-                                ResourceManager.preload_model("/" + event.path);
+                                await ResourceManager.preload_model("/" + event.path);
                             if (event.ext == FONT_EXT)
-                                ResourceManager.preload_font("/" + event.path);
+                                await ResourceManager.preload_font("/" + event.path);
                         }
                         else if (event.event_type == "remove") {
                             if (texture_ext.includes(event.ext)) {
