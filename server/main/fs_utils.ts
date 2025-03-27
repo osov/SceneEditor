@@ -7,7 +7,10 @@ import { working_folder_path } from '../config';
 
 export async function is_folder(path: string) {
     const stats = await fs.stat(path);
-    return stats.isDirectory();
+    const exists = await fs.exists(path);
+    if (exists)
+        return stats.isDirectory();
+    return false;
 }
 
 export async function mk_dir(name: string) {
@@ -34,17 +37,20 @@ export async function read_dir_assets(dir: string, root_dir?: string, recursive 
         const item = items[i];
         const item_path = path.join(dir, item);
         const rel_path = path.relative(root_dir ? root_dir : dir, item_path).replaceAll(path.sep, "/");
-        const stats = await fs.stat(item_path);
-        const is_file = stats.isFile();
-        const num_files = is_file ? 0 : await get_files_amount(item_path);
-        const ext = is_file ?  path.extname(item).slice(1) : undefined;
-        const src = is_file ?  path.join(URL_PATHS.ASSETS, rel_path).replaceAll(path.sep, "/") : undefined;
-        const info: FSObject = {name: item, type: is_file ? "file" : "folder", size: stats.size, path: rel_path, num_files, ext, src};
-        list.push(info);
-        if (stats.isDirectory() && recursive) {
-            const sub_list = await read_dir_assets(item_path, root_dir ? root_dir : dir, true);
-            list.push(...sub_list);
-        } 
+        const exists = await fs.exists(item_path);
+        if (exists) {
+            const stats = await fs.stat(item_path);
+            const is_file = stats.isFile();
+            const num_files = is_file ? 0 : await get_files_amount(item_path);
+            const ext = is_file ?  path.extname(item).slice(1) : undefined;
+            const src = is_file ?  path.join(URL_PATHS.ASSETS, rel_path).replaceAll(path.sep, "/") : undefined;
+            const info: FSObject = {name: item, type: is_file ? "file" : "folder", size: stats.size, path: rel_path, num_files, ext, src};
+            list.push(info);
+            if (stats.isDirectory() && recursive) {
+                const sub_list = await read_dir_assets(item_path, root_dir ? root_dir : dir, true);
+                list.push(...sub_list);
+            }
+        }
     }
     return list;
 }
