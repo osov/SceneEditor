@@ -116,16 +116,14 @@ export function ResourceManagerModule() {
             return atlases[atlas][name].data;
         }
 
-        Log.log('[add_texture] Try add texture', name, atlas);
-
         if (!has_atlas(atlas)) {
             add_atlas(atlas);
-            Log.log('[add_texture] Atlas added', atlas);
         }
 
         if (atlases[atlas][name]) {
             Log.warn('Texture already exists', name, atlas);
         }
+
         atlases[atlas][name] = { data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
 
         return atlases[atlas][name].data;
@@ -412,13 +410,11 @@ export function ResourceManagerModule() {
             }
             const metadata_atlases = metadata.data as TRecursiveDict;
             for(const [atlas_name, textures] of Object.entries(metadata_atlases)) {
-                Log.log('atlas_name', atlas_name);
                 if(!has_atlas(atlas_name)) {
                     add_atlas(atlas_name);
                 }
                 for(const texture_name of Object.keys(textures)) {
                     const old_atlas = get_atlas_by_texture_name(texture_name);
-                    Log.log('update', texture_name, old_atlas, atlas_name);
                     override_atlas_texture(old_atlas || '', atlas_name, texture_name);
                 }
             }

@@ -289,14 +289,12 @@ function InspectorControlCreate() {
 
     function subscribe_events() {
         EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
-            log('SYS_SELECTED_MESH_LIST', e);
             set_selected_list(e.list);
         }); 
 
         EventBus.on('SYS_UNSELECTED_MESH_LIST', clear);
 
         EventBus.on('SYS_ASSETS_SELECTED_TEXTURES', (data: { paths: string[] }) => {
-            log('SYS_ASSETS_SELECTED_TEXTURES', data);
             set_selected_textures(data.paths);
         });
 
@@ -312,8 +310,6 @@ function InspectorControlCreate() {
     }
 
     function setData(list_data: ObjectData[]) {
-        Log.log('setData', list_data);
-
         _unique_fields = [];
         _data = list_data;
 
@@ -516,7 +512,7 @@ function InspectorControlCreate() {
             const pane = searchPaneInFolderByProperty(_inspector, property);
             if (pane) {
                 _is_refreshed = true;
-                Log.log('REFRESH', property);
+                // Log.log('REFRESH', property);
                 pane.refresh();
             }
         });
@@ -803,7 +799,7 @@ function InspectorControlCreate() {
             case PropertyType.BUTTON:
                 return createButton(field as PropertyData<PropertyType.BUTTON>, property as PropertyItem<PropertyType.BUTTON>, { title: property.title });
             default:
-                Log.error(`Unable to cast ${field.name}`)
+                Log.error(`Unable to cast ${field.name}`);
                 return undefined;
         }
     }
@@ -888,7 +884,6 @@ function InspectorControlCreate() {
             entity.onChange = (event: ChangeEvent) => {
                 // NOTE: не обновляем только что измененные значения из вне(после refresh)
                 if (_is_refreshed) {
-                    Log.log('ON_CHANGE_AFTER_REFHRESH');
                     _is_refreshed = false;
 
                     tryDisabledValueByAxis({
@@ -1235,7 +1230,7 @@ function InspectorControlCreate() {
     }
 
     function updatedValue(info: ChangeInfo) {
-        Log.log("UPDATED: ", info);
+        // Log.log("UPDATED: ", info);
 
         switch (info.data.field.name) {
             case Property.NAME: updateName(info); break;
@@ -1882,7 +1877,6 @@ function InspectorControlCreate() {
     function updateAtlas (info: ChangeInfo) {
         info.ids.forEach((id) => {
             const path = _selected_textures[id];
-            Log.log('UPDATE ATLAS', path, info.data.event.value);
             const atlas = info.data.event.value as string;
             const texture_name = get_file_name(get_basename(path));
             const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
