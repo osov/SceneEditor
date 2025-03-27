@@ -10,6 +10,22 @@ import { WsClient } from "./types";
 export function FSWatcher(dir: string, sockets: WsClient[], fs_events_interval: number) {
     const events_cache: FSEvent[] = [];
 
+    function is_copy(event: FSEvent) {
+        if (events_cache.length == 0)
+            return false;
+        const last = events_cache.slice(-1)[0];
+        if (
+            last.event_type == event.event_type &&
+            last.ext == event.ext &&
+            last.folder_path == event.folder_path &&
+            last.path == event.path &&
+            last.obj_type == event.obj_type
+        ) {
+            return true;
+        }
+        return false;
+    }
+
     function send_events() {
         if (events_cache.length === 0) return;
         for (const soc of sockets)
@@ -49,7 +65,8 @@ export function FSWatcher(dir: string, sockets: WsClient[], fs_events_interval: 
                 const ext = path.extname(rel_path).replace(".", "");
                 if (ext)
                     event.ext = ext;
-                events_cache.push(event);
+                if (!is_copy(event))
+                    events_cache.push(event);
             }
         }
     );    
