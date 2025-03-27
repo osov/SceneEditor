@@ -365,11 +365,11 @@ function InspectorControlCreate() {
         // NOTE: обновляем конфиг атласов
         update_atlas_options();
 
-        const data = _selected_textures.map((path) => {
+        const data = _selected_textures.map((path, id) => {
             // TODO: нужно найти к какому атласу относится эта текстура ClientAPI.get_info()
             const texture_name = get_file_name(get_basename(path));
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
-            return {id: 0, data: [
+            return {id, data: [
                 { name: Property.ATLAS, data: atlas || ''},
                 {
                     name: Property.ATLAS_BUTTON, data: () => {
@@ -466,8 +466,6 @@ function InspectorControlCreate() {
             if (!property) return;
             (property.params as PropertyParams[PropertyType.LIST_TEXT]) = castAtlases(ResourceManager.get_all_atlases());
         });
-
-        refresh([Property.ATLAS]);
     }
 
     function update_texture_options() {
@@ -1950,23 +1948,32 @@ function InspectorControlCreate() {
     }
 
     function updateAtlas (info: ChangeInfo) {
+        const atlas = info.data.event.value as string;
+        if (!atlas) return; // Skip if no atlas selected
+
         info.ids.forEach((id) => {
             const path = _selected_textures[id];
-            const atlas = info.data.event.value as string;
+            if (!path) return;
+
             const texture_name = get_file_name(get_basename(path));
-            const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
-            ResourceManager.override_atlas_texture(old_atlas || '', atlas, texture_name);
-            // NOTE: возможно обновление текстур в мешах должно быть в override_atlas_texture
+            const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+            ResourceManager.override_atlas_texture(old_atlas, atlas, texture_name);
+            
+           // NOTE: возможно обновление текстур в мешах должно быть в override_atlas_texture 
             SceneManager.get_scene_list().forEach((mesh) => {
                 const is_type = mesh.type == IObjectTypes.GO_SPRITE_COMPONENT || mesh.type == IObjectTypes.GUI_BOX;
                 if(!is_type) return;
-                const is_atlas = (mesh as IBaseMesh).get_texture().includes(atlas);
-                const is_texture = (mesh as IBaseMesh).get_texture().includes(texture_name);
+                
+                const mesh_texture = (mesh as IBaseMesh).get_texture();
+                const is_atlas = mesh_texture.includes(atlas);
+                const is_texture = mesh_texture.includes(texture_name);
+                
                 if(is_atlas && is_texture) {
                     mesh.set_texture(texture_name, atlas);
                 }
             });
         });
+
         ResourceManager.write_metadata();
     }
 
