@@ -6,10 +6,11 @@ import { working_folder_path } from '../config';
 
 
 export async function is_folder(path: string) {
-    const stats = await fs.stat(path);
     const exists = await fs.exists(path);
-    if (exists)
+    if (exists) {
+        const stats = await fs.stat(path);
         return stats.isDirectory();
+    }
     return false;
 }
 
