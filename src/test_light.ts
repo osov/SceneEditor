@@ -7,8 +7,9 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { MapData, preload_tiled_textures, get_all_tiled_textures } from './render_engine/parsers/tile_parser';
-import { IObjectTypes } from './render_engine/types';
+import { IBaseMeshAndThree, IObjectTypes } from './render_engine/types';
 import { TileLoader } from './render_engine/tile_loader';
+import { is_base_mesh } from './render_engine/helpers/utils';
 
 
 export async function run_debug_scene_light() {
@@ -22,10 +23,10 @@ export async function run_debug_scene_light() {
     ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
     const project_to_load = 'SceneEditor_ExampleProject';
     await run_debug_filemanager(project_to_load);
-  
+
     const map_data = await ResourceManager.load_asset('/tiled/parsed_map.json') as MapData;
     preload_tiled_textures(map_data);
-    
+
     // hack atlases
     const all = get_all_tiled_textures();
     for (const id in all) {
@@ -53,13 +54,16 @@ export async function run_debug_scene_light() {
 
     function rebuild_light() {
         const lights = scene.getObjectByName('LIGHTS');
-        if (lights)
-        for (let i = 0; i < lights.children.length; i++) {
-            const light = lights.children[i];
-            light.layers.enable(2);
-            light.layers.disable(0);
-            ((light as any).material as MeshBasicMaterial).blending = AdditiveBlending;
+        if (lights) {
+            lights.traverse((light) => {
+                if (light.type == IObjectTypes.GO_CONTAINER)
+                    return;
+                light.layers.enable(2);
+                light.layers.disable(0);
+                ((light as any).material as MeshBasicMaterial).blending = AdditiveBlending;
+            });
         }
+
     }
     EventBus.on('SYS_SELECTED_MESH_LIST', rebuild_light);
     rebuild_light();
@@ -104,7 +108,7 @@ export async function run_debug_scene_light() {
     lightPass.uniforms.tLight.value = lightRenderTarget.texture;
     lightPass.uniforms.tLUT.value = lut;
     lightPass.uniforms.lightIntensity.value = 1.0;
-    lightPass.uniforms.resolution.value = new Vector2(1 / window.innerWidth, 1 / window.innerHeight);
+    lightPass.uniforms.resolution.value = new Vector2(window.innerWidth, window.innerHeight);
     composer.addPass(lightPass);
     (window as any).lightPass = lightPass;
 
@@ -131,7 +135,7 @@ export async function run_debug_scene_light() {
             lightPass.material.needsUpdate = true;
         }
     });
-    
+
     scene.background = null;
     RenderEngine.set_active_render(false);
 
@@ -154,7 +158,6 @@ export async function run_debug_scene_light() {
         ControlManager.inc_draw_calls(renderer.info.render.calls);
         camera.layers.mask = old;
 
-
         // Финальный рендер с постпроцессингом
         renderer.setRenderTarget(null);
         renderer.setClearColor(0x000000, 1);
@@ -166,7 +169,6 @@ export async function run_debug_scene_light() {
         renderer.clearDepth();
         renderer.render(scene, camera);
         camera.layers.mask = old;
-
 
     });
 }
