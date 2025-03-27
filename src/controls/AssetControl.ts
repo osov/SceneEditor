@@ -650,7 +650,7 @@ function AssetControlCreate() {
         if (move_type == "move") {
             const resp = await ClientAPI.move(path, move_to);
             if (resp && resp.result === 1) {
-                EventBus.trigger("SYS_ASSET_MOVED", { name, path, new_path: move_to });
+                EventBus.trigger("SYS_ASSET_MOVED", { name, path, new_path: move_to }, false);
             }
             else if (resp.result === 0) {
                 error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${resp.message}`);
@@ -659,7 +659,7 @@ function AssetControlCreate() {
         if (move_type == "copy") {
             const resp = await ClientAPI.copy(path, move_to);
             if (resp && resp.result === 1) {
-                EventBus.trigger("SYS_ASSET_COPIED", { name, path, new_path: move_to });
+                EventBus.trigger("SYS_ASSET_COPIED", { name, path, new_path: move_to }, false);
             }
             else if (resp.result === 0) {
                 error_popup(`Не удалось скопировать файл ${name}, ответ сервера: ${resp.message}`);
@@ -691,7 +691,7 @@ function AssetControlCreate() {
         const move_to = `${current_dir}/${new_name}`;
         const resp = await ClientAPI.copy(path, move_to);
         if (resp && resp.result === 1) {
-            EventBus.trigger("SYS_ASSET_COPIED", { name, path, new_path: move_to });
+            EventBus.trigger("SYS_ASSET_COPIED", { name, path, new_path: move_to }, false);
         }
     }
 
@@ -703,7 +703,7 @@ function AssetControlCreate() {
         if (resp_json.result === 1 && resp_json.data) {
             const data = resp_json.data;
             console.log(`file ${data.name} uploaded in dir ${data.path}`);
-            EventBus.trigger("SYS_FILE_UPLOADED", data)
+            EventBus.trigger("SYS_FILE_UPLOADED", data, false)
         }
     }
 
@@ -864,7 +864,7 @@ function AssetControlCreate() {
                 const name = file_elem.getAttribute('data-name');
                 const ext = file_elem.getAttribute('data-ext');
                 log(`Клик на ассет файл ${name}, путь ${path}, проект ${current_project}`);
-                EventBus.trigger("SYS_CLICK_ON_ASSET", { name, path, ext, button: event.button });
+                EventBus.trigger("SYS_CLICK_ON_ASSET", { name, path, ext, button: event.button }, false);
             }
             const breadcrumbs_elem = event.target.closest('a .folderName');
             if (breadcrumbs_elem !== null && event.button === 0) {
