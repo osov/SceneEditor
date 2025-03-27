@@ -1149,7 +1149,7 @@ export async function run_debug_filemanager(project_to_load: string) {
     }
     else {
         log('Server does not respond, cannot run debug filemanager');
-        AssetControl.draw_empty_project();
+        await AssetControl.draw_empty_project();
     }
 }
 

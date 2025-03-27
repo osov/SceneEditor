@@ -21,7 +21,7 @@ export function register_engine() {
 
 export function RenderEngineModule() {
     const canvas = document.querySelector(`canvas#scene`)!;
-    const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true })
+    const renderer = new WebGLRenderer({ canvas, antialias: !true, alpha: false, preserveDrawingBuffer: true })
     const scene = new Scene();
     scene.background = new Color('#222');
     const clock = new Clock();
@@ -30,7 +30,7 @@ export function RenderEngineModule() {
     const raycaster = new Raycaster();
     let is_active_gui_camera = false;
     const raycast_list: Object3D[] = [];
-    let is_active_render = true;
+    let _is_active_render = true;
 
     enum DC_LAYERS {
         GO_LAYER = 0, // Сцена
@@ -41,10 +41,10 @@ export function RenderEngineModule() {
 
     function init() {
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-       // renderer.autoClear = false;
+        // renderer.autoClear = false;
         renderer.autoClearColor = false
-      //  renderer.autoClearDepth = false
-       // renderer.autoClearStencil = false
+        //  renderer.autoClearDepth = false
+        // renderer.autoClearStencil = false
         camera.position.set(0, 0, CAMERA_Z)
         camera_gui.position.set(0, 0, CAMERA_Z)
         camera_gui.layers.disable(DC_LAYERS.GO_LAYER)
@@ -57,20 +57,23 @@ export function RenderEngineModule() {
         if (resize_renderer_to_display_size(renderer))
             on_resize();
         EventBus.trigger('SYS_ON_UPDATE', { dt: delta }, false);
-        if (is_active_render) {
+        if (_is_active_render) {
             renderer.clear();
             renderer.render(scene, camera);
             if (is_active_gui_camera) {
                 renderer.clearDepth();
                 renderer.render(scene, camera_gui);
             }
+        }
+        EventBus.trigger('SYS_ON_UPDATE_END', { dt: delta }, false);
+        // controls рисуем позже чем тригер чтобы верно посчитать DC
+        if (_is_active_render) {
             const mask = camera.layers.mask;
             camera.layers.set(DC_LAYERS.CONTROLS_LAYER);
             renderer.clearDepth();
             renderer.render(scene, camera);
             camera.layers.mask = mask;
         }
-        EventBus.trigger('SYS_ON_UPDATE_END', { dt: delta }, false);
     }
 
     function on_resize() {
@@ -111,8 +114,12 @@ export function RenderEngineModule() {
     }
 
     function set_active_render(is_active: boolean) {
-        is_active_render = is_active;
+        _is_active_render = is_active;
     }
 
-    return { DC_LAYERS, init, animate, get_render_size, raycast_scene, is_intersected_mesh, set_active_gui_camera, set_active_render, scene, camera, camera_gui, raycaster, renderer, raycast_list };
+    function is_active_render() {
+        return _is_active_render;
+    }
+
+    return { DC_LAYERS, init, animate, get_render_size, raycast_scene, is_intersected_mesh, set_active_gui_camera, set_active_render, is_active_render, scene, camera, camera_gui, raycaster, renderer, raycast_list };
 }

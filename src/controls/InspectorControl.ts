@@ -2122,7 +2122,7 @@ export function getDefaultInspectorConfig() {
                     name: Property.POSITION, title: 'Позиция', type: PropertyType.VECTOR_3, params: {
                         x: { format: (v: number) => v.toFixed(2), step: 0.1 },
                         y: { format: (v: number) => v.toFixed(2), step: 0.1 },
-                        z: { step: 0.001, format: (v: number) => v.toFixed(3) }
+                        z: { format: (v: number) => v.toFixed(2), step: 0.1 },
                     }
                 },
                 {

@@ -19,6 +19,7 @@ type ButtonsList = 'translate_transform_btn' | 'scale_transform_btn' | 'rotate_t
 function ControlManagerCreate() {
     let active_control = '';
     let current_scene_name = 'Сцена';
+    let current_draw_call = 0;
 
     function init() {
         bind_btn('translate_transform_btn', () => set_active_control('translate_transform_btn'));
@@ -98,13 +99,32 @@ function ControlManagerCreate() {
     function init_stats() {
         let params = new URLSearchParams(document.location.search);
         if (params.has("stats")) {
+            const div = document.createElement('div');
+            div.style.cssText = ' position: absolute;z-index: 10000;top: 50px;left: 45px;font-size: 12px;';
+            div.innerHTML = 'Draw Call: <span id="draw_call">100</span>';
+            document.body.appendChild(div);
+            const div_dc = document.getElementById('draw_call')!;
             const stats = new Stats();
-            stats.dom.style.cssText = 'position:fixed;top:0;right:80px;cursor:pointer;opacity:0.9;z-index:10000';
+            stats.dom.style.cssText = 'position:fixed;top:0;left:45px;cursor:pointer;opacity:0.9;z-index:10000';
             stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
             document.body.appendChild(stats.dom);
             EventBus.on('SYS_ON_UPDATE', () => stats.begin());
-            EventBus.on('SYS_ON_UPDATE_END', () => stats.end());
+            EventBus.on('SYS_ON_UPDATE_END', () => {
+                stats.end();
+                if (RenderEngine.is_active_render())
+                    div_dc.innerHTML = RenderEngine.renderer.info.render.calls.toString();
+                else
+                    div_dc.innerHTML = current_draw_call.toString();
+            });
         }
+    }
+
+    function inc_draw_calls(cnt: number) {
+        current_draw_call += cnt;
+    }
+
+    function clear_draw_calls() {
+        current_draw_call = 0;
     }
 
     function bind_btn(name: ButtonsList, callback: Function) {
@@ -190,7 +210,7 @@ function ControlManagerCreate() {
     function get_current_scene_name() {
         return current_scene_name;
     }
-    
+
     function open_atlas_manager() {
         const atlases = ResourceManager.get_all_atlases();
         const emptyIndex = atlases.findIndex((atlas) => atlas == '');
@@ -231,6 +251,8 @@ function ControlManagerCreate() {
         });
     }
 
+
+
     init();
-    return { clear_all_controls, set_active_control, get_tree_graph, update_graph, get_current_scene_name, open_atlas_manager };
+    return { clear_all_controls, set_active_control, get_tree_graph, update_graph, get_current_scene_name, open_atlas_manager, inc_draw_calls, clear_draw_calls };
 }
