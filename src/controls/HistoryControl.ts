@@ -1,7 +1,7 @@
-import { ActiveEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from "./types";
+import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { get_keys } from "../modules/utils";
-import { IBaseMeshAndThree } from "../render_engine/types";
+import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { TextMesh } from "../render_engine/objects/text";
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 
@@ -28,12 +28,14 @@ export type HistoryData = {
     MESH_ACTIVE: ActiveEventData
     MESH_VISIBLE: VisibleEventData
     MESH_COLOR: ColorEventData
+    MESH_ALPHA: AlphaEventData
     MESH_TEXTURE: TextureEventData
     MESH_TEXT: TextEventData
     MESH_FONT: FontEventData
     MESH_FONT_SIZE: FontSizeEventData
     MESH_TEXT_ALIGN: TextAlignEventData
     MESH_ATLAS: AtlasEventData
+    MESH_LINE_HEIGHT: LineHeightEventData
 }
 
 type HistoryDataKeys = keyof HistoryData;
@@ -212,6 +214,17 @@ function HistoryControlCreate() {
                 mesh.set_color(data.color);
                 list_mesh.push(mesh);
             }
+        } else if (type == 'MESH_ALPHA') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_ALPHA'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                if (mesh.type === IObjectTypes.TEXT || mesh.type === IObjectTypes.GUI_TEXT || mesh.type === IObjectTypes.GO_LABEL_COMPONENT) {
+                    (mesh as TextMesh).fillOpacity = data.alpha;
+                } else if (mesh.type === IObjectTypes.SLICE9_PLANE || mesh.type === IObjectTypes.GUI_BOX || mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                    (mesh as Slice9Mesh).set_alpha(data.alpha);
+                }
+                list_mesh.push(mesh);
+            }
         } else if (type == 'MESH_TEXTURE') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_TEXTURE'];
@@ -257,6 +270,13 @@ function HistoryControlCreate() {
                 ResourceManager.override_atlas_texture(old_atlas || '', data.atlas, texture_name);
             }
             ResourceManager.write_metadata();
+        } else if (type == 'MESH_LINE_HEIGHT') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_LINE_HEIGHT'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                (mesh as TextMesh).lineHeight = data.line_height;
+                list_mesh.push(mesh);
+            }
         }
         if (list_mesh.length > 0) {
             for (let i = 0; i < list_mesh.length; i++)

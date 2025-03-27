@@ -49,6 +49,7 @@ const shader = {
         }
 
 #endif
+        uniform float alpha;
 
         void main(void) {
 #ifdef USE_SLICE
@@ -63,9 +64,9 @@ const shader = {
 #ifdef USE_TEXTURE
             vec4 color = texture2D(u_texture, newUV);
             //  if (color.a < 0.5) discard;
-            gl_FragColor = color * vec4(vColor, 1.);
+            gl_FragColor = color * vec4(vColor, alpha);
 #else
-            gl_FragColor = vec4(vColor, 1.);
+            gl_FragColor = vec4(vColor, alpha);
 #endif
         }`
 };
@@ -253,12 +254,16 @@ export class Slice9Mesh extends EntityPlane {
     public type = IObjectTypes.SLICE9_PLANE;
     public mesh_data = { id: -1};
     private template: ReturnType<typeof CreateSlice9>;
+    private _alpha: number = 1.0;
 
     constructor(width = 1, height = 1, slice_width = 0, slice_height = 0, custom_material?: ShaderMaterial) {
         super();
         this.matrixAutoUpdate = true;
         const material = custom_material ? custom_material : new ShaderMaterial({
-            uniforms: { u_texture: { value: null }, },
+            uniforms: { 
+                u_texture: { value: null },
+                alpha: { value: 1.0 }
+            },
             vertexShader: shader.vertexShader,
             fragmentShader: shader.fragmentShader,
             transparent: true
@@ -267,6 +272,15 @@ export class Slice9Mesh extends EntityPlane {
         this.material = material;
         this.geometry = this.template.geometry;
         this.set_size(width, height);
+    }
+
+    get_alpha(): number {
+        return this._alpha;
+    }
+
+    set_alpha(value: number) {
+        this._alpha = value;
+        (this.material as ShaderMaterial).uniforms.alpha.value = value;
     }
 
     set_size(w: number, h: number) {

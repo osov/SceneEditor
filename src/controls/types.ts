@@ -62,6 +62,11 @@ export type ColorEventData = {
     color: string;
 };
 
+export type AlphaEventData = {
+    id_mesh: number;
+    alpha: number;
+};
+
 export type TextureEventData = {
     id_mesh: number;
     texture: string;
@@ -82,6 +87,11 @@ export type FontSizeEventData = ScaleEventData;
 export type TextAlignEventData = {
     id_mesh: number;
     text_align: 'left' | 'right' | 'center' | 'justify';
+};
+
+export type LineHeightEventData = {
+    id_mesh: number;
+    line_height: number;
 };
 
 export type AtlasEventData = {

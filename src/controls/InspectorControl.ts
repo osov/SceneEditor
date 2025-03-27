@@ -77,7 +77,7 @@ import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
-import { ActiveEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData } from './types';
+import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData } from './types';
 import { TextureInfo } from '../render_engine/resource_manager';
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 
@@ -104,6 +104,7 @@ export enum Property {
     ANCHOR = 'anchor',
     ANCHOR_PRESET = 'anchor_preset',
     COLOR = 'color',
+    ALPHA = 'alpha',
     TEXTURE = 'texture',
     SLICE9 = 'slice9',
     TEXT = 'text',
@@ -111,7 +112,8 @@ export enum Property {
     FONT_SIZE = 'font_size',
     TEXT_ALIGN = 'text_align',
     ATLAS = 'atlas',
-    ATLAS_BUTTON = 'atlas_button'
+    ATLAS_BUTTON = 'atlas_button',
+    LINE_HEIGHT = 'line_height'
 }
 
 export enum ScreenPointPreset {
@@ -421,12 +423,13 @@ function InspectorControlCreate() {
                     const anchor_preset = anchorToScreenPreset(value.get_anchor());
                     fields.push({ name: Property.ANCHOR_PRESET, data: anchor_preset });
                     fields.push({ name: Property.ANCHOR, data: value.get_anchor() });
-                } else if (IObjectTypes.GO_SPRITE_COMPONENT == value.type) {
+                } else if (IObjectTypes.GO_SPRITE_COMPONENT == value.type || IObjectTypes.GO_LABEL_COMPONENT == value.type) {
                     fields.push({ name: Property.SIZE, data: value.get_size() });
                 }
 
                 if ([IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT].includes(value.type)) {
                     fields.push({ name: Property.COLOR, data: value.get_color() });
+                    fields.push({ name: Property.ALPHA, data: (value as Slice9Mesh).get_alpha() });
                     fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
                     fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
                 }
@@ -434,6 +437,8 @@ function InspectorControlCreate() {
                 if ([IObjectTypes.TEXT, IObjectTypes.GUI_TEXT, IObjectTypes.GO_LABEL_COMPONENT].includes(value.type)) {
                     fields.push({ name: Property.TEXT, data: (value as TextMesh).text });
                     fields.push({ name: Property.FONT, data: (value as TextMesh).font || '' });
+                    fields.push({ name: Property.COLOR, data: value.get_color() });
+                    fields.push({ name: Property.ALPHA, data: (value as TextMesh).fillOpacity });
 
                     const delta = new Vector3(1 * value.scale.x, 1 * value.scale.y);
                     const max_delta = Math.max(delta.x, delta.y);
@@ -441,6 +446,10 @@ function InspectorControlCreate() {
 
                     fields.push({ name: Property.FONT_SIZE, data: font_size });
                     fields.push({ name: Property.TEXT_ALIGN, data: (value as TextMesh).textAlign });
+
+                    const line_height = (value as TextMesh).lineHeight;
+                    if(line_height == 'normal') fields.push({ name: Property.LINE_HEIGHT, data: 1 });
+                    else fields.push({ name: Property.LINE_HEIGHT, data: line_height });
                 }
             }
 
@@ -1219,6 +1228,7 @@ function InspectorControlCreate() {
             case Property.ANCHOR: saveAnchor(info.ids); break;
             case Property.ANCHOR_PRESET: saveAnchorPreset(info.ids); break;
             case Property.COLOR: saveColor(info.ids); break;
+            case Property.ALPHA: saveAlpha(info.ids); break;
             case Property.TEXTURE: saveTexture(info.ids); break;
             case Property.SLICE9: saveSlice(info.ids); break;
             case Property.TEXT: saveText(info.ids); break;
@@ -1226,6 +1236,7 @@ function InspectorControlCreate() {
             case Property.FONT_SIZE: saveFontSize(info.ids); break;
             case Property.TEXT_ALIGN: saveTextAlign(info.ids); break;
             case Property.ATLAS: saveAtlas(info.ids); break;
+            case Property.LINE_HEIGHT: saveLineHeight(info.ids); break;
         }
     }
 
@@ -1244,6 +1255,7 @@ function InspectorControlCreate() {
             case Property.ANCHOR: updateAnchor(info); break;
             case Property.ANCHOR_PRESET: updateAnchorPreset(info); break;
             case Property.COLOR: updateColor(info); break;
+            case Property.ALPHA: updateAlpha(info); break;
             case Property.TEXTURE: updateTexture(info); break;
             case Property.SLICE9: updateSlice(info); break;
             case Property.TEXT: updateText(info); break;
@@ -1251,6 +1263,7 @@ function InspectorControlCreate() {
             case Property.FONT_SIZE: updateFontSize(info); break;
             case Property.TEXT_ALIGN: updateTextAlign(info); break;
             case Property.ATLAS: updateAtlas(info); break;
+            case Property.LINE_HEIGHT: updateLineHeight(info); break;
         }
     }
 
@@ -1671,7 +1684,43 @@ function InspectorControlCreate() {
 
             if (!mesh) return;
             const color = info.data.event.value as string;
-            (mesh as Slice9Mesh).set_color(color);
+            mesh.set_color(color);
+        });
+    }
+
+    function saveAlpha(ids: number[]) {
+        const alphas: AlphaEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (!mesh) return;
+
+            if (mesh.type === IObjectTypes.TEXT || mesh.type === IObjectTypes.GUI_TEXT || mesh.type === IObjectTypes.GO_LABEL_COMPONENT) {
+                alphas.push({ id_mesh: id, alpha: deepClone((mesh as TextMesh).fillOpacity) });
+            } else if (mesh.type === IObjectTypes.SLICE9_PLANE || mesh.type === IObjectTypes.GUI_BOX || mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                alphas.push({ id_mesh: id, alpha: deepClone((mesh as Slice9Mesh).get_alpha()) });
+            }
+        });
+
+        HistoryControl.add('MESH_ALPHA', alphas);
+    }
+
+    function updateAlpha(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (!mesh) return;
+
+            const alpha = info.data.event.value as number;
+            if (mesh.type === IObjectTypes.TEXT || mesh.type === IObjectTypes.GUI_TEXT || mesh.type === IObjectTypes.GO_LABEL_COMPONENT) {
+                (mesh as TextMesh).fillOpacity = alpha;
+            } else if (mesh.type === IObjectTypes.SLICE9_PLANE || mesh.type === IObjectTypes.GUI_BOX || mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                (mesh as Slice9Mesh).set_alpha(alpha);
+            }
         });
     }
 
@@ -1857,6 +1906,32 @@ function InspectorControlCreate() {
 
             const text_align = info.data.event.value as any;
             (mesh as TextMesh).textAlign = text_align;
+        });
+    }
+
+    function saveLineHeight(ids: number[]) {
+        const lineHeights: LineHeightEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+            if (!mesh) return;
+
+            lineHeights.push({ id_mesh: id, line_height: deepClone((mesh as TextMesh).lineHeight) });
+        });
+
+        HistoryControl.add('MESH_LINE_HEIGHT', lineHeights);
+    }
+
+    function updateLineHeight(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+            if (!mesh) return;
+
+            const line_height = info.data.event.value as number;
+            (mesh as TextMesh).lineHeight = line_height;
         });
     }
 
@@ -2185,6 +2260,7 @@ export function getDefaultInspectorConfig() {
             title: 'Визуал',
             property_list: [
                 { name: Property.COLOR, title: 'Цвет', type: PropertyType.COLOR },
+                { name: Property.ALPHA, title: 'Прозрачность', type: PropertyType.NUMBER, params: { min: 0, max: 1, step: 0.1 } },
                 {
                     name: Property.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: ResourceManager.get_all_textures().map(castTextureInfo)
                 },
@@ -2215,6 +2291,11 @@ export function getDefaultInspectorConfig() {
                         'Слева': TextAlign.LEFT,
                         'Справа': TextAlign.RIGHT,
                         'По ширине': TextAlign.JUSTIFY
+                    }
+                },
+                {
+                    name: Property.LINE_HEIGHT, title: 'Высота строки', type: PropertyType.NUMBER, params: {
+                        min: 0.5, max: 3, step: 0.1, format: (v: number) => v.toFixed(2)
                     }
                 }
             ]
