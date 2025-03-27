@@ -13,7 +13,7 @@ export async function run_anim_scene() {
     ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
     const project_to_load = 'SceneEditor_ExampleProject';
     await run_debug_filemanager(project_to_load);
-
+    
     const map_data = await ResourceManager.load_asset('/tiled/parsed_map.json') as MapData;
     preload_tiled_textures(map_data);
     // hack atlases

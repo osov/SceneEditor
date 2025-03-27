@@ -1,4 +1,4 @@
-import { AdditiveBlending, FloatType, MeshBasicMaterial, NearestFilter, RGBAFormat, Vector2, Vector3, WebGLRenderTarget } from 'three'
+import { AdditiveBlending, FloatType, MeshBasicMaterial, NearestFilter, RGBAFormat, Vector2, WebGLRenderTarget } from 'three'
 import { run_debug_filemanager } from './controls/AssetControl';
 import { SERVER_URL, WORLD_SCALAR } from './config';
 import { URL_PATHS } from './modules_editor/modules_editor_const';
@@ -6,10 +6,8 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
-import { MapData, preload_tiled_textures, get_all_tiled_textures, apply_tile_transform, get_depth, get_tile_texture, parse_tiled, TILE_FLIP_MASK } from './render_engine/parsers/tile_parser';
+import { MapData, preload_tiled_textures, get_all_tiled_textures } from './render_engine/parsers/tile_parser';
 import { IObjectTypes } from './render_engine/types';
-import { rotate_point } from './render_engine/helpers/utils';
-import { EntityBase } from './render_engine/objects/entity_base';
 import { TileLoader } from './render_engine/tile_loader';
 
 
@@ -24,9 +22,10 @@ export async function run_debug_scene_light() {
     ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
     const project_to_load = 'SceneEditor_ExampleProject';
     await run_debug_filemanager(project_to_load);
-
+  
     const map_data = await ResourceManager.load_asset('/tiled/parsed_map.json') as MapData;
     preload_tiled_textures(map_data);
+    
     // hack atlases
     const all = get_all_tiled_textures();
     for (const id in all) {

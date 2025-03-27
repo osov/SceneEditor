@@ -23,10 +23,10 @@ function AssetControlCreate() {
     const drop_zone = document.getElementById("drop_zone") as HTMLDivElement;
     let active_asset: Element | undefined = undefined;
     let selected_assets: Element[] = [];
-    let move_assets_data: {assets: Element[], move_type?: "move" | "copy"} = {assets: []};
+    let move_assets_data: { assets: Element[], move_type?: "move" | "copy" } = { assets: [] };
     let current_dir: string | undefined = undefined;
     let current_project: string | undefined = undefined;
-    let current_scene: {path?: string, name?: string} = {};
+    let current_scene: { path?: string, name?: string } = {};
     let drag_for_upload_now = false;
     let drag_asset_now = false;
     let history_length_cache: TDictionary<number> = {};
@@ -67,7 +67,7 @@ function AssetControlCreate() {
                     return ResourceManager.preload_atlas("/" + paths.atlas, "/" + paths.texture);
                 }
             }
-            else func = async () => {};
+            else func = async () => { };
             if (func != undefined) {
                 for (const path of paths) {
                     list.push(func(path))
@@ -96,7 +96,7 @@ function AssetControlCreate() {
             Log.warn("cannot go to dir:", path, ", returning to root dir");
             await go_to_dir("", true);
         }
-        else 
+        else
             Log.warn('failed to load root dir!');
     }
 
@@ -152,7 +152,7 @@ function AssetControlCreate() {
                 folder_elem.appendChild(name_elem);
                 folder_elem.appendChild(details_elem);
                 folder_elem.addEventListener("drop", async (e) => {
-                    if (drag_asset_now) 
+                    if (drag_asset_now)
                         await handle_asset_drop(_path);
                 });
                 assets_list.appendChild(folder_elem);
@@ -176,7 +176,7 @@ function AssetControlCreate() {
                 const name_elem = span_elem(name, ["name"]);
                 if (file_type == "mtr")
                     asset_type = ASSET_MATERIAL;
-                else if (file_type == SCENE_EXT) 
+                else if (file_type == SCENE_EXT)
                     asset_type = ASSET_SCENE_GRAPH;
                 else if (fileIsImg(_path)) {
                     asset_type = ASSET_TEXTURE;
@@ -194,7 +194,7 @@ function AssetControlCreate() {
                 file_elem.appendChild(icon_elem);
                 file_elem.appendChild(name_elem);
                 file_elem.appendChild(details_elem);
-                file_elem.addEventListener("dragstart", function(e) {
+                file_elem.addEventListener("dragstart", function (e) {
                     drag_asset_now = true;
                 })
                 assets_list.appendChild(file_elem);
@@ -279,15 +279,15 @@ function AssetControlCreate() {
                 breadcrumbs.appendChild(a_elem);
                 breadcrumbs.appendChild(arrow);
                 s_elem.addEventListener("drop", async (e) => {
-                    if (drag_asset_now) 
+                    if (drag_asset_now)
                         await handle_asset_drop(_path);
                 });
                 s_elem.addEventListener("dragenter", async (e) => {
-                    if (drag_asset_now) 
+                    if (drag_asset_now)
                         s_elem.classList.add("marked");
                 });
                 s_elem.addEventListener("dragleave", async (e) => {
-                    if (drag_asset_now) 
+                    if (drag_asset_now)
                         s_elem.classList.remove("marked");
                 });
             }
@@ -390,7 +390,7 @@ function AssetControlCreate() {
             assets_menu_list.push({ text: 'Вырез. выделенные', action: NodeAction.CTRL_X });
             assets_menu_list.push({ text: 'Дублир. выделенные', action: NodeAction.CTRL_D });
         }
-            
+
         if (type && type != "folder") {
             assets_menu_list.push({ text: 'Скачать', action: NodeAction.download });
         }
@@ -425,8 +425,8 @@ function AssetControlCreate() {
         }
         if (active_asset) {
             const path = active_asset.getAttribute('data-path') as string;
-            const name = escapeHTML(active_asset.getAttribute('data-name') as string);  
-            const type = active_asset.getAttribute('data-type') as AssetType | undefined;  
+            const name = escapeHTML(active_asset.getAttribute('data-name') as string);
+            const type = active_asset.getAttribute('data-type') as AssetType | undefined;
             if (action == NodeAction.download)
                 download_asset(path, name);
 
@@ -451,7 +451,7 @@ function AssetControlCreate() {
             if (action == NodeAction.CTRL_D) {
                 for (const element of selected_assets) {
                     const path = element.getAttribute('data-path') as string;
-                    const name = escapeHTML(element.getAttribute('data-name') as string);                    
+                    const name = escapeHTML(element.getAttribute('data-name') as string);
                     await duplicate_asset(path, name);
                 };
                 await go_to_dir(current_dir ? current_dir : "", true);
@@ -467,7 +467,7 @@ function AssetControlCreate() {
     async function paste_assets() {
         const move_type = move_assets_data.move_type;
         for (const element of move_assets_data.assets) {
-            const name = escapeHTML(element.getAttribute('data-name') as string);  
+            const name = escapeHTML(element.getAttribute('data-name') as string);
             const path = escapeHTML(element.getAttribute("data-path") as string);
             await paste_asset(name, path, move_type);
         }
@@ -495,7 +495,7 @@ function AssetControlCreate() {
 
     async function new_scene(path: string, name: string) {
         const scene_path = `${path}/${name}.${SCENE_EXT}`
-        const r = await ClientAPI.save_data(scene_path, JSON.stringify({scene_data: []}));
+        const r = await ClientAPI.save_data(scene_path, JSON.stringify({ scene_data: [] }));
         if (r.result === 0) {
             error_popup(`Не удалось создать сцену, ответ сервера: ${r.message}`);
             return;
@@ -504,7 +504,7 @@ function AssetControlCreate() {
             await go_to_dir(path, true);
         }
         return scene_path;
-    }  
+    }
 
     function new_scene_popup(current_path: string, set_scene_current = false, save_scene = false) {
         Popups.open({
@@ -531,7 +531,7 @@ function AssetControlCreate() {
             callback: async (success, name) => {
                 if (success && name) {
                     const path = `${current_path}/${name}.${SCENE_EXT}`;
-                    const r = await ClientAPI.save_data(path, JSON.stringify({scene_data: [data]})) 
+                    const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: [data] }))
                     if (r && r.result)
                         Popups.toast.success(`Объект ${name} сохранён, путь: ${path}`);
                     else
@@ -589,7 +589,7 @@ function AssetControlCreate() {
             if (type == "folder") type_name = "папку";
             text = `Удалить ${type_name} ${name}?`;
             remove_type = "active";
-        } 
+        }
         if (remove_type) {
             Popups.open({
                 type: "Confirm",
@@ -748,7 +748,7 @@ function AssetControlCreate() {
         generate_breadcrumbs('')
     }
 
-    async function handle_asset_drop(dir_to: string) { 
+    async function handle_asset_drop(dir_to: string) {
         drag_asset_now = false;
         if (selected_assets.length != 0) {
             selected_assets.forEach(async element => {
@@ -763,12 +763,12 @@ function AssetControlCreate() {
                     error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${r.message}`);
                 }
             });
-        }   
+        }
     }
 
     function clear_selected() {
-        if(selected_assets.length == 0) return;
-        
+        if (selected_assets.length == 0) return;
+
         selected_assets.forEach(element => {
             element.classList.remove("selected");
         });
@@ -805,7 +805,7 @@ function AssetControlCreate() {
     function remove_from_selected(elem: HTMLSpanElement) {
         selected_assets.splice(selected_assets.indexOf(elem), 1);
         elem.classList.remove("selected");
-        
+
         const textures_paths = get_selected_textures();
         EventBus.trigger("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
     }
@@ -844,20 +844,20 @@ function AssetControlCreate() {
         const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
         clear_active();
         if (event.button === 0 || event.button === 2) {
-            if (asset_elem)  
+            if (asset_elem)
                 set_active(asset_elem);
             if (!Input.is_control()) {
-                clear_selected(); 
-                if (asset_elem)  
+                clear_selected();
+                if (asset_elem)
                     add_to_selected(asset_elem);
-            }   
+            }
             else if (Input.is_control()) {
                 if (asset_elem)
-                    if (selected_assets.includes(asset_elem))  
+                    if (selected_assets.includes(asset_elem))
                         remove_from_selected(asset_elem);
                     else
                         add_to_selected(asset_elem);
-            }       
+            }
             if (file_elem) {
                 const path = file_elem.getAttribute('data-path');
                 const name = file_elem.getAttribute('data-name');
@@ -872,7 +872,7 @@ function AssetControlCreate() {
             }
         }
         if (event.button === 0) {
-            if (folder_elem)  {
+            if (folder_elem) {
                 const path = folder_elem.getAttribute('data-path');
                 return await go_to_dir(path);
             }
@@ -923,9 +923,9 @@ function AssetControlCreate() {
             const new_path = file_elem.getAttribute('data-path');
             const current_path = current_scene.path;
             if (ext === SCENE_EXT && new_path != current_path) {
-                if (current_path != undefined && history_length_cache[current_path] != HistoryControl.get_history(current_scene.path).length) 
+                if (current_path != undefined && history_length_cache[current_path] != HistoryControl.get_history(current_scene.path).length)
                     open_scene_exit_popup(current_path, new_path)
-                else 
+                else
                     await open_scene(new_path)
             }
         }
@@ -977,7 +977,7 @@ function AssetControlCreate() {
         const path = current_scene.path as string;
         const name = current_scene.name as string;
         const data = SceneManager.save_scene();
-        const r = await ClientAPI.save_data(path, JSON.stringify({scene_data: data}));
+        const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: data }));
         if (r && r.result) {
             history_length_cache[path] = HistoryControl.get_history(current_scene.path).length;
             return Popups.toast.success(`Сцена ${name} сохранена, путь: ${path}`);
@@ -991,12 +991,12 @@ function AssetControlCreate() {
     }
 
     async function on_graph_drop(id: number) {
-         
+
         const scene_object = SceneManager.get_mesh_by_id(id);
         if (scene_object) {
             const data = SceneManager.serialize_mesh(scene_object);
             save_graph_popup(current_dir as string, data);
-        }        
+        }
     }
 
     drop_zone.addEventListener("dragenter", function (e) {
@@ -1007,7 +1007,7 @@ function AssetControlCreate() {
     filemanager.addEventListener("dragover", function (e) {
         e.preventDefault();
         if (e.dataTransfer)
-            e.dataTransfer.dropEffect = 'copy'; 
+            e.dataTransfer.dropEffect = 'copy';
     });
 
     drop_zone.addEventListener("dragleave", function (e) {
@@ -1016,7 +1016,7 @@ function AssetControlCreate() {
 
     drop_zone.addEventListener("drop", async function (e) {
         e.preventDefault();
-        if (drag_for_upload_now) 
+        if (drag_for_upload_now)
             await on_drop_upload(e);
     });
 
@@ -1057,7 +1057,7 @@ function AssetControlCreate() {
             let to_dir = (current_dir) ? current_dir : "";
 
             await load_project(data, undefined, to_dir);
-            if (current_scene.path) 
+            if (current_scene.path)
                 await set_current_scene(current_scene.path);
         }
     }
@@ -1076,9 +1076,9 @@ function AssetControlCreate() {
     EventBus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
     EventBus.on('ON_WS_CONNECTED', reload_current_project);
 
-    return { 
-        load_project, new_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_meta_info, 
-        get_meta_info, del_meta_info, draw_empty_project, get_current_scene, 
+    return {
+        load_project, new_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_meta_info,
+        get_meta_info, del_meta_info, draw_empty_project, get_current_scene,
     };
 }
 
@@ -1140,7 +1140,7 @@ export async function run_debug_filemanager(project_to_load: string) {
                     assets = undefined;
                     go_to_dir = current_dir;
                 }
-                AssetControl.load_project(data, assets, go_to_dir);
+                await AssetControl.load_project(data, assets, go_to_dir);
                 log('Project loaded', data.name);
                 return;
             }
