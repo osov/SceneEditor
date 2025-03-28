@@ -354,7 +354,7 @@ export class Slice9Mesh extends EntityPlane {
     deserialize(data: any) {
         super.deserialize(data);
         this.template.deserialize(data);
-        if(data.alpha) {
+        if(data.alpha != undefined) {
             this.set_alpha(data.alpha);
         }
     }
