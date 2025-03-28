@@ -1949,7 +1949,6 @@ function InspectorControlCreate() {
 
     function updateAtlas (info: ChangeInfo) {
         const atlas = info.data.event.value as string;
-        if (!atlas) return; // Skip if no atlas selected
 
         info.ids.forEach((id) => {
             const path = _selected_textures[id];
@@ -1965,9 +1964,9 @@ function InspectorControlCreate() {
                 if(!is_type) return;
                 
                 const mesh_texture = (mesh as IBaseMesh).get_texture();
-                const is_atlas = mesh_texture.includes(atlas);
+                const is_atlas = mesh_texture.includes(old_atlas);
                 const is_texture = mesh_texture.includes(texture_name);
-                
+
                 if(is_atlas && is_texture) {
                     mesh.set_texture(texture_name, atlas);
                 }
