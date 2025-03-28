@@ -117,7 +117,7 @@ export function SceneManagerModule() {
             pid,
             type: m.type,
             name: m.name,
-            visible: m.visible,
+            visible: m.get_visible(),
             position: wp.toArray(),
             rotation: wr.toArray(),
             scale: ws.toArray(),
@@ -141,7 +141,7 @@ export function SceneManagerModule() {
         if (data.scale)
             mesh.scale.set(data.scale[0], data.scale[1], data.scale[2]);
         mesh.name = data.name;
-        mesh.visible = data.visible;
+        mesh.set_visible(data.visible);
 
         mesh.deserialize(data.other_data);
         if (data.children) {
