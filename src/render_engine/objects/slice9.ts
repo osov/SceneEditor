@@ -348,13 +348,14 @@ export class Slice9Mesh extends EntityPlane {
     }
 
     serialize() {
-        return { ...super.serialize(), ...this.template.serialize() }
+        return { ...super.serialize(), ...this.template.serialize(), alpha: this.get_alpha() }
     }
 
     deserialize(data: any) {
         super.deserialize(data);
         this.template.deserialize(data);
+        if(data.alpha) {
+            this.set_alpha(data.alpha);
+        }
     }
-
-
 }   
