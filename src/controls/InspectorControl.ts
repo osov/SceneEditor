@@ -2169,7 +2169,7 @@ function castTextureInfo(info: TextureInfo) {
 function castAtlases(atlases: string[]) {
     const data: {[key in string]: string} = {};
     atlases.forEach((atlas) => {
-        return data[atlas == '' ? 'Not set' : atlas] = atlas;
+        return data[atlas == '' ? 'Без атласа' : atlas] = atlas;
     });
     return data;
 }
