@@ -80,6 +80,7 @@ import { radToDeg } from 'three/src/math/MathUtils';
 import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData } from './types';
 import { TextureInfo } from '../render_engine/resource_manager';
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
+import { GoSprite, FlipMode } from '../render_engine/objects/sub_types';
 
 
 declare global {
@@ -116,7 +117,11 @@ export enum Property {
     LINE_HEIGHT = 'line_height',
     BLEND_MODE = 'blend_mode',
     MIN_FILTER = 'min_filter',
-    MAG_FILTER = 'mag_filter'
+    MAG_FILTER = 'mag_filter',
+    FLIP_RESET = 'flip_reset',
+    FLIP_VERTICAL = 'flip_vertical',
+    FLIP_HORIZONTAL = 'flip_horizontal',
+    FLIP_DIAGONAL = 'flip_diagonal'
 }
 
 export enum ScreenPointPreset {
@@ -466,6 +471,28 @@ function InspectorControlCreate() {
                     fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
                     fields.push({ name: Property.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
                     fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
+                    if (value.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                        fields.push({ name: Property.FLIP_RESET, data: () => {
+                            _selected_list.forEach((item) => {
+                                (item as GoSprite).set_flip(FlipMode.NONE);
+                            });
+                        } });
+                        fields.push({ name: Property.FLIP_VERTICAL, data: () => {
+                            _selected_list.forEach((item) => {
+                                (item as GoSprite).set_flip(FlipMode.VERTICAL);
+                            });
+                        } });
+                        fields.push({ name: Property.FLIP_HORIZONTAL, data: () => {
+                            _selected_list.forEach((item) => {
+                                (item as GoSprite).set_flip(FlipMode.HORIZONTAL);
+                            });
+                        } });
+                        fields.push({ name: Property.FLIP_DIAGONAL, data: () => {
+                            _selected_list.forEach((item) => {
+                                (item as GoSprite).set_flip(FlipMode.DIAGONAL);
+                            });
+                        } });
+                    }
                 }
 
                 if ([IObjectTypes.TEXT, IObjectTypes.GUI_TEXT, IObjectTypes.GO_LABEL_COMPONENT].includes(value.type)) {
@@ -752,6 +779,9 @@ function InspectorControlCreate() {
                     // для чекбокса если между обьектами разные значения
                     _unique_fields[index].field.data = false;
                     _unique_fields[index].property.params = { disabled: true };
+                } else if (property.type == PropertyType.BUTTON) {
+                    // для кнопок всегда показываем
+                    return true;
                 } else {
                     // в ином случае просто убираем поле
                     _unique_fields.splice(index, 1);
@@ -2673,7 +2703,17 @@ export function getDefaultInspectorConfig() {
                         'Вычитание': BlendMode.SUBTRACT,
                         // 'Пользовательский': BlendMode.CUSTOM
                     }
-                }
+                },
+            ]
+        },
+        {
+        name: 'flip',
+            title: 'Отразить',
+            property_list: [
+                { name: Property.FLIP_RESET, title: 'В исходное положение', type: PropertyType.BUTTON },
+                { name: Property.FLIP_VERTICAL, title: 'По вертикали', type: PropertyType.BUTTON },
+                { name: Property.FLIP_HORIZONTAL, title: 'По горизонтали', type: PropertyType.BUTTON },
+                { name: Property.FLIP_DIAGONAL, title: 'По диагонали', type: PropertyType.BUTTON }
             ]
         },
         {
