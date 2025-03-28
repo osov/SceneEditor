@@ -1,4 +1,4 @@
-import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData } from "./types";
+import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { get_keys } from "../modules/utils";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
@@ -36,6 +36,7 @@ export type HistoryData = {
     MESH_TEXT_ALIGN: TextAlignEventData
     MESH_ATLAS: AtlasEventData
     MESH_LINE_HEIGHT: LineHeightEventData
+    MESH_BLEND_MODE: BlendModeEventData
 }
 
 type HistoryDataKeys = keyof HistoryData;
@@ -275,6 +276,13 @@ function HistoryControlCreate() {
                 const data = last.data[i] as HistoryData['MESH_LINE_HEIGHT'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
                 (mesh as TextMesh).lineHeight = data.line_height;
+                list_mesh.push(mesh);
+            }
+        } else if (type == 'MESH_BLEND_MODE') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_BLEND_MODE'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                (mesh as any).material.blending = data.blend_mode;
                 list_mesh.push(mesh);
             }
         }

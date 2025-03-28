@@ -72,12 +72,12 @@ import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plugin';
-import { Vector2, Vector3 } from 'three';
+import { Vector2, Vector3, NormalBlending, AdditiveBlending, MultiplyBlending, SubtractiveBlending, CustomBlending } from 'three';
 import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
-import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData } from './types';
+import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData } from './types';
 import { TextureInfo } from '../render_engine/resource_manager';
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 
@@ -113,7 +113,8 @@ export enum Property {
     TEXT_ALIGN = 'text_align',
     ATLAS = 'atlas',
     ATLAS_BUTTON = 'atlas_button',
-    LINE_HEIGHT = 'line_height'
+    LINE_HEIGHT = 'line_height',
+    BLEND_MODE = 'blend_mode'
 }
 
 export enum ScreenPointPreset {
@@ -157,6 +158,14 @@ export enum PropertyType {
     BUTTON,
     POINT_2D,
     LOG_DATA,
+}
+
+export enum BlendMode {
+    NORMAL = 'normal',
+    ADD = 'add',
+    MULTIPLY = 'multiply',
+    SUBTRACT = 'subtract',
+    // CUSTOM = 'custom'
 }
 
 export type PropertyParams = {
@@ -431,6 +440,7 @@ function InspectorControlCreate() {
                     fields.push({ name: Property.COLOR, data: value.get_color() });
                     fields.push({ name: Property.ALPHA, data: (value as Slice9Mesh).get_alpha() });
                     fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
+                    fields.push({ name: Property.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
                     fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
                 }
 
@@ -1235,6 +1245,7 @@ function InspectorControlCreate() {
             case Property.TEXT_ALIGN: saveTextAlign(info.ids); break;
             case Property.ATLAS: saveAtlas(info.ids); break;
             case Property.LINE_HEIGHT: saveLineHeight(info.ids); break;
+            case Property.BLEND_MODE: saveBlendMode(info.ids); break;
         }
     }
 
@@ -1262,6 +1273,7 @@ function InspectorControlCreate() {
             case Property.TEXT_ALIGN: updateTextAlign(info); break;
             case Property.ATLAS: updateAtlas(info); break;
             case Property.LINE_HEIGHT: updateLineHeight(info); break;
+            case Property.BLEND_MODE: updateBlendMode(info); break;
         }
     }
 
@@ -1976,6 +1988,38 @@ function InspectorControlCreate() {
         ResourceManager.write_metadata();
     }
 
+    function saveBlendMode(ids: number[]) {
+        const blendModes: BlendModeEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (!mesh) return;
+
+            blendModes.push({ 
+                id_mesh: id, 
+                blend_mode: (mesh as any).material.blending 
+            });
+        });
+
+        HistoryControl.add('MESH_BLEND_MODE', blendModes);
+    }
+
+    function updateBlendMode(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (!mesh) return;
+
+            const blend_mode = info.data.event.value as BlendMode;
+            const threeBlendMode = convertBlendModeToThreeJS(blend_mode);
+            (mesh as any).material.blending = threeBlendMode;
+        });
+    }
+
     init();
     return { setupConfig, setData, set_selected_textures, set_selected_list, refresh, clear }
 }
@@ -2113,6 +2157,38 @@ function screenPresetToAnchorValue(preset: ScreenPointPreset) {
         case ScreenPointPreset.BOTTOM_RIGHT: return new Vector2(1, 0);
         case ScreenPointPreset.NONE: return new Vector2(-1, -1);
         default: return new Vector2(0.5, 0.5);
+    }
+}
+
+function convertBlendModeToThreeJS(blend_mode: BlendMode): number {
+    switch(blend_mode) {
+        case BlendMode.NORMAL:
+            return NormalBlending;
+        case BlendMode.ADD:
+            return AdditiveBlending;
+        case BlendMode.MULTIPLY:
+            return MultiplyBlending;
+        case BlendMode.SUBTRACT:
+            return SubtractiveBlending;
+        // case BlendMode.CUSTOM:
+        //     return CustomBlending;
+        default:
+            return NormalBlending;
+    }
+}
+
+function convertThreeJSBlendingToBlendMode(blending: number): BlendMode {
+    switch(blending) {
+        case NormalBlending:
+            return BlendMode.NORMAL;
+        case AdditiveBlending:
+            return BlendMode.ADD;
+        case MultiplyBlending:
+            return BlendMode.MULTIPLY;
+        case SubtractiveBlending:
+            return BlendMode.SUBTRACT;
+        default:
+            return BlendMode.NORMAL;
     }
 }
 
@@ -2274,6 +2350,15 @@ export function getDefaultInspectorConfig() {
                     name: Property.SLICE9, title: 'Slice9', type: PropertyType.POINT_2D, params: {
                         x: { min: 0, max: 100, format: (v: number) => v.toFixed(2) },
                         y: { min: 0, max: 100, format: (v: number) => v.toFixed(2) }
+                    }
+                },
+                {
+                    name: Property.BLEND_MODE, title: 'Режим смешивания', type: PropertyType.LIST_TEXT, params: {
+                        'Нормальный': BlendMode.NORMAL,
+                        'Сложение': BlendMode.ADD,
+                        'Умножение': BlendMode.MULTIPLY,
+                        'Вычитание': BlendMode.SUBTRACT,
+                        // 'Пользовательский': BlendMode.CUSTOM
                     }
                 }
             ]
