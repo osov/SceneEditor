@@ -72,12 +72,12 @@ import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plugin';
-import { Vector2, Vector3, NormalBlending, AdditiveBlending, MultiplyBlending, SubtractiveBlending, CustomBlending } from 'three';
+import { Vector2, Vector3, NormalBlending, AdditiveBlending, MultiplyBlending, SubtractiveBlending, CustomBlending, NearestFilter, LinearFilter, MinificationTextureFilter, MagnificationTextureFilter } from 'three';
 import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
-import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData } from './types';
+import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData } from './types';
 import { TextureInfo } from '../render_engine/resource_manager';
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 
@@ -114,7 +114,9 @@ export enum Property {
     ATLAS = 'atlas',
     ATLAS_BUTTON = 'atlas_button',
     LINE_HEIGHT = 'line_height',
-    BLEND_MODE = 'blend_mode'
+    BLEND_MODE = 'blend_mode',
+    MIN_FILTER = 'min_filter',
+    MAG_FILTER = 'mag_filter'
 }
 
 export enum ScreenPointPreset {
@@ -166,6 +168,11 @@ export enum BlendMode {
     MULTIPLY = 'multiply',
     SUBTRACT = 'subtract',
     // CUSTOM = 'custom'
+}
+
+export enum FilterMode {
+    NEAREST = 'nearest',
+    LINEAR = 'linear'
 }
 
 export type PropertyParams = {
@@ -284,21 +291,24 @@ function InspectorControlCreate() {
             container: document.querySelector('.inspector__body') as HTMLElement,
         });
 
+        registerPlugins();
+        setupConfig(getDefaultInspectorConfig());
+        subscribeEvents();
+    }
+
+    function registerPlugins() {
         _inspector.registerPlugin(TweakpaneImagePlugin);
         _inspector.registerPlugin(TweakpaneSearchListPlugin);
         _inspector.registerPlugin(TextareaPlugin);
         _inspector.registerPlugin(ExtendedPointNdInputPlugin);
         _inspector.registerPlugin(TweakpaneExtendedBooleanPlugin);
-
-        setupConfig(getDefaultInspectorConfig());
-        subscribe_events();
     }
 
     function setupConfig(config: InspectorGroup[]) {
         _config = config;
     }
 
-    function subscribe_events() {
+    function subscribeEvents() {
         EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
             set_selected_list(e.list);
         }); 
@@ -375,18 +385,32 @@ function InspectorControlCreate() {
         update_atlas_options();
 
         const data = _selected_textures.map((path, id) => {
-            // TODO: нужно найти к какому атласу относится эта текстура ClientAPI.get_info()
+            const result = {id, data: [] as PropertyData<PropertyType>[]};
+
             const texture_name = get_file_name(get_basename(path));
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
-            return {id, data: [
-                { name: Property.ATLAS, data: atlas || ''},
-                {
-                    name: Property.ATLAS_BUTTON, data: () => {
-                        ControlManager.open_atlas_manager();
-                        // TODO: нужно обновить config чтобы отобразился измененный список атласов
-                    }
+
+            if(atlas == null) {
+                Log.error(`[set_selected_textures] Atlas for texture ${texture_name} not found`);
+                return {id, data: []};
+            }
+            
+            result.data.push({ name: Property.ATLAS, data: atlas });
+            result.data.push({
+                name: Property.ATLAS_BUTTON, data: () => {
+                    ControlManager.open_atlas_manager();
                 }
-            ]}; 
+            });
+
+            const min_filter = convertThreeJSFilterToFilterMode(ResourceManager.get_texture(texture_name, atlas).texture.minFilter);
+            const mag_filter = convertThreeJSFilterToFilterMode(ResourceManager.get_texture(texture_name, atlas).texture.magFilter);
+
+            Log.log(min_filter, mag_filter);
+
+            result.data.push({ name: Property.MIN_FILTER, data: min_filter });
+            result.data.push({ name: Property.MAG_FILTER, data: mag_filter });
+
+            return result;
         });
         
         clear();
@@ -1004,7 +1028,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[tryDisabledPositionValueByAxis] Mesh not found for id:', id);
+                return;
+            }
 
             if (i == 0) {
                 prevPosition = new Vector3();
@@ -1044,7 +1071,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[tryDisabledRotationValueByAxis] Mesh not found for id:', id);
+                return;
+            }
 
             if (i == 0) {
                 prevRotation = new Vector3();
@@ -1084,7 +1114,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[tryDisabledScaleValueByAxis] Mesh not found for id:', id);
+                return;
+            }
 
             if (i == 0) {
                 prevScale = new Vector2();
@@ -1122,7 +1155,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[tryDisabledSizeValueByAxis] Mesh not found for id:', id);
+                return;
+            }
 
             if (i == 0) {
                 prevSize = new Vector2();
@@ -1160,7 +1196,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[tryDisabledAnchorValueByAxis] Mesh not found for id:', id);
+                return;
+            }
 
             if (i == 0) {
                 prevAnchor = new Vector2();
@@ -1198,7 +1237,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[tryDisabledSliceValueByAxis] Mesh not found for id:', id);
+                return;
+            }
 
             if (i == 0) {
                 prevSlice = new Vector2();
@@ -1222,7 +1264,7 @@ function InspectorControlCreate() {
     }
 
     function saveValue(info: BeforeChangeInfo) {
-        Log.log("SAVED: ", info);
+        // Log.log("SAVED: ", info.field.name);
 
         switch (info.field.name) {
             case Property.NAME: saveName(info.ids); break;
@@ -1246,6 +1288,8 @@ function InspectorControlCreate() {
             case Property.ATLAS: saveAtlas(info.ids); break;
             case Property.LINE_HEIGHT: saveLineHeight(info.ids); break;
             case Property.BLEND_MODE: saveBlendMode(info.ids); break;
+            case Property.MIN_FILTER: saveMinFilter(info.ids); break;
+            case Property.MAG_FILTER: saveMagFilter(info.ids); break;
         }
     }
 
@@ -1274,6 +1318,8 @@ function InspectorControlCreate() {
             case Property.ATLAS: updateAtlas(info); break;
             case Property.LINE_HEIGHT: updateLineHeight(info); break;
             case Property.BLEND_MODE: updateBlendMode(info); break;
+            case Property.MIN_FILTER: updateMinFilter(info); break;
+            case Property.MAG_FILTER: updateMagFilter(info); break;
         }
     }
 
@@ -1284,7 +1330,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveName] Mesh not found for id:', id);
+                return;
+            }
 
             names.push({ id_mesh: id, name: mesh.name });
         });
@@ -1298,7 +1347,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateName] Mesh not found for id:', id);
+                return;
+            }
 
             mesh.name = info.data.event.value as string;
             ControlManager.update_graph();
@@ -1312,7 +1364,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveActive] Mesh not found for id:', id);
+                return;
+            }
 
             actives.push({ id_mesh: id, state: mesh.get_active() });
         });
@@ -1326,7 +1381,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateActive] Mesh not found for id:', id);
+                return;
+            }
 
             const state = info.data.event.value as boolean;
             mesh.set_active(state);
@@ -1340,7 +1398,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveVisible] Mesh not found for id:', id);
+                return;
+            }
 
             visibles.push({ id_mesh: id, state: mesh.get_visible() });
         });
@@ -1354,7 +1415,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateVisible] Mesh not found for id:', id);
+                return;
+            }
 
             const state = info.data.event.value as boolean;
             mesh.set_visible(state);
@@ -1368,7 +1432,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[savePosition] Mesh not found for id:', id);
+                return;
+            }
 
             oldPositions.push({ id_mesh: mesh.mesh_data.id, position: deepClone(mesh.position) });
         });
@@ -1393,7 +1460,10 @@ function InspectorControlCreate() {
                     return item.mesh_data.id == id;
                 });
 
-                if (!mesh) return;
+                if (mesh == undefined) {
+                    Log.error('[updatePosition] Mesh not found for id:', id);
+                    return;
+                }
 
                 sum.add(mesh.get_position());
             });
@@ -1406,7 +1476,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updatePosition] Mesh not found for id:', id);
+                return;
+            }
 
             /* NOTE: высчитываем разницу среднего значения позиции и измененного значения в инспекторе
                      (оно уже там стоит в среднем значени, ставиться на этапе сравнения осей в векторах) */
@@ -1428,7 +1501,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveRotation] Mesh not found for id:', id);
+                return;
+            }
 
             oldRotations.push({ id_mesh: id, rotation: deepClone(mesh.rotation) });
         });
@@ -1447,7 +1523,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateRotation] Mesh not found for id:', id);
+                return;
+            }
 
             const x = isChangedX ? rot.x : mesh.rotation.x;
             const y = isChangedY ? rot.y : mesh.rotation.y;
@@ -1468,7 +1547,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveScale] Mesh not found for id:', id);
+                return;
+            }
 
             oldScales.push({ id_mesh: id, scale: deepClone(mesh.scale) });
         });
@@ -1486,7 +1568,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateScale] Mesh not found for id:', id);
+                return;
+            }
 
             const x = isChangedX ? scale.x : mesh.get_scale().x;
             const y = isChangedY ? scale.y : mesh.get_scale().y;
@@ -1517,7 +1602,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveSize] Mesh not found for id:', id);
+                return;
+            }
 
             oldSizes.push({ id_mesh: id, position: mesh.get_position(), size: mesh.get_size() });
         });
@@ -1541,7 +1629,10 @@ function InspectorControlCreate() {
                     return item.mesh_data.id == id;
                 });
 
-                if (!mesh) return;
+                if (mesh == undefined) {
+                    Log.error('[updateSize] Mesh not found for id:', id);
+                    return;
+                }
 
                 sum.add(mesh.get_size());
             });
@@ -1554,7 +1645,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateSize] Mesh not found for id:', id);
+                return;
+            }
 
             const x = isDraggedX ? mesh.get_size().x + (size.x - averageSize.x) : isChangedX ? size.x : mesh.get_size().x;
             const y = isDraggedY ? mesh.get_size().y + (size.y - averageSize.y) : isChangedY ? size.y : mesh.get_size().y;
@@ -1572,7 +1666,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[savePivot] Mesh not found for id:', id);
+                return;
+            }
 
             pivots.push({ id_mesh: id, pivot: mesh.get_pivot() });
         });
@@ -1586,7 +1683,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updatePivot] Mesh not found for id:', id);
+                return;
+            }
 
             const pivot_preset = info.data.event.value as ScreenPointPreset;
             const pivot = screenPresetToPivotValue(pivot_preset);
@@ -1603,7 +1703,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveAnchor] Mesh not found for id:', id);
+                return;
+            }
 
             anchors.push({ id_mesh: id, anchor: mesh.get_anchor() });
         });
@@ -1621,7 +1724,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateAnchor] Mesh not found for id:', id);
+                return;
+            }
 
             const x = isChangedX ? anchor.x : mesh.get_anchor().x;
             const y = isChangedY ? anchor.y : mesh.get_anchor().y;
@@ -1645,7 +1751,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveAnchorPreset] Mesh not found for id:', id);
+                return;
+            }
 
             anchors.push({ id_mesh: id, anchor: mesh.get_anchor() });
         });
@@ -1659,7 +1768,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateAnchorPreset] Mesh not found for id:', id);
+                return;
+            }
 
             const anchor = screenPresetToAnchorValue(info.data.event.value as ScreenPointPreset);
             if (anchor) {
@@ -1678,7 +1790,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveColor] Mesh not found for id:', id);
+                return;
+            }
 
             colors.push({ id_mesh: id, color: mesh.get_color() });
         });
@@ -1692,7 +1807,11 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateColor] Mesh not found for id:', id);
+                return;
+            }
+
             const color = info.data.event.value as string;
             mesh.set_color(color);
         });
@@ -1705,7 +1824,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveAlpha] Mesh not found for id:', id);
+                return;
+            }
 
             if (mesh.type === IObjectTypes.TEXT || mesh.type === IObjectTypes.GUI_TEXT || mesh.type === IObjectTypes.GO_LABEL_COMPONENT) {
                 alphas.push({ id_mesh: id, alpha: deepClone((mesh as TextMesh).fillOpacity) });
@@ -1723,7 +1845,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateAlpha] Mesh not found for id:', id);
+                return;
+            }
 
             const alpha = info.data.event.value as number;
             if (mesh.type === IObjectTypes.TEXT || mesh.type === IObjectTypes.GUI_TEXT || mesh.type === IObjectTypes.GO_LABEL_COMPONENT) {
@@ -1741,7 +1866,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveTexture] Mesh not found for id:', id);
+                return;
+            }
 
             const texture = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
             textures.push({ id_mesh: id, texture });
@@ -1756,7 +1884,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateTexture] Mesh not found for id:', id);
+                return;
+            }
 
             if (info.data.event.value) {
                 const atlas = (info.data.event.value as string).split('/')[0];
@@ -1773,7 +1904,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveSlice] Mesh not found for id:', id);
+                return;
+            }
 
             slices.push({ id_mesh: id, slice: (mesh as Slice9Mesh).get_slice() });
         });
@@ -1791,7 +1925,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateSlice] Mesh not found for id:', id);
+                return;
+            }
 
             const x = isChangedX ? slice.x : (mesh as Slice9Mesh).get_slice().x;
             const y = isChangedY ? slice.y : (mesh as Slice9Mesh).get_slice().y;
@@ -1807,7 +1944,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveText] Mesh not found for id:', id);
+                return;
+            }
 
             texts.push({ id_mesh: id, text: deepClone((mesh as TextMesh).text) });
         });
@@ -1821,7 +1961,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateText] Mesh not found for id:', id);
+                return;
+            }
 
             const text = info.data.event.value as string;
             (mesh as TextMesh).text = text;
@@ -1835,7 +1978,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveFont] Mesh not found for id:', id);
+                return;
+            }
 
             const oldFont = deepClone((mesh as TextMesh).font);
             fonts.push({ id_mesh: id, font: oldFont ? oldFont : '' });
@@ -1850,7 +1996,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateFont] Mesh not found for id:', id);
+                return;
+            }
 
             const font = info.data.event.value as string;
             (mesh as TextMesh).font = font;
@@ -1864,7 +2013,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveFontSize] Mesh not found for id:', id);
+                return;
+            }
 
             const oldScale = mesh.get_scale();
             fontSizes.push({ id_mesh: id, scale: new Vector3(oldScale.x, oldScale.y, 1) });
@@ -1879,7 +2031,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateFontSize] Mesh not found for id:', id);
+                return;
+            }
 
             const font_size = info.data.event.value as number;
             const delta = font_size / (mesh as TextMesh).fontSize;
@@ -1899,7 +2054,10 @@ function InspectorControlCreate() {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveTextAlign] Mesh not found for id:', id);
+                return;
+            }
 
             textAligns.push({ id_mesh: id, text_align: deepClone((mesh as TextMesh).textAlign) });
         });
@@ -1912,7 +2070,10 @@ function InspectorControlCreate() {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateTextAlign] Mesh not found for id:', id);
+                return;
+            }
 
             const text_align = info.data.event.value as any;
             (mesh as TextMesh).textAlign = text_align;
@@ -1925,7 +2086,10 @@ function InspectorControlCreate() {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveLineHeight] Mesh not found for id:', id);
+                return;
+            }
 
             lineHeights.push({ id_mesh: id, line_height: deepClone((mesh as TextMesh).lineHeight) });
         });
@@ -1938,7 +2102,10 @@ function InspectorControlCreate() {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateLineHeight] Mesh not found for id:', id);
+                return;
+            }
 
             const line_height = info.data.event.value as number;
             (mesh as TextMesh).lineHeight = line_height;
@@ -1949,7 +2116,10 @@ function InspectorControlCreate() {
         const atlases: AtlasEventData[] = [];
         ids.forEach((id) => {
             const texture_path = _selected_textures[id];
-            if (!texture_path) return;
+            if (texture_path == null) {
+                Log.error('[saveAtlas] Texture path not found for id:', id);
+                return;
+            }
 
             const texture_name = get_file_name(get_basename(texture_path));
             const oldAtlas = ResourceManager.get_atlas_by_texture_name(texture_name);
@@ -1963,10 +2133,13 @@ function InspectorControlCreate() {
         const atlas = info.data.event.value as string;
 
         info.ids.forEach((id) => {
-            const path = _selected_textures[id];
-            if (!path) return;
+            const texture_path = _selected_textures[id];
+            if (texture_path == null) {
+                Log.error('[updateAtlas] Texture path not found for id:', id);
+                return;
+            }
 
-            const texture_name = get_file_name(get_basename(path));
+            const texture_name = get_file_name(get_basename(texture_path));
             const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
             ResourceManager.override_atlas_texture(old_atlas, atlas, texture_name);
             
@@ -1995,7 +2168,10 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[saveBlendMode] Mesh not found for id:', id);
+                return;
+            }
 
             blendModes.push({ 
                 id_mesh: id, 
@@ -2012,12 +2188,137 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
 
-            if (!mesh) return;
+            if (mesh == undefined) {
+                Log.error('[updateBlendMode] Mesh not found for id:', id);
+                return;
+            }
 
             const blend_mode = info.data.event.value as BlendMode;
             const threeBlendMode = convertBlendModeToThreeJS(blend_mode);
             (mesh as any).material.blending = threeBlendMode;
         });
+    }
+
+    function saveMinFilter(ids: number[]) {
+        const minFilters: MinFilterEventData[] = [];
+        ids.forEach((id) => {
+            const texture_path = _selected_textures[id];
+            if (texture_path == null) {
+                Log.error('[saveMinFilter] Texture path not found for id:', id);
+                return;
+            }
+
+            const texture_name = get_file_name(get_basename(texture_path));
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            if (atlas == null) {
+                Log.error('[saveMinFilter] Atlas not found for texture:', texture_name);
+                return;
+            }
+
+            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            minFilters.push({ 
+                texture_path, 
+                filter: texture_data.texture.minFilter as MinificationTextureFilter
+            });
+        });
+
+        HistoryControl.add('MESH_MIN_FILTER', minFilters);
+    }
+
+    function updateMinFilter(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const texture_path = _selected_textures[id];
+            if (texture_path == null) {
+                Log.error('[updateMinFilter] Texture path not found for id:', id);
+                return;
+            }
+
+            const texture_name = get_file_name(get_basename(texture_path));
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            if (atlas == null) {
+                Log.error('[updateMinFilter] Atlas not found for texture:', texture_name);
+                return;
+            }
+
+            const filter_mode = info.data.event.value as FilterMode;
+            const threeFilterMode = convertFilterModeToThreeJS(filter_mode) as MinificationTextureFilter;
+            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            texture_data.texture.minFilter = threeFilterMode;
+        });
+
+        ResourceManager.write_metadata();
+    }
+
+    function saveMagFilter(ids: number[]) {
+        const magFilters: MagFilterEventData[] = [];
+        ids.forEach((id) => {
+            const texture_path = _selected_textures[id];
+            if (texture_path == null) {
+                Log.error('[saveMagFilter] Texture path not found for id:', id);
+                return;
+            }
+
+            const texture_name = get_file_name(get_basename(texture_path));
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            if (atlas == null) {
+                Log.error('[saveMagFilter] Atlas not found for texture:', texture_name);
+                return;
+            }
+
+            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            magFilters.push({
+                texture_path,
+                filter: texture_data.texture.magFilter as MagnificationTextureFilter
+            });
+        });
+
+        HistoryControl.add('MESH_MAG_FILTER', magFilters);
+    }
+
+    function updateMagFilter(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const texture_path = _selected_textures[id];
+            if (texture_path == null) {
+                Log.error('[updateMagFilter] Texture path not found for id:', id);
+                return;
+            }
+
+            const texture_name = get_file_name(get_basename(texture_path));
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            if (atlas == null) {
+                Log.error('[updateMagFilter] Atlas not found for texture:', texture_name);
+                return;
+            }
+
+            const filter_mode = info.data.event.value as FilterMode;
+            const threeFilterMode = convertFilterModeToThreeJS(filter_mode) as MagnificationTextureFilter;
+            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            texture_data.texture.magFilter = threeFilterMode;
+        });
+
+        ResourceManager.write_metadata();
+    }
+
+    function convertFilterModeToThreeJS(filter_mode: FilterMode): number {
+        switch(filter_mode) {
+            case FilterMode.NEAREST:
+                return NearestFilter;
+            case FilterMode.LINEAR:
+                return LinearFilter;
+            default:
+                return LinearFilter;
+        }
+    }
+
+    function convertThreeJSFilterToFilterMode(filter: number): FilterMode {
+        switch(filter) {
+            case NearestFilter:
+                return FilterMode.NEAREST;
+            case LinearFilter:
+                return FilterMode.LINEAR;
+            default:
+                return FilterMode.LINEAR;
+        }
     }
 
     init();
@@ -2263,6 +2564,18 @@ export function getDefaultInspectorConfig() {
                     name: Property.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: castAtlases(ResourceManager.get_all_atlases())
                 },
                 { name: Property.ATLAS_BUTTON, title: 'Атлас менеджер', type: PropertyType.BUTTON },
+                {
+                    name: Property.MIN_FILTER, title: 'Фильтр уменьшения', type: PropertyType.LIST_TEXT, params: {
+                        'nearest': FilterMode.NEAREST,
+                        'linear': FilterMode.LINEAR
+                    }
+                },
+                { 
+                    name: Property.MAG_FILTER, title: 'Фильтр увеличения', type: PropertyType.LIST_TEXT, params: {
+                        'nearest': FilterMode.NEAREST,
+                        'linear': FilterMode.LINEAR
+                    }
+                }
             ]
         },
         {

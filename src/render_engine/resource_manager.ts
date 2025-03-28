@@ -1,4 +1,4 @@
-import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2 } from 'three';
+import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter } from 'three';
 import { get_file_name } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
@@ -7,7 +7,6 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
 import { TRecursiveDict } from '../modules_editor/modules_editor_const';
-import { IObjectTypes } from './types';
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -395,6 +394,40 @@ export function ResourceManagerModule() {
         atlases[new_atlas][name] = texture;
     }
     
+    // NOTE: записываем всю информацию из ресурсов в metadata
+    async function write_metadata() {
+        try {
+            const metadata = await ClientAPI.get_info('atlases');
+            if(!metadata.result) {
+                if(metadata.data != undefined) {
+                    throw new Error('Failed on get atlases metadata!');
+                }
+            }
+            const metadata_atlases = {} as TRecursiveDict;
+            // NOTE: для каждого атласа создаём отдельный объект в metadata_atlases
+            for (const [atlas_name, textures] of Object.entries(atlases)) {
+                if(!metadata_atlases[atlas_name]) {
+                    metadata_atlases[atlas_name] = {} as TRecursiveDict;
+                }
+                const metadata_atlas = metadata_atlases[atlas_name] as TRecursiveDict;
+                for (const [texture_name, texture] of Object.entries(textures)) {
+                    // NOTE: записываем путь до исходника текстуры и фильтры
+                    metadata_atlas[texture_name] = {
+                        path: (texture.data.texture as any).path,
+                        minFilter: texture.data.texture.minFilter,
+                        magFilter: texture.data.texture.magFilter
+                    };
+                }
+            }
+            const save_result = await ClientAPI.save_info('atlases', metadata_atlases);
+            if(!save_result.result) {
+                throw new Error('Failed on save atlases metadata!');
+            }
+        } catch (error) {
+            Log.error('Error writing metadata:', error);
+        }
+    }
+
     // NOTE: считываем всю информацию из metadata и обновляем ресурсы
     async function update_from_metadata() {
         Log.log('Update resource manager from metadata');
@@ -413,43 +446,27 @@ export function ResourceManagerModule() {
                 if(!has_atlas(atlas_name)) {
                     add_atlas(atlas_name);
                 }
-                for(const texture_name of Object.keys(textures)) {
+                for(const [texture_name, texture_data] of Object.entries(textures)) {
                     const old_atlas = get_atlas_by_texture_name(texture_name);
                     override_atlas_texture(old_atlas || '', atlas_name, texture_name);
+                    
+                    // Update texture filters if they exist in metadata
+                    if (typeof texture_data === 'object' && texture_data !== null) {
+                        const data = texture_data as { minFilter?: MinificationTextureFilter; magFilter?: MagnificationTextureFilter };
+                        if (has_texture_name(texture_name, atlas_name)) {
+                            const texture = atlases[atlas_name][texture_name].data.texture;
+                            if (data.minFilter !== undefined) {
+                                texture.minFilter = data.minFilter;
+                            }
+                            if (data.magFilter !== undefined) {
+                                texture.magFilter = data.magFilter;
+                            }
+                        }
+                    }
                 }
             }
         } catch (error) {
             Log.error('Error updating resource manager:', error);
-        }
-    }
-
-    // NOTE: записываем всю информацию из ресурсов в metadata
-    async function write_metadata() {
-        try {
-            const metadata = await ClientAPI.get_info('atlases');
-            if(!metadata.result) {
-                if(metadata.data != undefined) {
-                    throw new Error('Failed on get atlases metadata!');
-                }
-            }
-            const metadata_atlases = {} as TRecursiveDict;
-            // NOTE: для каждого атласа создаём отдельный объект в metadata_atlases
-            for (const [atlas_name, textures] of Object.entries(atlases)) {
-                if(!metadata_atlases[atlas_name]) {
-                    metadata_atlases[atlas_name] = {} as TRecursiveDict;
-                }
-                const metadata_atlas = metadata_atlases[atlas_name] as TRecursiveDict;
-                for (const [texture_name, texture] of Object.entries(textures)) {
-                    // NOTE: записываем путь до исходника текстуры
-                    metadata_atlas[texture_name] = (texture.data.texture as any).path;
-                }
-            }
-            const save_result = await ClientAPI.save_info('atlases', metadata_atlases);
-            if(!save_result.result) {
-                throw new Error('Failed on save atlases metadata!');
-            }
-        } catch (error) {
-            Log.error('Error writing metadata:', error);
         }
     }
 

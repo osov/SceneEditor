@@ -1,9 +1,10 @@
-import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData } from "./types";
+import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { get_keys } from "../modules/utils";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { TextMesh } from "../render_engine/objects/text";
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
+import { MagnificationTextureFilter, MinificationTextureFilter } from "three";
 
 declare global {
     const HistoryControl: ReturnType<typeof HistoryControlCreate>;
@@ -37,6 +38,8 @@ export type HistoryData = {
     MESH_ATLAS: AtlasEventData
     MESH_LINE_HEIGHT: LineHeightEventData
     MESH_BLEND_MODE: BlendModeEventData
+    MESH_MIN_FILTER: MinFilterEventData
+    MESH_MAG_FILTER: MagFilterEventData
 }
 
 type HistoryDataKeys = keyof HistoryData;
@@ -285,6 +288,34 @@ function HistoryControlCreate() {
                 (mesh as any).material.blending = data.blend_mode;
                 list_mesh.push(mesh);
             }
+        } else if (type == 'MESH_MIN_FILTER') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_MIN_FILTER'];
+                const texture_name = get_file_name(get_basename(data.texture_path));
+                const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+                if (atlas == null) {
+                    Log.error('Not found atlas by texture: ', texture_name);
+                    return;
+                }
+
+                const texture_data = ResourceManager.get_texture(texture_name, atlas);
+                texture_data.texture.minFilter = data.filter as MinificationTextureFilter;
+            }
+            ResourceManager.write_metadata();
+        } else if (type == 'MESH_MAG_FILTER') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_MAG_FILTER'];
+                const texture_name = get_file_name(get_basename(data.texture_path));
+                const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+                if (atlas == null) {
+                    Log.error('Not found atlas by texture: ', texture_name);
+                    return;
+                }
+
+                const texture_data = ResourceManager.get_texture(texture_name, atlas);
+                texture_data.texture.magFilter = data.filter as MagnificationTextureFilter;
+            }
+            ResourceManager.write_metadata();
         }
         if (list_mesh.length > 0) {
             for (let i = 0; i < list_mesh.length; i++)

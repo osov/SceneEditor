@@ -1,4 +1,4 @@
-import { Blending, Euler, Vector2, Vector3 } from "three";
+import { Blending, Euler, MagnificationTextureFilter, MinificationTextureFilter, Vector2, Vector3 } from "three";
 
 export type PositionEventData = {
     id_mesh: number;
@@ -102,4 +102,14 @@ export type AtlasEventData = {
 export interface BlendModeEventData {
     id_mesh: number;
     blend_mode: Blending;
+}
+
+export interface MinFilterEventData {
+    texture_path: string;
+    filter: MinificationTextureFilter;
+}
+
+export interface MagFilterEventData {
+    texture_path: string;
+    filter: MagnificationTextureFilter;
 }
