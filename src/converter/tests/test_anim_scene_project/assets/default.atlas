@@ -1,4 +1,4 @@
 images { 
-  image: "/assets/test_assets/textures/5.png"
+  image: "/assets//test_assets/textures/5.png"
    
  } 

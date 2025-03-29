@@ -1,16 +1,16 @@
 images { 
-  image: "/assets/tiled/Waves/Waves.png"
+  image: "/assets//tiled/Waves/Waves.png"
    
  } 
 images { 
-  image: "/assets/tiled/Waves/Waves3.png"
+  image: "/assets//tiled/Waves/Waves3.png"
    
  } 
 images { 
-  image: "/assets/tiled/Waves/Waves2.png"
+  image: "/assets//tiled/Waves/Waves2.png"
    
  } 
 images { 
-  image: "/assets/tiled/Waves/WaveDock.png"
+  image: "/assets//tiled/Waves/WaveDock.png"
    
  } 

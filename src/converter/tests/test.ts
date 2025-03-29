@@ -63,12 +63,12 @@ function test() {
             name: `/assets/${atlas}`,
             images: textures.map((texture) => {
                 console.log(metadata_atlas, texture);
-                let texture_path = metadata_atlas[texture] as string;
-                if(texture_path == undefined) {
+                let texture_info = metadata_atlas[texture] as { path: string, minFilter: number, magFilter: number };
+                if(texture_info == undefined) {
                     console.error('Not found metadata for texture:', texture);
                     return '';
                 }
-                texture_path = `/${texture_path.replace(/^https?:\/\/[^\/]+\//i, '')}`;
+                const texture_path = `/assets/${texture_info.path}`;  
                 console.log(texture_path);
                 return `${texture_path}`;
             })

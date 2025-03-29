@@ -413,7 +413,7 @@ export function ResourceManagerModule() {
                 for (const [texture_name, texture] of Object.entries(textures)) {
                     // NOTE: записываем путь до исходника текстуры и фильтры
                     metadata_atlas[texture_name] = {
-                        path: (texture.data.texture as any).path,
+                        path: (texture.data.texture as any).path.replace(project_path, ''),
                         minFilter: texture.data.texture.minFilter,
                         magFilter: texture.data.texture.magFilter
                     };
