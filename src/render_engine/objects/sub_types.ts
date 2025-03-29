@@ -48,32 +48,15 @@ export enum FlipMode {
 export class GoSprite extends Slice9Mesh {
     public type = IObjectTypes.GO_SPRITE_COMPONENT;
     public is_component = true;
-    private _original_uv: Float32Array | null = null;
+
+    private original_uv: Float32Array | null = null;
 
     set_pivot(x: number, y: number, is_sync?: boolean): void { }
 
-    get_flip(): FlipMode {
+    get_uv(): Float32Array {
         const geometry = this.geometry;
         const uv = geometry.attributes.uv;
-        
-        if (!this._original_uv) {
-            return FlipMode.NONE;
-        }
-
-        const current_x = uv.array[0];
-        const current_y = uv.array[1];
-        const original_x = this._original_uv[0];
-        const original_y = this._original_uv[1];
-        
-        if (current_x === 1 - original_y && current_y === 1 - original_x) {
-            return FlipMode.DIAGONAL;
-        } else if (current_x === 1 - original_x) {
-            return FlipMode.HORIZONTAL;
-        } else if (current_y === 1 - original_y) {
-            return FlipMode.VERTICAL;
-        }
-        
-        return FlipMode.NONE;
+        return new Float32Array(uv.array);
     }
 
     set_flip(value: FlipMode) {
@@ -81,8 +64,8 @@ export class GoSprite extends Slice9Mesh {
         const uv = geometry.attributes.uv;
 
         // NOTE: сохраняем оригинальные координаты UV
-        if (!this._original_uv) {
-            this._original_uv = new Float32Array(uv.array);
+        if (!this.original_uv) {
+            this.original_uv = new Float32Array(uv.array);
         }
 
         switch (value) {
@@ -97,7 +80,7 @@ export class GoSprite extends Slice9Mesh {
                 break;
             case FlipMode.NONE:
                 // NOTE: возвращаем оригинальные координаты UV
-                uv.array.set(this._original_uv);
+                uv.array.set(this.original_uv);
                 break;
         }
         geometry.attributes.uv.needsUpdate = true;
@@ -107,7 +90,7 @@ export class GoSprite extends Slice9Mesh {
     serialize() {
         return {
             ...super.serialize(),
-            original_uv: this._original_uv ? Array.from(this._original_uv) : null,
+            original_uv: this.original_uv ? Array.from(this.original_uv) : null,
             current_uv: Array.from(this.geometry.attributes.uv.array)
         };
     }
@@ -115,7 +98,7 @@ export class GoSprite extends Slice9Mesh {
     deserialize(data: any) {
         super.deserialize(data);
         if (data.original_uv) {
-            this._original_uv = new Float32Array(data.original_uv);
+            this.original_uv = new Float32Array(data.original_uv);
         }
         if (data.current_uv) {
             this.geometry.attributes.uv.array.set(data.current_uv);

@@ -113,3 +113,8 @@ export interface MagFilterEventData {
     texture_path: string;
     filter: MagnificationTextureFilter;
 }
+
+export interface UVEventData {
+    id_mesh: number;
+    uv: Float32Array;
+}

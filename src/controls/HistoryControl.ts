@@ -1,5 +1,6 @@
-import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData } from "./types";
+import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
+import { GoSprite } from "../render_engine/objects/sub_types";
 import { get_keys } from "../modules/utils";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { TextMesh } from "../render_engine/objects/text";
@@ -40,6 +41,7 @@ export type HistoryData = {
     MESH_BLEND_MODE: BlendModeEventData
     MESH_MIN_FILTER: MinFilterEventData
     MESH_MAG_FILTER: MagFilterEventData
+    MESH_UV: UVEventData
 }
 
 type HistoryDataKeys = keyof HistoryData;
@@ -316,6 +318,17 @@ function HistoryControlCreate() {
                 texture_data.texture.magFilter = data.filter as MagnificationTextureFilter;
             }
             ResourceManager.write_metadata();
+        } else if (type == 'MESH_UV') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_UV'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                if (mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                    const sprite = mesh as GoSprite;
+                    sprite.geometry.attributes.uv.array.set(data.uv);
+                    sprite.geometry.attributes.uv.needsUpdate = true;
+                    list_mesh.push(mesh);
+                }
+            }
         }
         if (list_mesh.length > 0) {
             for (let i = 0; i < list_mesh.length; i++)

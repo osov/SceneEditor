@@ -77,7 +77,7 @@ import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
-import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData } from './types';
+import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData } from './types';
 import { TextureInfo } from '../render_engine/resource_manager';
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 import { GoSprite, FlipMode } from '../render_engine/objects/sub_types';
@@ -473,21 +473,25 @@ function InspectorControlCreate() {
                     fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
                     if (value.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                         fields.push({ name: Property.FLIP_RESET, data: () => {
+                            saveUV(_selected_list.map(m => m.mesh_data.id));
                             _selected_list.forEach((item) => {
                                 (item as GoSprite).set_flip(FlipMode.NONE);
                             });
                         } });
                         fields.push({ name: Property.FLIP_VERTICAL, data: () => {
+                            saveUV(_selected_list.map(m => m.mesh_data.id));
                             _selected_list.forEach((item) => {
                                 (item as GoSprite).set_flip(FlipMode.VERTICAL);
                             });
                         } });
                         fields.push({ name: Property.FLIP_HORIZONTAL, data: () => {
+                            saveUV(_selected_list.map(m => m.mesh_data.id));
                             _selected_list.forEach((item) => {
                                 (item as GoSprite).set_flip(FlipMode.HORIZONTAL);
                             });
                         } });
                         fields.push({ name: Property.FLIP_DIAGONAL, data: () => {
+                            saveUV(_selected_list.map(m => m.mesh_data.id));
                             _selected_list.forEach((item) => {
                                 (item as GoSprite).set_flip(FlipMode.DIAGONAL);
                             });
@@ -2349,6 +2353,30 @@ function InspectorControlCreate() {
             default:
                 return FilterMode.LINEAR;
         }
+    }
+
+    function saveUV(ids: number[]) {
+        const uvs: UVEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (mesh == undefined) {
+                Log.error('[saveUV] Mesh not found for id:', id);
+                return;
+            }
+
+            if (mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                const sprite = mesh as GoSprite;
+                uvs.push({ 
+                    id_mesh: id, 
+                    uv: sprite.get_uv()
+                });
+            }
+        });
+
+        HistoryControl.add('MESH_UV', uvs);
     }
 
     init();
