@@ -15,6 +15,8 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
     public is_component = false;
     public mesh_data = { id: -1 };
     public on_transform_changed?: OnTransformChanged;
+    public no_saving = false;
+    public no_removing = false;
 
     protected parameters: IBaseParameters = {
         width: tmp_size,

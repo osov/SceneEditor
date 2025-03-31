@@ -34,6 +34,8 @@ export type OnTransformChanged = (e: IBaseEntityAndThree) => void;
 export interface IBaseEntity {
     type: IObjectTypes;
     mesh_data: { id: number };
+    no_saving?: boolean;
+    no_removing?: boolean;
     set_position(x: number, y: number, z?: number): void
     get_position(): Vector3
     set_scale(x: number, y: number): void

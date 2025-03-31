@@ -316,7 +316,7 @@ function InspectorControlCreate() {
     function subscribeEvents() {
         EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
             set_selected_list(e.list);
-        }); 
+        });
 
         EventBus.on('SYS_UNSELECTED_MESH_LIST', clear);
 
@@ -327,7 +327,7 @@ function InspectorControlCreate() {
         EventBus.on('SYS_ASSETS_CLEAR_SELECTED', clear);
 
         EventBus.on('SYS_CHANGED_ATLAS_DATA', () => {
-            if(_selected_textures.length > 0) {
+            if (_selected_textures.length > 0) {
                 // NOTE: пока просто пересоздаем поля занаво, так как нет возможности обновить параметры биндинга
                 clear();
                 set_selected_textures(_selected_textures);
@@ -390,16 +390,16 @@ function InspectorControlCreate() {
         update_atlas_options();
 
         const data = _selected_textures.map((path, id) => {
-            const result = {id, data: [] as PropertyData<PropertyType>[]};
+            const result = { id, data: [] as PropertyData<PropertyType>[] };
 
             const texture_name = get_file_name(get_basename(path));
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
 
-            if(atlas == null) {
+            if (atlas == null) {
                 Log.error(`[set_selected_textures] Atlas for texture ${texture_name} not found`);
-                return {id, data: []};
+                return { id, data: [] };
             }
-            
+
             result.data.push({ name: Property.ATLAS, data: atlas });
             result.data.push({
                 name: Property.ATLAS_BUTTON, data: () => {
@@ -417,7 +417,7 @@ function InspectorControlCreate() {
 
             return result;
         });
-        
+
         clear();
         setData(data);
     }
@@ -472,30 +472,38 @@ function InspectorControlCreate() {
                     fields.push({ name: Property.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
                     fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
                     if (value.type === IObjectTypes.GO_SPRITE_COMPONENT) {
-                        fields.push({ name: Property.FLIP_RESET, data: () => {
-                            saveUV(_selected_list.map(m => m.mesh_data.id));
-                            _selected_list.forEach((item) => {
-                                (item as GoSprite).set_flip(FlipMode.NONE);
-                            });
-                        } });
-                        fields.push({ name: Property.FLIP_VERTICAL, data: () => {
-                            saveUV(_selected_list.map(m => m.mesh_data.id));
-                            _selected_list.forEach((item) => {
-                                (item as GoSprite).set_flip(FlipMode.VERTICAL);
-                            });
-                        } });
-                        fields.push({ name: Property.FLIP_HORIZONTAL, data: () => {
-                            saveUV(_selected_list.map(m => m.mesh_data.id));
-                            _selected_list.forEach((item) => {
-                                (item as GoSprite).set_flip(FlipMode.HORIZONTAL);
-                            });
-                        } });
-                        fields.push({ name: Property.FLIP_DIAGONAL, data: () => {
-                            saveUV(_selected_list.map(m => m.mesh_data.id));
-                            _selected_list.forEach((item) => {
-                                (item as GoSprite).set_flip(FlipMode.DIAGONAL);
-                            });
-                        } });
+                        fields.push({
+                            name: Property.FLIP_RESET, data: () => {
+                                saveUV(_selected_list.map(m => m.mesh_data.id));
+                                _selected_list.forEach((item) => {
+                                    (item as GoSprite).set_flip(FlipMode.NONE);
+                                });
+                            }
+                        });
+                        fields.push({
+                            name: Property.FLIP_VERTICAL, data: () => {
+                                saveUV(_selected_list.map(m => m.mesh_data.id));
+                                _selected_list.forEach((item) => {
+                                    (item as GoSprite).set_flip(FlipMode.VERTICAL);
+                                });
+                            }
+                        });
+                        fields.push({
+                            name: Property.FLIP_HORIZONTAL, data: () => {
+                                saveUV(_selected_list.map(m => m.mesh_data.id));
+                                _selected_list.forEach((item) => {
+                                    (item as GoSprite).set_flip(FlipMode.HORIZONTAL);
+                                });
+                            }
+                        });
+                        fields.push({
+                            name: Property.FLIP_DIAGONAL, data: () => {
+                                saveUV(_selected_list.map(m => m.mesh_data.id));
+                                _selected_list.forEach((item) => {
+                                    (item as GoSprite).set_flip(FlipMode.DIAGONAL);
+                                });
+                            }
+                        });
                     }
                 }
 
@@ -513,7 +521,7 @@ function InspectorControlCreate() {
                     fields.push({ name: Property.TEXT_ALIGN, data: (value as TextMesh).textAlign });
 
                     const line_height = (value as TextMesh).lineHeight;
-                    if(line_height == 'normal') fields.push({ name: Property.LINE_HEIGHT, data: 1 });
+                    if (line_height == 'normal') fields.push({ name: Property.LINE_HEIGHT, data: 1 });
                     else fields.push({ name: Property.LINE_HEIGHT, data: line_height });
                 }
             }
@@ -1774,7 +1782,7 @@ function InspectorControlCreate() {
         if (info.data.event.last) {
             refresh([Property.ANCHOR_PRESET]);
         }
-        
+
         refresh([Property.ANCHOR]);
     }
 
@@ -2163,7 +2171,7 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_ATLAS', atlases);
     }
 
-    function updateAtlas (info: ChangeInfo) {
+    function updateAtlas(info: ChangeInfo) {
         const atlas = info.data.event.value as string;
 
         info.ids.forEach((id) => {
@@ -2176,17 +2184,17 @@ function InspectorControlCreate() {
             const texture_name = get_file_name(get_basename(texture_path));
             const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
             ResourceManager.override_atlas_texture(old_atlas, atlas, texture_name);
-            
-           // NOTE: возможно обновление текстур в мешах должно быть в override_atlas_texture 
+
+            // NOTE: возможно обновление текстур в мешах должно быть в override_atlas_texture 
             SceneManager.get_scene_list().forEach((mesh) => {
                 const is_type = mesh.type == IObjectTypes.GO_SPRITE_COMPONENT || mesh.type == IObjectTypes.GUI_BOX;
-                if(!is_type) return;
-                
+                if (!is_type) return;
+
                 const mesh_texture = (mesh as IBaseMesh).get_texture();
                 const is_atlas = mesh_texture.includes(old_atlas);
                 const is_texture = mesh_texture.includes(texture_name);
 
-                if(is_atlas && is_texture) {
+                if (is_atlas && is_texture) {
                     mesh.set_texture(texture_name, atlas);
                 }
             });
@@ -2207,9 +2215,9 @@ function InspectorControlCreate() {
                 return;
             }
 
-            blendModes.push({ 
-                id_mesh: id, 
-                blend_mode: (mesh as any).material.blending 
+            blendModes.push({
+                id_mesh: id,
+                blend_mode: (mesh as any).material.blending
             });
         });
 
@@ -2250,8 +2258,8 @@ function InspectorControlCreate() {
             }
 
             const texture_data = ResourceManager.get_texture(texture_name, atlas);
-            minFilters.push({ 
-                texture_path, 
+            minFilters.push({
+                texture_path,
                 filter: texture_data.texture.minFilter as MinificationTextureFilter
             });
         });
@@ -2334,7 +2342,7 @@ function InspectorControlCreate() {
     }
 
     function convertFilterModeToThreeJS(filter_mode: FilterMode): number {
-        switch(filter_mode) {
+        switch (filter_mode) {
             case FilterMode.NEAREST:
                 return NearestFilter;
             case FilterMode.LINEAR:
@@ -2345,7 +2353,7 @@ function InspectorControlCreate() {
     }
 
     function convertThreeJSFilterToFilterMode(filter: number): FilterMode {
-        switch(filter) {
+        switch (filter) {
             case NearestFilter:
                 return FilterMode.NEAREST;
             case LinearFilter:
@@ -2369,8 +2377,8 @@ function InspectorControlCreate() {
 
             if (mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                 const sprite = mesh as GoSprite;
-                uvs.push({ 
-                    id_mesh: id, 
+                uvs.push({
+                    id_mesh: id,
                     uv: sprite.get_uv()
                 });
             }
@@ -2520,7 +2528,7 @@ function screenPresetToAnchorValue(preset: ScreenPointPreset) {
 }
 
 function convertBlendModeToThreeJS(blend_mode: BlendMode): number {
-    switch(blend_mode) {
+    switch (blend_mode) {
         case BlendMode.NORMAL:
             return NormalBlending;
         case BlendMode.ADD:
@@ -2537,7 +2545,7 @@ function convertBlendModeToThreeJS(blend_mode: BlendMode): number {
 }
 
 function convertThreeJSBlendingToBlendMode(blending: number): BlendMode {
-    switch(blending) {
+    switch (blending) {
         case NormalBlending:
             return BlendMode.NORMAL;
         case AdditiveBlending:
@@ -2601,7 +2609,7 @@ function castTextureInfo(info: TextureInfo) {
 }
 
 function castAtlases(atlases: string[]) {
-    const data: {[key in string]: string} = {};
+    const data: { [key in string]: string } = {};
     atlases.forEach((atlas) => {
         return data[atlas == '' ? 'Без атласа' : atlas] = atlas;
     });
@@ -2616,7 +2624,7 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 { name: Property.TYPE, title: 'Тип', type: PropertyType.STRING, readonly: true },
                 { name: Property.NAME, title: 'Название', type: PropertyType.STRING },
-                { name: Property.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN },
+                //{ name: Property.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN },
                 { name: Property.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN },
                 {
                     name: Property.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: castAtlases(ResourceManager.get_all_atlases())
@@ -2628,7 +2636,7 @@ export function getDefaultInspectorConfig() {
                         'linear': FilterMode.LINEAR
                     }
                 },
-                { 
+                {
                     name: Property.MAG_FILTER, title: 'Фильтр увеличения', type: PropertyType.LIST_TEXT, params: {
                         'nearest': FilterMode.NEAREST,
                         'linear': FilterMode.LINEAR
@@ -2735,7 +2743,7 @@ export function getDefaultInspectorConfig() {
             ]
         },
         {
-        name: 'flip',
+            name: 'flip',
             title: 'Отразить',
             property_list: [
                 { name: Property.FLIP_RESET, title: 'В исходное положение', type: PropertyType.BUTTON },

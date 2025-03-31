@@ -1,28 +1,24 @@
 import { AdditiveBlending, FloatType, MeshBasicMaterial, NearestFilter, RGBAFormat, Vector2, WebGLRenderTarget } from 'three'
-import { run_debug_filemanager } from './controls/AssetControl';
-import { SERVER_URL, WORLD_SCALAR } from './config';
-import { URL_PATHS } from './modules_editor/modules_editor_const';
+import { run_debug_filemanager } from '../controls/AssetControl';
+import { PROJECT_NAME, SERVER_URL, WORLD_SCALAR } from '../config';
+import { URL_PATHS } from '../modules_editor/modules_editor_const';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
-import { MapData, preload_tiled_textures, get_all_tiled_textures } from './render_engine/parsers/tile_parser';
-import { IBaseMeshAndThree, IObjectTypes } from './render_engine/types';
-import { TileLoader } from './render_engine/tile_loader';
-import { is_base_mesh } from './render_engine/helpers/utils';
+import { MapData, preload_tiled_textures, get_all_tiled_textures } from '../render_engine/parsers/tile_parser';
+import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
+import { TileLoader } from '../render_engine/tile_loader';
 
 
-export async function run_debug_scene_light() {
+export async function run_scene_light() {
     (window as any).scene = RenderEngine.scene;
-
-    await ResourceManager.preload_atlas('./img/example_atlas.tpsheet', './img/example_atlas.png');
     const renderer = RenderEngine.renderer;
     const camera = RenderEngine.camera;
     const scene = RenderEngine.scene;
 
     ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
-    const project_to_load = 'SceneEditor_ExampleProject';
-    await run_debug_filemanager(project_to_load);
+    await run_debug_filemanager(PROJECT_NAME);
 
     const map_data = await ResourceManager.load_asset('/tiled/parsed_map.json') as MapData;
     preload_tiled_textures(map_data);
@@ -33,13 +29,14 @@ export async function run_debug_scene_light() {
     //    const tex = all[id];
     //    ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
     //}
+
     const world = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    world.name = 'TILES';
     SceneManager.add(world);
-    (world as any).mesh_data = null;
+    world.no_saving = true; //  чтобы не сохранять в файл
+    world.no_removing = true; //  чтобы не удалять из сцены
     const tl = TileLoader(world, 256);
     tl.load(map_data);
-
-    ControlManager.update_graph(true, 'tiled');
 
     await AssetControl.open_scene('/LIGHT.scn');
 
@@ -50,6 +47,7 @@ export async function run_debug_scene_light() {
     am.set_texture('PolygonExplorers_Texture_01_A')
     am.rotateX(30 / 180 * Math.PI)
     am.position.set(313, -240, 5000)
+    am.no_saving = true;
     SceneManager.add(am);
 
     function rebuild_light() {
@@ -60,7 +58,7 @@ export async function run_debug_scene_light() {
                     return;
                 light.layers.enable(2);
                 light.layers.disable(0);
-                ((light as any).material as MeshBasicMaterial).blending = AdditiveBlending;
+                //((light as any).material as MeshBasicMaterial).blending = AdditiveBlending;
             });
         }
 

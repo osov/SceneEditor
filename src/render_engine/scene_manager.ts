@@ -153,18 +153,26 @@ export function SceneManagerModule() {
 
     function clear_scene() {
         for (let i = scene.children.length - 1; i >= 0; i--) {
-            const m = scene.children[i];
-            if (is_base_mesh(m))
+            const _m = scene.children[i];
+            if (is_base_mesh(_m)) {
+                const m = (_m as any as IBaseEntityAndThree);
+                if (m.no_removing)
+                    continue;
                 scene.remove(m);
+            }
         }
     }
 
     function save_scene() {
         const list: IBaseEntityData[] = [];
         for (let i = 0; i < scene.children.length; i++) {
-            const m = scene.children[i];
-            if (is_base_mesh(m))
-                list.push(serialize_mesh(m as IBaseEntityAndThree));
+            const _m = scene.children[i];
+            if (is_base_mesh(_m)) {
+                const m = (_m as any as IBaseEntityAndThree);
+                if (m.no_saving)
+                    continue;
+                list.push(serialize_mesh(m));
+            }
         }
         return list;
     }

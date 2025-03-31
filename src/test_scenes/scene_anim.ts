@@ -1,29 +1,28 @@
-import { SERVER_URL, WORLD_SCALAR } from "./config";
-import { run_debug_filemanager } from "./controls/AssetControl";
-import { URL_PATHS } from "./modules_editor/modules_editor_const";
-import { get_all_tiled_textures, get_depth, MapData, preload_tiled_textures } from "./render_engine/parsers/tile_parser";
-import { IObjectTypes } from "./render_engine/types";
-import { TileLoader } from "./render_engine/tile_loader";
+import { PROJECT_NAME, SERVER_URL, WORLD_SCALAR } from "../config";
+import { run_debug_filemanager } from "../controls/AssetControl";
+import { URL_PATHS } from "../modules_editor/modules_editor_const";
+import { get_all_tiled_textures, get_depth, MapData, preload_tiled_textures } from "../render_engine/parsers/tile_parser";
+import { IObjectTypes } from "../render_engine/types";
+import { TileLoader } from "../render_engine/tile_loader";
 
 const SORT_LAYER = 7;
 const SUB_SCALAR = WORLD_SCALAR;
-export async function run_anim_scene() {
+export async function run_scene_anim() {
     (window as any).get_depth = get_depth;
 
     ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
-    const project_to_load = 'SceneEditor_ExampleProject';
-    await run_debug_filemanager(project_to_load);
-    
+    await run_debug_filemanager(PROJECT_NAME);
+
     const map_data = await ResourceManager.load_asset('/tiled/parsed_map.json') as MapData;
     preload_tiled_textures(map_data);
     // hack atlases
-    const all = get_all_tiled_textures();
-    for (const id in all) {
-        const tex = all[id];
-        if (ResourceManager.has_texture_name(tex.name, '')) {
-            ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
-        }
-    }
+    //const all = get_all_tiled_textures();
+    //for (const id in all) {
+    //    const tex = all[id];
+    //    if (ResourceManager.has_texture_name(tex.name, '')) {
+    //        ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
+    //    }
+    //}
     await ResourceManager.write_metadata();
     // ------------
 
@@ -56,7 +55,7 @@ export async function run_anim_scene() {
     box.set_color('#0f0')
     box.set_slice(8, 8);
     gui.add(box);
-    
+
     const box1 = SceneManager.create(IObjectTypes.GUI_BOX, { width: 230, height: 50 });
     box1.set_color('#fff');
     box1.scale.setScalar(0.5);
@@ -73,8 +72,8 @@ export async function run_anim_scene() {
     am.rotateX(30 / 180 * Math.PI)
     am.position.set(x, y, z)
     SceneManager.add(am);
-    
+
     ControlManager.update_graph(true, 'anim_scene');
-    
+
     // console.log(JSON.stringify(SceneManager.save_scene()));
 }

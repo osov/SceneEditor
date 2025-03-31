@@ -1,10 +1,10 @@
 import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, Vector3 } from 'three'
-import { IObjectTypes } from './render_engine/types';
-import { run_debug_filemanager } from './controls/AssetControl';
-import { SERVER_URL } from './config';
-import { URL_PATHS } from './modules_editor/modules_editor_const';
+import { IObjectTypes } from '../render_engine/types';
+import { run_debug_filemanager } from '../controls/AssetControl';
+import { PROJECT_NAME, SERVER_URL } from '../config';
+import { URL_PATHS } from '../modules_editor/modules_editor_const';
 
-export async function run_debug_scene() {
+export async function run_scene_simple() {
   (window as any).scene = RenderEngine.scene;
   await ResourceManager.preload_font('ShantellSans-Light11.ttf')
   const tex = await ResourceManager.preload_texture('./img/2.png');
@@ -86,7 +86,6 @@ export async function run_debug_scene() {
 
 
   ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
-  const project_to_load = 'SceneEditor_ExampleProject';
-  await run_debug_filemanager(project_to_load);
+  await run_debug_filemanager(PROJECT_NAME);
   ControlManager.update_graph(true, 'test');
 }
