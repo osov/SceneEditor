@@ -220,8 +220,6 @@ function ControlManagerCreate() {
             return { id: id.toString(), title, can_delete: true };
         });
 
-        Log.log('open_atlas_manager', list);
-
         Popups.open({
             type: "Layers",
             params: {

@@ -72,13 +72,13 @@ import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plugin';
-import { Vector2, Vector3, NormalBlending, AdditiveBlending, MultiplyBlending, SubtractiveBlending, CustomBlending, NearestFilter, LinearFilter, MinificationTextureFilter, MagnificationTextureFilter } from 'three';
+import { Vector2, Vector3, NormalBlending, AdditiveBlending, MultiplyBlending, SubtractiveBlending, CustomBlending, NearestFilter, LinearFilter, MinificationTextureFilter, MagnificationTextureFilter, Vector4, Color, Uniform, IUniform } from 'three';
 import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
-import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData } from './types';
-import { TextureInfo } from '../render_engine/resource_manager';
+import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData } from './types';
+import { MaterialUniformParams, MaterialUniformType, TextureInfo } from '../render_engine/resource_manager';
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 import { GoSprite, FlipMode } from '../render_engine/objects/sub_types';
 
@@ -121,7 +121,18 @@ export enum Property {
     FLIP_RESET = 'flip_reset',
     FLIP_VERTICAL = 'flip_vertical',
     FLIP_HORIZONTAL = 'flip_horizontal',
-    FLIP_DIAGONAL = 'flip_diagonal'
+    FLIP_DIAGONAL = 'flip_diagonal',
+    MATERIAL = 'material',
+    VERTEX_PROGRAM = 'vertex_program',
+    FRAGMENT_PROGRAM = 'fragment_program',
+    TRANSPARENT = 'transparent',
+    UNIFORM_SAMPLER2D = 'uniform_sampler2d',
+    UNIFORM_FLOAT = 'uniform_float',
+    UNIFORM_RANGE = 'uniform_range',
+    UNIFORM_VEC2 = 'uniform_vec2',
+    UNIFORM_VEC3 = 'uniform_vec3',
+    UNIFORM_VEC4 = 'uniform_vec4',
+    UNIFORM_COLOR = 'uniform_color'
 }
 
 export enum ScreenPointPreset {
@@ -286,6 +297,7 @@ function InspectorControlCreate() {
     let _unique_fields: { ids: number[], field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }[];
     let _selected_list: IBaseMeshAndThree[] = [];
     let _selected_textures: string[] = [];
+    let _selected_materials: string[] = [];
     let _data: ObjectData[];
 
     let _is_first = true;
@@ -322,6 +334,10 @@ function InspectorControlCreate() {
 
         EventBus.on('SYS_ASSETS_SELECTED_TEXTURES', (data: { paths: string[] }) => {
             set_selected_textures(data.paths);
+        });
+
+        EventBus.on('SYS_ASSETS_SELECTED_MATERIALS', (data: { paths: string[] }) => {
+            set_selected_materials(data.paths);
         });
 
         EventBus.on('SYS_ASSETS_CLEAR_SELECTED', clear);
@@ -410,10 +426,165 @@ function InspectorControlCreate() {
             const min_filter = convertThreeJSFilterToFilterMode(ResourceManager.get_texture(texture_name, atlas).texture.minFilter);
             const mag_filter = convertThreeJSFilterToFilterMode(ResourceManager.get_texture(texture_name, atlas).texture.magFilter);
 
-            Log.log(min_filter, mag_filter);
-
             result.data.push({ name: Property.MIN_FILTER, data: min_filter });
             result.data.push({ name: Property.MAG_FILTER, data: mag_filter });
+
+            return result;
+        });
+
+        clear();
+        setData(data);
+    }
+    
+    function set_selected_materials(materials_paths: string[]) {
+        _selected_materials = materials_paths;
+        
+        // NOTE: обновляем конфиг текстур
+        update_texture_options();
+
+        const data = _selected_materials.map((path, id) => {
+            const result = {id, data: [] as PropertyData<PropertyType>[]}; 
+
+            const material_name = get_file_name(get_basename(path));
+            const material = ResourceManager.get_material(material_name);
+
+            result.data.push({ name: Property.VERTEX_PROGRAM, data: material.data.vertexShader });
+            result.data.push({ name: Property.FRAGMENT_PROGRAM, data: material.data.fragmentShader });
+            result.data.push({ name: Property.TRANSPARENT, data: material.data.transparent });
+
+            Object.entries(material.uniforms).forEach(([key, value]) => {
+                switch (value.type) {
+                    case MaterialUniformType.SAMPLER2D:
+                        _config.forEach((group) => {
+                            const property = group.property_list.find((property) => property.name == Property.UNIFORM_SAMPLER2D);
+                            if (!property) return;
+                            property.title = key;
+                        });
+                        const texture = material.data.uniforms[key] as unknown;
+                        result.data.push({ name: Property.UNIFORM_SAMPLER2D, data: `/${get_file_name(texture as string)}` });
+                        break;
+                    case MaterialUniformType.FLOAT:
+                        _config.forEach((group) => {
+                            const property = group.property_list.find((property) => property.name == Property.UNIFORM_FLOAT);
+                            if (!property) return;
+                            property.title = key;
+                            const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.FLOAT];
+                            property.params = {
+                                min: params.min,
+                                max: params.max,
+                                step: params.step
+                            };
+                        });
+                        const float = material.data.uniforms[key] as unknown;
+                        result.data.push({ name: Property.UNIFORM_FLOAT, data: float as number });
+                        break;
+                    case MaterialUniformType.RANGE:
+                        _config.forEach((group) => {
+                            const property = group.property_list.find((property) => property.name == Property.UNIFORM_RANGE);
+                            if (!property) return;
+                            property.title = key;
+                            const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.RANGE];
+                            property.params = {
+                                min: params.min,
+                                max: params.max,
+                                step: params.step
+                            };
+                        });
+                        const range = material.data.uniforms[key] as unknown;
+                        result.data.push({ name: Property.UNIFORM_RANGE, data: range as number });
+                        break;
+                    case MaterialUniformType.VEC2:
+                        _config.forEach((group) => {
+                            const property = group.property_list.find((property) => property.name == Property.UNIFORM_VEC2);
+                            if (!property) return;
+                            property.title = key;
+                            const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.VEC2];
+                            property.params = {
+                                x: {
+                                    min: params.x.min,
+                                    max: params.x.max,
+                                    step: params.x.step
+                                },
+                                y: {
+                                    min: params.y.min,
+                                    max: params.y.max,
+                                    step: params.y.step
+                                }
+                            };
+                        });
+                        const vec2 = material.data.uniforms[key] as unknown;
+                        result.data.push({ name: Property.UNIFORM_VEC2, data: vec2 as Vector2 });
+                        break;
+                    case MaterialUniformType.VEC3:
+                        _config.forEach((group) => {
+                            const property = group.property_list.find((property) => property.name == Property.UNIFORM_VEC3);
+                            if (!property) return;
+                            property.title = key;
+                            const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.VEC3];
+                            property.params = {
+                                x: {
+                                    min: params.x.min,
+                                    max: params.x.max,
+                                    step: params.x.step
+                                },
+                                y: {
+                                    min: params.y.min,
+                                    max: params.y.max,
+                                    step: params.y.step
+                                },
+                                z: {
+                                    min: params.z.min,
+                                    max: params.z.max,
+                                    step: params.z.step
+                                }
+                            };
+                        });
+                        const vec3 = material.data.uniforms[key] as unknown;
+                        result.data.push({ name: Property.UNIFORM_VEC3, data: vec3 as Vector3 });
+                        break;
+                    case MaterialUniformType.VEC4:
+                        _config.forEach((group) => {
+                            const property = group.property_list.find((property) => property.name == Property.UNIFORM_VEC4);
+                            if (!property) return;
+                            property.title = key;
+                            const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.VEC4];
+                            property.params = {
+                                x: {
+                                    min: params.x.min,
+                                    max: params.x.max,
+                                    step: params.x.step
+                                },
+                                y: {
+                                    min: params.y.min,
+                                    max: params.y.max,
+                                    step: params.y.step
+                                },
+                                z: {
+                                    min: params.z.min,
+                                    max: params.z.max,
+                                    step: params.z.step
+                                },
+                                w: {
+                                    min: params.w.min,
+                                    max: params.w.max,
+                                    step: params.w.step
+                                }
+                            };
+                        });
+                        const vec4 = material.data.uniforms[key] as unknown;
+                        result.data.push({ name: Property.UNIFORM_VEC4, data: vec4 as Vector4 });
+                        break;
+                    case MaterialUniformType.COLOR:
+                        _config.forEach((group) => {
+                            const property = group.property_list.find((property) => property.name == Property.UNIFORM_COLOR);
+                            if (!property) return;
+                            property.title = key;
+                        });
+                        const color = material.data.uniforms[key] as unknown;
+                        result.data.push({ name: Property.UNIFORM_COLOR, data: color as string });
+                        break;
+                }
+            });
 
             return result;
         });
@@ -427,6 +598,9 @@ function InspectorControlCreate() {
 
         // NOTE: обновляем конфиг текстур
         update_texture_options();
+
+        // NOTE: обновляем конфиг материалов
+        update_material_options();
 
         // NOTE: обновляем конфиг шрифтов
         update_font_options();
@@ -469,6 +643,7 @@ function InspectorControlCreate() {
                     fields.push({ name: Property.COLOR, data: value.get_color() });
                     fields.push({ name: Property.ALPHA, data: (value as Slice9Mesh).get_alpha() });
                     fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
+                    fields.push({ name: Property.MATERIAL, data: (value as Slice9Mesh).material.name || '' });
                     fields.push({ name: Property.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
                     fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
                     if (value.type === IObjectTypes.GO_SPRITE_COMPONENT) {
@@ -537,15 +712,23 @@ function InspectorControlCreate() {
         _config.forEach((group) => {
             const property = group.property_list.find((property) => property.name == Property.ATLAS);
             if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = castAtlases(ResourceManager.get_all_atlases());
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateAtlasOptions();
+        });
+    }
+
+    function update_material_options() {
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.MATERIAL);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateMaterialOptions();
         });
     }
 
     function update_texture_options() {
         _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.TEXTURE);
+            const property = group.property_list.find((property) => property.type == PropertyType.LIST_TEXTURES);
             if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXTURES]) = ResourceManager.get_all_textures().map(castTextureInfo);
+            (property.params as PropertyParams[PropertyType.LIST_TEXTURES]) = generateTextureOptions();
         });
     }
 
@@ -1332,6 +1515,7 @@ function InspectorControlCreate() {
             case Property.BLEND_MODE: saveBlendMode(info.ids); break;
             case Property.MIN_FILTER: saveMinFilter(info.ids); break;
             case Property.MAG_FILTER: saveMagFilter(info.ids); break;
+            case Property.MATERIAL: saveMaterial(info.ids); break;
         }
     }
 
@@ -1362,6 +1546,16 @@ function InspectorControlCreate() {
             case Property.BLEND_MODE: updateBlendMode(info); break;
             case Property.MIN_FILTER: updateMinFilter(info); break;
             case Property.MAG_FILTER: updateMagFilter(info); break;
+            case Property.MATERIAL: updateMaterial(info); break;
+            case Property.VERTEX_PROGRAM: updateMaterialVertexProgram(info); break;
+            case Property.FRAGMENT_PROGRAM: updateMaterialFragmentProgram(info); break;
+            case Property.UNIFORM_SAMPLER2D: updateUniformSampler2D(info); break;
+            case Property.UNIFORM_FLOAT: updateUniformFloat(info); break;
+            case Property.UNIFORM_RANGE: updateUniformRange(info); break;
+            case Property.UNIFORM_VEC2: updateUniformVec2(info); break;
+            case Property.UNIFORM_VEC3: updateUniformVec3(info); break;
+            case Property.UNIFORM_VEC4: updateUniformVec4(info); break;
+            case Property.UNIFORM_COLOR: updateUniformColor(info); break;
         }
     }
 
@@ -2427,8 +2621,174 @@ function InspectorControlCreate() {
         HistoryControl.add('MESH_UV', uvs);
     }
 
+    function saveMaterial(ids: number[]) {
+        const materials: MaterialEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (mesh == undefined) {
+                Log.error('[saveMaterial] Mesh not found for id:', id);
+                return;
+            }
+
+            materials.push({ id_mesh: id, material: (mesh as any).material.name });
+        });
+
+        HistoryControl.add('MESH_MATERIAL', materials);
+    }
+
+    function updateMaterial(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (mesh == undefined) {
+                Log.error('[updateMaterial] Mesh not found for id:', id);
+                return;
+            }
+
+            const material = info.data.event.value as string;
+            (mesh as any).material = ResourceManager.get_material(material).data;
+        });
+    }
+
+    function updateMaterialVertexProgram(info: ChangeInfo) {
+        const program = info.data.event.value as string;
+        info.ids.forEach((id) => {
+            const material = ResourceManager.get_material(_selected_materials[id]);
+            if (!material) return;
+            material.data.vertexShader = program;
+            material.data.needsUpdate = true;
+            EventBus.trigger('MATERIAL_CHANGED', {
+                material_name: material.name,
+                property: 'vertexShader',
+                value: program
+            });
+        });
+    }
+    
+    function updateMaterialFragmentProgram(info: ChangeInfo) {
+        const program = info.data.event.value as string;
+        info.ids.forEach((id) => {
+            const material = ResourceManager.get_material(_selected_materials[id]);
+            if (!material) return;
+            material.data.fragmentShader = program;
+            material.data.needsUpdate = true;
+            EventBus.trigger('MATERIAL_CHANGED', {
+                material_name: material.name,
+                property: 'fragmentShader',
+                value: program
+            });
+        });
+    }
+
+    function updateUniformSampler2D(info: ChangeInfo) {
+        const atlas = (info.data.event.value as string).split('/')[0];
+        const texture = (info.data.event.value as string).split('/')[1];
+        info.ids.forEach((id) => {
+            const material = ResourceManager.get_material(_selected_materials[id]);
+            if (!material) return;
+            
+            material.data.uniforms[info.data.property.title].value = ResourceManager.get_texture(texture, atlas || '').texture;
+            material.data.needsUpdate = true;
+            EventBus.trigger('MATERIAL_CHANGED', {
+                material_name: material.name,
+                property: info.data.property.title,
+                value: info.data.event.value
+            });
+        });
+    }
+
+    function updateUniformFloat(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const material = ResourceManager.get_material(_selected_materials[id]);
+            if (!material) return;
+            material.data.uniforms[info.data.property.title].value = info.data.event.value as number;
+            material.data.needsUpdate = true;
+            EventBus.trigger('MATERIAL_CHANGED', {
+                material_name: material.name,
+                property: info.data.property.title,
+                value: info.data.event.value
+            });
+        });
+    }
+
+    function updateUniformRange(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const material = ResourceManager.get_material(_selected_materials[id]);
+            if (!material) return;
+            material.data.uniforms[info.data.property.title].value = info.data.event.value as number;
+            material.data.needsUpdate = true;
+            EventBus.trigger('MATERIAL_CHANGED', {
+                material_name: material.name,
+                property: info.data.property.title,
+                value: info.data.event.value
+            });
+        });
+    }
+
+    function updateUniformVec2(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const material = ResourceManager.get_material(_selected_materials[id]);
+            if (!material) return;
+            material.data.uniforms[info.data.property.title].value = info.data.event.value as Vector2;
+            material.data.needsUpdate = true;
+            EventBus.trigger('MATERIAL_CHANGED', {
+                material_name: material.name,
+                property: info.data.property.title,
+                value: info.data.event.value
+            });
+        });
+    }
+
+    function updateUniformVec3(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const material = ResourceManager.get_material(_selected_materials[id]);
+            if (!material) return;
+            material.data.uniforms[info.data.property.title].value = info.data.event.value as Vector3;
+            material.data.needsUpdate = true;
+            EventBus.trigger('MATERIAL_CHANGED', {
+                material_name: material.name,
+                property: info.data.property.title,
+                value: info.data.event.value
+            });
+        });
+    }
+
+    function updateUniformVec4(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const material = ResourceManager.get_material(_selected_materials[id]);
+            if (!material) return;
+            material.data.uniforms[info.data.property.title].value = info.data.event.value as Vector4;
+            material.data.needsUpdate = true;
+            EventBus.trigger('MATERIAL_CHANGED', {
+                material_name: material.name,
+                property: info.data.property.title,
+                value: info.data.event.value
+            });
+        });
+    }
+
+    function updateUniformColor(info: ChangeInfo) {
+        info.ids.forEach((id) => {
+            const material = ResourceManager.get_material(_selected_materials[id]);
+            if (!material) return;
+            const color = new Color(info.data.event.value as string);
+            material.data.uniforms[info.data.property.title].value = new Vector3(color.r, color.g, color.b);
+            material.data.needsUpdate = true;
+            EventBus.trigger('MATERIAL_CHANGED', {
+                material_name: material.name,
+                property: info.data.property.title,
+                value: info.data.event.value
+            });
+        });
+    }
+
     init();
-    return { setupConfig, setData, set_selected_textures, set_selected_list, refresh, clear }
+    return { setupConfig, setData, set_selected_textures, set_selected_materials, set_selected_list, refresh, clear }
 }
 
 function getChangedInfo(info: ChangeInfo) {
@@ -2599,6 +2959,10 @@ function convertThreeJSBlendingToBlendMode(blending: number): BlendMode {
     }
 }
 
+function generateTextureOptions() {
+    return ResourceManager.get_all_textures().map(castTextureInfo);
+}
+
 function castTextureInfo(info: TextureInfo) {
     const data = {
         value: `${info.atlas}/${info.name}`,
@@ -2648,15 +3012,24 @@ function castTextureInfo(info: TextureInfo) {
     return data;
 }
 
-function castAtlases(atlases: string[]) {
-    const data: { [key in string]: string } = {};
-    atlases.forEach((atlas) => {
+function generateMaterialOptions() {
+    const materialOptions: { [key: string]: string } = {};
+    ResourceManager.get_all_materials().forEach(material => {
+        materialOptions[material] = material;
+    });
+    return materialOptions;
+}
+
+function generateAtlasOptions() {
+    const data: {[key in string]: string} = {};
+    ResourceManager.get_all_atlases().forEach((atlas) => {
         return data[atlas == '' ? 'Без атласа' : atlas] = atlas;
     });
     return data;
 }
 
 export function getDefaultInspectorConfig() {
+
     return [
         {
             name: 'base',
@@ -2667,7 +3040,7 @@ export function getDefaultInspectorConfig() {
                 // { name: Property.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN },
                 { name: Property.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN },
                 {
-                    name: Property.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: castAtlases(ResourceManager.get_all_atlases())
+                    name: Property.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: generateAtlasOptions()
                 },
                 { name: Property.ATLAS_BUTTON, title: 'Атлас менеджер', type: PropertyType.BUTTON },
                 {
@@ -2681,6 +3054,23 @@ export function getDefaultInspectorConfig() {
                         'nearest': FilterMode.NEAREST,
                         'linear': FilterMode.LINEAR
                     }
+                },
+                {
+                    name: Property.VERTEX_PROGRAM, 
+                    title: 'Vertex Program', 
+                    type: PropertyType.LIST_TEXT, 
+                    params: {}
+                },
+                {
+                    name: Property.FRAGMENT_PROGRAM, 
+                    title: 'Fragment Program', 
+                    type: PropertyType.LIST_TEXT, 
+                    params: {}
+                },
+                {
+                    name: Property.TRANSPARENT, 
+                    title: 'Transparent', 
+                    type: PropertyType.BOOLEAN
                 }
             ]
         },
@@ -2763,7 +3153,10 @@ export function getDefaultInspectorConfig() {
                 { name: Property.COLOR, title: 'Цвет', type: PropertyType.COLOR },
                 { name: Property.ALPHA, title: 'Прозрачность', type: PropertyType.NUMBER, params: { min: 0, max: 1, step: 0.1 } },
                 {
-                    name: Property.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: ResourceManager.get_all_textures().map(castTextureInfo)
+                    name: Property.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: generateTextureOptions()
+                },
+                {
+                    name: Property.MATERIAL, title: 'Материал', type: PropertyType.LIST_TEXT, params: generateMaterialOptions()
                 },
                 {
                     name: Property.SLICE9, title: 'Slice9', type: PropertyType.POINT_2D, params: {
@@ -2817,6 +3210,74 @@ export function getDefaultInspectorConfig() {
                     name: Property.LINE_HEIGHT, title: 'Высота строки', type: PropertyType.NUMBER, params: {
                         min: 0.5, max: 3, step: 0.1, format: (v: number) => v.toFixed(2)
                     }
+                }
+            ]
+        },
+        {
+            name: 'uniforms',
+            title: 'Uniforms',
+            property_list: [
+                {
+                    name: Property.UNIFORM_SAMPLER2D,
+                    title: 'Sampler2D',
+                    type: PropertyType.LIST_TEXTURES,
+                    params: generateTextureOptions()
+                },
+                {
+                    name: Property.UNIFORM_FLOAT,
+                    title: 'Float',
+                    type: PropertyType.NUMBER,
+                    params: {
+                        min: 0,
+                        max: 1,
+                        step: 0.1,
+                        format: (v: number) => v.toFixed(2)
+                    }
+                },
+                {
+                    name: Property.UNIFORM_RANGE,
+                    title: 'Range',
+                    type: PropertyType.SLIDER,
+                    params: {
+                        min: 0,
+                        max: 100,
+                        step: 0.1
+                    }
+                },
+                {
+                    name: Property.UNIFORM_VEC2,
+                    title: 'Vec2',
+                    type: PropertyType.VECTOR_2,
+                    params: {
+                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
+                    }
+                },
+                {
+                    name: Property.UNIFORM_VEC3,
+                    title: 'Vec3',
+                    type: PropertyType.VECTOR_3,
+                    params: {
+                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
+                    }
+                },
+                {
+                    name: Property.UNIFORM_VEC4,
+                    title: 'Vec4',
+                    type: PropertyType.VECTOR_4,
+                    params: {
+                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        w: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
+                    }
+                },
+                {
+                    name: Property.UNIFORM_COLOR,
+                    title: 'Color',
+                    type: PropertyType.COLOR
                 }
             ]
         }

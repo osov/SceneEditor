@@ -1,5 +1,5 @@
-import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter } from 'three';
-import { get_file_name } from './helpers/utils';
+import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, IUniform, Vector3, Vector4, ShaderLib } from 'three';
+import { get_basename, get_file_name } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
@@ -7,6 +7,7 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
 import { TRecursiveDict } from '../modules_editor/modules_editor_const';
+import { shader } from './objects/entity_base';
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -38,11 +39,59 @@ interface AnimationInfo {
     clip: AnimationClip;
 }
 
+export type MaterialUniformParams = {
+    [MaterialUniformType.FLOAT]: { min?: number, max?: number, step?: number };
+    [MaterialUniformType.RANGE]: { min?: number, max?: number, step?: number };
+    [MaterialUniformType.VEC2]: {
+        x: { min?: number, max?: number, step?: number };
+        y: { min?: number, max?: number, step?: number };
+    };
+    [MaterialUniformType.VEC3]: {
+        x: { min?: number, max?: number, step?: number };
+        y: { min?: number, max?: number, step?: number };
+        z: { min?: number, max?: number, step?: number };
+    };
+    [MaterialUniformType.VEC4]: {
+        x: { min?: number, max?: number, step?: number };
+        y: { min?: number, max?: number, step?: number };
+        z: { min?: number, max?: number, step?: number };
+        w: { min?: number, max?: number, step?: number };
+    };
+    [MaterialUniformType.COLOR]: {};
+    [MaterialUniformType.SAMPLER2D]: {};
+}
+
+export interface MaterialUniform<T extends keyof MaterialUniformParams> {
+    type: T;
+    params: MaterialUniformParams[T];
+}
+
+export interface MaterialInfo {
+    name: string;
+    vp: string;
+    fp: string;
+    uniforms: {
+        [key: string]: MaterialUniform<keyof MaterialUniformParams>
+    };
+    data: ShaderMaterial;
+}
+
+export enum MaterialUniformType {
+    FLOAT = 'float',
+    RANGE = 'range',
+    VEC2 = 'vec2',
+    VEC3 = 'vec3',
+    VEC4 = 'vec4',
+    COLOR = 'color',
+    SAMPLER2D = 'sampler2D'
+}
+
 export function ResourceManagerModule() {
     const font_characters = " !\"#$%&'()*+,-./0123456789:;<=> ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~йцукенгшщзхфывапролджэячсмитьбюЙЦУКЕНГШЩЗХФЫВАПРОЛДЖЯЧСМИТЬБЮЭ";
     const texture_loader = new TextureLoader();
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
+    const materials: { [name: string]: MaterialInfo } = {};
     const models: { [name: string]: Object3D } = {};
     const animations: AnimationInfo[] = [];
     const manager = new LoadingManager();
@@ -52,6 +101,36 @@ export function ResourceManagerModule() {
 
     function init() {
         gen_textures();
+
+        // NOTE: обновление шейдеров при изменении файлов
+        EventBus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {
+            for (let i = 0; i < e.events.length; i++) {
+                const ev = e.events[i];
+                const base_name = get_basename(ev.path);
+                if(base_name.search('.vp') > 0) {
+                    const vp_path = get_file_name(ev.path);
+                    const vp_data = await AssetControl.get_file_data(vp_path);
+                    const vp = vp_data.data!;
+                    for(const material of Object.values(materials)) {
+                        if(material.vp == vp_path) {
+                            material.data.vertexShader = vp;
+                            material.data.needsUpdate = true;
+                        }
+                    }
+                }
+                if (base_name.search('.fp') > 0){
+                    const fp_path = get_file_name(ev.path);
+                    const fp_data = await AssetControl.get_file_data(fp_path);
+                    const fp = fp_data.data!;
+                    for(const material of Object.values(materials)) {
+                        if(material.fp == fp_path) {
+                            material.data.fragmentShader = fp;
+                            material.data.needsUpdate = true;
+                        }
+                    }
+                }
+            }
+        });
     }
 
     function set_project_path(path: string) {
@@ -179,6 +258,71 @@ export function ResourceManagerModule() {
         })
     }
 
+    async function load_material(path: string) {
+        path = project_path + path;
+        const result = await fetch(path);
+        if (!result.ok) {
+            return {
+                success: false,
+                error: `Material not found: ${path}`
+            };
+        }
+
+        const material_info = await result.json();
+
+        const material = {} as MaterialInfo;
+        material.name = get_file_name(path);
+        material.vp = material_info.vp;
+        material.fp = material_info.fp;
+        material.uniforms = {};
+
+        material.data = new ShaderMaterial();
+        material.data.name = material.name;
+
+        Object.keys(material_info.uniforms).forEach((key) => {
+            material.uniforms[key] = {
+                type: material_info.uniforms[key].type,
+                params: { ...material_info.uniforms[key] }
+            };
+            material.data.uniforms[key] = material_info.data[key];    
+        });
+
+        const vp = await AssetControl.get_file_data(material_info.vp);
+        material.data.vertexShader = (vp.result && vp.data) ? await vp.data : shader.vertexShader;
+        
+        const fp = await AssetControl.get_file_data(material_info.fp);
+        material.data.fragmentShader = (fp.result && fp.data) ? await fp.data : shader.fragmentShader;
+        
+        material.data.transparent = material_info.transparent;
+
+        return {
+            success: true,
+            data: material
+        };
+    }
+
+    async function preload_material(path: string) {
+        const name = get_file_name(path);
+        if(has_material(name)) {
+            Log.warn('Material already exists', name, path);
+            return materials[name];
+        }
+
+        const response = await load_material(path);
+        if (!response.success) {
+            Log.error(response.error);
+            return null;
+        }
+
+        if(!response.data) {
+            Log.error('Material not found', path);
+            return null;
+        }
+
+        materials[name] = response.data;
+        return response.data;
+    }
+
     function get_all_fonts() {
         return fonts;
     }
@@ -253,6 +397,18 @@ export function ResourceManagerModule() {
             }
         }
         return list;
+    }
+
+    function get_all_materials() {
+        return Object.keys(materials);
+    }
+
+    function get_material(name: string) {
+        return materials[name];
+    }
+
+    function has_material(name: string) {
+        return materials[name] != undefined;
     }
 
     function find_animation(name_anim: string, model_name: string) {
@@ -479,6 +635,7 @@ export function ResourceManagerModule() {
         preload_atlas,
         preload_texture,
         preload_font,
+        preload_material,
         get_all_fonts,
         get_font,
         get_texture,
@@ -490,6 +647,8 @@ export function ResourceManagerModule() {
         has_atlas,
         del_atlas,
         get_all_textures,
+        get_all_materials,
+        get_material,
         set_project_path,
         preload_model,
         get_model,

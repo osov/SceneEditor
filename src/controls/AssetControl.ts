@@ -48,9 +48,15 @@ function AssetControlCreate() {
         for (const key of get_keys(data.paths)) {
             const paths = data.paths[key];
             let func: (...args: any[]) => Promise<any>;
+            Log.log('Preload', key, paths);
             if (key == "textures") {
                 func = (path: string) => {
                     return ResourceManager.preload_texture("/" + path);
+                }
+            }
+            else if (key == "materials") {
+                func = (path: string) => {
+                    return ResourceManager.preload_material("/" + path);
                 }
             }
             else if (key == "fonts") {
@@ -783,14 +789,27 @@ function AssetControlCreate() {
         selected_assets.push(elem);
         elem.classList.add("selected");
 
-        const textures_paths = get_selected_textures();
-        EventBus.trigger("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
+        if(elem.getAttribute('data-type') == ASSET_TEXTURE) {
+            const textures_paths = get_selected_textures();
+            EventBus.trigger("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
+        }
+
+        if(elem.getAttribute('data-type') == ASSET_MATERIAL) {
+            const materials_paths = get_selected_materials();
+            EventBus.trigger("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
+        }
     }
 
     function get_selected_textures() {
         const textures = selected_assets.filter(asset => asset.getAttribute('data-type') === ASSET_TEXTURE);
         const textures_paths = textures.map(asset => asset.getAttribute('data-path') || '');
         return textures_paths;
+    }
+
+    function get_selected_materials() {
+        const materials = selected_assets.filter(asset => asset.getAttribute('data-type') === ASSET_MATERIAL);
+        const materials_paths = materials.map(asset => asset.getAttribute('data-path') || '');
+        return materials_paths;
     }
 
     function set_active(elem: HTMLSpanElement) {
@@ -809,6 +828,9 @@ function AssetControlCreate() {
 
         const textures_paths = get_selected_textures();
         EventBus.trigger("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
+        
+        const materials_paths = get_selected_materials();
+        EventBus.trigger("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
     }
 
     function on_mouse_move(event: any) {

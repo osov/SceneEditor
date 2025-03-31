@@ -1,4 +1,4 @@
-import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData } from "./types";
+import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { GoSprite } from "../render_engine/objects/sub_types";
 import { get_keys } from "../modules/utils";
@@ -42,6 +42,7 @@ export type HistoryData = {
     MESH_MIN_FILTER: MinFilterEventData
     MESH_MAG_FILTER: MagFilterEventData
     MESH_UV: UVEventData
+    MESH_MATERIAL: MaterialEventData
 }
 
 type HistoryDataKeys = keyof HistoryData;
@@ -322,12 +323,18 @@ function HistoryControlCreate() {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_UV'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
-                if (mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
-                    const sprite = mesh as GoSprite;
-                    sprite.geometry.attributes.uv.array.set(data.uv);
-                    sprite.geometry.attributes.uv.needsUpdate = true;
-                    list_mesh.push(mesh);
+                if (mesh instanceof GoSprite) {
+                    mesh.geometry.attributes.uv.array.set(data.uv);
+                    mesh.geometry.attributes.uv.needsUpdate = true;
                 }
+                list_mesh.push(mesh);
+            }
+        } else if (type == 'MESH_MATERIAL') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MESH_MATERIAL'];
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                (mesh as any).material = ResourceManager.get_material(data.material);
+                list_mesh.push(mesh);
             }
         }
         if (list_mesh.length > 0) {

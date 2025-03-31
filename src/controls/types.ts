@@ -118,3 +118,8 @@ export interface UVEventData {
     id_mesh: number;
     uv: Float32Array;
 }
+
+export interface MaterialEventData {
+    id_mesh: number;
+    material: string;
+}

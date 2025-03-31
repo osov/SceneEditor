@@ -6,7 +6,8 @@ import { check_dir_exists, exists, get_asset_path, get_full_path, get_assets_fol
 import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD, 
     SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD, 
     MOVE_CMD, SET_CURRENT_SCENE_CMD, SCENE_EXT, OPEN_EXPLORER_CMD, allowed_ext, texture_ext, FSObject, ProjectPathsData, model_ext, 
-    FONT_EXT, ATLAS_EXT, LoadAtlasData } from "../../src/modules_editor/modules_editor_const";
+    FONT_EXT, ATLAS_EXT, LoadAtlasData, 
+    MATERIAL_EXT} from "../../src/modules_editor/modules_editor_const";
 import { ServerCacheData } from "./types";
 
 
@@ -56,7 +57,7 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
     }
 
     async function gather_paths(project: string, assets: FSObject[]) {
-        const paths: ProjectPathsData = {textures: [], atlases: [], models: [], fonts: []};
+        const paths: ProjectPathsData = {textures: [], atlases: [], models: [], fonts: [], materials: []};
         const atlases_textures: string[] = [];
         assets.forEach(async element => {
             if (element.ext && model_ext.includes(element.ext)) 
@@ -73,7 +74,10 @@ export async function handle_command<T extends CommandId>(project: string, cmd_i
                     }
                 }
             }
-        })
+            if (element.ext == MATERIAL_EXT) {
+                paths.materials.push(element.path);
+            }
+        });
         assets.forEach(element => {
             if (element.ext && texture_ext.includes(element.ext) && !(atlases_textures.includes(element.path)))
                 paths.textures.push(element.path);

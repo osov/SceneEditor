@@ -30,8 +30,10 @@ export type _SystemMessagesEditor = {
     SYS_COPY_CMD: { path: string, new_path: string },
     NEW_FOLDER_CMD: { name: string, path: string },
     SYS_ASSETS_SELECTED_TEXTURES: { paths: string[] },
+    SYS_ASSETS_SELECTED_MATERIALS: { paths: string[] },
     SYS_ASSETS_CLEAR_SELECTED: {},
     SYS_CHANGED_ATLAS_DATA: {},
+    MATERIAL_CHANGED: { material_name: string, property: string, value: any },
 };
 
 
@@ -70,6 +72,7 @@ export type ProjectPathsData = {
     fonts: string[],
     atlases: LoadAtlasData[],
     models: string[],
+    materials: string[],
 }
 export type ProjectLoadData = { assets: FSObject[], name: string, paths: ProjectPathsData }
 export type ProjectCache = { name?: string, current_dir: string, current_scene: { name?: string, path?: string } }
@@ -138,6 +141,7 @@ export const METADATA = '/metadata.json'  // Путь к файлу с мета�
 export const CACHE = '/server_cache.json';
 export const SCENE_EXT = `scn`;
 export const ATLAS_EXT = `tpsheet`;
+export const MATERIAL_EXT = `mtr`;
 export const FONT_EXT = `ttf`;
 
 export const CMD_NAME = [
