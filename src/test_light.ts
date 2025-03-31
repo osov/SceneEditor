@@ -28,11 +28,11 @@ export async function run_debug_scene_light() {
     preload_tiled_textures(map_data);
 
     // hack atlases
-    const all = get_all_tiled_textures();
-    for (const id in all) {
-        const tex = all[id];
-        ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
-    }
+    //const all = get_all_tiled_textures();
+    //for (const id in all) {
+    //    const tex = all[id];
+    //    ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
+    //}
     const world = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     SceneManager.add(world);
     (world as any).mesh_data = null;
@@ -112,8 +112,8 @@ export async function run_debug_scene_light() {
     composer.addPass(lightPass);
     (window as any).lightPass = lightPass;
 
-    const fxaaPass = new ShaderPass(FXAAShader);
-    fxaaPass.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
+    //const fxaaPass = new ShaderPass(FXAAShader);
+    //fxaaPass.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
     //composer.addPass(fxaaPass);
 
     EventBus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {

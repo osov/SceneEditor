@@ -5,6 +5,7 @@ import { componentsGo } from "./ActionsControl";
 import { HistoryData } from "./HistoryControl";
 import { cbDataItem, Action } from "../modules_editor/Popups";
 import Stats from 'stats.js';
+import { DEFOLD_LIMITS } from "../config";
 
 declare global {
     const ControlManager: ReturnType<typeof ControlManagerCreate>;
@@ -192,7 +193,7 @@ function ControlManagerCreate() {
             };
 
             // no_drop для компонентов Go 
-            if (componentsGo.includes(g_item.type)) { item.no_drop = true; }
+            if (DEFOLD_LIMITS && componentsGo.includes(g_item.type)) { item.no_drop = true; }
 
             list.push(item);
         }

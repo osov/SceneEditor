@@ -2,7 +2,7 @@ import { format_list_without_children } from "../render_engine/helpers/utils";
 import { HistoryData } from "./HistoryControl";
 import { IObjectTypes } from '../render_engine/types';
 import { TreeItem } from "./TreeControl";
-import { WORLD_SCALAR } from "../config";
+import { DEFOLD_LIMITS, WORLD_SCALAR } from "../config";
 
 declare global {
     const ActionsControl: ReturnType<typeof ActionsControlCreate>;
@@ -175,15 +175,15 @@ function ActionsControlCreate() {
     }
 
     function add_gui_box(data: paramsTexture) {
-        const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: data?.size?.w, height: data?.size?.h });
+        const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: data.size.w, height: data.size.h });
         if (!box) return;
-        box.set_position(data.pos.x, data?.pos.y);
+        box.set_position(data.pos.x, data.pos.y);
         SceneManager.move_mesh(box, data.id);
         box.scale.setScalar(1);
         box.set_color('#0f0')
-        box.set_texture(data?.texture, data?.atlas);
+        box.set_texture(data.texture, data.atlas);
         box.set_slice(8, 8);
-        sceneAddItem(box, data?.id);
+        sceneAddItem(box, data.id);
     }
 
     function add_gui_text(pid: number = -1) {
@@ -204,7 +204,7 @@ function ActionsControlCreate() {
     }
 
     function add_go_sprite_component(data: paramsTexture) {
-        const sprite = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: data?.size?.w, height: data?.size?.h });
+        const sprite = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: data.size.w * WORLD_SCALAR, height: data.size.h * WORLD_SCALAR });
         if (!sprite) return;
         sprite.set_position(data.pos.x, data.pos.y);
         sprite.set_texture(data.texture, data.atlas);
@@ -220,7 +220,7 @@ function ActionsControlCreate() {
     }
 
     function add_go_model_component(pid: number = -1) {
-        const model = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50, height: 50 });
+        const model = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
         if (!model) return;
         model.set_position(0, 0);
         sceneAddItem(model, pid);
@@ -236,15 +236,15 @@ function ActionsControlCreate() {
 
     function add_go_with_sprite_component(data: paramsTexture) {
         const go = SceneManager.create(IObjectTypes.GO_CONTAINER);
-        const spr = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: (data?.size?.w || 32) * WORLD_SCALAR, height: (data?.size?.h || 32) * WORLD_SCALAR });
+        const spr = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: (data.size.w || 32) * WORLD_SCALAR, height: (data.size.h || 32) * WORLD_SCALAR });
         if (!spr || !go) return;
-        go.set_position(data.pos.x, data?.pos.y);
+        go.set_position(data.pos.x, data.pos.y);
         SceneManager.move_mesh(go, data.id);
         go.position.z = 0;
         spr.set_position(0, 0);
-        spr.set_texture(data?.texture, data?.atlas);
+        spr.set_texture(data.texture, data.atlas);
         go.add(spr);
-        sceneAddItem(go, data?.id);
+        sceneAddItem(go, data.id);
     }
 
     function setUniqueNameMeshList(list: TreeItem[]): void {
@@ -305,6 +305,7 @@ function ActionsControlCreate() {
     }
 
     function checkPasteScene(list: any): boolean {
+        if (!DEFOLD_LIMITS) return true;
         if (list.length == 0) return false;
         for (let i = 0; i < list.length; i++) {
             const type = list[i]?.type ? list[i]?.type : list[i].icon ? list[i].icon : '';
@@ -318,6 +319,26 @@ function ActionsControlCreate() {
     function is_valid_action(itemWhere: any, selected: any = copy_mesh_list, asChild: boolean = false, isMove: boolean = false, msg: boolean = false) {
         const icon = itemWhere?.type ? itemWhere?.type : itemWhere?.icon ? itemWhere?.icon : '';
         const worldIW = getWorldName(icon);
+
+        const listWhat = selected?.length ? selected : [];
+        if (!listWhat.length) {
+            if (msg) showToast('Ничего не выбрано!');
+            return false;
+        }
+
+        const type = listWhat[0]?.type ? listWhat[0]?.type : listWhat[0]?.icon ? listWhat[0]?.icon : '';
+        const worldS = getWorldName(type);
+        if (!worldS) {
+            if (msg) showToast('Не найдены объекты для вставки!');
+            return false;
+        }
+
+        if (!worldIW) {
+            if (msg) showToast('Не выбрано место для вставки!');
+            return false;
+        }
+
+        if (!DEFOLD_LIMITS) return true;
 
         // внутрь sprite\label\model ничего добавлять нельзя
         if (asChild && componentsGo.includes(icon)) {
@@ -347,24 +368,6 @@ function ActionsControlCreate() {
 
         if (worldIW == 'scene' && checkPasteScene(selected)) {
             return true;
-        }
-
-        const listWhat = selected?.length ? selected : [];
-        if (!listWhat.length) {
-            if (msg) showToast('Ничего не выбрано!');
-            return false;
-        }
-
-        const type = listWhat[0]?.type ? listWhat[0]?.type : listWhat[0]?.icon ? listWhat[0]?.icon : '';
-        const worldS = getWorldName(type);
-        if (!worldS) {
-            if (msg) showToast('Не найдены объекты для вставки!');
-            return false;
-        }
-
-        if (!worldIW) {
-            if (msg) showToast('Не выбрано место для вставки!');
-            return false;
         }
 
         // нельзя Go в Gui || Gui в Go

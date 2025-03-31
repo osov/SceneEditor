@@ -1,13 +1,14 @@
 import { BufferGeometry, Mesh, Object3DEventMap, PlaneGeometry, ShaderMaterial, Vector2, Vector3 } from "three";
 import { IBaseEntity, IBaseParameters, IObjectTypes, OnTransformChanged } from "../types";
 import { convert_width_height_to_pivot_bb, is_base_mesh, set_pivot_with_sync_pos } from "../helpers/utils";
+import { WORLD_SCALAR } from "../../config";
 
 export const shader = new ShaderMaterial({
     vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);}',
     fragmentShader: 'void main() { gl_FragColor = vec4(1.0); }'
 });
 
-const tmp_size = 32;
+const tmp_size = 32 * WORLD_SCALAR;
 
 export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEventMap> implements IBaseEntity {
     public type = IObjectTypes.ENTITY;
