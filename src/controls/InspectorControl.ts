@@ -439,7 +439,7 @@ function InspectorControlCreate() {
 
             fields.push({ name: Property.TYPE, data: value.type });
             fields.push({ name: Property.NAME, data: value.name });
-            fields.push({ name: Property.VISIBLE, data: value.get_visible() });
+            // fields.push({ name: Property.VISIBLE, data: value.get_visible() });
             fields.push({ name: Property.ACTIVE, data: value.get_active() });
 
             if (value.type != IObjectTypes.GUI_CONTAINER) {
@@ -2624,7 +2624,7 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 { name: Property.TYPE, title: 'Тип', type: PropertyType.STRING, readonly: true },
                 { name: Property.NAME, title: 'Название', type: PropertyType.STRING },
-                //{ name: Property.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN },
+                // { name: Property.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN },
                 { name: Property.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN },
                 {
                     name: Property.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: castAtlases(ResourceManager.get_all_atlases())
