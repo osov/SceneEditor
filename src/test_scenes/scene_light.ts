@@ -24,11 +24,11 @@ export async function run_scene_light() {
     preload_tiled_textures(map_data);
 
     // hack atlases
-    //const all = get_all_tiled_textures();
-    //for (const id in all) {
-    //    const tex = all[id];
-    //    ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
-    //}
+    const all = get_all_tiled_textures();
+    for (const id in all) {
+        const tex = all[id];
+        ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
+    }
 
     const world = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     world.name = 'TILES';

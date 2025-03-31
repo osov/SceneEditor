@@ -19,6 +19,9 @@ import { register_inspector_control } from './controls/InspectorControl';
 import { register_asset_control } from './controls/AssetControl';
 import { run_scene_anim } from './test_scenes/scene_anim';
 import { run_scene_light } from './test_scenes/scene_light';
+import { run_scene_card } from './test_scenes/scene_card';
+
+let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
 
 register_manager();
 register_engine();
@@ -31,6 +34,8 @@ register_scene_manager();
 
 register_camera_control();
 register_select_control();
+if (!game_mode)
+    SelectControl.init();
 register_size_control();
 register_transform_control();
 register_actions_control();
@@ -46,7 +51,8 @@ register_history_control();
 const scenes = [
     run_scene_simple,
     run_scene_anim,
-    run_scene_light
+    run_scene_card,
+    run_scene_light,
 ];
 let id = new URLSearchParams(document.location.search).get('scene');
 if (id)

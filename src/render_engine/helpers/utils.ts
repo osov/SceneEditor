@@ -1,4 +1,4 @@
-import { BufferGeometry, Object3D, Vector2, Vector3 } from "three";
+import { BufferGeometry, Line, LineDashedMaterial, Object3D, Vector2, Vector3 } from "three";
 import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
 
 export function get_basename(path: string) {
@@ -128,3 +128,25 @@ export function rotate_point(point: Vector3, size: Vector2, angle_deg: number,) 
 
     return { x: xNew, y: yNew };
 }
+
+
+
+export function make_ramk(width: number, height: number) {
+    const offset = 0.5;
+    var points = [
+        new Vector3(-offset, offset, 0),
+        new Vector3(offset, offset, 0),
+        new Vector3(offset, - offset, 0),
+        new Vector3(-offset, - offset, 0),
+        new Vector3(-offset, offset, 0),
+    ];
+
+    var geometry = new BufferGeometry().setFromPoints(points);
+    var line = new Line(geometry, new LineDashedMaterial({ color: 0xffaa00, dashSize: 0.005, gapSize: 0.005 }));
+    line.scale.set(width, height, 1);
+    line.position.x = width / 2;
+    line.position.y = -height / 2;
+    line.computeLineDistances();
+    return line;
+}
+

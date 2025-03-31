@@ -97,7 +97,7 @@ export function ResourceManagerModule() {
             return atlases[atlas][name].data;
         }
         const texture = await load_texture(path);
-        if(!has_atlas(atlas)) {
+        if (!has_atlas(atlas)) {
             add_atlas(atlas);
         }
         if (atlases[atlas][name]) {
@@ -139,7 +139,7 @@ export function ResourceManagerModule() {
         const texture = await load_texture(texture_path);
         const texture_data = parse_tp_data_to_uv(data, texture.image.width, texture.image.height);
 
-        if(!has_atlas(name)) {
+        if (!has_atlas(name)) {
             add_atlas(name);
         }
 
@@ -216,10 +216,10 @@ export function ResourceManagerModule() {
     }
 
     function add_atlas(name: string) {
-        if(has_atlas(name)) {
+        if (has_atlas(name)) {
             Log.warn(`Atlas ${name} already exist!`)
         }
-        
+
         atlases[name] = {};
     }
 
@@ -228,11 +228,11 @@ export function ResourceManagerModule() {
     }
 
     function del_atlas(name: string) {
-        if(!atlases[name]) {
+        if (!atlases[name]) {
             Log.warn(`Atlas ${name} not found!`);
         }
 
-        if(!has_atlas('')) {
+        if (!has_atlas('')) {
             add_atlas('');
         }
 
@@ -327,7 +327,7 @@ export function ResourceManagerModule() {
                 });
             })
         }
-        else if (path.toLowerCase().endsWith('.dae') ) {
+        else if (path.toLowerCase().endsWith('.dae')) {
             return new Promise<Scene>(async (resolve, _) => {
                 const loader = new ColladaLoader(manager);
                 loader.load(path, (collada) => {
@@ -387,26 +387,26 @@ export function ResourceManagerModule() {
         const texture = atlases[old_atlas][name];
         delete atlases[old_atlas][name];
 
-        if(!has_atlas(new_atlas)) {
+        if (!has_atlas(new_atlas)) {
             add_atlas(new_atlas);
         }
 
         atlases[new_atlas][name] = texture;
     }
-    
+
     // NOTE: записываем всю информацию из ресурсов в metadata
     async function write_metadata() {
         try {
             const metadata = await ClientAPI.get_info('atlases');
-            if(!metadata.result) {
-                if(metadata.data != undefined) {
+            if (!metadata.result) {
+                if (metadata.data != undefined) {
                     throw new Error('Failed on get atlases metadata!');
                 }
             }
             const metadata_atlases = {} as TRecursiveDict;
             // NOTE: для каждого атласа создаём отдельный объект в metadata_atlases
             for (const [atlas_name, textures] of Object.entries(atlases)) {
-                if(!metadata_atlases[atlas_name]) {
+                if (!metadata_atlases[atlas_name]) {
                     metadata_atlases[atlas_name] = {} as TRecursiveDict;
                 }
                 const metadata_atlas = metadata_atlases[atlas_name] as TRecursiveDict;
@@ -420,7 +420,7 @@ export function ResourceManagerModule() {
                 }
             }
             const save_result = await ClientAPI.save_info('atlases', metadata_atlases);
-            if(!save_result.result) {
+            if (!save_result.result) {
                 throw new Error('Failed on save atlases metadata!');
             }
         } catch (error) {
@@ -433,8 +433,8 @@ export function ResourceManagerModule() {
         Log.log('Update resource manager from metadata');
         try {
             const metadata = await ClientAPI.get_info('atlases');
-            if(!metadata.result) {
-                if(metadata.data == undefined) {
+            if (!metadata.result) {
+                if (metadata.data == undefined) {
                     Log.log('Update resource manager from metadata: atlases not found!');
                     return;
                 }
@@ -442,14 +442,14 @@ export function ResourceManagerModule() {
                 return;
             }
             const metadata_atlases = metadata.data as TRecursiveDict;
-            for(const [atlas_name, textures] of Object.entries(metadata_atlases)) {
-                if(!has_atlas(atlas_name)) {
+            for (const [atlas_name, textures] of Object.entries(metadata_atlases)) {
+                if (!has_atlas(atlas_name)) {
                     add_atlas(atlas_name);
                 }
-                for(const [texture_name, texture_data] of Object.entries(textures)) {
+                for (const [texture_name, texture_data] of Object.entries(textures)) {
                     const old_atlas = get_atlas_by_texture_name(texture_name);
                     override_atlas_texture(old_atlas || '', atlas_name, texture_name);
-                    
+
                     // Update texture filters if they exist in metadata
                     if (typeof texture_data === 'object' && texture_data !== null) {
                         const data = texture_data as { minFilter?: MinificationTextureFilter; magFilter?: MagnificationTextureFilter };

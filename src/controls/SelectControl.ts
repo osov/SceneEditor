@@ -57,12 +57,12 @@ function SelectControlCreate() {
 
         EventBus.on('SYS_SELECTED_MESH', (e) => {
             if (Input.is_control()) {
-                    if (!is_selected(e.mesh))
+                if (!is_selected(e.mesh))
                     selected_list.push(e.mesh);
-                    else {
-                        const index = selected_list.indexOf(e.mesh);
-                        selected_list.splice(index, 1);
-                    }
+                else {
+                    const index = selected_list.indexOf(e.mesh);
+                    selected_list.splice(index, 1);
+                }
             }
             else {
                 selected_list = [e.mesh];
@@ -145,6 +145,5 @@ function SelectControlCreate() {
     }
 
 
-    init();
-    return { get_selected_list, set_selected_list };
+    return { init, get_selected_list, set_selected_list };
 }

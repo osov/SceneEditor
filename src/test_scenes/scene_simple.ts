@@ -3,6 +3,7 @@ import { IObjectTypes } from '../render_engine/types';
 import { run_debug_filemanager } from '../controls/AssetControl';
 import { PROJECT_NAME, SERVER_URL } from '../config';
 import { URL_PATHS } from '../modules_editor/modules_editor_const';
+import { make_ramk } from '../render_engine/helpers/utils';
 
 export async function run_scene_simple() {
   (window as any).scene = RenderEngine.scene;
@@ -12,22 +13,8 @@ export async function run_scene_simple() {
 
   await ResourceManager.preload_atlas('./img/example_atlas.tpsheet', './img/example_atlas.png');
 
-  const offset = 0.5;
-  var points = [
-    new Vector3(-offset, offset, 0),
-    new Vector3(offset, offset, 0),
-    new Vector3(offset, - offset, 0),
-    new Vector3(-offset, - offset, 0),
-    new Vector3(-offset, offset, 0),
-  ];
-
-  var geometry = new BufferGeometry().setFromPoints(points);
-  var line = new Line(geometry, new LineDashedMaterial({ color: 0xffaa00, dashSize: 0.005, gapSize: 0.005 }));
-  line.scale.set(540, 960, 1);
-  line.position.x = 270;
-  line.position.y = -480;
-  line.computeLineDistances();
-  RenderEngine.scene.add(line)
+  const ramk = make_ramk(540, 960);
+  RenderEngine.scene.add(ramk);
 
 
   const go1 = SceneManager.create(IObjectTypes.GO_CONTAINER);

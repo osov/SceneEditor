@@ -5,7 +5,7 @@ import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_tr
 import { IObjectTypes } from "./types";
 import { GoContainer } from "./objects/sub_types";
 
-export function TileLoader(world:GoContainer, tileSize = 256) {
+export function TileLoader(world: GoContainer, tileSize = 256) {
 
     function load(map_data: MapData) {
         const render_data = parse_tiled(map_data);
@@ -58,22 +58,24 @@ export function TileLoader(world:GoContainer, tileSize = 256) {
                 id_object++;
                 const tile_id = tile.tile_id & TILE_FLIP_MASK;
                 const tile_info = get_tile_texture(tile_id);
-                const tile_w = tile.width * WORLD_SCALAR;
-                const tile_h = tile.height * WORLD_SCALAR;
-                const x = tile.x * WORLD_SCALAR;
-                const y = tile.y * WORLD_SCALAR;
-                const z = get_depth(x, y, id_layer, tile_w, tile_h);
-                const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
-                plane.position.set(x, y, z);
-                plane.set_texture(tile_info.name, tile_info.atlas);
-                apply_tile_transform(plane, tile.tile_id);
-                if (tile.rotation)
-                    plane.rotation.z = -tile.rotation! * Math.PI / 180;
-                container.add(plane);
-                plane.name = tile_info.name + '' + plane.mesh_data.id;
+                if (tile_info != undefined) {
+                    const tile_w = tile.width * WORLD_SCALAR;
+                    const tile_h = tile.height * WORLD_SCALAR;
+                    const x = tile.x * WORLD_SCALAR;
+                    const y = tile.y * WORLD_SCALAR;
+                    const z = get_depth(x, y, id_layer, tile_w, tile_h);
+                    const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
+                    plane.position.set(x, y, z);
+                    plane.set_texture(tile_info.name, tile_info.atlas);
+                    apply_tile_transform(plane, tile.tile_id);
+                    if (tile.rotation)
+                        plane.rotation.z = -tile.rotation! * Math.PI / 180;
+                    container.add(plane);
+                    plane.name = tile_info.name + '' + plane.mesh_data.id;
+                }
             }
         }
     }
 
-    return {load};
+    return { load };
 }
