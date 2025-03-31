@@ -1,4 +1,4 @@
-import { AdditiveBlending, FloatType, MeshBasicMaterial, NearestFilter, RGBAFormat, Vector2, WebGLRenderTarget } from 'three'
+import { AdditiveBlending, FloatType, MeshBasicMaterial, NearestFilter, RepeatWrapping, RGBAFormat, ShaderMaterial, Vector2, WebGLRenderTarget } from 'three'
 import { run_debug_filemanager } from '../controls/AssetControl';
 import { PROJECT_NAME, SERVER_URL, WORLD_SCALAR } from '../config';
 import { URL_PATHS } from '../modules_editor/modules_editor_const';
@@ -9,6 +9,7 @@ import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { MapData, preload_tiled_textures, get_all_tiled_textures } from '../render_engine/parsers/tile_parser';
 import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import { TileLoader } from '../render_engine/tile_loader';
+
 
 
 export async function run_scene_light() {
@@ -169,4 +170,65 @@ export async function run_scene_light() {
         camera.layers.mask = old;
 
     });
+
+    create_water_mesh(274);
+    create_water_mesh(228);
+
+    create_water_mesh(235);
+    create_water_mesh(227);
+    create_water_mesh(226);
+
+    create_water_mesh(242);
+    create_water_mesh(241);
+    create_water_mesh(240);
+    create_water_mesh(239);
+    create_water_mesh(238);
+}
+
+
+async function create_water_mesh(mesh_id: number) {
+    const normals = ResourceManager.get_texture('waternormals').texture;
+    normals.wrapS = normals.wrapT = RepeatWrapping;
+    const mat = new ShaderMaterial({
+        uniforms: {
+            u_texture: { value: null },
+            u_normal: { value: normals },
+            u_time: { value: 0.0 },
+            alpha: { value: 1.0 }
+        },
+        vertexShader: `
+        attribute vec3 color;  
+        varying vec2 vUv;
+        varying vec3 vColor; 
+        
+
+        void main() {
+            vColor = color;
+            vUv = uv; 
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+        fragmentShader: (await AssetControl.get_file_data('shaders/water.fp')).data!,
+        transparent: true
+    });
+    EventBus.on('SYS_ON_UPDATE', (e) => mat.uniforms.u_time.value += 0.01);
+    const mesh = SceneManager.get_mesh_by_id(mesh_id)!;
+    const tex = mesh.get_texture();
+    mat.uniforms.u_texture.value = ResourceManager.get_texture(tex[0], tex[1]).texture;
+    (mesh as any).material = mat;
+
+    EventBus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {
+        let is_change = false;
+        for (let i = 0; i < e.events.length; i++) {
+            const ev = e.events[i];
+            if (ev.path == 'shaders/water.fp')
+                is_change = true;
+        }
+        if (is_change) {
+            const fp_data = await AssetControl.get_file_data('shaders/water.fp');
+            const fp = fp_data.data!;
+            mat.fragmentShader = fp;
+            mat.needsUpdate = true;
+        }
+    });
+
 }
