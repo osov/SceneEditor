@@ -82,6 +82,7 @@ function TreeControlCreate() {
     function draw_graph(getList: Item[], scene_name?: string, is_hide_allSub = false, is_clear_state = false) {
         currentSceneName = scene_name ? scene_name : currentSceneName;
         treeList = deepClone(getList);
+        // log({treeList})
         contexts[currentSceneName] = is_clear_state ? {} : contexts[currentSceneName];
         contexts[currentSceneName] = contexts[currentSceneName] ? contexts[currentSceneName] : {};
 
@@ -99,7 +100,6 @@ function TreeControlCreate() {
         listSelected = []; // сбрасываем 
 
         const rootList = deepClone(list);
-        //log({ rootList });
 
         rootList.forEach((node: any) => {
             treeMap[node.id] = { ...node, children: [] };
@@ -381,7 +381,6 @@ function TreeControlCreate() {
         itemDrop = null;
         isDrop = false;
         countMove = 0;
-        console.log('clear');
         const items = document.querySelectorAll('.tree__item') as NodeListOf<HTMLLIElement>;
         items.forEach(i => { i.classList.remove('top', 'bg', 'bottom'); });
     }
@@ -395,15 +394,12 @@ function TreeControlCreate() {
         if (!list || !list.length || !drag || !drop || !type || !list.includes(drag?.id)) return null;
 
         if (type === 'top') {
-            //log('top')
             return { pid: drop?.pid, next_id: drop?.id, id_mesh_list: list };
         }
         if (type === 'bg') {
-            //log('bg')
             return itemDrop?.no_drop === true ? null : { pid: drop?.id, next_id: -1, id_mesh_list: list };
         }
         if (type === 'bottom') {
-            //log('bottom')
             const next_id = findNextIdItemByPid(drop?.id, drop?.pid) || -1;
             return { pid: drop?.pid, next_id: next_id, id_mesh_list: list };
         }
@@ -1277,6 +1273,18 @@ function TreeControlCreate() {
         Popups.toast.open({ type: 'info', message: "Этому объекту нельзя добавлять текстуру!" });
     }
 
+    function updateDataVisible(id: number, value: string) {
+        const item = document.querySelector(`.tree__item[data-id="${id}"]`);
+        if (item) item.setAttribute("data-visible", value);
+    }
+
+    function updateActive(e: any) {
+        const { list, state } = e;
+        list.forEach((id: number) => { 
+            updateDataVisible(id, state); 
+        });
+    }
+
     function updateDaD(): void {
 
         // устанавливаем ширину для span.tree__item_bg и .menu_left
@@ -1359,6 +1367,8 @@ function TreeControlCreate() {
     document.querySelector('#wr_tree')?.addEventListener('contextmenu', (event: any) => {
         event.preventDefault();
     });
+
+    EventBus.on('SYS_GRAPH_ACTIVE', updateActive);
 
     // document.addEventListener('mousedown', onMouseDown, false);
     EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);

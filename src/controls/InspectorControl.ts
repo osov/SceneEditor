@@ -1399,6 +1399,19 @@ function InspectorControlCreate() {
         });
     }
 
+    function getChildrenActive(list: any[], state: boolean) {
+        let result: ActiveEventData[] = [];
+
+        list.forEach((item: any) => {
+            result.push({ id_mesh: item.mesh_data.id, state: item.get_active() });
+            if (item.children.length > 0) {
+                const children = getChildrenActive(item.children, state);
+                if (children.length > 0) result.push(...children);
+            }
+        });
+        return result;
+    }
+
     function saveActive(ids: number[]) {
         const actives: ActiveEventData[] = [];
         ids.forEach((id) => {
@@ -1412,12 +1425,32 @@ function InspectorControlCreate() {
             }
 
             actives.push({ id_mesh: id, state: mesh.get_active() });
+            
+            if (mesh.children.length > 0) {
+                const children = getChildrenActive(mesh.children, mesh.get_active());
+                if (children.length > 0) actives.push(...children);
+            }
+            
         });
 
         HistoryControl.add('MESH_ACTIVE', actives);
     }
 
+    function updateChildrenActive(children: any[], state: boolean) {
+        const result:number[] = [];
+        children.forEach((child: any) => {
+            child.set_active(state);
+            result.push(child.mesh_data.id);
+            if (child.children.length > 0) {
+                const children = updateChildrenActive(child.children, state); 
+                if (children.length > 0) result.push(...children);
+            }
+        });
+        return result;
+    }
+
     function updateActive(info: ChangeInfo) {
+        const ids: number[] = [];
         info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1430,7 +1463,14 @@ function InspectorControlCreate() {
 
             const state = info.data.event.value as boolean;
             mesh.set_active(state);
+            ids.push(id);
+            if (mesh.children) {
+                const children = updateChildrenActive(mesh.children, state); 
+                if (children.length > 0) ids.push(...children);
+            }
         });
+
+        EventBus.trigger("SYS_GRAPH_ACTIVE", {list: ids, state: info.data.event.value as boolean});
     }
 
     function saveVisible(ids: number[]) {

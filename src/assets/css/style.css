@@ -323,8 +323,8 @@ a.tree__item {
   border: 0;
 }
 
-a.tree__item:not([data-visible="true"]),
-a.tree__item:not([data-visible="true"]) + .tree_sub a.tree__item {
+/* a.tree__item:not([data-visible="true"]) + .tree_sub a.tree__item, */
+a.tree__item:not([data-visible="true"]) {
   color: var(--color_gray);
 }
 a.tree__item.isCut,
