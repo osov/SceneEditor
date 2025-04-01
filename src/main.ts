@@ -20,6 +20,7 @@ import { register_asset_control } from './controls/AssetControl';
 import { run_scene_anim } from './test_scenes/scene_anim';
 import { run_scene_light } from './test_scenes/scene_light';
 import { run_scene_card } from './test_scenes/scene_card';
+import { register_flow_map_control } from './controls/FlowMapControl';
 
 let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
 
@@ -47,6 +48,7 @@ register_contextmenu();
 register_inspector_control();
 register_control_manager();
 register_history_control();
+register_flow_map_control();
 
 const scenes = [
     run_scene_simple,

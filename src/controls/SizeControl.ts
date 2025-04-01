@@ -62,13 +62,15 @@ function SizeControlCreate() {
             const mesh = new Mesh(geometry, material);
             mesh.visible = false;
             mesh.layers.set(layer_control);
+            mesh.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
             scene.add(mesh)
             pivot_points.push(mesh);
         }
 
-        anchor_mesh = new Mesh(new CircleGeometry(15, 12), new MeshBasicMaterial({ color: 0xffff00, transparent: true }));
+        anchor_mesh = new Mesh(new CircleGeometry(15 * WORLD_SCALAR, 12), new MeshBasicMaterial({ color: 0xffff00, transparent: true }));
         anchor_mesh.position.set(300, -220, editor_z);
         anchor_mesh.layers.set(layer_control);
+        anchor_mesh.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
         ResourceManager.preload_texture('img/target.png', 'editor').then(() => {
             anchor_mesh.material.map = ResourceManager.get_texture('target', 'editor').texture;
             anchor_mesh.material.needsUpdate = true;
@@ -609,7 +611,7 @@ function SizeControlCreate() {
         if (visible && selected_list.length != 1)
             return;
         pivot_points.forEach(p => p.visible = visible);
-        anchor_mesh.visible = visible;
+        //anchor_mesh.visible = visible;
     }
 
     function set_slice_visible(visible: boolean) {

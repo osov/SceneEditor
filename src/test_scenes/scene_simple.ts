@@ -7,11 +7,14 @@ import { make_ramk } from '../render_engine/helpers/utils';
 
 export async function run_scene_simple() {
   (window as any).scene = RenderEngine.scene;
-  await ResourceManager.preload_font('ShantellSans-Light11.ttf')
+
   const tex = await ResourceManager.preload_texture('./img/2.png');
   tex.texture.magFilter = NearestFilter;
 
-  await ResourceManager.preload_atlas('./img/example_atlas.tpsheet', './img/example_atlas.png');
+  ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
+  await run_debug_filemanager(PROJECT_NAME);
+
+  await ResourceManager.preload_atlas('/test_assets/atlas.tpsheet', '/test_assets/atlas.png');
 
   const ramk = make_ramk(540, 960);
   RenderEngine.scene.add(ramk);
@@ -22,7 +25,7 @@ export async function run_scene_simple() {
   SceneManager.add(go1);
 
   const spr1 = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT);
-  spr1.set_texture('arrow1', 'example_atlas');
+  spr1.set_texture('arrow1', 'atlas');
   go1.add(spr1);
 
   const label1 = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, { text: 'Надпись' });
@@ -41,7 +44,7 @@ export async function run_scene_simple() {
   go2.add(go3);
 
   const spr2 = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: 100, height: 100 });
-  spr2.set_texture('Home', 'example_atlas');
+  spr2.set_texture('Home', 'atlas');
   spr2.set_slice(10, 10);
   go2.add(spr2);
 
@@ -72,7 +75,6 @@ export async function run_scene_simple() {
 
 
 
-  ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
-  await run_debug_filemanager(PROJECT_NAME);
+
   ControlManager.update_graph(true, 'test');
 }

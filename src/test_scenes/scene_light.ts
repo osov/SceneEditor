@@ -25,11 +25,11 @@ export async function run_scene_light() {
     preload_tiled_textures(map_data);
 
     // hack atlases
-    const all = get_all_tiled_textures();
-    for (const id in all) {
-        const tex = all[id];
-        ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
-    }
+    //const all = get_all_tiled_textures();
+    //for (const id in all) {
+    //    const tex = all[id];
+    //    ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
+    //}
 
     const world = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     world.name = 'TILES';
@@ -91,13 +91,7 @@ export async function run_scene_light() {
             'resolution': { value: new Vector2(window.innerWidth, window.innerHeight) }
 
         },
-        vertexShader: `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
+        vertexShader: (await AssetControl.get_file_data('shaders/light.vp')).data,
         fragmentShader: fp
     };
     const lut = ResourceManager.get_texture(lut_name).texture;
@@ -170,7 +164,12 @@ export async function run_scene_light() {
         camera.layers.mask = old;
 
     });
-
+    create_water_mesh(105);
+    create_water_mesh(106);
+    create_water_mesh(107);
+    create_water_mesh(108);
+    create_water_mesh(109);
+    // create_water_mesh(1481); return
     create_water_mesh(274);
     create_water_mesh(228);
 
@@ -196,17 +195,7 @@ async function create_water_mesh(mesh_id: number) {
             u_time: { value: 0.0 },
             alpha: { value: 1.0 }
         },
-        vertexShader: `
-        attribute vec3 color;  
-        varying vec2 vUv;
-        varying vec3 vColor; 
-        
-
-        void main() {
-            vColor = color;
-            vUv = uv; 
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }`,
+        vertexShader: (await AssetControl.get_file_data('shaders/water.vp')).data!,
         fragmentShader: (await AssetControl.get_file_data('shaders/water.fp')).data!,
         transparent: true
     });
