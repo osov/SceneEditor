@@ -211,9 +211,12 @@ export function ResourceManagerModule() {
         const name = get_file_name(atlas_path);
         if (!override && atlases[name]) {
             Log.warn('atlas exists', name);
-            const vals = Object.values(atlases[name]);
-            return vals[0].data.texture;
+            const textures = Object.values(atlases[name]);
+            if(textures[0]) {
+                return textures[0].data.texture;
+            }
         }
+
         const data = await (await fetch(project_path + atlas_path)).text();
         const texture = await load_texture(texture_path);
         const texture_data = parse_tp_data_to_uv(data, texture.image.width, texture.image.height);

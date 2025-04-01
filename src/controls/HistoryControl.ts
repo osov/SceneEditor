@@ -1,4 +1,4 @@
-import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData } from "./types";
+import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData, MeshAtlasEventData, TextureAtlasEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { GoSprite } from "../render_engine/objects/sub_types";
 import { get_keys } from "../modules/utils";
@@ -36,13 +36,14 @@ export type HistoryData = {
     MESH_FONT: FontEventData
     MESH_FONT_SIZE: FontSizeEventData
     MESH_TEXT_ALIGN: TextAlignEventData
-    MESH_ATLAS: AtlasEventData
+    MESH_ATLAS: MeshAtlasEventData
     MESH_LINE_HEIGHT: LineHeightEventData
     MESH_BLEND_MODE: BlendModeEventData
-    MESH_MIN_FILTER: MinFilterEventData
-    MESH_MAG_FILTER: MagFilterEventData
     MESH_UV: UVEventData
     MESH_MATERIAL: MaterialEventData
+    TEXTURE_MIN_FILTER: MinFilterEventData
+    TEXTURE_MAG_FILTER: MagFilterEventData
+    TEXTURE_ATLAS: TextureAtlasEventData
 }
 
 type HistoryDataKeys = keyof HistoryData;
@@ -101,6 +102,7 @@ function HistoryControlCreate() {
         const last = ctx.pop()!;
         const type = last.type;
         const list_mesh: IBaseMeshAndThree[] = [];
+        const list_assets: string[] = [];
 
         Log.log("UNDO: ", type, last);
 
@@ -236,8 +238,8 @@ function HistoryControlCreate() {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_TEXTURE'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
-                const atlas = data.texture.split('/')[0];
-                const texture = data.texture.split('/')[1];
+                const atlas = mesh.get_texture()[1];
+                const texture = data.texture;
                 (mesh as Slice9Mesh).set_texture(texture, atlas);
                 list_mesh.push(mesh);
             }
@@ -272,9 +274,9 @@ function HistoryControlCreate() {
         } else if (type == 'MESH_ATLAS') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_ATLAS'];
-                const texture_name = get_file_name(get_basename(data.texture_path));
-                const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
-                ResourceManager.override_atlas_texture(old_atlas || '', data.atlas, texture_name);
+                const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                mesh.set_texture(data.texture, data.atlas);
+                list_mesh.push(mesh);
             }
             ResourceManager.write_metadata();
         } else if (type == 'MESH_LINE_HEIGHT') {
@@ -291,9 +293,9 @@ function HistoryControlCreate() {
                 (mesh as any).material.blending = data.blend_mode;
                 list_mesh.push(mesh);
             }
-        } else if (type == 'MESH_MIN_FILTER') {
+        } else if (type == 'TEXTURE_MIN_FILTER') {
             for (let i = 0; i < last.data.length; i++) {
-                const data = last.data[i] as HistoryData['MESH_MIN_FILTER'];
+                const data = last.data[i] as HistoryData['TEXTURE_MIN_FILTER'];
                 const texture_name = get_file_name(get_basename(data.texture_path));
                 const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
                 if (atlas == null) {
@@ -303,11 +305,12 @@ function HistoryControlCreate() {
 
                 const texture_data = ResourceManager.get_texture(texture_name, atlas);
                 texture_data.texture.minFilter = data.filter as MinificationTextureFilter;
+                list_assets.push(data.texture_path);
             }
             ResourceManager.write_metadata();
-        } else if (type == 'MESH_MAG_FILTER') {
+        } else if (type == 'TEXTURE_MAG_FILTER') {
             for (let i = 0; i < last.data.length; i++) {
-                const data = last.data[i] as HistoryData['MESH_MAG_FILTER'];
+                const data = last.data[i] as HistoryData['TEXTURE_MAG_FILTER'];
                 const texture_name = get_file_name(get_basename(data.texture_path));
                 const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
                 if (atlas == null) {
@@ -317,6 +320,7 @@ function HistoryControlCreate() {
 
                 const texture_data = ResourceManager.get_texture(texture_name, atlas);
                 texture_data.texture.magFilter = data.filter as MagnificationTextureFilter;
+                list_assets.push(data.texture_path);
             }
             ResourceManager.write_metadata();
         } else if (type == 'MESH_UV') {
@@ -336,6 +340,14 @@ function HistoryControlCreate() {
                 (mesh as any).material = ResourceManager.get_material(data.material);
                 list_mesh.push(mesh);
             }
+        } else if (type == 'TEXTURE_ATLAS') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['TEXTURE_ATLAS'];
+                const texture_name = get_file_name(get_basename(data.texture_path));
+                const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+                ResourceManager.override_atlas_texture(old_atlas || '', data.atlas, texture_name);
+                list_assets.push(data.texture_path);
+            }
         }
         if (list_mesh.length > 0) {
             for (let i = 0; i < list_mesh.length; i++)
@@ -343,7 +355,9 @@ function HistoryControlCreate() {
             SelectControl.set_selected_list(list_mesh);
             ControlManager.update_graph();
         }
-
+        if (list_assets.length > 0) {
+            InspectorControl.set_selected_textures(list_assets);
+        }
     }
 
     init();

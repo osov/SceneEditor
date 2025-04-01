@@ -174,6 +174,7 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
     function set_texture(name: string, atlas = '') {
         parameters.texture = name;
         parameters.atlas = atlas;
+        Log.log('set_texture', name, atlas);
         if (name != '') {
             const texture_data = ResourceManager.get_texture(name, atlas);
             material.uniforms['u_texture'].value = texture_data.texture;

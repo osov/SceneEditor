@@ -94,7 +94,13 @@ export type LineHeightEventData = {
     line_height: number;
 };
 
-export type AtlasEventData = {
+export type MeshAtlasEventData = {
+    id_mesh: number;
+    atlas: string;
+    texture: string;
+};
+
+export type TextureAtlasEventData = {
     texture_path: string;
     atlas: string;
 };

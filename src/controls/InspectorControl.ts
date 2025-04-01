@@ -77,7 +77,7 @@ import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
-import { ActiveEventData, AlphaEventData, AnchorEventData, AtlasEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData } from './types';
+import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData, MeshAtlasEventData, TextureAtlasEventData } from './types';
 import { MaterialUniformParams, MaterialUniformType, TextureInfo } from '../render_engine/resource_manager';
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 import { GoSprite, FlipMode } from '../render_engine/objects/sub_types';
@@ -113,6 +113,7 @@ export enum Property {
     FONT_SIZE = 'font_size',
     TEXT_ALIGN = 'text_align',
     ATLAS = 'atlas',
+    ASSET_ATLAS = 'asset_atlas',
     ATLAS_BUTTON = 'atlas_button',
     LINE_HEIGHT = 'line_height',
     BLEND_MODE = 'blend_mode',
@@ -329,7 +330,9 @@ function InspectorControlCreate() {
             set_selected_list(e.list);
         });
 
-        EventBus.on('SYS_UNSELECTED_MESH_LIST', clear);
+        EventBus.on('SYS_UNSELECTED_MESH_LIST', () => {
+            clear();
+        });
 
         EventBus.on('SYS_ASSETS_SELECTED_TEXTURES', (data: { paths: string[] }) => {
             set_selected_textures(data.paths);
@@ -339,12 +342,13 @@ function InspectorControlCreate() {
             set_selected_materials(data.paths);
         });
 
-        EventBus.on('SYS_ASSETS_CLEAR_SELECTED', clear);
+        EventBus.on('SYS_ASSETS_CLEAR_SELECTED', () => {
+            clear();
+        });
 
         EventBus.on('SYS_CHANGED_ATLAS_DATA', () => {
             if (_selected_textures.length > 0) {
                 // NOTE: пока просто пересоздаем поля занаво, так как нет возможности обновить параметры биндинга
-                clear();
                 set_selected_textures(_selected_textures);
             }
         });
@@ -415,7 +419,7 @@ function InspectorControlCreate() {
                 return { id, data: [] };
             }
 
-            result.data.push({ name: Property.ATLAS, data: atlas });
+            result.data.push({ name: Property.ASSET_ATLAS, data: atlas });
             result.data.push({
                 name: Property.ATLAS_BUTTON, data: () => {
                     ControlManager.open_atlas_manager();
@@ -439,7 +443,7 @@ function InspectorControlCreate() {
         _selected_materials = materials_paths;
         
         // NOTE: обновляем конфиг текстур
-        update_texture_options();
+        update_texture_options([Property.TEXTURE, Property.UNIFORM_SAMPLER2D]);
 
         const data = _selected_materials.map((path, id) => {
             const result = {id, data: [] as PropertyData<PropertyType>[]}; 
@@ -595,15 +599,6 @@ function InspectorControlCreate() {
     function set_selected_list(list: IBaseMeshAndThree[]) {
         _selected_list = list;
 
-        // NOTE: обновляем конфиг текстур
-        update_texture_options();
-
-        // NOTE: обновляем конфиг материалов
-        update_material_options();
-
-        // NOTE: обновляем конфиг шрифтов
-        update_font_options();
-
         // IDEA: в значение пихать callback который будет отвечать за обновление
         /* TODO: все значения должны быть копиями, чтобы инспектор не мог их изменять на прямую, а только самому в ивенте обновления
                  при этом также нужно будет еще обновлять и при рефреше */
@@ -615,16 +610,21 @@ function InspectorControlCreate() {
             // fields.push({ name: Property.VISIBLE, data: value.get_visible() });
             fields.push({ name: Property.ACTIVE, data: value.get_active() });
 
+            // NOTE: исключаем gui контейнер
             if (value.type != IObjectTypes.GUI_CONTAINER) {
 
-                fields.push({ name: Property.POSITION, data: value.get_position() });
+                // NOTE: трансформация
+                {
+                    fields.push({ name: Property.POSITION, data: value.get_position() });
 
-                const raw = value.rotation;
-                const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
-                fields.push({ name: Property.ROTATION, data: rotation });
+                    const raw = value.rotation;
+                    const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
+                    fields.push({ name: Property.ROTATION, data: rotation });
 
-                fields.push({ name: Property.SCALE, data: value.get_scale() });
+                    fields.push({ name: Property.SCALE, data: value.get_scale() });
+                }
 
+                // NOTE: gui поля
                 if ([IObjectTypes.GUI_BOX, IObjectTypes.GUI_TEXT].includes(value.type)) {
                     fields.push({ name: Property.SIZE, data: value.get_size() });
 
@@ -638,13 +638,39 @@ function InspectorControlCreate() {
                     fields.push({ name: Property.SIZE, data: value.get_size() });
                 }
 
+                // NOTE: визуальные поля
                 if ([IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT].includes(value.type)) {
                     fields.push({ name: Property.COLOR, data: value.get_color() });
                     fields.push({ name: Property.ALPHA, data: (value as Slice9Mesh).get_alpha() });
-                    fields.push({ name: Property.TEXTURE, data: `${(value as Slice9Mesh).get_texture()[1]}/${(value as Slice9Mesh).get_texture()[0]}` });
+
+                    const atlas = (value as Slice9Mesh).get_texture()[1];
+                    const texture = (value as Slice9Mesh).get_texture()[0];
+                    
+                    // NOTE: обновляем конфиг атласов
+                    update_atlas_options();
+
+                    // NOTE: обновляем конфиг текстур только для выбранного атласа
+                    update_texture_options([Property.TEXTURE], () => {
+                        const list: any[] = [];
+                        ResourceManager.get_all_textures().forEach((info) => {
+                            if(info.atlas != atlas) {
+                                return;
+                            }
+                            list.push(castTextureInfo(info));
+                        });
+                        return list;
+                    });
+
+                    // NOTE: обновляем конфиг материалов
+                    update_material_options();
+
+                    fields.push({ name: Property.ATLAS, data: atlas });
+                    fields.push({ name: Property.TEXTURE, data: texture });
                     fields.push({ name: Property.MATERIAL, data: (value as Slice9Mesh).material.name || '' });
                     fields.push({ name: Property.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
                     fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
+
+                    // NOTE: отражение только для спрайта
                     if (value.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                         const sprite = value as GoSprite;
                         const currentFlip = sprite.get_flip();
@@ -674,6 +700,10 @@ function InspectorControlCreate() {
                     }
                 }
 
+                // NOTE: обновляем конфиг шрифтов
+                update_font_options();
+
+                // NOTE: текстовые поля
                 if ([IObjectTypes.TEXT, IObjectTypes.GUI_TEXT, IObjectTypes.GO_LABEL_COMPONENT].includes(value.type)) {
                     fields.push({ name: Property.TEXT, data: (value as TextMesh).text });
                     fields.push({ name: Property.FONT, data: (value as TextMesh).font || '' });
@@ -702,7 +732,8 @@ function InspectorControlCreate() {
 
     function update_atlas_options() {
         _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.ATLAS);
+            const properties = [Property.ASSET_ATLAS, Property.ATLAS];
+            const property = group.property_list.find((property) => properties.includes(property.name as Property));
             if (!property) return;
             (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateAtlasOptions();
         });
@@ -716,11 +747,11 @@ function InspectorControlCreate() {
         });
     }
 
-    function update_texture_options() {
+    function update_texture_options(properties: Property[], method = generateTextureOptions) {
         _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.type == PropertyType.LIST_TEXTURES);
+            const property = group.property_list.find((property) => properties.includes(property.name as Property));
             if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXTURES]) = generateTextureOptions();
+            (property.params as PropertyParams[PropertyType.LIST_TEXTURES]) = method();
         });
     }
 
@@ -766,7 +797,6 @@ function InspectorControlCreate() {
                         value.data = (item as GoSprite).get_flip() == FlipMode.HORIZONTAL;
                         break;
                     case Property.FLIP_DIAGONAL:
-                        Log.log('FLIP_DIAGONAL', (item as GoSprite).get_flip());
                         value.data = (item as GoSprite).get_flip() == FlipMode.DIAGONAL;
                         break;
                 }
@@ -814,6 +844,7 @@ function InspectorControlCreate() {
     }
 
     function clear() {
+        // Log.log('CLEAR');
         _inspector.children.forEach((value) => {
             value.dispose();
         });
@@ -1184,7 +1215,8 @@ function InspectorControlCreate() {
                         }
                     });
 
-                    // NOTE: еще раз ставим прочерки на изменненой оси, потому что на изменненой оси запись значения будет после этого ивента 
+                    // NOTE: перезаписываем прочерки на изменненой оси в следующем кадре
+                    // потому что на изменненой оси запись значения будет в конце обновления
                     setTimeout(() => {
                         tryDisabledValueByAxis({
                             ids,
@@ -1511,6 +1543,7 @@ function InspectorControlCreate() {
             case Property.FONT_SIZE: saveFontSize(info.ids); break;
             case Property.TEXT_ALIGN: saveTextAlign(info.ids); break;
             case Property.ATLAS: saveAtlas(info.ids); break;
+            case Property.ASSET_ATLAS: saveAssetAtlas(info.ids); break;
             case Property.LINE_HEIGHT: saveLineHeight(info.ids); break;
             case Property.BLEND_MODE: saveBlendMode(info.ids); break;
             case Property.MIN_FILTER: saveMinFilter(info.ids); break;
@@ -1542,6 +1575,7 @@ function InspectorControlCreate() {
             case Property.FONT_SIZE: updateFontSize(info); break;
             case Property.TEXT_ALIGN: updateTextAlign(info); break;
             case Property.ATLAS: updateAtlas(info); break;
+            case Property.ASSET_ATLAS: updateAssetAtlas(info); break;
             case Property.LINE_HEIGHT: updateLineHeight(info); break;
             case Property.BLEND_MODE: updateBlendMode(info); break;
             case Property.MIN_FILTER: updateMinFilter(info); break;
@@ -2150,7 +2184,7 @@ function InspectorControlCreate() {
                 return;
             }
 
-            const texture = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
+            const texture = mesh.get_texture()[0];
             textures.push({ id_mesh: id, texture });
         });
 
@@ -2169,8 +2203,8 @@ function InspectorControlCreate() {
             }
 
             if (info.data.event.value) {
-                const atlas = (info.data.event.value as string).split('/')[0];
-                const texture = (info.data.event.value as string).split('/')[1];
+                const atlas = (mesh as Slice9Mesh).get_texture()[1];
+                const texture = info.data.event.value as string;
                 (mesh as Slice9Mesh).set_texture(texture, atlas);
             } else (mesh as Slice9Mesh).set_texture('');
         });
@@ -2392,7 +2426,49 @@ function InspectorControlCreate() {
     }
 
     function saveAtlas(ids: number[]) {
-        const atlases: AtlasEventData[] = [];
+        const atlases: MeshAtlasEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (mesh == undefined) {
+                Log.error('[saveAtlas] Mesh not found for id:', id);
+                return;
+            }
+
+            const atlas = mesh.get_texture()[1];
+            const texture = mesh.get_texture()[0];
+            atlases.push({ id_mesh: id, atlas, texture });
+        });
+
+        HistoryControl.add('MESH_ATLAS', atlases);
+    }
+
+    function updateAtlas(info: ChangeInfo) {
+        Log.log('update atlas');
+        const atlas = info.data.event.value as string;
+        info.ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id == id;
+            });
+
+            if (mesh == undefined) {
+                Log.error('[updateAtlas] Mesh not found for id:', id);
+                return;
+            }
+
+            (mesh as Slice9Mesh).set_texture('', atlas);
+        });
+
+        // NOTE: на следующем кадре обновляем список выбранных мешей чтобы обновились опции текстур
+        // моментально обновить не можем так как мы сейчас в событии обновления поля которое под копотом делает dispose
+        // поэтому очистить инспектор и собрать поля занаво можно будет только после обновления поля
+        setTimeout(() => set_selected_list(_selected_list));
+    }
+
+    function saveAssetAtlas(ids: number[]) {
+        const atlases: TextureAtlasEventData[] = [];
         ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
@@ -2405,10 +2481,10 @@ function InspectorControlCreate() {
             atlases.push({ texture_path, atlas: oldAtlas ? oldAtlas : '' });
         });
 
-        HistoryControl.add('MESH_ATLAS', atlases);
+        HistoryControl.add('TEXTURE_ATLAS', atlases);
     }
 
-    function updateAtlas(info: ChangeInfo) {
+    function updateAssetAtlas(info: ChangeInfo) {
         const atlas = info.data.event.value as string;
 
         info.ids.forEach((id) => {
@@ -2501,7 +2577,7 @@ function InspectorControlCreate() {
             });
         });
 
-        HistoryControl.add('MESH_MIN_FILTER', minFilters);
+        HistoryControl.add('TEXTURE_MIN_FILTER', minFilters);
     }
 
     function updateMinFilter(info: ChangeInfo) {
@@ -2551,7 +2627,7 @@ function InspectorControlCreate() {
             });
         });
 
-        HistoryControl.add('MESH_MAG_FILTER', magFilters);
+        HistoryControl.add('TEXTURE_MAG_FILTER', magFilters);
     }
 
     function updateMagFilter(info: ChangeInfo) {
@@ -3013,7 +3089,7 @@ function generateTextureOptions() {
 
 function castTextureInfo(info: TextureInfo) {
     const data = {
-        value: `${info.atlas}/${info.name}`,
+        value: info.name,
         src: (info.data.texture as any).path ?? ''
     } as any;
 
@@ -3088,7 +3164,7 @@ export function getDefaultInspectorConfig() {
                 // { name: Property.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN },
                 { name: Property.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN },
                 {
-                    name: Property.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: generateAtlasOptions()
+                    name: Property.ASSET_ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: generateAtlasOptions()
                 },
                 { name: Property.ATLAS_BUTTON, title: 'Атлас менеджер', type: PropertyType.BUTTON },
                 {
@@ -3200,6 +3276,7 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 { name: Property.COLOR, title: 'Цвет', type: PropertyType.COLOR },
                 { name: Property.ALPHA, title: 'Прозрачность', type: PropertyType.NUMBER, params: { min: 0, max: 1, step: 0.1 } },
+                { name: Property.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: generateAtlasOptions() },
                 {
                     name: Property.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: generateTextureOptions()
                 },
