@@ -17,9 +17,9 @@ interface IParameters {
 }
 
 interface SerializeData {
-    text: string
-    font: string
-    font_size: number
+    text?: string
+    font?: string
+    font_size?: number
 }
 
 
@@ -186,13 +186,37 @@ export class TextMesh extends Text implements IBaseMesh {
     }
 
     serialize(): SerializeData {
-        return { text: this.text, font: this.parameters.font, font_size: this.fontSize };
+        const data: SerializeData = {};
+        
+        if (this.text != '') {
+            data.text = this.text;
+        }
+        if (this.parameters.font != '') {
+            data.font = this.parameters.font;
+        }
+        if (this.fontSize != 32) {
+            data.font_size = this.fontSize;
+        }
+        
+        return data;
     }
 
     deserialize(data: SerializeData) {
-        this.fontSize = data.font_size;
-        this.set_font(data.font, false);
-        this.set_text(data.text);
+        // NOTE: сначала устанавливаем значения по умолчанию
+        this.fontSize = 32;
+        this.set_font('', false);
+        this.set_text('');
+        
+        // NOTE: затем переопределяем значения
+        if (data.font_size !== undefined) {
+            this.fontSize = data.font_size;
+        }
+        if (data.font !== undefined) {
+            this.set_font(data.font, false);
+        }
+        if (data.text !== undefined) {
+            this.set_text(data.text);
+        }
     }
 
     transform_changed() {

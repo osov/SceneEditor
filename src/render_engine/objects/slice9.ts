@@ -72,10 +72,11 @@ const shader = {
 };
 
 interface SerializeData {
-    slice_width: number;
-    slice_height: number;
-    atlas: string;
-    texture: string
+    slice_width?: number;
+    slice_height?: number;
+    atlas?: string;
+    texture?: string;
+    alpha?: number;
 }
 
 export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, slice_width = 0, slice_height = 0) {
@@ -233,17 +234,40 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
     }
 
     function serialize(): SerializeData {
-        return {
-            slice_width: parameters.slice_width,
-            slice_height: parameters.slice_height,
-            texture: parameters.texture,
-            atlas: parameters.atlas
-        };
+        const data: SerializeData = {};
+        
+        if (parameters.slice_width !== 0) {
+            data.slice_width = parameters.slice_width;
+        }
+        if (parameters.slice_height !== 0) {
+            data.slice_height = parameters.slice_height;
+        }
+        if (parameters.texture !== '') {
+            data.texture = parameters.texture;
+        }
+        if (parameters.atlas !== '') {
+            data.atlas = parameters.atlas;
+        }
+        
+        return data;
     }
 
     function deserialize(data: SerializeData) {
-        set_texture(data.texture, data.atlas);
-        set_slice(data.slice_width, data.slice_height);
+        // NOTE: сначала устанавливаем значения по умолчанию
+        set_slice(0, 0);
+        set_texture('', '');
+        
+        // NOTE: затем переопределяем значения
+        if (data.slice_width !== undefined) {
+            parameters.slice_width = data.slice_width;
+        }
+        if (data.slice_height !== undefined) {
+            parameters.slice_height = data.slice_height;
+        }
+        if (data.texture !== undefined || data.atlas !== undefined) {
+            set_texture(data.texture || '', data.atlas || '');
+        }
+        update_parameters();
     }
 
     return { set_size, set_slice, set_color, set_texture, get_bounds, set_pivot, set_anchor, serialize, deserialize, geometry, parameters };
@@ -348,13 +372,25 @@ export class Slice9Mesh extends EntityPlane {
     }
 
     serialize() {
-        return { ...super.serialize(), ...this.template.serialize(), alpha: this.get_alpha() }
+        const data: SerializeData = { ...super.serialize(), ...this.template.serialize() };
+        
+        // NOTE: только если не 1.0
+        if (this._alpha !== 1.0) {
+            data.alpha = this._alpha;
+        }
+        
+        return data;
     }
 
-    deserialize(data: any) {
+    deserialize(data: SerializeData) {
         super.deserialize(data);
         this.template.deserialize(data);
-        if(data.alpha != undefined) {
+        
+        // NOTE: сначала устанавливаем значение по умолчанию
+        this._alpha = 1.0;
+        
+        // NOTE: затем переопределяем значение
+        if (data.alpha !== undefined) {
             this.set_alpha(data.alpha);
         }
     }

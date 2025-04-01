@@ -2,6 +2,7 @@ import { Vector2, Vector3 } from "three";
 import { IBaseMesh } from "../types";
 import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
 import { EntityBase } from "./entity_base";
+import { WORLD_SCALAR } from "../../config";
 
 
 export class EntityPlane extends EntityBase implements IBaseMesh {
@@ -56,17 +57,54 @@ export class EntityPlane extends EntityBase implements IBaseMesh {
 
 
     serialize() {
-        return {
-            size: this.get_size().toArray(),
-            color: this.get_color(),
-            pivot: this.get_pivot(),
-        };
+        const data: any = {};
+        const size = this.get_size();
+        const pivot = this.get_pivot();
+        const color = this.get_color();
+        
+        // NOTE: только если не 32 * WORLD_SCALAR
+        if (size.x !== 32 * WORLD_SCALAR || size.y !== 32 * WORLD_SCALAR) {
+            data.size = size.toArray();
+        }
+        
+        // NOTE: только если не #fff
+        if (color !== '#fff') {
+            data.color = color;
+        }
+        
+        // NOTE: только если не (0.5, 0.5)
+        if (pivot.x !== 0.5 || pivot.y !== 0.5) {
+            data.pivot = pivot;
+        }
+
+        // NOTE: только если не true
+        if (!this.get_active()) {
+            data.active = false;
+        }
+        
+        return data;
     }
 
     deserialize(_data: any) {
-        this.set_pivot(_data.pivot.x, _data.pivot.y, false);
-        this.set_size(_data.size[0], _data.size[1]);
-        this.set_color(_data.color);
+        // NOTE: сначала устанавливаем значения по умолчанию
+        this.set_pivot(0.5, 0.5, false);
+        this.set_size(32 * WORLD_SCALAR, 32 * WORLD_SCALAR);
+        this.set_color('#fff');
+        this.set_active(true);
+        
+        // NOTE: затем переопределяем значения
+        if (_data.pivot) {
+            this.set_pivot(_data.pivot.x, _data.pivot.y, false);
+        }
+        if (_data.size) {
+            this.set_size(_data.size[0], _data.size[1]);
+        }
+        if (_data.color) {
+            this.set_color(_data.color);
+        }
+        if (_data.active != undefined) {
+            this.set_active(_data.active);
+        }
     }
 
 }
