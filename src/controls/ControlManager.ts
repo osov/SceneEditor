@@ -176,8 +176,29 @@ function ControlManagerCreate() {
         document.querySelector('.menu_min a.' + name)!.classList.add('active');
     }
 
+    function setVisible(item: IBaseMeshAndThree): boolean {
+        // log(item.name, 'v: ', item.get_visible(), 'a: ', item.get_active());
+        return item.get_active() && item.get_visible() ? true : false;
+    }
+
+    function getParentActiveIds(list: IBaseMeshAndThree[]): number[] {
+        const ids: number[] = [];
+        list.forEach((item) => {
+            if ((!item.get_active() || ids.includes(item.mesh_data.id)) && item.children.length > 0) {
+                item.children.forEach((child: any) => {
+                    ids.push(child.mesh_data.id);
+                }) 
+            }
+        });
+        return ids;
+    }
+
     function get_tree_graph() {
         const graph = SceneManager.make_graph();
+        // log({graph})
+        const scene_list = SceneManager.get_scene_list();
+        const parentActiveIds = getParentActiveIds(scene_list);
+        // log({parentActiveIds})
         const sel_list_ids = SelectControl.get_selected_list().map(m => m.mesh_data.id);
         const list: TreeItem[] = [];
         list.push({ id: -1, pid: -2, name: current_scene_name, icon: 'scene', selected: false, visible: true });
@@ -189,7 +210,7 @@ function ControlManagerCreate() {
                 name: g_item.name,
                 icon: g_item.type,
                 selected: sel_list_ids.includes(g_item.id),
-                visible: g_item.visible
+                visible: parentActiveIds.includes(g_item.id) ? false : setVisible(scene_list[i])
             };
 
             // no_drop для компонентов Go 

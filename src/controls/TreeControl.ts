@@ -1280,8 +1280,40 @@ function TreeControlCreate() {
 
     function updateActive(e: any) {
         const { list, state } = e;
-        list.forEach((id: number) => { 
-            updateDataVisible(id, state); 
+        list.forEach((item: { id: number, visible: boolean }) => {
+            let isVisible: string = 'true';
+            // if (checkParentsIncludeIds(item.id, list)) isVisible = 'false';
+            if (!checkParentsVisible(item.id) || item.visible == false) isVisible = 'false';
+            else isVisible = state;
+            updateDataVisible(item.id, isVisible);
+        });
+    }
+
+    function checkParentsIncludeIds(id: number, ids: { id: number, visible: boolean }[]): boolean {
+        const item = treeList.find((i) => i.id == id);
+        if (!item) return true;
+        if (item.pid == -1) return true;
+        const parent = treeList.find((i) => i.id == item.pid);
+        if (!parent) return true;
+        if (ids.find((i) => i.id == parent.id)) return false;  
+        return checkParentsIncludeIds(parent.id, ids);
+    }
+
+    function checkParentsVisible(id: number): boolean {
+        const item = treeList.find((i) => i.id == id);
+        if (!item) return true;
+        if (item.pid == -1) return true;
+        const parent = treeList.find((i) => i.id == item.pid);
+        if (!parent) return true;
+        if (parent.visible == false) return false;  
+        return checkParentsVisible(parent.id);
+    }
+    
+    function updateVisible(e: any) {
+        const { list, state } = e;
+        list.forEach((id: number) => {
+            const isVisible: string = checkParentsVisible(id) == false ? 'false' : state;
+            updateDataVisible(id, isVisible);
         });
     }
 
@@ -1369,6 +1401,7 @@ function TreeControlCreate() {
     });
 
     EventBus.on('SYS_GRAPH_ACTIVE', updateActive);
+    EventBus.on('SYS_GRAPH_VISIBLE', updateVisible);
 
     // document.addEventListener('mousedown', onMouseDown, false);
     EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);

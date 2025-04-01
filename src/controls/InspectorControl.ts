@@ -1668,10 +1668,10 @@ function InspectorControlCreate() {
     }
 
     function updateChildrenActive(children: any[], state: boolean) {
-        const result:number[] = [];
+        const result: { id: number, visible: boolean }[] = [];
         children.forEach((child: any) => {
             child.set_active(state);
-            result.push(child.mesh_data.id);
+            result.push({ id: child.mesh_data.id, visible: child.get_visible() });
             if (child.children.length > 0) {
                 const children = updateChildrenActive(child.children, state); 
                 if (children.length > 0) result.push(...children);
@@ -1681,7 +1681,8 @@ function InspectorControlCreate() {
     }
 
     function updateActive(info: ChangeInfo) {
-        const ids: number[] = [];
+        const ids: { id: number, visible: boolean }[] = [];
+        const state = info.data.event.value as boolean;
         info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1692,16 +1693,15 @@ function InspectorControlCreate() {
                 return;
             }
 
-            const state = info.data.event.value as boolean;
             mesh.set_active(state);
-            ids.push(id);
+            ids.push({id, visible: mesh.get_visible()});
             if (mesh.children) {
                 const children = updateChildrenActive(mesh.children, state); 
                 if (children.length > 0) ids.push(...children);
             }
         });
 
-        EventBus.trigger("SYS_GRAPH_ACTIVE", {list: ids, state: info.data.event.value as boolean});
+        EventBus.trigger("SYS_GRAPH_ACTIVE", {list: ids, state});
     }
 
     function saveVisible(ids: number[]) {
@@ -1723,6 +1723,8 @@ function InspectorControlCreate() {
     }
 
     function updateVisible(info: ChangeInfo) {
+        const state = info.data.event.value as boolean;
+
         info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -1733,9 +1735,10 @@ function InspectorControlCreate() {
                 return;
             }
 
-            const state = info.data.event.value as boolean;
             mesh.set_visible(state);
         });
+
+        EventBus.trigger("SYS_GRAPH_VISIBLE", {list: info.ids, state});
     }
 
     function savePosition(ids: number[]) {
