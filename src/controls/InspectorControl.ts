@@ -118,7 +118,6 @@ export enum Property {
     BLEND_MODE = 'blend_mode',
     MIN_FILTER = 'min_filter',
     MAG_FILTER = 'mag_filter',
-    FLIP_RESET = 'flip_reset',
     FLIP_VERTICAL = 'flip_vertical',
     FLIP_HORIZONTAL = 'flip_horizontal',
     FLIP_DIAGONAL = 'flip_diagonal',
@@ -301,7 +300,7 @@ function InspectorControlCreate() {
     let _data: ObjectData[];
 
     let _is_first = true;
-    let _is_refreshed = false;
+    let _is_refresh = false;
 
     function init() {
         _inspector = new Pane({
@@ -647,38 +646,31 @@ function InspectorControlCreate() {
                     fields.push({ name: Property.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
                     fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
                     if (value.type === IObjectTypes.GO_SPRITE_COMPONENT) {
-                        fields.push({
-                            name: Property.FLIP_RESET, data: () => {
-                                saveUV(_selected_list.map(m => m.mesh_data.id));
-                                _selected_list.forEach((item) => {
-                                    (item as GoSprite).set_flip(FlipMode.NONE);
-                                });
-                            }
-                        });
-                        fields.push({
-                            name: Property.FLIP_VERTICAL, data: () => {
-                                saveUV(_selected_list.map(m => m.mesh_data.id));
-                                _selected_list.forEach((item) => {
-                                    (item as GoSprite).set_flip(FlipMode.VERTICAL);
-                                });
-                            }
-                        });
-                        fields.push({
-                            name: Property.FLIP_HORIZONTAL, data: () => {
-                                saveUV(_selected_list.map(m => m.mesh_data.id));
-                                _selected_list.forEach((item) => {
-                                    (item as GoSprite).set_flip(FlipMode.HORIZONTAL);
-                                });
-                            }
-                        });
-                        fields.push({
-                            name: Property.FLIP_DIAGONAL, data: () => {
-                                saveUV(_selected_list.map(m => m.mesh_data.id));
-                                _selected_list.forEach((item) => {
-                                    (item as GoSprite).set_flip(FlipMode.DIAGONAL);
-                                });
-                            }
-                        });
+                        const sprite = value as GoSprite;
+                        const currentFlip = sprite.get_flip();
+
+                        switch (currentFlip) {
+                            case FlipMode.NONE:
+                                fields.push({ name: Property.FLIP_DIAGONAL, data: false });
+                                fields.push({ name: Property.FLIP_VERTICAL, data: false });
+                                fields.push({ name: Property.FLIP_HORIZONTAL, data: false });
+                                break;
+                            case FlipMode.VERTICAL:
+                                fields.push({ name: Property.FLIP_DIAGONAL, data: false });
+                                fields.push({ name: Property.FLIP_VERTICAL, data: true });
+                                fields.push({ name: Property.FLIP_HORIZONTAL, data: false });
+                                break;
+                            case FlipMode.HORIZONTAL:
+                                fields.push({ name: Property.FLIP_DIAGONAL, data: false });
+                                fields.push({ name: Property.FLIP_VERTICAL, data: false });
+                                fields.push({ name: Property.FLIP_HORIZONTAL, data: true });
+                                break;
+                            case FlipMode.DIAGONAL:
+                                fields.push({ name: Property.FLIP_DIAGONAL, data: true });
+                                fields.push({ name: Property.FLIP_VERTICAL, data: false });
+                                fields.push({ name: Property.FLIP_HORIZONTAL, data: false });
+                                break;
+                        }
                     }
                 }
 
@@ -767,6 +759,16 @@ function InspectorControlCreate() {
                         const font_size = (item as TextMesh).fontSize * max_delta;
                         value.data = font_size;
                         break;
+                    case Property.FLIP_VERTICAL:
+                        value.data = (item as GoSprite).get_flip() == FlipMode.VERTICAL;
+                        break;
+                    case Property.FLIP_HORIZONTAL:
+                        value.data = (item as GoSprite).get_flip() == FlipMode.HORIZONTAL;
+                        break;
+                    case Property.FLIP_DIAGONAL:
+                        Log.log('FLIP_DIAGONAL', (item as GoSprite).get_flip());
+                        value.data = (item as GoSprite).get_flip() == FlipMode.DIAGONAL;
+                        break;
                 }
             });
         });
@@ -774,9 +776,9 @@ function InspectorControlCreate() {
         properties.forEach((property) => {
             const pane = searchPaneInFolderByProperty(_inspector, property);
             if (pane) {
-                _is_refreshed = true;
-                // Log.log('REFRESH', property);
+                _is_refresh = true;
                 pane.refresh();
+                _is_refresh = false;
             }
         });
     }
@@ -1135,7 +1137,7 @@ function InspectorControlCreate() {
 
         if (!property.readonly) {
             entity.onBeforeChange = () => {
-                if (!_is_first || _is_refreshed) {
+                if (!_is_first || _is_refresh) {
                     return;
                 }
 
@@ -1149,9 +1151,7 @@ function InspectorControlCreate() {
 
             entity.onChange = (event: ChangeEvent) => {
                 // NOTE: не обновляем только что измененные значения из вне(после refresh)
-                if (_is_refreshed) {
-                    _is_refreshed = false;
-
+                if (_is_refresh) {
                     tryDisabledValueByAxis({
                         ids,
                         data: {
@@ -1556,6 +1556,9 @@ function InspectorControlCreate() {
             case Property.UNIFORM_VEC3: updateUniformVec3(info); break;
             case Property.UNIFORM_VEC4: updateUniformVec4(info); break;
             case Property.UNIFORM_COLOR: updateUniformColor(info); break;
+            case Property.FLIP_VERTICAL: updateFlipVertical(info); break;
+            case Property.FLIP_HORIZONTAL: updateFlipHorizontal(info); break;
+            case Property.FLIP_DIAGONAL: updateFlipDiagonal(info); break;
         }
     }
 
@@ -2787,6 +2790,51 @@ function InspectorControlCreate() {
         });
     }
 
+    function updateFlipVertical(info: ChangeInfo) {
+        saveUV(info.ids);
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                const sprite = item as GoSprite;
+                sprite.set_flip(FlipMode.NONE);
+                if(info.data.event.value) { 
+                    sprite.set_flip(FlipMode.VERTICAL);
+                }
+            }
+        });
+
+        refresh([Property.FLIP_DIAGONAL, Property.FLIP_HORIZONTAL]);
+    }
+
+    function updateFlipHorizontal(info: ChangeInfo) {
+        saveUV(info.ids);
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                const sprite = item as GoSprite;
+                sprite.set_flip(FlipMode.NONE);
+                if(info.data.event.value) { 
+                    sprite.set_flip(FlipMode.HORIZONTAL);
+                }
+            }
+        });
+
+        refresh([Property.FLIP_DIAGONAL, Property.FLIP_VERTICAL]);
+    }
+
+    function updateFlipDiagonal(info: ChangeInfo) {
+        saveUV(info.ids);
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                const sprite = item as GoSprite;
+                sprite.set_flip(FlipMode.NONE);
+                if(info.data.event.value) { 
+                    sprite.set_flip(FlipMode.DIAGONAL);
+                }
+            }
+        });
+
+        refresh([Property.FLIP_VERTICAL, Property.FLIP_HORIZONTAL]);
+    }
+
     init();
     return { setupConfig, setData, set_selected_textures, set_selected_materials, set_selected_list, refresh, clear }
 }
@@ -3177,12 +3225,11 @@ export function getDefaultInspectorConfig() {
         },
         {
             name: 'flip',
-            title: 'Отразить',
+            title: 'Отражение',
             property_list: [
-                { name: Property.FLIP_RESET, title: 'В исходное положение', type: PropertyType.BUTTON },
-                { name: Property.FLIP_VERTICAL, title: 'По вертикали', type: PropertyType.BUTTON },
-                { name: Property.FLIP_HORIZONTAL, title: 'По горизонтали', type: PropertyType.BUTTON },
-                { name: Property.FLIP_DIAGONAL, title: 'По диагонали', type: PropertyType.BUTTON }
+                { name: Property.FLIP_VERTICAL, title: 'По вертикали', type: PropertyType.BOOLEAN },
+                { name: Property.FLIP_HORIZONTAL, title: 'По горизонтали', type: PropertyType.BOOLEAN },
+                { name: Property.FLIP_DIAGONAL, title: 'По диагонали', type: PropertyType.BOOLEAN }
             ]
         },
         {

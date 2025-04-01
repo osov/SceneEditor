@@ -39,10 +39,10 @@ export class GuiText extends TextMesh {
 }
 
 export enum FlipMode {
-    NONE = 'none',
-    VERTICAL = 'vertical',
-    HORIZONTAL = 'horizontal',
-    DIAGONAL = 'diagonal'
+    NONE,
+    VERTICAL,
+    HORIZONTAL,
+    DIAGONAL
 }
 
 export class GoSprite extends Slice9Mesh {
@@ -57,6 +57,48 @@ export class GoSprite extends Slice9Mesh {
         const geometry = this.geometry;
         const uv = geometry.attributes.uv;
         return new Float32Array(uv.array);
+    }
+
+    get_flip(): FlipMode {
+        const geometry = this.geometry;
+        const uv = geometry.attributes.uv;
+        
+        if (!this.original_uv) {
+            return FlipMode.NONE;
+        }
+
+        // NOTE: Проверяем все UV координаты
+        let has_changed = false;
+        for (let i = 0; i < uv.array.length; i++) {
+            if (uv.array[i] !== this.original_uv[i]) {
+                has_changed = true;
+                break;
+            }
+        }
+
+        if (has_changed) {
+            // NOTE: Проверяем все пары UV координат
+            let is_horizontal = true;
+            let is_vertical = true;
+            let is_diagonal = true;
+
+            for (let i = 0; i < uv.array.length; i += 2) {
+                const current_x = uv.array[i];
+                const current_y = uv.array[i + 1];
+                const original_x = this.original_uv[i];
+                const original_y = this.original_uv[i + 1];
+
+                if (current_x !== 1 - original_x) is_horizontal = false;
+                if (current_y !== 1 - original_y) is_vertical = false;
+                if (current_x !== 1 - original_y || current_y !== 1 - original_x) is_diagonal = false;
+            }
+
+            if (is_diagonal) return FlipMode.DIAGONAL;
+            if (is_horizontal) return FlipMode.HORIZONTAL;
+            if (is_vertical) return FlipMode.VERTICAL;
+        }
+        
+        return FlipMode.NONE;
     }
 
     set_flip(value: FlipMode) {
@@ -83,16 +125,22 @@ export class GoSprite extends Slice9Mesh {
                 uv.array.set(this.original_uv);
                 break;
         }
+
         geometry.attributes.uv.needsUpdate = true;
         this.transform_changed();
     }
 
     serialize() {
-        return {
+        const data: any = {
             ...super.serialize(),
-            original_uv: this.original_uv ? Array.from(this.original_uv) : null,
             current_uv: Array.from(this.geometry.attributes.uv.array)
         };
+        
+        if (this.original_uv) {
+            data.original_uv = Array.from(this.original_uv);
+        }
+        
+        return data;
     }
 
     deserialize(data: any) {
