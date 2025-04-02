@@ -177,7 +177,6 @@ function ControlManagerCreate() {
     }
 
     function setVisible(item: IBaseMeshAndThree): boolean {
-        // log(item.name, 'v: ', item.get_visible(), 'a: ', item.get_active());
         return item.get_active() && item.get_visible() ? true : false;
     }
 
@@ -195,10 +194,8 @@ function ControlManagerCreate() {
 
     function get_tree_graph() {
         const graph = SceneManager.make_graph();
-        // log({graph})
         const scene_list = SceneManager.get_scene_list();
         const parentActiveIds = getParentActiveIds(scene_list);
-        // log({parentActiveIds})
         const sel_list_ids = SelectControl.get_selected_list().map(m => m.mesh_data.id);
         const list: TreeItem[] = [];
         list.push({ id: -1, pid: -2, name: current_scene_name, icon: 'scene', selected: false, visible: true });

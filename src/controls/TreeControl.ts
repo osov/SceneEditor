@@ -1281,39 +1281,56 @@ function TreeControlCreate() {
     function updateActive(e: any) {
         const { list, state } = e;
         list.forEach((item: { id: number, visible: boolean }) => {
+            if (!state) { updateDataVisible(item.id, 'false'); return; }
+
             let isVisible: string = 'true';
-            // if (checkParentsIncludeIds(item.id, list)) isVisible = 'false';
-            if (!checkParentsVisible(item.id) || item.visible == false) isVisible = 'false';
-            else isVisible = state;
+            const parentIncludes = checkParentsVisible(item.id, list); // список изменяемых, включая дочерние
+            const parentIsVisible = checkParentsVisible(item.id); // скрытые родители
+            const parentIncludesLS = checkParentsVisible(item.id, [], listSelected); // есть ли у выделенных скрытые родители
+
+            if (parentIsVisible) {
+                if(!parentIncludes || item.visible == false) isVisible = 'false';
+                if(parentIncludes) isVisible = parentIncludesLS ? 'false' : 'true'; 
+            }
+            else isVisible = 'true';
+
             updateDataVisible(item.id, isVisible);
         });
     }
 
-    function checkParentsIncludeIds(id: number, ids: { id: number, visible: boolean }[]): boolean {
+    function checkParentsVisible(id: number, ids: { id: number, visible: boolean }[] = [], ls: number[] = []): boolean {
         const item = treeList.find((i) => i.id == id);
-        if (!item) return true;
-        if (item.pid == -1) return true;
+        if (!item) return false;
+        if (item.pid == -1) return false;
         const parent = treeList.find((i) => i.id == item.pid);
-        if (!parent) return true;
-        if (ids.find((i) => i.id == parent.id)) return false;  
-        return checkParentsIncludeIds(parent.id, ids);
-    }
+        if (!parent) return false;
 
-    function checkParentsVisible(id: number): boolean {
-        const item = treeList.find((i) => i.id == id);
-        if (!item) return true;
-        if (item.pid == -1) return true;
-        const parent = treeList.find((i) => i.id == item.pid);
-        if (!parent) return true;
-        if (parent.visible == false) return false;  
+        // есть ли у выделенных скрытые родители
+        if (ls.length > 0) {
+            if (ls.includes(parent.id)) {
+                const pr = treeList.find((i) => i.id == parent.pid);
+                if (!pr || pr.id == -1) return false;
+                log({ls, pid: pr.id, id, v: pr.visible});
+                return parent.visible == false ? true : false;
+            }
+            return checkParentsVisible(parent.id, [], ls);
+        }
+
+        // список изменяемых, включая дочерние
+        if (ids.length > 0) {
+            if (ids.find((i) => i.id == parent.id)) { log({ids, pid: parent.id}); return true; }
+            return checkParentsVisible(parent.id, ids);
+        }
+
+        // есть ли скрытые родители
+        if (parent.visible == false) return true;
         return checkParentsVisible(parent.id);
     }
     
     function updateVisible(e: any) {
         const { list, state } = e;
         list.forEach((id: number) => {
-            const isVisible: string = checkParentsVisible(id) == false ? 'false' : state;
-            updateDataVisible(id, isVisible);
+            updateDataVisible(id, state);
         });
     }
 
