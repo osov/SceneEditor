@@ -1,5 +1,5 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, LineDashedMaterial, BufferGeometry, Line, Object3DEventMap, Scene } from "three";
-import { IBaseMeshAndThree, PivotX, PivotY } from "../render_engine/types";
+import { IBaseMeshAndThree, IObjectTypes, PivotX, PivotY } from "../render_engine/types";
 import { AnchorEventData, PositionEventData, SizeEventData, SliceEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { is_base_mesh } from "../render_engine/helpers/utils";
@@ -610,6 +610,9 @@ function SizeControlCreate() {
     function set_pivot_visible(visible: boolean) {
         if (visible && selected_list.length != 1)
             return;
+        if (visible && selected_list[0].type == IObjectTypes.GO_SPRITE_COMPONENT)
+            return;
+        anchor_mesh.visible = visible;
         pivot_points.forEach(p => p.visible = visible);
         //anchor_mesh.visible = visible;
     }

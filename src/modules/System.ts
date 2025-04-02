@@ -7,11 +7,15 @@ export function register_system() {
 }
 
 function SystemModule() {
-  
+
     function now() {
         return Math.floor(Date.now() / 1000);
     }
 
+    function now_with_ms() {
+        return Date.now() / 1000;
+    }
 
-    return { now };
+
+    return { now, now_with_ms };
 }

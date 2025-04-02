@@ -44,6 +44,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                 apply_tile_transform(plane, tile.id);
                 container.add(plane);
                 plane.name = tile_info.name + '' + plane.mesh_data.id;
+                plane.userData = { tile };
             }
         }
 

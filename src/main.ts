@@ -46,9 +46,10 @@ register_tree_control();
 register_popups();
 register_contextmenu();
 register_inspector_control();
+register_flow_map_control();
 register_control_manager();
 register_history_control();
-register_flow_map_control();
+
 
 const scenes = [
     run_scene_simple,

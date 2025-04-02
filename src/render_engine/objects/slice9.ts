@@ -5,7 +5,7 @@ import { EntityPlane } from "./entity_plane";
 
 // todo optimize material list
 
-const shader = {
+export const shader = {
     vertexShader: `
         attribute vec4 uvData; 
         attribute vec3 color;  
@@ -236,7 +236,7 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
 
     function serialize(): SerializeData {
         const data: SerializeData = {};
-        
+
         if (parameters.slice_width !== 0) {
             data.slice_width = parameters.slice_width;
         }
@@ -249,7 +249,7 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         if (parameters.atlas !== '') {
             data.atlas = parameters.atlas;
         }
-        
+
         return data;
     }
 
@@ -257,7 +257,7 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         // NOTE: сначала устанавливаем значения по умолчанию
         set_slice(0, 0);
         set_texture('', '');
-        
+
         // NOTE: затем переопределяем значения
         if (data.slice_width !== undefined) {
             parameters.slice_width = data.slice_width;
@@ -277,7 +277,7 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
 
 export class Slice9Mesh extends EntityPlane {
     public type = IObjectTypes.SLICE9_PLANE;
-    public mesh_data = { id: -1};
+    public mesh_data = { id: -1 };
     private template: ReturnType<typeof CreateSlice9>;
     private _alpha: number = 1.0;
 
@@ -285,7 +285,7 @@ export class Slice9Mesh extends EntityPlane {
         super();
         this.matrixAutoUpdate = true;
         const material = custom_material ? custom_material : new ShaderMaterial({
-            uniforms: { 
+            uniforms: {
                 u_texture: { value: null },
                 alpha: { value: 1.0 }
             },
@@ -374,22 +374,22 @@ export class Slice9Mesh extends EntityPlane {
 
     serialize() {
         const data: SerializeData = { ...super.serialize(), ...this.template.serialize() };
-        
+
         // NOTE: только если не 1.0
         if (this._alpha !== 1.0) {
             data.alpha = this._alpha;
         }
-        
+
         return data;
     }
 
     deserialize(data: SerializeData) {
         super.deserialize(data);
         this.template.deserialize(data);
-        
+
         // NOTE: сначала устанавливаем значение по умолчанию
         this._alpha = 1.0;
-        
+
         // NOTE: затем переопределяем значение
         if (data.alpha !== undefined) {
             this.set_alpha(data.alpha);

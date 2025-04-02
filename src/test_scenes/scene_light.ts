@@ -30,6 +30,8 @@ export async function run_scene_light() {
     //    const tex = all[id];
     //    ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
     //}
+    FlowMapControl.init();
+    await FlowMapControl.load_shader();
 
     const world = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     world.name = 'TILES';
@@ -164,6 +166,7 @@ export async function run_scene_light() {
         camera.layers.mask = old;
 
     });
+    return;
     create_water_mesh(105);
     create_water_mesh(106);
     create_water_mesh(107);
@@ -199,7 +202,8 @@ async function create_water_mesh(mesh_id: number) {
         fragmentShader: (await AssetControl.get_file_data('shaders/water.fp')).data!,
         transparent: true
     });
-    EventBus.on('SYS_ON_UPDATE', (e) => mat.uniforms.u_time.value += 0.01);
+    const now = System.now_with_ms();
+    EventBus.on('SYS_ON_UPDATE', (e) => mat.uniforms.u_time.value = System.now_with_ms() - now);
     const mesh = SceneManager.get_mesh_by_id(mesh_id)!;
     const tex = mesh.get_texture();
     mat.uniforms.u_texture.value = ResourceManager.get_texture(tex[0], tex[1]).texture;
