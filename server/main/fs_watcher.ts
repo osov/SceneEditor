@@ -5,9 +5,10 @@ import path from "path";
 import { send_message_socket } from "./ws_utils";
 import { FSEvent, FSEventType, FSObjectType, PUBLIC } from "../../src/modules_editor/modules_editor_const";
 import { WsClient } from "./types";
+import { send_fs_events_interval } from "../config";
 
 
-export function FSWatcher(dir: string, sockets: WsClient[], fs_events_interval: number) {
+export function FSWatcher(dir: string, sockets: WsClient[]) {
     const events_cache: FSEvent[] = [];
 
     function is_copy(event: FSEvent) {
@@ -33,7 +34,7 @@ export function FSWatcher(dir: string, sockets: WsClient[], fs_events_interval: 
         events_cache.splice(0);
     }
 
-    const timer = setInterval(send_events, fs_events_interval * 1000);
+    const timer = setInterval(send_events, send_fs_events_interval * 1000);
     const watcher = watch(
         dir,
         { recursive: true }, 

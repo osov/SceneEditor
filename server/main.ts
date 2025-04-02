@@ -1,9 +1,9 @@
-import { send_fs_events_interval, server_port, ws_server_port } from "./config";
-import { Server } from "./main/server";
+import { server_port, ws_server_port } from "./config";
+import { register_server_global_data, Server } from "./main/server";
 import { register_log } from "./modules/Log";
 
 
-
+// chains_test()
 register_log();
-
-const server = await Server(server_port, ws_server_port, send_fs_events_interval);
+register_server_global_data();
+const server = await Server(server_port, ws_server_port);

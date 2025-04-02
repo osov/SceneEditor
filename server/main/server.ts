@@ -1,24 +1,38 @@
 import path from "path";
 import { Router } from "bun-serve-router";
-import { project_name_required, get_file, handle_command, loaded_project_required } from "./logic";
 import { ExtWebSocket, WsClient } from "./types";
-import { ServerResponses, ServerCommands, NetMessagesEditor as NetMessages, CommandId, URL_PATHS, CMD_NAME, LOAD_PROJECT_CMD, GET_FOLDER_CMD, SET_CURRENT_SCENE_CMD } from "../../src/modules_editor/modules_editor_const";
-import { TDictionary } from "../../src/modules_editor/modules_editor_const";
+import { ServerResponses, NetMessagesEditor as NetMessages, CommandId, URL_PATHS, CMD_NAME, ServerData} from "../../src/modules_editor/modules_editor_const";
 import { do_response, json_parsable } from "./utils";
 import { get_asset_path, get_full_path } from "./fs_utils";
 import { WsServer } from "./WsServer";
 import { FSWatcher } from "./fs_watcher";
 import { ERROR_TEXT } from "./const";
+import { use_queues_when_write_file } from "../config";
+import { Logic } from "./logic";
 
-export async function Server(server_port: number, ws_server_port: number, fs_events_interval: number) {
+declare global {
+    const current: typeof _DATA;
+}
+
+export function register_server_global_data() {
+    (global as any).current = _DATA;
+}
+
+export const _DATA: ServerData = {
+    project:  undefined,
+    dir: "",
+    scene: {},
+}
+
+export async function Server(server_port: number, ws_server_port: number) {
     // const clients = Clients();
+    const logic = Logic(use_queues_when_write_file);
     let sockets: WsClient[] = [];
-    const fs_watcher = FSWatcher(get_full_path(""), sockets, fs_events_interval);
+    const fs_watcher = FSWatcher(get_full_path(""), sockets);
     const router = new Router();
-    const data_sessions: TDictionary<any> = {};
-    let current_project: string | undefined = undefined;
-    let current_dir = "";
-    const current_scene: {path?: string, name?: string} = {};
+    current.project = undefined;
+    current.dir = "";
+    current.scene = {};
 
     router.add("GET", `${URL_PATHS.TEST}`, (request, params) => {
         return test_func();
@@ -35,7 +49,7 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
             try {
                 const formdata = await request.formData();
                 const file_data = formdata.get('file');
-                const project = current_project;
+                const project = current.project;
                 dir_path = formdata.get('path') as  string | null;
                 if (file_data != null && dir_path != null && project != null) {
                     const file = file_data as unknown as Blob;
@@ -66,8 +80,8 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
     router.add("GET", `${URL_PATHS.ASSETS}/*`, async (request, params) => {
         const uri = params[0];  
         const asset_path = decodeURIComponent(uri ? uri : "");
-        if (current_project) {
-            const file = await get_file(current_project, asset_path);
+        if (current.project) {
+            const file = await logic.get_file(current.project, asset_path);
             if (file) 
                 return do_response(file, false);
         }
@@ -129,36 +143,7 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
         if (data && !json_parsable(data)) 
             return {message: ERROR_TEXT.WRONG_JSON, result: 0};
         const params = (data) ? JSON.parse(data) : {};
-
-        const resp = await project_name_required(cmd_id, params);
-        if (resp) return resp;
-        
-        if (loaded_project_required(cmd_id) && !current_project)
-            return {message: ERROR_TEXT.PROJECT_NOT_LOADED, result: 0}
-
-        const result = await handle_command(current_project as string, cmd_id, params);
-        if (result.result) {
-            if (cmd_id === LOAD_PROJECT_CMD) {
-                const _result = result as ServerResponses[typeof LOAD_PROJECT_CMD];
-                current_project = _result.data?.name as string;
-                log(`${current_project} is current loaded project`);
-                current_dir = "";
-            }
-            if (cmd_id === GET_FOLDER_CMD) {
-                const _params = params as ServerCommands[typeof GET_FOLDER_CMD];
-                if (current_dir != _params.path) {
-                    current_dir = _params.path as string;      
-                } 
-            }
-            if (cmd_id === SET_CURRENT_SCENE_CMD) {
-                const _params = params as ServerCommands[typeof SET_CURRENT_SCENE_CMD];
-                const _result = result as ServerResponses[typeof SET_CURRENT_SCENE_CMD];
-                if (current_scene.path != _params.path) {
-                    current_scene.path = _params.path as string;    
-                    current_scene.name = _result.data?.name as string;
-                } 
-            }
-        }
+        const result = await logic.handle_command(cmd_id, params);
         return result;
     }
 
@@ -176,16 +161,6 @@ export async function Server(server_port: number, ws_server_port: number, fs_eve
 
     function test_func() {
         return do_response({message: "OK!", result: 1}, true, 200);
-    }
-
-    function get_session_data(id_session: string) {
-        return data_sessions[id_session];
-    }
-
-    function set_session_data(id_session: string, key: string, data: any) {
-        if (data_sessions[id_session] == undefined)
-            data_sessions[id_session] = {};
-        data_sessions[id_session][key] = data;
     }
 
     function verify_message(client_data: ExtWebSocket, data: string) {

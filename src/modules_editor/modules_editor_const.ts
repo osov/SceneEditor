@@ -39,6 +39,7 @@ export type _SystemMessagesEditor = {
 
 
 export type AssetsCommands = {
+    [GET_SERVER_DATA_CMD]: VoidMessage,
     [SET_CURRENT_SCENE_CMD]: { path: string }, 
     [GET_PROJECTS_CMD]: VoidMessage,
     [NEW_PROJECT_CMD]: { project: string },
@@ -77,8 +78,14 @@ export type ProjectPathsData = {
 }
 export type ProjectLoadData = { assets: FSObject[], name: string, paths: ProjectPathsData }
 export type ProjectCache = { name?: string, current_dir: string, current_scene: { name?: string, path?: string } }
+export type ServerData = {
+    project: string | undefined,
+    dir: string,
+    scene: { path?: string, name?: string },
+}
 
 export type AssetsResponses = {
+    [GET_SERVER_DATA_CMD]: BaseResp<ServerData>,
     [SET_CURRENT_SCENE_CMD]: BaseResp<{ name?: string, path?: string }>, 
     [GET_PROJECTS_CMD]: BaseResp<string[]>,
     [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
@@ -119,6 +126,7 @@ export interface FSObject { name: string, type: FSObjectType, size: number, path
 export const ASSET_TEXTURE: AssetType = "texture";
 export const ASSET_SCENE_GRAPH: AssetType = "scene_graph";
 export const ASSET_MATERIAL: AssetType = "material";
+export const GET_SERVER_DATA_CMD = '/server_data';
 export const SET_CURRENT_SCENE_CMD = '/set_current_scene';
 export const GET_PROJECTS_CMD = '/get_projects';
 export const NEW_PROJECT_CMD = '/new_project';
@@ -146,6 +154,7 @@ export const MATERIAL_EXT = `mtr`;
 export const FONT_EXT = `ttf`;
 
 export const CMD_NAME = [
+    GET_SERVER_DATA_CMD,
     SET_CURRENT_SCENE_CMD,
     GET_PROJECTS_CMD, 
     NEW_PROJECT_CMD, 

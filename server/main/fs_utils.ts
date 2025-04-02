@@ -65,10 +65,6 @@ export async function exists(dir: string) {
 	return await fs.exists(dir);
 }
 
-export async function check_dir_exists(dir: string) {
-    return await exists(dir)
-}
-
 export function get_full_path(dir: string) {
     return path.join(path.resolve(working_folder_path), dir);    
 }
