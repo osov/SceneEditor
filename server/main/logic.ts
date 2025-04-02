@@ -6,8 +6,7 @@ import { exists, get_asset_path, get_full_path, get_assets_folder_path, get_meta
 import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD, 
     SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD, 
     MOVE_CMD, SET_CURRENT_SCENE_CMD, SCENE_EXT, OPEN_EXPLORER_CMD, allowed_ext, texture_ext, FSObject, ProjectPathsData, model_ext, 
-    FONT_EXT, ATLAS_EXT, LoadAtlasData, 
-    BaseResp,
+    FONT_EXT, ATLAS_EXT, LoadAtlasData,
     GET_SERVER_DATA_CMD,
     MATERIAL_EXT} from "../../src/modules_editor/modules_editor_const";
 import { PromiseChains } from "./PromiseChains";
@@ -129,12 +128,35 @@ export function Logic(use_queues: boolean) {
         
         async function on_save_data(cmd: ServerCommands[typeof SAVE_DATA_CMD]): Promise<ServerResponses[typeof SAVE_DATA_CMD]> {
             const data_path = get_data_file_path(project, cmd.path);
-            const new_data = cmd.data;
+            const data_format = cmd.format
+            const ext = path.extname(data_path).slice(1);
+            const data: string = cmd.data;
+            let buffer_data: Buffer<ArrayBuffer> | undefined = (data_format == "base64") ? img_data_to_array_buffer(data) : undefined;
+            if (!allowed_ext.includes(ext))
+                return {result: 0, message: ERROR_TEXT.WRONG_END_EXTENTION};
+
+            if (data_format == "base64") {
+                if (!texture_ext.includes(ext)) {
+                    return {result: 0, message: ERROR_TEXT.WRONG_TEXTURE_EXTENTION};
+                }
+                let is_match = false;
+                for (const _ext of texture_ext) {
+                    const template = `data:image/${_ext};base64,`;
+                    if (data.search(template) == 0) {
+                        is_match = true;
+                        buffer_data = Buffer.from(data.replace(template, ""), 'base64');
+                    }    
+                }
+                if (!is_match) {
+                    buffer_data = Buffer.from(data, 'base64');
+                }
+            }
             try {
-                await _write(data_path, new_data);
+                const data_to_write = (data_format == "base64" && buffer_data) ? buffer_data : data_path
+                await _write(data_path, data_to_write);
                 return {result: 1, data: {}};
         
-            } catch (e) {
+            } catch (e) {``
                 return {result: 0, message: `${ERROR_TEXT.CANT_WRITE_FILE}: ${e}`};
             }
         }

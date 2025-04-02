@@ -1,5 +1,5 @@
 import { SERVER_URL } from "../config";
-import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, ProtocolWrapper, TRecursiveDict, DEL_INFO_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, OPEN_EXPLORER_CMD } from "./modules_editor_const";
+import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, ProtocolWrapper, TRecursiveDict, DEL_INFO_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, OPEN_EXPLORER_CMD, DataFormatType } from "./modules_editor_const";
 
 
 declare global {
@@ -64,9 +64,9 @@ function ClientAPIModule() {
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path});
     }
 
-    async function save_data(path: string, data: string): Promise<AssetsResponses[typeof SAVE_DATA_CMD]> {
+    async function save_data(path: string, data: string, format: DataFormatType = "string"): Promise<AssetsResponses[typeof SAVE_DATA_CMD]> {
         const command_id = SAVE_DATA_CMD;
-        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, data});
+        return await api.command<typeof command_id>(URL_PATHS.API, command_id, {path, data, format});
     }
     
     async function get_data(path: string): Promise<AssetsResponses[typeof GET_DATA_CMD]> {

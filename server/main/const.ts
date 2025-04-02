@@ -33,6 +33,8 @@ export const ERROR_TEXT = {
     SOME_FIELDS_WRONG: `Some of the command's required params are missing or empty`,
     WRONG_ORIG_EXTENTION: `Wrong extention of the initial file`,
     WRONG_END_EXTENTION: `Wrong extention of the destination file`,
+    WRONG_TEXTURE_EXTENTION: `Wrong texture file extention`,
+    WRONG_BASE64_EXTENTION: `Wrong file extention in base64 data`,
     RECURSIVE_FOLDER_COPYING: `Can't put a copy of a folder into its subfolder`,
     SCENE_NOT_EXIST: `Scene not found on that path!`,
     METAINFO_NOT_FOUND: `No metainfo found!`,

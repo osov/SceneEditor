@@ -1,5 +1,7 @@
 import { SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
-import { ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, AssetType, FILE_UPLOAD_CMD, FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectCache, ProjectLoadData, SCENE_EXT, ServerResponses, TDictionary, texture_ext, TRecursiveDict, URL_PATHS } from "../modules_editor/modules_editor_const";
+import { ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, AssetType, DataFormatType, FILE_UPLOAD_CMD, 
+    FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses, 
+    TDictionary, texture_ext, URL_PATHS } from "../modules_editor/modules_editor_const";
 import { span_elem, json_parsable, get_keys } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
@@ -239,28 +241,12 @@ function AssetControlCreate() {
         assets_list.hidden = false;
     }
 
-    async function get_file_data(path: string) {
-        return await ClientAPI.get_data(path);
+    function get_file_data(path: string) {
+        return ClientAPI.get_data(path);
     }
 
-    async function save_file_data(path: string, data: string) {
-        await ClientAPI.save_data(path, data);
-    }
-
-    async function save_meta_info(path: string, data: TRecursiveDict) {
-        await ClientAPI.save_info(path, data);
-    }
-
-    async function get_meta_info(path: string) {
-        const resp = await ClientAPI.get_info(path);
-        if (resp && resp.result === 1 && resp.data) {
-            return resp.data;
-        }
-        return undefined;
-    }
-
-    async function del_meta_info(path: string) {
-        await ClientAPI.del_info(path);
+    function save_file_data(path: string, data: string, format: DataFormatType = "string") {
+        return ClientAPI.save_data(path, data, format);
     }
 
     function generate_breadcrumbs(dir: string) {
@@ -1107,8 +1093,7 @@ function AssetControlCreate() {
     EventBus.on('ON_WS_CONNECTED', reload_current_project);
 
     return {
-        load_project, new_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_meta_info,
-        get_meta_info, del_meta_info, draw_empty_project, get_current_scene,
+        load_project, new_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, draw_empty_project, get_current_scene,
     };
 }
 

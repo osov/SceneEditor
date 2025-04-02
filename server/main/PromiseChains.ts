@@ -13,7 +13,7 @@ export function PromiseChains(_hander: Handler) {
         handler = _hander;
     }
 
-    async function push(key: string, data: string) {
+    async function push(key: string, data: any) {
         const promise = promises[key];
         if (promise == undefined) {
             const new_promise = _hander(key, data);

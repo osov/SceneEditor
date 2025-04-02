@@ -53,11 +53,32 @@ export type AssetsCommands = {
     [SAVE_INFO_CMD]: { path: string, data: TRecursiveDict },
     [GET_INFO_CMD]: { path?: string },
     [DEL_INFO_CMD]: { path: string },
-    [SAVE_DATA_CMD]: { path: string, data: string },
+    [SAVE_DATA_CMD]: { path: string, data: string, format: DataFormatType },
     [GET_DATA_CMD]: { path: string },
     [OPEN_EXPLORER_CMD]: { path: string },
     // [NEW_MATERIAL]: {name: string, path: string, data: IDictionary<string>},
     // [GET_MATERIAL]: {name: string, path: string},
+}
+
+export type AssetsResponses = {
+    [GET_SERVER_DATA_CMD]: BaseResp<ServerData>,
+    [SET_CURRENT_SCENE_CMD]: BaseResp<{ name?: string, path?: string }>, 
+    [GET_PROJECTS_CMD]: BaseResp<string[]>,
+    [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
+    [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
+    [GET_FOLDER_CMD]: BaseResp<FSObject[]>,
+    [LOAD_PROJECT_CMD]: BaseResp<ProjectLoadData>,
+    [RENAME_CMD]: BaseResp<VoidMessage>,
+    [COPY_CMD]: BaseResp<VoidMessage>,
+    [MOVE_CMD]: BaseResp<VoidMessage>,
+    [DELETE_CMD]: BaseResp<VoidMessage>,
+    [SAVE_INFO_CMD]: BaseResp<VoidMessage>,
+    [GET_INFO_CMD]: BaseResp<TRecursiveDict>,
+    [DEL_INFO_CMD]: BaseResp<VoidMessage>,
+    [SAVE_DATA_CMD]: BaseResp<VoidMessage>,
+    [GET_DATA_CMD]: BaseResp<string>,
+    [OPEN_EXPLORER_CMD]: BaseResp<VoidMessage>,
+    [FILE_UPLOAD_CMD]: BaseResp<FileUploadedData>
 }
 
 export type BaseResp<T> = {
@@ -84,27 +105,6 @@ export type ServerData = {
     scene: { path?: string, name?: string },
 }
 
-export type AssetsResponses = {
-    [GET_SERVER_DATA_CMD]: BaseResp<ServerData>,
-    [SET_CURRENT_SCENE_CMD]: BaseResp<{ name?: string, path?: string }>, 
-    [GET_PROJECTS_CMD]: BaseResp<string[]>,
-    [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
-    [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
-    [GET_FOLDER_CMD]: BaseResp<FSObject[]>,
-    [LOAD_PROJECT_CMD]: BaseResp<ProjectLoadData>,
-    [RENAME_CMD]: BaseResp<VoidMessage>,
-    [COPY_CMD]: BaseResp<VoidMessage>,
-    [MOVE_CMD]: BaseResp<VoidMessage>,
-    [DELETE_CMD]: BaseResp<VoidMessage>,
-    [SAVE_INFO_CMD]: BaseResp<VoidMessage>,
-    [GET_INFO_CMD]: BaseResp<TRecursiveDict>,
-    [DEL_INFO_CMD]: BaseResp<VoidMessage>,
-    [SAVE_DATA_CMD]: BaseResp<VoidMessage>,
-    [GET_DATA_CMD]: BaseResp<string>,
-    [OPEN_EXPLORER_CMD]: BaseResp<VoidMessage>,
-    [FILE_UPLOAD_CMD]: BaseResp<FileUploadedData>
-}
-
 export type NetMessagesEditor = {
     GET_LOADED_PROJECT: VoidMessage,
     LOADED_PROJECT: { name: string | undefined, current_dir: string },
@@ -114,6 +114,8 @@ export type NetMessagesEditor = {
 export type FileUploadedData = { size: number, path: string, name: string, project: string, ext: string };
 
 export type FSEvent = { path: string, folder_path: string, project: string, obj_type: FSObjectType, event_type: FSEventType, ext?: string };
+
+export type DataFormatType = "string" | "base64";
 
 export type FSObjectType = "folder" | "file" | "null";
 
