@@ -131,7 +131,7 @@ export function Logic(use_queues: boolean) {
             const data_format = cmd.format
             const ext = path.extname(data_path).slice(1);
             const data: string = cmd.data;
-            let buffer_data: Buffer<ArrayBuffer> | undefined = (data_format == "base64") ? img_data_to_array_buffer(data) : undefined;
+            let buffer_data: Buffer<ArrayBuffer> | undefined = undefined;
             if (!allowed_ext.includes(ext))
                 return {result: 0, message: ERROR_TEXT.WRONG_END_EXTENTION};
 

@@ -241,6 +241,10 @@ function AssetControlCreate() {
         assets_list.hidden = false;
     }
 
+    function save_base64_img(path: string, data: string) {
+        return ClientAPI.save_data(path, data, "base64");
+    }
+
     function get_file_data(path: string) {
         return ClientAPI.get_data(path);
     }
@@ -1093,7 +1097,7 @@ function AssetControlCreate() {
     EventBus.on('ON_WS_CONNECTED', reload_current_project);
 
     return {
-        load_project, new_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, draw_empty_project, get_current_scene,
+        load_project, new_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene,
     };
 }
 
