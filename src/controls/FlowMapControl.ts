@@ -29,7 +29,8 @@ function FlowMapControlCreate() {
     let shader_fp = '';
     let shader_vp = '';
     const last_pos = new Vector2(0, 0);
-    let selected_mesh: IBaseMeshAndThree | undefined = undefined;
+    let selected_mesh: IBaseMeshAndThree | undefined;
+    const now = System.now_with_ms();
 
     function get_selected_mesh() {
         const selected_list = SelectControl.get_selected_list();
@@ -203,7 +204,6 @@ function FlowMapControlCreate() {
             fragmentShader: shader_fp,
             transparent: true
         });
-        const now = System.now_with_ms();
         EventBus.on('SYS_ON_UPDATE', (e) => mat.uniforms.u_time.value = System.now_with_ms() - now);
         const tex = mesh.get_texture();
         const texture = ResourceManager.get_texture(tex[0], tex[1]).texture;
