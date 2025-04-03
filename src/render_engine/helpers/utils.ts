@@ -6,7 +6,8 @@ export function get_basename(path: string) {
 }
 
 export function get_file_name(path: string) {
-    return get_basename(path).split('.')[0];
+    const basename = get_basename(path);
+    return basename.substring(0, basename.lastIndexOf(".")) || basename;
 }
 
 export function is_base_mesh(mesh: Object3D) {

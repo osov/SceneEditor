@@ -30,8 +30,7 @@ export async function run_scene_light() {
     //    const tex = all[id];
     //    ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
     //}
-    FlowMapControl.init();
-    await FlowMapControl.load_shader();
+
 
     const world = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     world.name = 'TILES';
@@ -40,6 +39,10 @@ export async function run_scene_light() {
     world.no_removing = true; //  чтобы не удалять из сцены
     const tl = TileLoader(world, 256);
     tl.load(map_data);
+
+    FlowMapControl.init();
+    await FlowMapControl.load_shader();
+    await FlowMapControl.load_saved_flows();
 
     await AssetControl.open_scene('/LIGHT.scn');
 
@@ -166,62 +169,4 @@ export async function run_scene_light() {
         camera.layers.mask = old;
 
     });
-    return;
-    create_water_mesh(105);
-    create_water_mesh(106);
-    create_water_mesh(107);
-    create_water_mesh(108);
-    create_water_mesh(109);
-    // create_water_mesh(1481); return
-    create_water_mesh(274);
-    create_water_mesh(228);
-
-    create_water_mesh(235);
-    create_water_mesh(227);
-    create_water_mesh(226);
-
-    create_water_mesh(242);
-    create_water_mesh(241);
-    create_water_mesh(240);
-    create_water_mesh(239);
-    create_water_mesh(238);
-}
-
-
-async function create_water_mesh(mesh_id: number) {
-    const normals = ResourceManager.get_texture('waternormals').texture;
-    normals.wrapS = normals.wrapT = RepeatWrapping;
-    const mat = new ShaderMaterial({
-        uniforms: {
-            u_texture: { value: null },
-            u_normal: { value: normals },
-            u_time: { value: 0.0 },
-            alpha: { value: 1.0 }
-        },
-        vertexShader: (await AssetControl.get_file_data('shaders/water.vp')).data!,
-        fragmentShader: (await AssetControl.get_file_data('shaders/water.fp')).data!,
-        transparent: true
-    });
-    const now = System.now_with_ms();
-    EventBus.on('SYS_ON_UPDATE', (e) => mat.uniforms.u_time.value = System.now_with_ms() - now);
-    const mesh = SceneManager.get_mesh_by_id(mesh_id)!;
-    const tex = mesh.get_texture();
-    mat.uniforms.u_texture.value = ResourceManager.get_texture(tex[0], tex[1]).texture;
-    (mesh as any).material = mat;
-
-    EventBus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {
-        let is_change = false;
-        for (let i = 0; i < e.events.length; i++) {
-            const ev = e.events[i];
-            if (ev.path == 'shaders/water.fp')
-                is_change = true;
-        }
-        if (is_change) {
-            const fp_data = await AssetControl.get_file_data('shaders/water.fp');
-            const fp = fp_data.data!;
-            mat.fragmentShader = fp;
-            mat.needsUpdate = true;
-        }
-    });
-
 }

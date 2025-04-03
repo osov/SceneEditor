@@ -40,7 +40,7 @@ export type _SystemMessagesEditor = {
 
 export type AssetsCommands = {
     [GET_SERVER_DATA_CMD]: VoidMessage,
-    [SET_CURRENT_SCENE_CMD]: { path: string }, 
+    [SET_CURRENT_SCENE_CMD]: { path: string },
     [GET_PROJECTS_CMD]: VoidMessage,
     [NEW_PROJECT_CMD]: { project: string },
     [LOAD_PROJECT_CMD]: { project: string },
@@ -62,7 +62,7 @@ export type AssetsCommands = {
 
 export type AssetsResponses = {
     [GET_SERVER_DATA_CMD]: BaseResp<ServerData>,
-    [SET_CURRENT_SCENE_CMD]: BaseResp<{ name?: string, path?: string }>, 
+    [SET_CURRENT_SCENE_CMD]: BaseResp<{ name?: string, path?: string }>,
     [GET_PROJECTS_CMD]: BaseResp<string[]>,
     [NEW_PROJECT_CMD]: BaseResp<VoidMessage>,
     [NEW_FOLDER_CMD]: BaseResp<VoidMessage>,
@@ -158,16 +158,16 @@ export const FONT_EXT = `ttf`;
 export const CMD_NAME = [
     GET_SERVER_DATA_CMD,
     SET_CURRENT_SCENE_CMD,
-    GET_PROJECTS_CMD, 
-    NEW_PROJECT_CMD, 
-    NEW_FOLDER_CMD, 
-    GET_FOLDER_CMD, 
-    LOAD_PROJECT_CMD, 
-    SEARCH_CMD, 
+    GET_PROJECTS_CMD,
+    NEW_PROJECT_CMD,
+    NEW_FOLDER_CMD,
+    GET_FOLDER_CMD,
+    LOAD_PROJECT_CMD,
+    SEARCH_CMD,
     RENAME_CMD,
     COPY_CMD,
     MOVE_CMD,
-    DELETE_CMD, 
+    DELETE_CMD,
     SAVE_DATA_CMD,
     GET_DATA_CMD,
     SAVE_INFO_CMD,
@@ -176,9 +176,9 @@ export const CMD_NAME = [
     OPEN_EXPLORER_CMD,
 ]
 
-export const allowed_ext = ['mtr', 'prt', 'pss', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'gltf', 'glb', 'obj', 'smpl', 'prt', 'fbx', 'mp3', 'ogg', 'tpsheet', 'fbx', 'ttf'];
+export const allowed_ext = ['mtr', 'prt', 'pss', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'gltf', 'glb', 'obj', 'smpl', 'prt', 'fbx', 'mp3', 'ogg', 'tpsheet', 'fbx', 'ttf', 'scn'];
 export const texture_ext = ['jpg', 'jpeg', 'png'];
-export const model_ext = ['gltf', 'glb', `fbx`, ];
+export const model_ext = ['gltf', 'glb', `fbx`,];
 
 export const URL_PATHS = {
     TEST: '/test',

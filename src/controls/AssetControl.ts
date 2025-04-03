@@ -1,7 +1,9 @@
 import { SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
-import { ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, AssetType, DataFormatType, FILE_UPLOAD_CMD, 
-    FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses, 
-    TDictionary, texture_ext, URL_PATHS } from "../modules_editor/modules_editor_const";
+import {
+    ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, AssetType, DataFormatType, FILE_UPLOAD_CMD,
+    FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses,
+    TDictionary, texture_ext, URL_PATHS
+} from "../modules_editor/modules_editor_const";
 import { span_elem, json_parsable, get_keys } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
@@ -50,7 +52,7 @@ function AssetControlCreate() {
         for (const key of get_keys(data.paths)) {
             const paths = data.paths[key];
             let func: (...args: any[]) => Promise<any>;
-            Log.log('Preload', key, paths);
+            // Log.log('Preload', key, paths);
             if (key == "textures") {
                 func = (path: string) => {
                     return ResourceManager.preload_texture("/" + path);
@@ -779,12 +781,12 @@ function AssetControlCreate() {
         selected_assets.push(elem);
         elem.classList.add("selected");
 
-        if(elem.getAttribute('data-type') == ASSET_TEXTURE) {
+        if (elem.getAttribute('data-type') == ASSET_TEXTURE) {
             const textures_paths = get_selected_textures();
             EventBus.trigger("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
         }
 
-        if(elem.getAttribute('data-type') == ASSET_MATERIAL) {
+        if (elem.getAttribute('data-type') == ASSET_MATERIAL) {
             const materials_paths = get_selected_materials();
             EventBus.trigger("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
         }
@@ -818,7 +820,7 @@ function AssetControlCreate() {
 
         const textures_paths = get_selected_textures();
         EventBus.trigger("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
-        
+
         const materials_paths = get_selected_materials();
         EventBus.trigger("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
     }
@@ -861,7 +863,7 @@ function AssetControlCreate() {
         const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
         clear_active();
         if (event.button === 0 || event.button === 2) {
-            if(mouse_down_on_asset) {
+            if (mouse_down_on_asset) {
                 mouse_down_on_asset = false;
                 if (asset_elem)
                     set_active(asset_elem);
