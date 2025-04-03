@@ -152,11 +152,11 @@ export function Logic(use_queues: boolean) {
                 }
             }
             try {
-                const data_to_write = (data_format == "base64" && buffer_data) ? buffer_data : data_path
+                const data_to_write = (data_format == "base64" && buffer_data) ? buffer_data : data;
                 await _write(data_path, data_to_write);
                 return {result: 1, data: {}};
         
-            } catch (e) {``
+            } catch (e) {
                 return {result: 0, message: `${ERROR_TEXT.CANT_WRITE_FILE}: ${e}`};
             }
         }
