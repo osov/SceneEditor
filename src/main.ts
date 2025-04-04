@@ -22,7 +22,7 @@ import { run_scene_light } from './test_scenes/scene_light';
 import { run_scene_card } from './test_scenes/scene_card';
 import { register_flow_map_control } from './controls/FlowMapControl';
 import { run_scene_stereo } from './test_scenes/scene_stereo';
-
+import { run_scene_inventory } from './test_scenes/scene_inventory';
 let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
 
 register_manager();
@@ -58,6 +58,7 @@ const scenes = [
     run_scene_card,
     run_scene_light,
     run_scene_stereo,
+    run_scene_inventory,
 ];
 let id = new URLSearchParams(document.location.search).get('scene');
 if (id)
