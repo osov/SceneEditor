@@ -2,8 +2,9 @@
     Модуль для работы с камерой и преобразованиями
 */
 
-import { Vector3 } from "three";
+import { OrthographicCamera, PerspectiveCamera, Vector3 } from "three";
 import { get_window_size } from "../render_engine/helpers/window_utils";
+import { IS_CAMERA_ORTHOGRAPHIC } from "../config";
 
 declare global {
     const Camera: ReturnType<typeof CameraModule>;
@@ -173,12 +174,20 @@ function CameraModule() {
             [left, right, top, bottom] = width_viewport();
 
 
-        const camera = RenderEngine.camera;
-        camera.left = left;
-        camera.right = right;
-        camera.top = top;
-        camera.bottom = bottom;
-        camera.updateProjectionMatrix();
+        const _camera = RenderEngine.camera;
+        if (IS_CAMERA_ORTHOGRAPHIC) {
+            const camera = _camera as OrthographicCamera;
+            camera.left = left;
+            camera.right = right;
+            camera.top = top;
+            camera.bottom = bottom;
+        }
+        else {
+            const camera = _camera as PerspectiveCamera;
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = aspect;
+            camera.updateProjectionMatrix();
+        }
 
         [left, right, top, bottom] = screen_viewport();
         const camera_gui = RenderEngine.camera_gui;

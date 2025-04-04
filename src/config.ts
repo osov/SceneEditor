@@ -3,6 +3,7 @@ export const _GAME_CONFIG = {
     DISPLAY_HEIGHT: 540
 };
 
+export const IS_CAMERA_ORTHOGRAPHIC = true;
 export const CAMERA_FAR = 10000;
 export const CAMERA_Z = CAMERA_FAR - 1;
 export const WORLD_SCALAR = 1 / 10;
