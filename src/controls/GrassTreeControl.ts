@@ -154,9 +154,9 @@ function GrassTreeControlCreate() {
             const mesh = find_mesh(id);
             if (mesh) {
                 await activate_flow(mesh);
-                const { draw_canvas, material } = tiles_info[id];
-                const texture_data = ResourceManager.get_texture(id);
-                draw_canvas.loadTexture(texture_data.texture, () => material.uniforms.u_flowMap.value.needsUpdate = true);
+                //const { draw_canvas, material } = tiles_info[id];
+                //const texture_data = ResourceManager.get_texture(id);
+                //draw_canvas.loadTexture(texture_data.texture, () => material.uniforms.u_flowMap.value.needsUpdate = true);
             }
             else {
                 Popups.toast.error('[Карта потока] меш не найден:' + id);
