@@ -23,6 +23,7 @@ import { run_scene_card } from './test_scenes/scene_card';
 import { register_flow_map_control } from './controls/FlowMapControl';
 import { run_scene_stereo } from './test_scenes/scene_stereo';
 import { run_scene_inventory } from './test_scenes/scene_inventory';
+import { register_grass_tree_control } from './controls/GrassTreeControl';
 let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
 
 register_manager();
@@ -48,6 +49,7 @@ register_popups();
 register_contextmenu();
 register_inspector_control();
 register_flow_map_control();
+register_grass_tree_control();
 register_control_manager();
 register_history_control();
 

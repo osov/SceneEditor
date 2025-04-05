@@ -186,8 +186,8 @@ function CameraModule() {
             const camera = _camera as PerspectiveCamera;
             const aspect = window.innerWidth / window.innerHeight;
             camera.aspect = aspect;
-            camera.updateProjectionMatrix();
         }
+        _camera.updateProjectionMatrix();
 
         [left, right, top, bottom] = screen_viewport();
         const camera_gui = RenderEngine.camera_gui;

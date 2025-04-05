@@ -3,28 +3,28 @@ import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { shader } from "../render_engine/objects/slice9";
 
 declare global {
-    const FlowMapControl: ReturnType<typeof FlowMapControlCreate>;
+    const GrassTreeControl: ReturnType<typeof GrassTreeControlCreate>;
 }
 
-export function register_flow_map_control() {
-    (window as any).FlowMapControl = FlowMapControlCreate();
+export function register_grass_tree_control() {
+    (window as any).GrassTreeControl = GrassTreeControlCreate();
 }
 
-interface FlowInfo {
+interface GrassTreeInfo {
     speed: number;
     size: number;
 }
 
-type FileData = { [id: string]: FlowInfo };
+type FileData = { [id: string]: GrassTreeInfo };
 
 
 
-function FlowMapControlCreate() {
+function GrassTreeControlCreate() {
 
     const tiles_info: { [k: string]: { material: ShaderMaterial, draw_canvas: IDrawCanvas } } = {};
-    const flows_path = '/flows/data.txt';
-    const water_fp_path = 'shaders/water.fp';
-    const water_vp_path = 'shaders/water.vp';
+    const flows_path = '/tree/data.txt';
+    const tree_fp_path = 'shaders/tree.fp';
+    const tree_vp_path = 'shaders/tree.vp';
     let normals: Texture;
     let shader_fp = '';
     let shader_vp = '';
@@ -81,7 +81,7 @@ function FlowMapControlCreate() {
     function init() {
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
             if (Input.is_shift()) {
-                if (e.key == 'F' || e.key == 'А') {
+                if (e.key == 'R' || e.key == 'К') {
                     const mesh = get_selected_mesh();
                     if (mesh)
                         activate_flow(mesh);
@@ -164,18 +164,18 @@ function FlowMapControlCreate() {
         }
     }
     async function load_shader() {
-        shader_fp = (await AssetControl.get_file_data(water_fp_path)).data!;
-        shader_vp = (await AssetControl.get_file_data(water_vp_path)).data!;
+        shader_fp = (await AssetControl.get_file_data(tree_fp_path)).data!;
+        shader_vp = (await AssetControl.get_file_data(tree_vp_path)).data!;
         EventBus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {
             let is_change = false;
             for (let i = 0; i < e.events.length; i++) {
                 const ev = e.events[i];
-                if (ev.path == water_fp_path || ev.path == water_vp_path)
+                if (ev.path == tree_fp_path || ev.path == tree_vp_path)
                     is_change = true;
             }
             if (is_change) {
-                shader_fp = (await AssetControl.get_file_data(water_fp_path)).data!;
-                shader_vp = (await AssetControl.get_file_data(water_vp_path)).data!;
+                shader_fp = (await AssetControl.get_file_data(tree_fp_path)).data!;
+                shader_vp = (await AssetControl.get_file_data(tree_vp_path)).data!;
                 for (const key in tiles_info) {
                     const { material, draw_canvas } = tiles_info[key];
                     material.fragmentShader = shader_fp;
@@ -256,7 +256,7 @@ function FlowMapControlCreate() {
         const flow_data = await load_flow_data();
         delete flow_data[key];
         await ClientAPI.save_data(flows_path, JSON.stringify(flow_data));
-        await ClientAPI.remove('/flows/' + key + '.png');
+        await ClientAPI.remove('/tree/' + key + '.png');
         log('deactivated flow', key)
     }
 
@@ -267,12 +267,12 @@ function FlowMapControlCreate() {
         const { draw_canvas } = tiles_info[key];
         const image = draw_canvas.getCanvas();
         const imageData = image.toDataURL();
-        const answer = await AssetControl.save_base64_img('/flows/' + key + '.png', imageData);
+        const answer = await AssetControl.save_base64_img('/tree/' + key + '.png', imageData);
         if (answer.result == 1) {
             const flow_data = await load_flow_data();
             flow_data[key] = { speed: 1.0, size: 1.0 };
             await ClientAPI.save_data(flows_path, JSON.stringify(flow_data));
-            Popups.toast.success('Карта потока сохранена:' + key);
+            Popups.toast.success('Карта дерева сохранена:' + key);
         }
         else
             Popups.toast.error('Ошибка сохранения карты потока:' + key);

@@ -25,11 +25,11 @@ export async function run_scene_light() {
     preload_tiled_textures(map_data);
 
     // hack atlases
-    //const all = get_all_tiled_textures();
-    //for (const id in all) {
-    //    const tex = all[id];
-    //    ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
-    //}
+    const all = get_all_tiled_textures();
+    for (const id in all) {
+        const tex = all[id];
+        ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
+    }
 
 
     const world = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
@@ -44,7 +44,11 @@ export async function run_scene_light() {
     await FlowMapControl.load_shader();
     await FlowMapControl.load_saved_flows();
 
-    await AssetControl.open_scene('/LIGHT.scn');
+    GrassTreeControl.init();
+    await GrassTreeControl.load_shader();
+    await GrassTreeControl.load_saved_flows();
+
+    // await AssetControl.open_scene('/LIGHT.scn');
 
     const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
     am.set_mesh('Unarmed Idle');
@@ -52,7 +56,7 @@ export async function run_scene_light() {
     am.add_animation('Unarmed Idle', 'idle');
     am.set_texture('PolygonExplorers_Texture_01_A')
     am.rotateX(30 / 180 * Math.PI)
-    am.position.set(313, -240, 5000)
+    am.position.set(313, -240, 6000)
     am.no_saving = true;
     SceneManager.add(am);
 
