@@ -15,7 +15,6 @@ import { register_history_control } from './controls/HistoryControl';
 import { register_resource_manager } from './render_engine/resource_manager';
 import { register_actions_control } from './controls/ActionsControl';
 import { register_view_control } from './controls/ViewControl';
-import { register_inspector_control } from './controls/InspectorControl';
 import { register_asset_control } from './controls/AssetControl';
 import { run_scene_anim } from './test_scenes/scene_anim';
 import { run_scene_light } from './test_scenes/scene_light';
@@ -24,6 +23,9 @@ import { register_flow_map_control } from './controls/FlowMapControl';
 import { run_scene_stereo } from './test_scenes/scene_stereo';
 import { run_scene_inventory } from './test_scenes/scene_inventory';
 import { register_grass_tree_control } from './controls/GrassTreeControl';
+import { register_object_inspector } from './inspectors/ObjectInspector';
+import { register_asset_inspector } from './inspectors/AssetInspector';
+
 let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
 
 register_manager();
@@ -47,11 +49,13 @@ register_asset_control();
 register_tree_control();
 register_popups();
 register_contextmenu();
-register_inspector_control();
 register_flow_map_control();
 register_grass_tree_control();
 register_control_manager();
 register_history_control();
+
+register_object_inspector();
+register_asset_inspector();
 
 
 const scenes = [

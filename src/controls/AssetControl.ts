@@ -11,7 +11,6 @@ import { NodeAction } from "./ActionsControl";
 import { api } from "../modules_editor/ClientAPI";
 import { IBaseEntityData } from "../render_engine/types";
 import { get_file_name } from "../render_engine/helpers/utils";
-
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
 }
@@ -19,6 +18,7 @@ declare global {
 export function register_asset_control() {
     (window as any).AssetControl = AssetControlCreate();
 }
+
 
 function AssetControlCreate() {
     const filemanager = document.querySelector('.filemanager') as HTMLDivElement;
@@ -35,6 +35,27 @@ function AssetControlCreate() {
     let drag_asset_now = false;
     let history_length_cache: TDictionary<number> = {};
     let mouse_down_on_asset = false;
+
+    function init() {
+        document.querySelector('.filemanager')?.addEventListener('contextmenu', (event: any) => {
+            event.preventDefault();
+        });
+
+        subscribe();
+    }
+
+    function subscribe() {
+        EventBus.on('SYS_VIEW_INPUT_KEY_UP', on_key_up);
+        EventBus.on('SYS_INPUT_POINTER_DOWN', on_mouse_down);
+        EventBus.on('SYS_INPUT_POINTER_MOVE', on_mouse_move);
+        EventBus.on('SYS_INPUT_POINTER_UP', on_mouse_up);
+        EventBus.on('SYS_INPUT_DBL_CLICK', on_dbl_click);
+        EventBus.on('SYS_INPUT_SAVE', save_current_scene);
+        EventBus.on('SYS_GRAPH_DROP_IN_ASSETS', on_graph_drop);
+
+        EventBus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
+        EventBus.on('ON_WS_CONNECTED', reload_current_project);
+    }
 
     async function load_project(data: ProjectLoadData, folder_content?: FSObject[], to_dir?: string) {
         current_project = data.name;
@@ -1084,20 +1105,7 @@ function AssetControlCreate() {
         }
     }
 
-    document.querySelector('.filemanager')?.addEventListener('contextmenu', (event: any) => {
-        event.preventDefault();
-    });
-    EventBus.on('SYS_VIEW_INPUT_KEY_UP', on_key_up);
-    EventBus.on('SYS_INPUT_POINTER_DOWN', on_mouse_down);
-    EventBus.on('SYS_INPUT_POINTER_MOVE', on_mouse_move);
-    EventBus.on('SYS_INPUT_POINTER_UP', on_mouse_up);
-    EventBus.on('SYS_INPUT_DBL_CLICK', on_dbl_click);
-    EventBus.on('SYS_INPUT_SAVE', save_current_scene);
-    EventBus.on('SYS_GRAPH_DROP_IN_ASSETS', on_graph_drop);
-
-    EventBus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
-    EventBus.on('ON_WS_CONNECTED', reload_current_project);
-
+    init();
     return {
         load_project, new_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene,
     };

@@ -1,8 +1,8 @@
 import { TransformControls, TransformControlsMode } from 'three/examples/jsm/controls/TransformControls.js';
 import { Euler, Object3D, Vector3 } from 'three';
 import { PositionEventData, RotationEventData, ScaleEventData } from './types';
-import { Property } from './InspectorControl';
 import { IBaseEntityAndThree } from '../render_engine/types';
+import { ObjectProperty } from '../inspectors/ObjectInspector';
 
 declare global {
     const TransformControl: ReturnType<typeof TransformControlCreate>;
@@ -57,15 +57,15 @@ function TransformControlCreate() {
         switch (control.getMode()) {
             case 'translate':
                 translate();
-                InspectorControl.refresh([Property.POSITION]);
+                Inspector.refresh([ObjectProperty.POSITION]);
                 break;
             case 'rotate':
                 rotate();
-                InspectorControl.refresh([Property.ROTATION]);
+                Inspector.refresh([ObjectProperty.ROTATION]);
                 break;
             case 'scale':
                 scale();
-                InspectorControl.refresh([Property.SCALE]);
+                Inspector.refresh([ObjectProperty.SCALE]);
                 break;
         }
     });

@@ -1,5 +1,5 @@
 import { is_base_mesh } from "../render_engine/helpers/utils";
-import { IBaseMeshAndThree } from "../render_engine/types";
+import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { TreeItem } from "./TreeControl";
 import { componentsGo } from "./ActionsControl";
 import { HistoryData } from "./HistoryControl";
@@ -268,8 +268,10 @@ function ControlManagerCreate() {
         });
     }
 
+    
 
 
     init();
     return { clear_all_controls, set_active_control, get_tree_graph, update_graph, get_current_scene_name, open_atlas_manager, inc_draw_calls, clear_draw_calls };
 }
+

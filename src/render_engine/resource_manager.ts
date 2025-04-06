@@ -1,5 +1,5 @@
-import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, IUniform, Vector3, Vector4, ShaderLib } from 'three';
-import { get_basename, get_file_name } from './helpers/utils';
+import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial } from 'three';
+import { get_file_name } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
@@ -39,6 +39,7 @@ interface AnimationInfo {
     clip: AnimationClip;
 }
 
+//TODO: переместить в AssetInspector, а сдесь нужно сделать MaterialUniformValues
 export type MaterialUniformParams = {
     [MaterialUniformType.FLOAT]: { min?: number, max?: number, step?: number };
     [MaterialUniformType.RANGE]: { min?: number, max?: number, step?: number };
@@ -101,13 +102,15 @@ export function ResourceManagerModule() {
 
     function init() {
         gen_textures();
+        subscribe();
+    }
 
+    function subscribe() {
         // NOTE: обновление шейдеров при изменении файлов
         EventBus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {
             for (let i = 0; i < e.events.length; i++) {
                 const ev = e.events[i];
-                const base_name = get_basename(ev.path);
-                if(base_name.search('.vp') > 0) {
+                if(ev.ext == '.vp') {
                     const vp_path = get_file_name(ev.path);
                     const vp_data = await AssetControl.get_file_data(vp_path);
                     const vp = vp_data.data!;
@@ -118,7 +121,7 @@ export function ResourceManagerModule() {
                         }
                     }
                 }
-                if (base_name.search('.fp') > 0){
+                if (ev.ext == '.fp') {
                     const fp_path = get_file_name(ev.path);
                     const fp_data = await AssetControl.get_file_data(fp_path);
                     const fp = fp_data.data!;
@@ -306,6 +309,7 @@ export function ResourceManagerModule() {
 
     async function preload_material(path: string) {
         const name = get_file_name(path);
+        Log.log('[preload_material] name:', name, path);
         if(has_material(name)) {
             Log.warn('Material already exists', name, path);
             return materials[name];
@@ -321,6 +325,8 @@ export function ResourceManagerModule() {
             Log.error('Material not found', path);
             return null;
         }
+
+        Log.log('[preload_material] response:', response);
 
         materials[name] = response.data;
         return response.data;
