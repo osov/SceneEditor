@@ -1,4 +1,4 @@
-import { Blending, Euler, MagnificationTextureFilter, MinificationTextureFilter, Vector2, Vector3 } from "three";
+import { Blending, Euler, MagnificationTextureFilter, MinificationTextureFilter, Vector2, Vector3, Vector4 } from "three";
 
 export type PositionEventData = {
     id_mesh: number;
@@ -128,4 +128,56 @@ export interface UVEventData {
 export interface MaterialEventData {
     id_mesh: number;
     material: string;
+}
+
+export interface MaterialVertexProgramEventData {
+    material_path: string;
+    program: string;
+}
+
+export interface MaterialFragmentProgramEventData {
+    material_path: string;
+    program: string;
+}
+
+export interface MaterialSampler2DEventData {
+    material_path: string;
+    uniform_name: string;
+    value: string;
+}
+
+export interface MaterialFloatEventData {
+    material_path: string;
+    uniform_name: string;
+    value: number;
+}
+
+export interface MaterialRangeEventData {
+    material_path: string;
+    uniform_name: string;
+    value: number;
+}
+
+export interface MaterialVec2EventData {
+    material_path: string;
+    uniform_name: string;
+    value: Vector2;
+}
+
+export interface MaterialVec3EventData {
+    material_path: string;
+    uniform_name: string;
+    value: Vector3;
+}
+
+export interface MaterialVec4EventData {
+    material_path: string;
+    uniform_name: string;
+    value: Vector4;
+}
+
+export interface MaterialColorEventData {
+    material_path: string;
+    uniform_name: string;
+    value: string;
 }

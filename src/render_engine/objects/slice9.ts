@@ -168,13 +168,14 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
             material.defines['USE_TEXTURE'] = '';
             material.needsUpdate = true;
         }
+
+        material.needsUpdate = true;
     }
 
 
     function set_texture(name: string, atlas = '') {
         parameters.texture = name;
         parameters.atlas = atlas;
-        //Log.log('set_texture', name, atlas);
         if (name != '') {
             const texture_data = ResourceManager.get_texture(name, atlas);
             material.uniforms['u_texture'].value = texture_data.texture;
@@ -285,6 +286,7 @@ export class Slice9Mesh extends EntityPlane {
         super();
         this.matrixAutoUpdate = true;
         const material = custom_material ? custom_material : new ShaderMaterial({
+            name: 'default',
             uniforms: {
                 u_texture: { value: null },
                 alpha: { value: 1.0 }
@@ -331,6 +333,15 @@ export class Slice9Mesh extends EntityPlane {
 
     get_texture() {
         return [this.template.parameters.texture, this.template.parameters.atlas];
+    }
+
+    set_material(material: ShaderMaterial) {
+        const texture_info = this.get_texture();
+        this.template = CreateSlice9(material, this.template.parameters.width, this.template.parameters.height, this.template.parameters.slice_width, this.template.parameters.slice_height);
+        this.material = material;
+        this.geometry = this.template.geometry;
+        this.set_size(this.template.parameters.width, this.template.parameters.height);
+        this.set_texture(texture_info[0], texture_info[1]);
     }
 
     set_texture(name: string, atlas = '') {

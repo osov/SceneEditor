@@ -94,6 +94,7 @@ export interface ObjectData {
 export interface BeforeChangeInfo {
     ids: number[];
     field: PropertyData<PropertyType>;
+    property: PropertyItem<PropertyType>;
 }
 
 export interface ChangeInfo {
@@ -107,7 +108,7 @@ export interface ChangeInfo {
 
 export type ChangeEvent = TpChangeEvent<unknown, BindingApi<unknown, unknown>>;
 
-export type SaveCallback = (ids: number[]) => void;
+export type SaveCallback = (info: BeforeChangeInfo) => void;
 export type UpdateCallback = (info: ChangeInfo) => void;
 export type RefreshCallback<T extends PropertyType> = (ids: number[]) => PropertyValues[T] | undefined;
 
@@ -176,7 +177,6 @@ function InspectorModule() {
         list_data.forEach((obj, index) => {
             const info: ObjectInfo[] = [];
             for (const field of obj.data) {
-                Log.log('[setData] field:', field);
                 // NOTE: ищем информацию о поле в соответсвующем конфиге
                 const property: PropertyItem<PropertyType> | undefined = getPropertyItemByName(field.name);
                 if (!property) {
@@ -617,7 +617,8 @@ function InspectorModule() {
 
                 saveValue({
                     ids,
-                    field
+                    field,
+                    property
                 });
             };
 
@@ -768,7 +769,7 @@ function InspectorModule() {
     function saveValue(info: BeforeChangeInfo) {
         const unique_field = _unique_fields.find(field => field.field === info.field);
         if (unique_field && unique_field.property.onSave) {
-            unique_field.property.onSave(info.ids);
+            unique_field.property.onSave(info);
         }
     }
 

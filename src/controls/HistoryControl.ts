@@ -1,11 +1,11 @@
-import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData, MeshAtlasEventData, TextureAtlasEventData } from "./types";
+import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData, MeshAtlasEventData, TextureAtlasEventData, MaterialVertexProgramEventData, MaterialFragmentProgramEventData, MaterialSampler2DEventData, MaterialFloatEventData, MaterialRangeEventData, MaterialVec2EventData, MaterialVec3EventData, MaterialVec4EventData, MaterialColorEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { GoSprite } from "../render_engine/objects/sub_types";
 import { get_keys } from "../modules/utils";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { TextMesh } from "../render_engine/objects/text";
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
-import { MagnificationTextureFilter, MinificationTextureFilter } from "three";
+import { MagnificationTextureFilter, MinificationTextureFilter, Color, Vector3 } from "three";
 
 declare global {
     const HistoryControl: ReturnType<typeof HistoryControlCreate>;
@@ -44,6 +44,15 @@ export type HistoryData = {
     TEXTURE_MIN_FILTER: MinFilterEventData
     TEXTURE_MAG_FILTER: MagFilterEventData
     TEXTURE_ATLAS: TextureAtlasEventData
+    MATERIAL_VERTEX_PROGRAM: MaterialVertexProgramEventData
+    MATERIAL_FRAGMENT_PROGRAM: MaterialFragmentProgramEventData
+    MATERIAL_SAMPLER2D: MaterialSampler2DEventData
+    MATERIAL_FLOAT: MaterialFloatEventData
+    MATERIAL_RANGE: MaterialRangeEventData
+    MATERIAL_VEC2: MaterialVec2EventData
+    MATERIAL_VEC3: MaterialVec3EventData
+    MATERIAL_VEC4: MaterialVec4EventData
+    MATERIAL_COLOR: MaterialColorEventData
 }
 
 type HistoryDataKeys = keyof HistoryData;
@@ -102,7 +111,8 @@ function HistoryControlCreate() {
         const last = ctx.pop()!;
         const type = last.type;
         const list_mesh: IBaseMeshAndThree[] = [];
-        const list_assets: string[] = [];
+        const list_textures: string[] = [];
+        const list_materials: string[] = [];
 
         Log.log("UNDO: ", type, last);
 
@@ -305,7 +315,7 @@ function HistoryControlCreate() {
 
                 const texture_data = ResourceManager.get_texture(texture_name, atlas);
                 texture_data.texture.minFilter = data.filter as MinificationTextureFilter;
-                list_assets.push(data.texture_path);
+                list_textures.push(data.texture_path);
             }
             ResourceManager.write_metadata();
         } else if (type == 'TEXTURE_MAG_FILTER') {
@@ -320,7 +330,7 @@ function HistoryControlCreate() {
 
                 const texture_data = ResourceManager.get_texture(texture_name, atlas);
                 texture_data.texture.magFilter = data.filter as MagnificationTextureFilter;
-                list_assets.push(data.texture_path);
+                list_textures.push(data.texture_path);
             }
             ResourceManager.write_metadata();
         } else if (type == 'MESH_UV') {
@@ -337,7 +347,12 @@ function HistoryControlCreate() {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_MATERIAL'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
-                (mesh as any).material = ResourceManager.get_material(data.material);
+                const material = ResourceManager.get_material(data.material);
+                if (material == undefined) {
+                    Log.error('Not found material: ', data.material);
+                    continue;
+                }
+                (mesh as Slice9Mesh).set_material(material.data);
                 list_mesh.push(mesh);
             }
         } else if (type == 'TEXTURE_ATLAS') {
@@ -346,7 +361,116 @@ function HistoryControlCreate() {
                 const texture_name = get_file_name(get_basename(data.texture_path));
                 const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
                 ResourceManager.override_atlas_texture(old_atlas || '', data.atlas, texture_name);
-                list_assets.push(data.texture_path);
+                list_textures.push(data.texture_path);
+            }
+        } else if (type == 'MATERIAL_VERTEX_PROGRAM') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MATERIAL_VERTEX_PROGRAM'];
+                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                if (material == undefined) {
+                    Log.error('Not found material: ', data.material_path);
+                    continue;
+                }
+                material.data.vertexShader = data.program;
+                material.data.needsUpdate = true;
+                list_materials.push(data.material_path);
+            }
+        } else if (type == 'MATERIAL_FRAGMENT_PROGRAM') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MATERIAL_FRAGMENT_PROGRAM'];
+                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                if (material == undefined) {
+                    Log.error('Not found material: ', data.material_path);
+                    continue;
+                }
+                material.data.fragmentShader = data.program;
+                material.data.needsUpdate = true;
+                list_materials.push(data.material_path);
+            }
+        } else if (type == 'MATERIAL_SAMPLER2D') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MATERIAL_SAMPLER2D'];
+                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                if (material == undefined) {
+                    Log.error('Not found material: ', data.material_path);
+                    continue;
+                }
+                material.data.uniforms[data.uniform_name].value = ResourceManager.get_texture(data.value, '').texture;
+                material.data.needsUpdate = true;
+                list_materials.push(data.material_path);
+            }
+        } else if (type == 'MATERIAL_FLOAT') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MATERIAL_FLOAT'];
+                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                if (material == undefined) {
+                    Log.error('Not found material: ', data.material_path);
+                    continue;
+                }
+                material.data.uniforms[data.uniform_name].value = data.value;
+                material.data.needsUpdate = true;
+                list_materials.push(data.material_path);
+            }
+        } else if (type == 'MATERIAL_RANGE') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MATERIAL_RANGE'];
+                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                if (material == undefined) {
+                    Log.error('Not found material: ', data.material_path);
+                    continue;
+                }
+                material.data.uniforms[data.uniform_name].value = data.value;
+                material.data.needsUpdate = true;
+                list_materials.push(data.material_path);
+            }
+        } else if (type == 'MATERIAL_VEC2') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MATERIAL_VEC2'];
+                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                if (material == undefined) {
+                    Log.error('Not found material: ', data.material_path);
+                    continue;
+                }
+                material.data.uniforms[data.uniform_name].value = data.value;
+                material.data.needsUpdate = true;
+                list_materials.push(data.material_path);
+            }
+        } else if (type == 'MATERIAL_VEC3') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MATERIAL_VEC3'];
+                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                if (material == undefined) {
+                    Log.error('Not found material: ', data.material_path);
+                    continue;
+                }
+                material.data.uniforms[data.uniform_name].value = data.value;
+                material.data.needsUpdate = true;
+                list_materials.push(data.material_path);
+            }
+        } else if (type == 'MATERIAL_VEC4') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MATERIAL_VEC4'];
+                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                if (material == undefined) {
+                    Log.error('Not found material: ', data.material_path);
+                    continue;
+                }
+                material.data.uniforms[data.uniform_name].value = data.value;
+                material.data.needsUpdate = true;
+                list_materials.push(data.material_path);
+            }
+        } else if (type == 'MATERIAL_COLOR') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MATERIAL_COLOR'];
+                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                if (material == undefined) {
+                    Log.error('Not found material: ', data.material_path);
+                    continue;
+                }
+                const color = new Color(data.value);
+                material.data.uniforms[data.uniform_name].value = new Vector3(color.r, color.g, color.b);
+                material.data.needsUpdate = true;
+                list_materials.push(data.material_path);
             }
         }
         if (list_mesh.length > 0) {
@@ -355,8 +479,11 @@ function HistoryControlCreate() {
             SelectControl.set_selected_list(list_mesh);
             ControlManager.update_graph();
         }
-        if (list_assets.length > 0) {
-            InspectorControl.set_selected_textures(list_assets);
+        if (list_textures.length > 0) {
+            AssetInspector.set_selected_textures(list_textures);
+        }
+        if (list_materials.length > 0) {
+            AssetInspector.set_selected_materials(list_materials);
         }
     }
 

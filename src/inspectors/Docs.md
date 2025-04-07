@@ -84,7 +84,7 @@ function NewInspectorCreate() {
     }
 
     // Добавить обработчики сохранения и обновления для каждого свойства
-    function saveProperty1(ids: number[]) {
+    function saveProperty1(info: BeforeChangeInfo[]) {
         // Обработка сохранения свойства
     }
 

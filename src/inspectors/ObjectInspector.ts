@@ -4,7 +4,7 @@ import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { GoSprite, FlipMode } from "../render_engine/objects/sub_types";
 import { TextMesh } from "../render_engine/objects/text";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
-import { ChangeInfo, InspectorGroup, PropertyType, castTextureInfo, generateTextureOptions, getChangedInfo, getDraggedInfo, update_option } from "../modules_editor/Inspector";
+import { ChangeInfo, InspectorGroup, PropertyType, castTextureInfo, generateTextureOptions, getChangedInfo, getDraggedInfo, update_option, BeforeChangeInfo } from "../modules_editor/Inspector";
 import { deepClone } from "../modules/utils";
 import { NameEventData, ActiveEventData, VisibleEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, PivotEventData, AnchorEventData, ColorEventData, AlphaEventData, TextureEventData, SliceEventData, TextEventData, FontEventData, FontSizeEventData, TextAlignEventData, LineHeightEventData, MeshAtlasEventData, BlendModeEventData, UVEventData, MaterialEventData } from "../controls/types";
 
@@ -164,22 +164,22 @@ function ObjectInspectorCreate() {
                     onRefresh: refreshAnchor
                 },
                 {
-                    name: ObjectProperty.ANCHOR_PRESET, title: 'Пресет', type: PropertyType.LIST_TEXT, params: {
-                        'Не выбрано': ScreenPointPreset.NONE,
-                        'Центр': ScreenPointPreset.CENTER,
-                        'Левый Верхний': ScreenPointPreset.TOP_LEFT,
-                        'Центр Сверху': ScreenPointPreset.TOP_CENTER,
-                        'Правый Верхний': ScreenPointPreset.TOP_RIGHT,
-                        'Центр Слева': ScreenPointPreset.LEFT_CENTER,
-                        'Центр Справа': ScreenPointPreset.RIGHT_CENTER,
-                        'Левый Нижний': ScreenPointPreset.BOTTOM_LEFT,
-                        'Центр Снизу': ScreenPointPreset.BOTTOM_CENTER,
-                        'Правый Нижний': ScreenPointPreset.BOTTOM_RIGHT,
-                        'Индивидуальный': ScreenPointPreset.CUSTOM
+                    name: ObjectProperty.ANCHOR_PRESET,
+                    title: 'Anchor Preset',
+                    type: PropertyType.LIST_TEXT,
+                    params: {
+                        'Top Left': 'Top Left',
+                        'Top Center': 'Top Center',
+                        'Top Right': 'Top Right',
+                        'Middle Left': 'Middle Left',
+                        'Middle Center': 'Middle Center',
+                        'Middle Right': 'Middle Right',
+                        'Bottom Left': 'Bottom Left',
+                        'Bottom Center': 'Bottom Center',
+                        'Bottom Right': 'Bottom Right'
                     },
-                    onSave: saveAnchorPreset,
-                    onUpdate: updateAnchorPreset,
-                    onRefresh: refreshAnchorPreset
+                    onSave: (info: BeforeChangeInfo) => saveAnchorPreset(info),
+                    onUpdate: updateAnchorPreset
                 }
             ]
         },
@@ -188,7 +188,18 @@ function ObjectInspectorCreate() {
             title: 'Визуал',
             property_list: [
                 { name: ObjectProperty.COLOR, title: 'Цвет', type: PropertyType.COLOR, onSave: saveColor, onUpdate: updateColor },
-                { name: ObjectProperty.ALPHA, title: 'Прозрачность', type: PropertyType.NUMBER, params: { min: 0, max: 1, step: 0.1 }, onSave: saveAlpha, onUpdate: updateAlpha },
+                {
+                    name: ObjectProperty.ALPHA,
+                    title: 'Alpha',
+                    type: PropertyType.SLIDER,
+                    params: {
+                        min: 0,
+                        max: 1,
+                        step: 0.01
+                    },
+                    onSave: (info: BeforeChangeInfo) => saveAlpha(info),
+                    onUpdate: updateAlpha
+                },
                 { name: ObjectProperty.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: generateAtlasOptions(), onSave: saveAtlas, onUpdate: updateAtlas },
                 {
                     name: ObjectProperty.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: generateTextureOptions(),
@@ -235,7 +246,7 @@ function ObjectInspectorCreate() {
             name: 'text',
             title: 'Текст',
             property_list: [
-                { name: ObjectProperty.TEXT, title: 'Текст', type: PropertyType.LOG_DATA, onSave: saveText, onUpdate: updateText },
+                { name: ObjectProperty.TEXT, title: 'Текст', type: PropertyType.STRING, onSave: saveText, onUpdate: updateText },
                 {
                     name: ObjectProperty.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: ResourceManager.get_all_fonts(),
                     onSave: saveFont,
@@ -575,9 +586,9 @@ function ObjectInspectorCreate() {
         return (mesh as GoSprite).get_flip() == FlipMode.DIAGONAL;
     }
 
-    function saveName(ids: number[]) {
+    function saveName(info: BeforeChangeInfo) {
         const names: NameEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -622,9 +633,9 @@ function ObjectInspectorCreate() {
         return result;
     }
 
-    function saveActive(ids: number[]) {
+    function saveActive(info: BeforeChangeInfo) {
         const actives: ActiveEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -720,9 +731,9 @@ function ObjectInspectorCreate() {
     //     EventBus.trigger("SYS_GRAPH_VISIBLE", {list: info.ids, state});
     // }
 
-    function savePosition(ids: number[]) {
+    function savePosition(info: BeforeChangeInfo) {
         const oldPositions: PositionEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -789,9 +800,9 @@ function ObjectInspectorCreate() {
         SizeControl.draw();
     }
 
-    function saveRotation(ids: number[]) {
+    function saveRotation(info: BeforeChangeInfo) {
         const oldRotations: RotationEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -835,9 +846,9 @@ function ObjectInspectorCreate() {
         SizeControl.draw();
     }
 
-    function saveScale(ids: number[]) {
+    function saveScale(info: BeforeChangeInfo) {
         const oldScales: ScaleEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -890,9 +901,9 @@ function ObjectInspectorCreate() {
         Inspector.refresh([ObjectProperty.FONT_SIZE]);
     }
 
-    function saveSize(ids: number[]) {
+    function saveSize(info: BeforeChangeInfo) {
         const oldSizes: SizeEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -954,9 +965,9 @@ function ObjectInspectorCreate() {
         SizeControl.draw();
     }
 
-    function savePivot(ids: number[]) {
+    function savePivot(info: BeforeChangeInfo) {
         const pivots: PivotEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -991,9 +1002,9 @@ function ObjectInspectorCreate() {
         SizeControl.draw();
     }
 
-    function saveAnchor(ids: number[]) {
+    function saveAnchor(info: BeforeChangeInfo) {
         const anchors: AnchorEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1039,9 +1050,9 @@ function ObjectInspectorCreate() {
         Inspector.refresh([ObjectProperty.ANCHOR]);
     }
 
-    function saveAnchorPreset(ids: number[]) {
+    function saveAnchorPreset(info: BeforeChangeInfo) {
         const anchors: AnchorEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1078,9 +1089,9 @@ function ObjectInspectorCreate() {
         Inspector.refresh([ObjectProperty.ANCHOR]);
     }
 
-    function saveColor(ids: number[]) {
+    function saveColor(info: BeforeChangeInfo) {
         const colors: ColorEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1112,9 +1123,9 @@ function ObjectInspectorCreate() {
         });
     }
 
-    function saveAlpha(ids: number[]) {
+    function saveAlpha(info: BeforeChangeInfo) {
         const alphas: AlphaEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1154,9 +1165,9 @@ function ObjectInspectorCreate() {
         });
     }
 
-    function saveTexture(ids: number[]) {
+    function saveTexture(info: BeforeChangeInfo) {
         const textures: TextureEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1192,9 +1203,9 @@ function ObjectInspectorCreate() {
         });
     }
 
-    function saveSlice(ids: number[]) {
+    function saveSlice(info: BeforeChangeInfo) {
         const slices: SliceEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1232,9 +1243,9 @@ function ObjectInspectorCreate() {
         });
     }
 
-    function saveText(ids: number[]) {
+    function saveText(info: BeforeChangeInfo) {
         const texts: TextEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1266,9 +1277,9 @@ function ObjectInspectorCreate() {
         });
     }
 
-    function saveFont(ids: number[]) {
+    function saveFont(info: BeforeChangeInfo) {
         const fonts: FontEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1301,9 +1312,9 @@ function ObjectInspectorCreate() {
         });
     }
 
-    function saveFontSize(ids: number[]) {
+    function saveFontSize(info: BeforeChangeInfo) {
         const fontSizes: FontSizeEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1343,9 +1354,9 @@ function ObjectInspectorCreate() {
         Inspector.refresh([ObjectProperty.SCALE]);
     }
 
-    function saveTextAlign(ids: number[]) {
+    function saveTextAlign(info: BeforeChangeInfo) {
         const textAligns: TextAlignEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1375,9 +1386,9 @@ function ObjectInspectorCreate() {
         });
     }
 
-    function saveLineHeight(ids: number[]) {
+    function saveLineHeight(info: BeforeChangeInfo) {
         const lineHeights: LineHeightEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1407,9 +1418,9 @@ function ObjectInspectorCreate() {
         });
     }
 
-    function saveAtlas(ids: number[]) {
+    function saveAtlas(info: BeforeChangeInfo) {
         const atlases: MeshAtlasEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1455,9 +1466,9 @@ function ObjectInspectorCreate() {
         setTimeout(() => set_selected_meshes(_selected_meshes));
     }
 
-    function saveBlendMode(ids: number[]) {
+    function saveBlendMode(info: BeforeChangeInfo) {
         const blendModes: BlendModeEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1493,9 +1504,9 @@ function ObjectInspectorCreate() {
         });
     }
 
-    function saveMaterial(ids: number[]) {
+    function saveMaterial(info: BeforeChangeInfo) {
         const materials: MaterialEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1523,13 +1534,13 @@ function ObjectInspectorCreate() {
             }
 
             const material = info.data.event.value as string;
-            (mesh as any).material = ResourceManager.get_material(material).data;
+            (mesh as Slice9Mesh).set_material(ResourceManager.get_material(material).data);
         });
     }
 
-    function saveUV(ids: number[]) {
+    function saveUV(info: BeforeChangeInfo) {
         const uvs: UVEventData[] = [];
-        ids.forEach((id) => {
+        info.ids.forEach((id) => {
             const mesh = _selected_meshes.find((item) => {
                 return item.mesh_data.id == id;
             });
@@ -1552,7 +1563,6 @@ function ObjectInspectorCreate() {
     }
 
     function updateFlipVertical(info: ChangeInfo) {
-        saveUV(info.ids);
         _selected_meshes.forEach((item) => {
             if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                 const sprite = item as GoSprite;
@@ -1567,7 +1577,6 @@ function ObjectInspectorCreate() {
     }
 
     function updateFlipHorizontal(info: ChangeInfo) {
-        saveUV(info.ids);
         _selected_meshes.forEach((item) => {
             if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                 const sprite = item as GoSprite;
@@ -1582,7 +1591,6 @@ function ObjectInspectorCreate() {
     }
 
     function updateFlipDiagonal(info: ChangeInfo) {
-        saveUV(info.ids);
         _selected_meshes.forEach((item) => {
             if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                 const sprite = item as GoSprite;
@@ -1603,7 +1611,7 @@ function ObjectInspectorCreate() {
 export function generateMaterialOptions() {
     const materialOptions: { [key: string]: string } = {};
     ResourceManager.get_all_materials().forEach(material => {
-        materialOptions[material] = material;
+        materialOptions[(material == 'default') ? 'Стандартный' : material] = material;
     });
     return materialOptions;
 }

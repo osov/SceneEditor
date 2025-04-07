@@ -1,4 +1,4 @@
-import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial } from 'three';
+import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform } from 'three';
 import { get_file_name } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
@@ -8,6 +8,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
 import { TRecursiveDict } from '../modules_editor/modules_editor_const';
 import { shader } from './objects/entity_base';
+import { hexToRGB } from '../modules/utils';
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -65,6 +66,7 @@ export type MaterialUniformParams = {
 export interface MaterialUniform<T extends keyof MaterialUniformParams> {
     type: T;
     params: MaterialUniformParams[T];
+    readonly?: boolean;
 }
 
 export interface MaterialInfo {
@@ -288,9 +290,24 @@ export function ResourceManagerModule() {
         Object.keys(material_info.uniforms).forEach((key) => {
             material.uniforms[key] = {
                 type: material_info.uniforms[key].type,
-                params: { ...material_info.uniforms[key] }
+                params: { ...material_info.uniforms[key] },
+                readonly: material_info.uniforms[key].readonly
             };
-            material.data.uniforms[key] = material_info.data[key];    
+            switch(material_info.uniforms[key].type) {
+                case MaterialUniformType.COLOR:
+                    const colorVec3 = hexToRGB(material_info.data[key]);
+                    material.data.uniforms[key] = { value: colorVec3 } as IUniform<Vector3>;
+                    break;
+                case MaterialUniformType.SAMPLER2D:
+                    const texture_name = get_file_name(material_info.data[key] || '');
+                    const atlas = get_atlas_by_texture_name(texture_name);
+                    const texture_data = get_texture(texture_name, atlas || '');
+                    material.data.uniforms[key] = { value: texture_data.texture } as IUniform<Texture>;
+                    break;
+                default:
+                    material.data.uniforms[key] = { value: material_info.data[key] };
+                    break;
+            }
         });
 
         const vp = await AssetControl.get_file_data(material_info.vp);
