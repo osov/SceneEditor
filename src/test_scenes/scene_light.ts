@@ -1,7 +1,7 @@
 import { AdditiveBlending, FloatType, MeshBasicMaterial, NearestFilter, RepeatWrapping, RGBAFormat, ShaderMaterial, Vector2, WebGLRenderTarget } from 'three'
 import { run_debug_filemanager } from '../controls/AssetControl';
 import { PROJECT_NAME, SERVER_URL, WORLD_SCALAR } from '../config';
-import { URL_PATHS } from '../modules_editor/modules_editor_const';
+import { Segment, URL_PATHS } from '../modules_editor/modules_editor_const';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
@@ -9,6 +9,7 @@ import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { MapData, preload_tiled_textures, get_all_tiled_textures } from '../render_engine/parsers/tile_parser';
 import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import { TileLoader } from '../render_engine/tile_loader';
+import { calculate_borders, default_settings, MovementLogic } from '../modules/PlayerMovement';
 
 
 
@@ -54,11 +55,31 @@ export async function run_scene_light() {
     am.set_mesh('Unarmed Idle');
     am.children[0].scale.setScalar(1 / 150 * WORLD_SCALAR);
     am.add_animation('Unarmed Idle', 'idle');
+    am.add_animation('Unarmed Run Forward', 'walk');
     am.set_texture('PolygonExplorers_Texture_01_A')
     am.rotateX(30 / 180 * Math.PI)
-    am.position.set(313, -240, 6000)
+    am.position.set(313, -245, 6000)
     am.no_saving = true;
     SceneManager.add(am);
+
+    let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
+    if (game_mode) {
+        const movement_settings = {
+            ...default_settings, 
+            collide_radius: 2, 
+            speed: {WALK: 18},
+        }
+        const obstacles: Segment[] = [];
+        const all_objects = SceneManager.get_scene_list();
+        for (const id in all_objects) {
+            const obj = all_objects[id];
+            if (obj.name.includes("Fence")) {
+                obstacles.push(...calculate_borders(obj))
+            }
+        }
+        const move_logic = MovementLogic(movement_settings);
+        move_logic.init(am, obstacles);
+    }
 
     function rebuild_light() {
         const lights = scene.getObjectByName('LIGHTS');

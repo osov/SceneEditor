@@ -1,9 +1,10 @@
 import { PROJECT_NAME, SERVER_URL, WORLD_SCALAR } from "../config";
 import { run_debug_filemanager } from "../controls/AssetControl";
-import { URL_PATHS } from "../modules_editor/modules_editor_const";
+import { Segment, URL_PATHS } from "../modules_editor/modules_editor_const";
 import { get_all_tiled_textures, get_depth, MapData, preload_tiled_textures } from "../render_engine/parsers/tile_parser";
 import { IObjectTypes } from "../render_engine/types";
 import { TileLoader } from "../render_engine/tile_loader";
+import { calculate_borders, default_settings, MovementLogic } from "../modules/PlayerMovement";
 
 const SORT_LAYER = 7;
 const SUB_SCALAR = WORLD_SCALAR;
@@ -62,18 +63,33 @@ export async function run_scene_anim() {
     box.add(box1)
 
     const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * SUB_SCALAR, height: 50 * SUB_SCALAR });
-    const x = 2802 * SUB_SCALAR;
-    const y = -2533 * SUB_SCALAR;
+    const x = 2900 * SUB_SCALAR;
+    const y = -2750 * SUB_SCALAR;
     const z = get_depth(x, y, SORT_LAYER, 50 * SUB_SCALAR, 50 * SUB_SCALAR);
     am.set_mesh('Unarmed Idle');
     am.children[0].scale.setScalar(1 / 100 * SUB_SCALAR);
     am.add_animation('Unarmed Idle', 'idle');
+    am.add_animation('Unarmed Run Forward', 'walk');
     am.set_texture('PolygonExplorers_Texture_01_A')
     am.rotateX(30 / 180 * Math.PI)
     am.position.set(x, y, z)
     SceneManager.add(am);
 
     ControlManager.update_graph(true, 'anim_scene');
+
+    let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
+    if (game_mode) {
+        const obstacles: Segment[] = [];
+        const all_objects = SceneManager.get_scene_list();
+        for (const id in all_objects) {
+            const obj = all_objects[id];
+            if (obj.name.includes("Fence")) {
+                obstacles.push(...calculate_borders(obj))
+            }
+        }
+        const move_logic = MovementLogic(default_settings);
+        move_logic.init(am, obstacles);
+    }
 
     // console.log(JSON.stringify(SceneManager.save_scene()));
 }

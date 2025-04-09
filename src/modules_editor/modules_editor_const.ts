@@ -1,6 +1,7 @@
 import { WatchEventType } from "fs";
 import { IBaseMeshAndThree } from "../render_engine/types";
 import { VoidMessage } from "../modules/modules_const";
+import { Vector2, Vector2Like } from "three";
 
 export type ServerCommands = AssetsCommands;
 export type ServerResponses = AssetsResponses;
@@ -195,3 +196,5 @@ export interface ProtocolWrapper {
 export type TDictionary<T> = { [key: number | string]: T };
 
 export type TRecursiveDict = { [Key: number | string]: TRecursiveDict | number | string };
+export type Segment = {p2: Vector2Like, p1: Vector2Like};
+export type Circle = {center: Vector2, radius: number};
