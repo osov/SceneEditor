@@ -1,14 +1,16 @@
-import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform } from 'three';
-import { get_file_name } from './helpers/utils';
+import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4 } from 'three';
+import { get_file_name, is_changed_uniform } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
-import { TRecursiveDict } from '../modules_editor/modules_editor_const';
+import { FSEvent, TMaterialChanged, TRecursiveDict } from '../modules_editor/modules_editor_const';
 import { shader } from './objects/entity_base';
 import { hexToRGB } from '../modules/utils';
+import { Slice9Mesh } from './objects/slice9';
+import { IObjectTypes } from './types';
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -40,7 +42,6 @@ interface AnimationInfo {
     clip: AnimationClip;
 }
 
-//TODO: переместить в AssetInspector, а сдесь нужно сделать MaterialUniformValues
 export type MaterialUniformParams = {
     [MaterialUniformType.FLOAT]: { min?: number, max?: number, step?: number };
     [MaterialUniformType.RANGE]: { min?: number, max?: number, step?: number };
@@ -71,8 +72,8 @@ export interface MaterialUniform<T extends keyof MaterialUniformParams> {
 
 export interface MaterialInfo {
     name: string;
-    vp: string;
-    fp: string;
+    vertexShader: string;
+    fragmentShader: string;
     uniforms: {
         [key: string]: MaterialUniform<keyof MaterialUniformParams>
     };
@@ -94,6 +95,8 @@ export function ResourceManagerModule() {
     const texture_loader = new TextureLoader();
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
+    const vertex_programs: { [name: string]: string } = {};
+    const fragment_programs: { [name: string]: string } = {};
     const materials: { [name: string]: MaterialInfo } = {};
     const models: { [name: string]: Object3D } = {};
     const animations: AnimationInfo[] = [];
@@ -108,34 +111,213 @@ export function ResourceManagerModule() {
     }
 
     function subscribe() {
-        // NOTE: обновление шейдеров при изменении файлов
         EventBus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {
-            for (let i = 0; i < e.events.length; i++) {
-                const ev = e.events[i];
-                if(ev.ext == '.vp') {
-                    const vp_path = get_file_name(ev.path);
-                    const vp_data = await AssetControl.get_file_data(vp_path);
-                    const vp = vp_data.data!;
-                    for(const material of Object.values(materials)) {
-                        if(material.vp == vp_path) {
-                            material.data.vertexShader = vp;
+            for (const event of e.events) {
+                await on_file_change(event);
+            }
+        });
+
+        EventBus.on('MATERIAL_CHANGED', async (info: TMaterialChanged) => {
+            const material = get_material(info.material_name);
+            const copies = get_material_copies(info.material_name);
+            if (material) {
+                if (!info.is_uniform) {
+                    switch (info.property) {
+                        case 'vertexShader':
+                            material.vertexShader = info.value;
+                            const vertexShader = await get_file_data(info.value);
+                            if (!vertexShader) break;
+                            material.data.vertexShader = vertexShader;
                             material.data.needsUpdate = true;
-                        }
-                    }
-                }
-                if (ev.ext == '.fp') {
-                    const fp_path = get_file_name(ev.path);
-                    const fp_data = await AssetControl.get_file_data(fp_path);
-                    const fp = fp_data.data!;
-                    for(const material of Object.values(materials)) {
-                        if(material.fp == fp_path) {
-                            material.data.fragmentShader = fp;
+                            copies.forEach((copy) => {
+                                copy.vertexShader = vertexShader;
+                                copy.needsUpdate = true;
+                            });
+                            break;
+                        case 'fragmentShader':
+                            material.fragmentShader = info.value;
+                            const fragmentShader = await get_file_data(info.value);
+                            if (!fragmentShader) break;
+                            material.data.fragmentShader = fragmentShader;
                             material.data.needsUpdate = true;
-                        }
+                            copies.forEach((copy) => {
+                                copy.fragmentShader = fragmentShader;
+                                copy.needsUpdate = true;
+                            });
+                            break;
+                        default:
+                            if (!Object.hasOwn(material, info.property)) {
+                                Log.error('[MATERIAL_CHANGED] property not found:', info.property, material);
+                                return;
+                            }
+                            (material as any)[info.property] = info.value;
+                            material.data.needsUpdate = true;
+
+                            copies.forEach((copy) => {
+                                if (!Object.hasOwn(copy, info.property)) {
+                                    Log.error('[MATERIAL_CHANGED] copy property not found:', info.property, copy);
+                                    return;
+                                }
+                                if (!is_changed_uniform(copy, info.property)) {
+                                    (copy as any)[info.property].value = info.value;
+                                    copy.needsUpdate = true;
+                                }
+                            });
+                            break;
                     }
+                } else {
+                    material.data.uniforms[info.property].value = info.value;
+                    material.data.needsUpdate = true;
+                    copies.forEach((copy) => {
+                        if (!is_changed_uniform(copy, info.property)) {
+                            copy.uniforms[info.property].value = info.value;
+                            copy.needsUpdate = true;
+                        }
+                    });
                 }
             }
         });
+    }
+
+    async function on_file_change(event: FSEvent) {
+        switch (event.ext) {
+            case 'vp': await on_vertex_shader_change(event.path); break;
+            case 'fp': await on_fragment_shader_change(event.path); break;
+            case 'mtr': await on_material_change(event.path); break;
+        }
+    }
+
+    async function get_file_data(path: string) {
+        const data = await AssetControl.get_file_data(path);
+        if (data.result != 1) {
+            Log.error('[get_file_data]:', data.error_code, data.message);
+            return;
+        }
+        return data.data!;
+    }
+
+    async function on_vertex_shader_change(path: string) {
+        const vertexShader = await get_file_data(path);
+        if (!vertexShader) return;
+        // NOTE: беребираем оригинальные материалы и копии
+        for (const material_info of Object.values(materials)) {
+            if (material_info.vertexShader == path) {
+                material_info.data.vertexShader = vertexShader;
+                material_info.data.needsUpdate = true;
+
+                const copies = get_material_copies(material_info.data.name);
+                copies.forEach((copy) => {
+                    copy.vertexShader = vertexShader;
+                    copy.needsUpdate = true;
+                });
+            }
+        }
+    }
+
+    async function on_fragment_shader_change(path: string) {
+        const fragmentShader = await get_file_data(path);
+        if (!fragmentShader) return;
+        // NOTE: беребираем оригинальные материалы и копии
+        for (const material_info of Object.values(materials)) {
+            if (material_info.fragmentShader == path) {
+                material_info.data.fragmentShader = fragmentShader;
+                material_info.data.needsUpdate = true;
+
+                const copies = get_material_copies(material_info.data.name);
+                copies.forEach((copy) => {
+                    copy.fragmentShader = fragmentShader;
+                    copy.needsUpdate = true;
+                });
+            }
+        }
+    }
+
+    async function on_material_change(path: string) {
+        const updatedMaterial = await load_material(path);
+        if (!updatedMaterial) return;
+
+        const existingMaterial = get_material(get_file_name(path));
+        if (!existingMaterial) return;
+
+        // Get all Slice9 meshes using this material
+        const copies = get_material_copies(existingMaterial.name);
+
+        // Update shaders if changed
+        if (existingMaterial.vertexShader != updatedMaterial.vertexShader) {
+            existingMaterial.vertexShader = updatedMaterial.vertexShader;
+            const vertexShader = await get_file_data(updatedMaterial.vertexShader);
+            if (vertexShader) {
+                existingMaterial.data.vertexShader = vertexShader;
+                existingMaterial.data.needsUpdate = true;
+
+                // Update vertex shader in all copies
+                copies.forEach(mesh => {
+                    const meshMaterial = mesh;
+                    meshMaterial.vertexShader = vertexShader;
+                    meshMaterial.needsUpdate = true;
+                });
+            }
+        }
+
+        if (existingMaterial.fragmentShader != updatedMaterial.fragmentShader) {
+            existingMaterial.fragmentShader = updatedMaterial.fragmentShader;
+            const fragmentShader = await get_file_data(updatedMaterial.fragmentShader);
+            if (fragmentShader) {
+                existingMaterial.data.fragmentShader = fragmentShader;
+                existingMaterial.data.needsUpdate = true;
+
+                // Update fragment shader in all copies
+                copies.forEach(mesh => {
+                    const meshMaterial = mesh;
+                    meshMaterial.fragmentShader = fragmentShader;
+                    meshMaterial.needsUpdate = true;
+                });
+            }
+        }
+
+        // Check for new/updated uniforms
+        for (const [key, uniform] of Object.entries(updatedMaterial.uniforms)) {
+            if (!existingMaterial.uniforms[key] || existingMaterial.uniforms[key] != uniform) {
+                existingMaterial.uniforms[key] = { ...uniform };
+                existingMaterial.data.uniforms[key] = updatedMaterial.data.uniforms[key];
+
+                copies.forEach(material => {
+                    if (!material.userData.changed_uniforms.includes(key)) {
+                        material.uniforms[key] = updatedMaterial.data.uniforms[key];
+                        material.needsUpdate = true;
+                    }
+                });
+            }
+        }
+
+        // Check for removed uniforms
+        for (const key of Object.keys(existingMaterial.uniforms)) {
+            if (!updatedMaterial.uniforms[key]) {
+                delete existingMaterial.uniforms[key];
+                delete existingMaterial.data.uniforms[key];
+
+                // Remove uniform from all copies if they match old value
+                copies.forEach(mesh => {
+                    const meshMaterial = mesh;
+                    delete meshMaterial.uniforms[key];
+                    meshMaterial.needsUpdate = true;
+                });
+            }
+        }
+
+        // Update transparency if changed
+        if (existingMaterial.data.transparent != updatedMaterial.data.transparent) {
+            existingMaterial.data.transparent = updatedMaterial.data.transparent;
+            existingMaterial.data.needsUpdate = true;
+
+            // Update transparency in all copies if they match old value
+            copies.forEach(material => {
+                if (!material.userData.changed_uniforms.includes('transparent')) {
+                    material.transparent = updatedMaterial.data.transparent;
+                    material.needsUpdate = true;
+                }
+            });
+        }
     }
 
     function set_project_path(path: string) {
@@ -217,7 +399,7 @@ export function ResourceManagerModule() {
         if (!override && atlases[name]) {
             Log.warn('atlas exists', name);
             const textures = Object.values(atlases[name]);
-            if(textures[0]) {
+            if (textures[0]) {
                 return textures[0].data.texture;
             }
         }
@@ -266,22 +448,46 @@ export function ResourceManagerModule() {
         })
     }
 
+    function has_vertex_program(name: string) {
+        return vertex_programs[name] != undefined;
+    }
+
+    async function track_vertex_program(path: string) {
+        const name = get_file_name(path);
+        if (has_vertex_program(name)) {
+            Log.warn('vertex program exists', name, path);
+            return;
+        }
+        vertex_programs[name] = path;
+    }
+
+    function has_fragment_program(name: string) {
+        return fragment_programs[name] != undefined;
+    }
+
+    async function track_fragment_program(path: string) {
+        const name = get_file_name(path);
+        if (has_fragment_program(name)) {
+            Log.warn('fragment program exists', name, path);
+            return;
+        }
+        fragment_programs[name] = path;
+    }
+
     async function load_material(path: string) {
-        path = project_path + path;
-        const result = await fetch(path);
-        if (!result.ok) {
-            return {
-                success: false,
-                error: `Material not found: ${path}`
-            };
+        const response = await AssetControl.get_file_data(path);
+        if (response.result != 1) {
+            Log.error('[load_material]:', response.error_code, response.message);
+            return;
         }
 
-        const material_info = await result.json();
+        const material_info = JSON.parse(response.data!);
 
         const material = {} as MaterialInfo;
-        material.name = get_file_name(path);
-        material.vp = material_info.vp;
-        material.fp = material_info.fp;
+        const name = get_file_name(path);
+        material.name = name;
+        material.vertexShader = material_info.vertexShader;
+        material.fragmentShader = material_info.fragmentShader;
         material.uniforms = {};
 
         material.data = new ShaderMaterial();
@@ -290,19 +496,27 @@ export function ResourceManagerModule() {
         Object.keys(material_info.uniforms).forEach((key) => {
             material.uniforms[key] = {
                 type: material_info.uniforms[key].type,
-                params: { ...material_info.uniforms[key] },
+                params: { ...material_info.uniforms[key] }, // TODO: сейчас тут лишние данные
                 readonly: material_info.uniforms[key].readonly
             };
-            switch(material_info.uniforms[key].type) {
-                case MaterialUniformType.COLOR:
-                    const colorVec3 = hexToRGB(material_info.data[key]);
-                    material.data.uniforms[key] = { value: colorVec3 } as IUniform<Vector3>;
-                    break;
+            switch (material_info.uniforms[key].type) {
                 case MaterialUniformType.SAMPLER2D:
                     const texture_name = get_file_name(material_info.data[key] || '');
                     const atlas = get_atlas_by_texture_name(texture_name);
                     const texture_data = get_texture(texture_name, atlas || '');
                     material.data.uniforms[key] = { value: texture_data.texture } as IUniform<Texture>;
+                    break;
+                case MaterialUniformType.VEC2:
+                    material.data.uniforms[key] = { value: new Vector2(...material_info.data[key]) } as IUniform<Vector2>;
+                    break;
+                case MaterialUniformType.VEC3:
+                    material.data.uniforms[key] = { value: new Vector3(...material_info.data[key]) } as IUniform<Vector3>;
+                    break;
+                case MaterialUniformType.VEC4:
+                    material.data.uniforms[key] = { value: new Vector4(...material_info.data[key]) } as IUniform<Vector4>;
+                    break;
+                case MaterialUniformType.COLOR:
+                    material.data.uniforms[key] = { value: hexToRGB(material_info.data[key]) } as IUniform<Vector3>;
                     break;
                 default:
                     material.data.uniforms[key] = { value: material_info.data[key] };
@@ -310,47 +524,65 @@ export function ResourceManagerModule() {
             }
         });
 
-        const vp = await AssetControl.get_file_data(material_info.vp);
-        material.data.vertexShader = (vp.result && vp.data) ? await vp.data : shader.vertexShader;
-        
-        const fp = await AssetControl.get_file_data(material_info.fp);
-        material.data.fragmentShader = (fp.result && fp.data) ? await fp.data : shader.fragmentShader;
-        
+        const vertexShader = await AssetControl.get_file_data(material_info.vertexShader);
+        material.data.vertexShader = (vertexShader.result && vertexShader.data) ? await vertexShader.data : shader.vertexShader;
+
+        const fragmentShader = await AssetControl.get_file_data(material_info.fragmentShader);
+        material.data.fragmentShader = (fragmentShader.result && fragmentShader.data) ? await fragmentShader.data : shader.fragmentShader;
+
         material.data.transparent = material_info.transparent;
 
-        return {
-            success: true,
-            data: material
-        };
+        return material;
     }
 
     async function preload_material(path: string) {
-        const name = get_file_name(path);
-        Log.log('[preload_material] name:', name, path);
-        if(has_material(name)) {
+        let name = get_file_name(path);
+        if (has_material(name)) {
             Log.warn('Material already exists', name, path);
             return materials[name];
         }
 
-        const response = await load_material(path);
-        if (!response.success) {
-            Log.error(response.error);
-            return null;
-        }
+        const material = await load_material(path);
+        if (!material) return;
 
-        if(!response.data) {
-            Log.error('Material not found', path);
-            return null;
-        }
+        materials[name] = material;
+        return material;
+    }
 
-        Log.log('[preload_material] response:', response);
+    function get_material(name: string) {
+        return materials[name];
+    }
 
-        materials[name] = response.data;
-        return response.data;
+    function get_material_copies(material_name: string) {
+        return SceneManager.get_scene_list()
+            .filter((mesh) => {
+                if (mesh.type == IObjectTypes.GO_SPRITE_COMPONENT || mesh.type == IObjectTypes.GUI_BOX) {
+                    const mesh_material = (mesh as Slice9Mesh).get_material();
+                    return mesh_material.name == material_name;
+                }
+                return false;
+            })
+            .map((mesh) => (mesh as Slice9Mesh).get_material());
     }
 
     function get_all_fonts() {
         return fonts;
+    }
+
+    function get_vertex_program_path(name: string) {
+        return vertex_programs[name];
+    }
+
+    function get_fragment_program_path(name: string) {
+        return fragment_programs[name];
+    }
+
+    function get_all_vertex_programs() {
+        return Object.keys(vertex_programs);
+    }
+
+    function get_all_fragment_programs() {
+        return Object.keys(fragment_programs);
     }
 
     function get_font(name: string) {
@@ -427,10 +659,6 @@ export function ResourceManagerModule() {
 
     function get_all_materials() {
         return Object.keys(materials);
-    }
-
-    function get_material(name: string) {
-        return materials[name];
     }
 
     function has_material(name: string) {
@@ -662,19 +890,26 @@ export function ResourceManagerModule() {
         preload_texture,
         preload_font,
         preload_material,
-        get_all_fonts,
+        track_vertex_program,
+        track_fragment_program,
+        get_vertex_program_path,
+        get_fragment_program_path,
+        get_material,
+        get_material_copies,
         get_font,
         get_texture,
         free_texture,
         get_atlas,
-        get_all_atlases,
         get_atlas_by_texture_name,
         add_atlas,
         has_atlas,
         del_atlas,
+        get_all_fonts,
+        get_all_atlases,
         get_all_textures,
         get_all_materials,
-        get_material,
+        get_all_vertex_programs,
+        get_all_fragment_programs,
         set_project_path,
         preload_model,
         get_model,
@@ -682,6 +917,6 @@ export function ResourceManagerModule() {
         get_animations_by_model,
         override_atlas_texture,
         update_from_metadata,
-        write_metadata
+        write_metadata,
     };
 }

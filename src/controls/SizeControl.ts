@@ -4,7 +4,7 @@ import { AnchorEventData, PositionEventData, SizeEventData, SliceEventData } fro
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { is_base_mesh } from "../render_engine/helpers/utils";
 import { WORLD_SCALAR } from "../config";
-import { ObjectProperty } from "../inspectors/ObjectInspector";
+import { MeshProperty } from "../inspectors/MeshInspector";
 
 declare global {
     const SizeControl: ReturnType<typeof SizeControlCreate>;
@@ -147,7 +147,7 @@ function SizeControlCreate() {
                             const pivot = index_to_pivot(i);
                             HistoryControl.add('MESH_PIVOT', [{ id_mesh: mesh.mesh_data.id, pivot: mesh.get_pivot() }]);
                             mesh.set_pivot(pivot.x, pivot.y, true);
-                            Inspector.refresh([ObjectProperty.PIVOT]);
+                            Inspector.refresh([MeshProperty.PIVOT]);
                             // для текста почему-то прыгает размер и поэтому bb определяется неверно на ближайших кадрах
                             // поэтому не обновляем draw_debug_bb
                             for (let i = 0; i < pivot_points.length; i++)
@@ -263,7 +263,7 @@ function SizeControlCreate() {
                     dir[1] = tmp[1];
                 }
                 draw_debug_bb(bounds);
-                Inspector.refresh([ObjectProperty.SLICE9]);
+                Inspector.refresh([MeshProperty.SLICE9]);
                 return;
             }
             if (Input.is_shift() || Input.is_alt())
@@ -320,7 +320,7 @@ function SizeControlCreate() {
                         selected_go.set_position(lp.x, lp.y);
                         is_changed_size = true;
 
-                        Inspector.refresh([ObjectProperty.POSITION, ObjectProperty.SIZE]);
+                        Inspector.refresh([MeshProperty.POSITION, MeshProperty.SIZE]);
                     }
                 }
                 if (dir[0] == 0 && dir[1] == 0) {
@@ -357,7 +357,7 @@ function SizeControlCreate() {
                 draw_debug_bb(bounds);
 
                 TransformControl.set_proxy_in_average_point(selected_list);
-                Inspector.refresh([ObjectProperty.POSITION]);
+                Inspector.refresh([MeshProperty.POSITION]);
             }
         });
     }

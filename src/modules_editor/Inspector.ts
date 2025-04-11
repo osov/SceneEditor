@@ -6,7 +6,7 @@ import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plugin';
 import { deepClone } from '../modules/utils';
-import { TextureInfo } from '../render_engine/resource_manager';
+
 
 declare global {
     const Inspector: ReturnType<typeof InspectorModule>;
@@ -170,9 +170,9 @@ function InspectorModule() {
     }
 
     function setData(list_data: ObjectData[], config: InspectorGroup[]) {
-        _unique_fields = [];
         _config = config;
         _data = list_data;
+        _unique_fields = [];
 
         list_data.forEach((obj, index) => {
             const info: ObjectInfo[] = [];
@@ -220,7 +220,7 @@ function InspectorModule() {
         if (tp_to) tp_to.classList.add('my_scroll');
     }
 
-   
+
 
     function refresh(properties: Property[]) {
         properties.forEach((property) => {
@@ -367,8 +367,8 @@ function InspectorModule() {
             });
 
             // Track vector fields for later use
-            if (property.type == PropertyType.VECTOR_2 || 
-                property.type == PropertyType.VECTOR_3 || 
+            if (property.type == PropertyType.VECTOR_2 ||
+                property.type == PropertyType.VECTOR_3 ||
                 property.type == PropertyType.VECTOR_4) {
                 _vector_fields.push({ field, property });
             }
@@ -438,7 +438,7 @@ function InspectorModule() {
         } else {
             if (field.data != _unique_fields[index].field.data) {
                 // для кнопок всегда показываем
-                if(property.type == PropertyType.BUTTON) {
+                if (property.type == PropertyType.BUTTON) {
                     return true;
                 }
                 if ([PropertyType.LIST_TEXT, PropertyType.LIST_TEXTURES, PropertyType.LOG_DATA].includes(property.type)) {
@@ -699,10 +699,10 @@ function InspectorModule() {
     }
 
     function tryDisabledVectorValueByAxis(info: ChangeInfo) {
-        const isVectorField = info.data.property.type === PropertyType.VECTOR_2 || 
-                            info.data.property.type === PropertyType.VECTOR_3 || 
-                            info.data.property.type === PropertyType.VECTOR_4;
-        
+        const isVectorField = info.data.property.type === PropertyType.VECTOR_2 ||
+            info.data.property.type === PropertyType.VECTOR_3 ||
+            info.data.property.type === PropertyType.VECTOR_4;
+
         if (!isVectorField || !info.data.event.target.controller.view.valueElement) {
             return;
         }
@@ -740,7 +740,7 @@ function InspectorModule() {
             }
 
             const currentValue = currentField.data as { x: number, y: number, z?: number, w?: number };
-            
+
             if (axisCount >= 1 && !differentAxes[0] && currentValue.x !== referenceValue.x) {
                 differentAxes[0] = true;
             }
@@ -767,14 +767,14 @@ function InspectorModule() {
     }
 
     function saveValue(info: BeforeChangeInfo) {
-        const unique_field = _unique_fields.find(field => field.field === info.field);
+        const unique_field = _unique_fields.find(field => field.field == info.field);
         if (unique_field && unique_field.property.onSave) {
             unique_field.property.onSave(info);
         }
     }
 
     function updatedValue(info: ChangeInfo) {
-        const unique_field = _unique_fields.find(field => field.field === info.data.field);
+        const unique_field = _unique_fields.find(field => field.field == info.data.field);
         if (unique_field && unique_field.property.onUpdate) {
             unique_field.property.onUpdate(info);
         }
@@ -782,120 +782,4 @@ function InspectorModule() {
 
     init();
     return { setData, refresh, clear }
-}
-
-export function getChangedInfo(info: ChangeInfo) {
-    let isChangedX = false;
-    let isChangedY = false;
-    let isChangedZ = false;
-    let isChangedW = false;
-
-    // NOTE: варинат как получить какие либо значения из tweakpane не переписывая половину либы
-    const valueController = info.data.event.target.controller.labelController.valueController as any;
-
-    // NOTE: для 2D пикера
-    const picker = valueController.pickerC_;
-    if (picker && picker.is_changed) {
-        isChangedX = true;
-        isChangedY = true;
-        return [isChangedX, isChangedY];
-    }
-
-    // NOTE: учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_ 
-    const acs = !valueController.acs_ ? valueController.textC_.acs_ : valueController.acs_;
-    acs.forEach((ac: any, index: number) => {
-        if (!ac.is_changed) return;
-        switch (index) {
-            case 0: isChangedX = true; break;
-            case 1: isChangedY = true; break;
-            case 2: isChangedZ = true; break;
-            case 3: isChangedW = true; break;
-        }
-    });
-
-    return [isChangedX, isChangedY, isChangedZ, isChangedW];
-}
-
-export function getDraggedInfo(info: ChangeInfo) {
-    let isDraggedX = false;
-    let isDraggedY = false;
-    let isDraggedZ = false;
-    let isDraggedW = false;
-
-    // NOTE: варинат как получить какие либо значения из tweakpane не переписывая половину либы
-    // учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_ 
-    const valueController = info.data.event.target.controller.labelController.valueController as any;
-    const acs = !valueController.acs_ ? valueController.textC_.acs_ : valueController.acs_;
-    acs.forEach((ac: any, index: number) => {
-        if (!ac.is_drag) return;
-        switch (index) {
-            case 0: isDraggedX = true; break;
-            case 1: isDraggedY = true; break;
-            case 2: isDraggedZ = true; break;
-            case 3: isDraggedW = true; break;
-        }
-    });
-
-    return [isDraggedX, isDraggedY, isDraggedZ, isDraggedW];
-}
-
-export function generateTextureOptions() {
-    return ResourceManager.get_all_textures().map(castTextureInfo);
-}
-
-export function castTextureInfo(info: TextureInfo) {
-    const data = {
-        value: info.name,
-        src: (info.data.texture as any).path ?? ''
-    } as any;
-
-    if (info.atlas != '') {
-        const sizeX = info.data.texture.image.width;
-        const sizeY = info.data.texture.image.height;
-
-        data.offset = {
-            posX: -(sizeX * info.data.uvOffset.x),
-            posY: -(sizeY - (sizeY * info.data.uvOffset.y)),
-            width: info.data.size.x,
-            height: info.data.size.y,
-            sizeX,
-            sizeY
-        };
-
-        if (info.data.size.x > info.data.size.y) {
-            // по ширине
-            if (info.data.size.x > 40) {
-                const delta = info.data.size.x / 40;
-                data.offset.posX /= delta;
-                data.offset.posY /= delta;
-                data.offset.width = 40;
-                data.offset.height = info.data.size.y / delta;
-                data.offset.sizeX = sizeX / delta;
-                data.offset.sizeY = sizeY / delta;
-            }
-        } else {
-            // по высоте
-            if (info.data.size.y > 40) {
-                const delta = info.data.size.y / 40;
-                data.offset.posX /= delta;
-                data.offset.posY /= delta;
-                data.offset.width = info.data.size.x / delta;
-                data.offset.height = 40;
-                data.offset.sizeX = sizeX / delta;
-                data.offset.sizeY = sizeY / delta;
-            }
-        }
-
-        data.offset.posY += data.offset.height;
-    }
-
-    return data;
-}
-
-export function update_option<T extends PropertyType>(config: InspectorGroup[], property_name: string, method: () => PropertyParams[T]) {
-    config.forEach((group) => {
-        const property = group.property_list.find((property) => property.name == property_name);
-        if (!property) return;
-        (property.params as PropertyParams[T]) = method();
-    });
 }

@@ -57,6 +57,17 @@ export function hexToRGB(hex: string): Vector3 {
     return new Vector3(r, g, b);
 }
 
+export function rgbToHex(rgb: Vector3): string {
+    const r = Math.round(rgb.x * 255);
+    const g = Math.round(rgb.y * 255);
+    const b = Math.round(rgb.z * 255);
+
+    return '#' + [r, g, b].map(x => {
+        const hex = x.toString(16);
+        return hex.length == 1 ? '0' + hex : hex;
+    }).join('');
+}
+
 export function degToRad(degrees: number) {
     return degrees * (Math.PI / 180);
 }
@@ -121,33 +132,33 @@ export function two_lines_intersect(v1: Segment, v2: Segment) {
     if (ua < 0 || ua > 1 || ub < 0 || ub > 1) {
         return false
     }
-    
+
     let x = x1 + ua * (x2 - x1)
     let y = y1 + ua * (y2 - y1)
 
-    return {x, y}
+    return { x, y }
 }
 
-export function circle_line_intersect(circle: Circle, line: Segment){
-    const v1 = {x: line.p2.x - line.p1.x, y: line.p2.y - line.p1.y};
-    const v2 = {x: line.p1.x - circle.center.x, y: line.p1.y - circle.center.y};
+export function circle_line_intersect(circle: Circle, line: Segment) {
+    const v1 = { x: line.p2.x - line.p1.x, y: line.p2.y - line.p1.y };
+    const v2 = { x: line.p1.x - circle.center.x, y: line.p1.y - circle.center.y };
     let b = v1.x * v2.x + v1.y * v2.y;
     let c = 2 * (v1.x * v1.x + v1.y * v1.y);
     b *= -2;
     let d = Math.sqrt(b * b - 2 * c * (v2.x * v2.x + v2.y * v2.y - circle.radius * circle.radius));
-    if (isNaN(d)){ // no intercept
+    if (isNaN(d)) { // no intercept
         return [];
     }
     const u1 = (b - d) / c;
-    const u2 = (b + d) / c;    
+    const u2 = (b + d) / c;
     const ret = [];
-    if (u1 <= 1 && u1 >= 0){  // add point if on the line segment
-        const retP1 = {x: line.p1.x + v1.x * u1, y: line.p1.y + v1.y * u1};
+    if (u1 <= 1 && u1 >= 0) {  // add point if on the line segment
+        const retP1 = { x: line.p1.x + v1.x * u1, y: line.p1.y + v1.y * u1 };
         ret[0] = retP1;
     }
-    if (u2 <= 1 && u2 >= 0){  // second add point if on the line segment
-        const retP2 = {x: line.p1.x + v1.x * u2, y: line.p1.y + v1.y * u2};
+    if (u2 <= 1 && u2 >= 0) {  // second add point if on the line segment
+        const retP2 = { x: line.p1.x + v1.x * u2, y: line.p1.y + v1.y * u2 };
         ret[ret.length] = retP2;
-    }       
+    }
     return ret;
 }

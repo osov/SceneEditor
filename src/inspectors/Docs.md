@@ -18,11 +18,13 @@
 
 ```typescript
 export enum NewInspectorProperty {
-    PROPERTY_1 = 'property_1',
-    PROPERTY_2 = 'property_2',
+    PROPERTY_1 = 'new_property_1',
+    PROPERTY_2 = 'new_property_2',
     // остальные свойства ...
 }
 ```
+
+Желательно использовать перфикс инспектора для которого описываются свойства, чтобы не было колизий имен между инспекторами.
 
 ### 3. Создание конфигурации инспектора
 
@@ -157,9 +159,9 @@ register_new_inspector();
 
 ```typescript
 export enum NewInspectorProperty {
-    NAME = 'name',
-    VALUE = 'value',
-    ENABLED = 'enabled'
+    NAME = 'new_name',
+    VALUE = 'new_value',
+    ENABLED = 'new_enabled'
 }
 
 function NewInspectorCreate() {

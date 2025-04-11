@@ -1,10 +1,17 @@
+// CHECK: как вектора записываются в файл если их просто присвоить без преобразований
+
+// IDEA/TODO: вынести перезапись значений как минимум материалов в ResourceManager, а здесь отправлять только ивент MATERIAL_CHANGED, за счет этого можно будет легко управлять измененинием матриала в одном месте
+
+
 import { Vector2, Vector3, Vector4, MinificationTextureFilter, MagnificationTextureFilter, Color, NearestFilter, LinearFilter, IUniform, Texture } from "three";
-import { get_file_name, get_basename } from "../render_engine/helpers/utils";
+import { get_file_name } from "../render_engine/helpers/utils";
 import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
 import { IObjectTypes, IBaseMesh } from "../render_engine/types";
-import { InspectorGroup, update_option, PropertyData, PropertyType, generateTextureOptions, ChangeInfo, BeforeChangeInfo } from "../modules_editor/Inspector";
+import { InspectorGroup, PropertyData, PropertyType, ChangeInfo, BeforeChangeInfo, PropertyParams } from "../modules_editor/Inspector";
 import { TextureAtlasEventData, MinFilterEventData, MagFilterEventData } from "../controls/types";
-import { generateAtlasOptions } from "./ObjectInspector";
+import { hexToRGB, rgbToHex } from "../modules/utils";
+import { generateAtlasOptions, generateTextureOptions, update_option } from "./helpers";
+
 
 declare global {
     const AssetInspector: ReturnType<typeof AssetInspectorCreate>;
@@ -16,20 +23,19 @@ export function register_asset_inspector() {
 
 export enum AssetProperty {
     ASSET_ATLAS = 'asset_atlas',
-    ATLAS_BUTTON = 'atlas_button',
-    MIN_FILTER = 'min_filter',
-    MAG_FILTER = 'mag_filter',
-    MATERIAL = 'material',
-    TRANSPARENT = 'transparent',
-    VERTEX_PROGRAM = 'vertex_program',
-    FRAGMENT_PROGRAM = 'fragment_program',
-    UNIFORM_SAMPLER2D = 'uniform_sampler2d',
-    UNIFORM_FLOAT = 'uniform_float',
-    UNIFORM_RANGE = 'uniform_range',
-    UNIFORM_VEC2 = 'uniform_vec2',
-    UNIFORM_VEC3 = 'uniform_vec3',
-    UNIFORM_VEC4 = 'uniform_vec4',
-    UNIFORM_COLOR = 'uniform_color',
+    ATLAS_BUTTON = 'asset_atlas_button',
+    MIN_FILTER = 'asset_min_filter',
+    MAG_FILTER = 'asset_mag_filter',
+    TRANSPARENT = 'asset_transparent',
+    VERTEX_PROGRAM = 'asset_vertex_program',
+    FRAGMENT_PROGRAM = 'asset_fragment_program',
+    UNIFORM_SAMPLER2D = 'asset_uniform_sampler2d',
+    UNIFORM_FLOAT = 'asset_uniform_float',
+    UNIFORM_RANGE = 'asset_uniform_range',
+    UNIFORM_VEC2 = 'asset_uniform_vec2',
+    UNIFORM_VEC3 = 'asset_uniform_vec3',
+    UNIFORM_VEC4 = 'asset_uniform_vec4',
+    UNIFORM_COLOR = 'asset_uniform_color',
 }
 
 export enum FilterMode {
@@ -44,22 +50,22 @@ function AssetInspectorCreate() {
             title: '',
             property_list: [
                 {
-                    name: AssetProperty.ASSET_ATLAS, 
-                    title: 'Атлас', 
-                    type: PropertyType.LIST_TEXT, 
+                    name: AssetProperty.ASSET_ATLAS,
+                    title: 'Атлас',
+                    type: PropertyType.LIST_TEXT,
                     params: generateAtlasOptions(),
                     onSave: saveAssetAtlas,
                     onUpdate: updateAssetAtlas
                 },
-                { 
-                    name: AssetProperty.ATLAS_BUTTON, 
-                    title: 'Атлас менеджер', 
-                    type: PropertyType.BUTTON 
+                {
+                    name: AssetProperty.ATLAS_BUTTON,
+                    title: 'Атлас менеджер',
+                    type: PropertyType.BUTTON
                 },
                 {
-                    name: AssetProperty.MIN_FILTER, 
-                    title: 'Фильтр уменьшения', 
-                    type: PropertyType.LIST_TEXT, 
+                    name: AssetProperty.MIN_FILTER,
+                    title: 'Фильтр уменьшения',
+                    type: PropertyType.LIST_TEXT,
                     params: {
                         'nearest': FilterMode.NEAREST,
                         'linear': FilterMode.LINEAR
@@ -68,9 +74,9 @@ function AssetInspectorCreate() {
                     onUpdate: updateMinFilter
                 },
                 {
-                    name: AssetProperty.MAG_FILTER, 
-                    title: 'Фильтр увеличения', 
-                    type: PropertyType.LIST_TEXT, 
+                    name: AssetProperty.MAG_FILTER,
+                    title: 'Фильтр увеличения',
+                    type: PropertyType.LIST_TEXT,
                     params: {
                         'nearest': FilterMode.NEAREST,
                         'linear': FilterMode.LINEAR
@@ -79,25 +85,27 @@ function AssetInspectorCreate() {
                     onUpdate: updateMagFilter
                 },
                 {
-                    name: AssetProperty.VERTEX_PROGRAM, 
-                    title: 'Vertex Program', 
-                    type: PropertyType.LIST_TEXT, 
-                    params: {},
+                    name: AssetProperty.VERTEX_PROGRAM,
+                    title: 'Vertex Program',
+                    type: PropertyType.LIST_TEXT,
+                    params: generateVertexProgramOptions(),
                     onSave: saveMaterialVertexProgram,
                     onUpdate: updateMaterialVertexProgram
                 },
                 {
-                    name: AssetProperty.FRAGMENT_PROGRAM, 
-                    title: 'Fragment Program', 
-                    type: PropertyType.LIST_TEXT, 
-                    params: {},
+                    name: AssetProperty.FRAGMENT_PROGRAM,
+                    title: 'Fragment Program',
+                    type: PropertyType.LIST_TEXT,
+                    params: generateFragmentProgramOptions(),
                     onSave: saveMaterialFragmentProgram,
                     onUpdate: updateMaterialFragmentProgram
-                }, 
+                },
                 {
                     name: AssetProperty.TRANSPARENT,
                     title: 'Transparent',
-                    type: PropertyType.BOOLEAN
+                    type: PropertyType.BOOLEAN,
+                    onSave: saveMaterialTransparent,
+                    onUpdate: updateMaterialTransparent
                 }
             ]
         },
@@ -109,7 +117,7 @@ function AssetInspectorCreate() {
                     name: AssetProperty.UNIFORM_SAMPLER2D,
                     title: 'Sampler2D',
                     type: PropertyType.LIST_TEXTURES,
-                    params: generateTextureOptions(),
+                    params: generateTextureOptions(true),
                     onSave: saveUniformSampler2D,
                     onUpdate: updateUniformSampler2D
                 },
@@ -122,7 +130,7 @@ function AssetInspectorCreate() {
                         max: 1,
                         step: 0.01
                     },
-                    onSave: (info: BeforeChangeInfo) => saveUniformFloat(info),
+                    onSave: saveUniformFloat,
                     onUpdate: updateUniformFloat
                 },
                 {
@@ -134,7 +142,7 @@ function AssetInspectorCreate() {
                         max: 1,
                         step: 0.01
                     },
-                    onSave: (info: BeforeChangeInfo) => saveUniformRange(info),
+                    onSave: saveUniformRange,
                     onUpdate: updateUniformRange
                 },
                 {
@@ -157,7 +165,7 @@ function AssetInspectorCreate() {
                         y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
                         z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
                     },
-                    onSave: (info: BeforeChangeInfo) => saveUniformVec3(info),
+                    onSave: saveUniformVec3,
                     onUpdate: updateUniformVec3
                 },
                 {
@@ -170,7 +178,7 @@ function AssetInspectorCreate() {
                         z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
                         w: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
                     },
-                    onSave: (info: BeforeChangeInfo) => saveUniformVec4(info),
+                    onSave: saveUniformVec4,
                     onUpdate: updateUniformVec4
                 },
                 {
@@ -185,7 +193,7 @@ function AssetInspectorCreate() {
     ];
     let _selected_textures: string[] = [];
     let _selected_materials: string[] = [];
-    
+
     function init() {
         subscribe();
     }
@@ -221,7 +229,7 @@ function AssetInspectorCreate() {
         const data = _selected_textures.map((path, id) => {
             const result = { id, data: [] as PropertyData<PropertyType>[] };
 
-            const texture_name = get_file_name(get_basename(path));
+            const texture_name = get_file_name(path);
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
 
             if (atlas == null) {
@@ -248,21 +256,25 @@ function AssetInspectorCreate() {
         Inspector.clear();
         Inspector.setData(data, _config);
     }
-    
+
     function set_selected_materials(materials_paths: string[]) {
         _selected_materials = materials_paths;
-        
+
+        // NOTE: обновляем конфиг шейдеров
+        update_option(_config, AssetProperty.VERTEX_PROGRAM, generateVertexProgramOptions);
+        update_option(_config, AssetProperty.FRAGMENT_PROGRAM, generateFragmentProgramOptions);
+
         // NOTE: обновляем конфиг текстур для sampler2d полeй
-        update_option(_config, AssetProperty.UNIFORM_SAMPLER2D, generateTextureOptions);
+        update_option(_config, AssetProperty.UNIFORM_SAMPLER2D, () => generateTextureOptions(true));
 
         const data = _selected_materials.map((path, id) => {
-            const result = {id, data: [] as PropertyData<PropertyType>[]}; 
+            const result = { id, data: [] as PropertyData<PropertyType>[] };
 
-            const material_name = get_file_name(get_basename(path));
+            const material_name = get_file_name(path);
             const material = ResourceManager.get_material(material_name);
 
-            result.data.push({ name: AssetProperty.VERTEX_PROGRAM, data: material.data.vertexShader });
-            result.data.push({ name: AssetProperty.FRAGMENT_PROGRAM, data: material.data.fragmentShader });
+            result.data.push({ name: AssetProperty.VERTEX_PROGRAM, data: get_file_name(material.vertexShader) });
+            result.data.push({ name: AssetProperty.FRAGMENT_PROGRAM, data: get_file_name(material.fragmentShader) });
             result.data.push({ name: AssetProperty.TRANSPARENT, data: material.data.transparent });
 
             Object.entries(material.uniforms).forEach(([key, value]) => {
@@ -271,12 +283,16 @@ function AssetInspectorCreate() {
                         _config.forEach((group) => {
                             const property = group.property_list.find((property) => property.name == AssetProperty.UNIFORM_SAMPLER2D);
                             if (!property) return;
-                            property.title = key;
-                            property.readonly = value.readonly;
+                            const newProperty = { ...property };
+                            newProperty.name = key;
+                            newProperty.title = key;
+                            newProperty.readonly = value.readonly;
+                            group.property_list.push(newProperty);
                         });
                         const texture = material.data.uniforms[key] as IUniform<Texture>;
-                        const texture_name = get_file_name(get_basename((texture.value as any).path || ''));
-                        result.data.push({ name: AssetProperty.UNIFORM_SAMPLER2D, data: texture_name });
+                        const texture_name = get_file_name((texture.value as any).path || '');
+                        const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+                        result.data.push({ name: key, data: `${atlas}/${texture_name}` });
                         break;
                     case MaterialUniformType.FLOAT:
                         _config.forEach((group) => {
@@ -328,16 +344,18 @@ function AssetInspectorCreate() {
                             newProperty.title = key;
                             newProperty.readonly = value.readonly;
                             const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.VEC2];
+                            const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_2];
+
                             newProperty.params = {
                                 x: {
-                                    min: params.x.min,
-                                    max: params.x.max,
-                                    step: params.x.step
+                                    min: params?.x?.min ?? defaultParams?.x?.min,
+                                    max: params?.x?.max ?? defaultParams?.x?.max,
+                                    step: params?.x?.step ?? defaultParams?.x?.step
                                 },
                                 y: {
-                                    min: params.y.min,
-                                    max: params.y.max,
-                                    step: params.y.step
+                                    min: params?.y?.min ?? defaultParams?.y?.min,
+                                    max: params?.y?.max ?? defaultParams?.y?.max,
+                                    step: params?.y?.step ?? defaultParams?.y?.step
                                 }
                             };
                             group.property_list.push(newProperty);
@@ -355,21 +373,22 @@ function AssetInspectorCreate() {
                             newProperty.title = key;
                             newProperty.readonly = value.readonly;
                             const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.VEC3];
+                            const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_3];
                             newProperty.params = {
                                 x: {
-                                    min: params.x.min,
-                                    max: params.x.max,
-                                    step: params.x.step
+                                    min: params?.x?.min ?? defaultParams?.x?.min,
+                                    max: params?.x?.max ?? defaultParams?.x?.max,
+                                    step: params?.x?.step ?? defaultParams?.x?.step
                                 },
                                 y: {
-                                    min: params.y.min,
-                                    max: params.y.max,
-                                    step: params.y.step
+                                    min: params?.y?.min ?? defaultParams?.y?.min,
+                                    max: params?.y?.max ?? defaultParams?.y?.max,
+                                    step: params?.y?.step ?? defaultParams?.y?.step
                                 },
                                 z: {
-                                    min: params.z.min,
-                                    max: params.z.max,
-                                    step: params.z.step
+                                    min: params?.z?.min ?? defaultParams?.z?.min,
+                                    max: params?.z?.max ?? defaultParams?.z?.max,
+                                    step: params?.z?.step ?? defaultParams?.z?.step
                                 }
                             };
                             group.property_list.push(newProperty);
@@ -387,26 +406,28 @@ function AssetInspectorCreate() {
                             newProperty.title = key;
                             newProperty.readonly = value.readonly;
                             const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.VEC4];
+                            const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_4];
+
                             newProperty.params = {
                                 x: {
-                                    min: params.x.min,
-                                    max: params.x.max,
-                                    step: params.x.step
+                                    min: params?.x?.min ?? defaultParams?.x?.min,
+                                    max: params?.x?.max ?? defaultParams?.x?.max,
+                                    step: params?.x?.step ?? defaultParams?.x?.step
                                 },
                                 y: {
-                                    min: params.y.min,
-                                    max: params.y.max,
-                                    step: params.y.step
+                                    min: params?.y?.min ?? defaultParams?.y?.min,
+                                    max: params?.y?.max ?? defaultParams?.y?.max,
+                                    step: params?.y?.step ?? defaultParams?.y?.step
                                 },
                                 z: {
-                                    min: params.z.min,
-                                    max: params.z.max,
-                                    step: params.z.step
+                                    min: params?.z?.min ?? defaultParams?.z?.min,
+                                    max: params?.z?.max ?? defaultParams?.z?.max,
+                                    step: params?.z?.step ?? defaultParams?.z?.step
                                 },
                                 w: {
-                                    min: params.w.min,
-                                    max: params.w.max,
-                                    step: params.w.step
+                                    min: params?.w?.min ?? defaultParams?.w?.min,
+                                    max: params?.w?.max ?? defaultParams?.w?.max,
+                                    step: params?.w?.step ?? defaultParams?.w?.step
                                 }
                             };
                             group.property_list.push(newProperty);
@@ -425,8 +446,8 @@ function AssetInspectorCreate() {
                             newProperty.readonly = value.readonly;
                             group.property_list.push(newProperty);
                         });
-                        const color = material.data.uniforms[key] as IUniform<string>;
-                        result.data.push({ name: key, data: color.value });
+                        const color = material.data.uniforms[key] as IUniform<Vector3>;
+                        result.data.push({ name: key, data: rgbToHex(color.value) });
                         break;
                 }
             });
@@ -447,7 +468,7 @@ function AssetInspectorCreate() {
                 return;
             }
 
-            const texture_name = get_file_name(get_basename(texture_path));
+            const texture_name = get_file_name(texture_path);
             const oldAtlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             atlases.push({ texture_path, atlas: oldAtlas ? oldAtlas : '' });
         });
@@ -465,7 +486,7 @@ function AssetInspectorCreate() {
                 return;
             }
 
-            const texture_name = get_file_name(get_basename(texture_path));
+            const texture_name = get_file_name(texture_path);
             const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
             ResourceManager.override_atlas_texture(old_atlas, atlas, texture_name);
 
@@ -496,7 +517,7 @@ function AssetInspectorCreate() {
                 return;
             }
 
-            const texture_name = get_file_name(get_basename(texture_path));
+            const texture_name = get_file_name(texture_path);
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Log.error('[saveMinFilter] Atlas not found for texture:', texture_name);
@@ -521,7 +542,7 @@ function AssetInspectorCreate() {
                 return;
             }
 
-            const texture_name = get_file_name(get_basename(texture_path));
+            const texture_name = get_file_name(texture_path);
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Log.error('[updateMinFilter] Atlas not found for texture:', texture_name);
@@ -546,7 +567,7 @@ function AssetInspectorCreate() {
                 return;
             }
 
-            const texture_name = get_file_name(get_basename(texture_path));
+            const texture_name = get_file_name(texture_path);
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Log.error('[saveMagFilter] Atlas not found for texture:', texture_name);
@@ -571,7 +592,7 @@ function AssetInspectorCreate() {
                 return;
             }
 
-            const texture_name = get_file_name(get_basename(texture_path));
+            const texture_name = get_file_name(texture_path);
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Log.error('[updateMagFilter] Atlas not found for texture:', texture_name);
@@ -591,7 +612,7 @@ function AssetInspectorCreate() {
         const vertexPrograms: { material_path: string, program: string }[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
+            const name = get_file_name(path);
             const material = ResourceManager.get_material(name);
             if (!material) return;
             vertexPrograms.push({
@@ -602,20 +623,31 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_VERTEX_PROGRAM', vertexPrograms);
     }
 
-    function updateMaterialVertexProgram(info: ChangeInfo) {
+    async function updateMaterialVertexProgram(info: ChangeInfo) {
         const program = info.data.event.value as string;
-        info.ids.forEach((id) => {
+        const program_path = ResourceManager.get_vertex_program_path(program);
+        info.ids.forEach(async (id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
-            const material = ResourceManager.get_material(name);
-            if (!material) return;
-            material.data.vertexShader = program;
-            material.data.needsUpdate = true;
+            const get_response = await AssetControl.get_file_data(path);
+            if (get_response.result != 1) {
+                Log.error('[updateMaterialVertexProgram]:', get_response.error_code, get_response.message);
+                return;
+            }
+            const material_data = JSON.parse(get_response.data!);
+            material_data.vertexShader = program_path;
+
             EventBus.trigger('MATERIAL_CHANGED', {
-                material_name: material.name,
+                material_name: get_file_name(path),
+                is_uniform: false,
                 property: 'vertexShader',
-                value: program
+                value: program_path
             });
+
+            const save_response = await AssetControl.save_file_data(path, JSON.stringify(material_data));
+            if (save_response.result != 1) {
+                Log.error('[updateMaterialVertexProgram]:', save_response.error_code, save_response.message);
+                return;
+            }
         });
     }
 
@@ -623,7 +655,7 @@ function AssetInspectorCreate() {
         const fragmentPrograms: { material_path: string, program: string }[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
+            const name = get_file_name(path);
             const material = ResourceManager.get_material(name);
             if (!material) return;
             fragmentPrograms.push({
@@ -633,21 +665,32 @@ function AssetInspectorCreate() {
         });
         HistoryControl.add('MATERIAL_FRAGMENT_PROGRAM', fragmentPrograms);
     }
-    
-    function updateMaterialFragmentProgram(info: ChangeInfo) {
+
+    async function updateMaterialFragmentProgram(info: ChangeInfo) {
         const program = info.data.event.value as string;
-        info.ids.forEach((id) => {
+        const program_path = ResourceManager.get_fragment_program_path(program);
+        info.ids.forEach(async (id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
-            const material = ResourceManager.get_material(name);
-            if (!material) return;
-            material.data.fragmentShader = program;
-            material.data.needsUpdate = true;
+            const get_response = await AssetControl.get_file_data(path);
+            if (get_response.result != 1) {
+                Log.error('[updateMaterialFragmentProgram]:', get_response.error_code, get_response.message);
+                return;
+            }
+            const material_data = JSON.parse(get_response.data!);
+            material_data.fragmentShader = program_path;
+
             EventBus.trigger('MATERIAL_CHANGED', {
-                material_name: material.name,
+                material_name: get_file_name(path),
+                is_uniform: false,
                 property: 'fragmentShader',
-                value: program
+                value: program_path
             });
+
+            const save_response = await AssetControl.save_file_data(path, JSON.stringify(material_data));
+            if (save_response.result != 1) {
+                Log.error('[updateMaterialFragmentProgram]:', save_response.error_code, save_response.message);
+                return;
+            }
         });
     }
 
@@ -655,7 +698,7 @@ function AssetInspectorCreate() {
         const sampler2Ds: { material_path: string, uniform_name: string, value: string }[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
+            const name = get_file_name(path);
             const material = ResourceManager.get_material(name);
             if (!material) return;
             const uniform = material.data.uniforms[info.field.name];
@@ -670,21 +713,32 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_SAMPLER2D', sampler2Ds);
     }
 
-    function updateUniformSampler2D(info: ChangeInfo) {
-        const atlas = (info.data.event.value as string).split('/')[0];
-        const texture = (info.data.event.value as string).split('/')[1];
-        info.ids.forEach((id) => {
+    async function updateUniformSampler2D(info: ChangeInfo) {
+        info.ids.forEach(async (id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
-            const material = ResourceManager.get_material(name);
-            if (!material) return;
-            material.data.uniforms[info.data.field.name].value = ResourceManager.get_texture(texture || '', atlas || '').texture;
-            material.data.needsUpdate = true;
+            const get_response = await AssetControl.get_file_data(path);
+            if (get_response.result != 1) {
+                Log.error('[updateUniformSampler2D]:', get_response.error_code, get_response.message);
+                return;
+            }
+
+            const material_data = JSON.parse(get_response.data!);
+            material_data.data[info.data.field.name] = rgbToHex(info.data.event.value as Vector3);
+
+            const atlas = (info.data.event.value as string).split('/')[0];
+            const texture = (info.data.event.value as string).split('/')[1];
             EventBus.trigger('MATERIAL_CHANGED', {
-                material_name: material.name,
+                material_name: get_file_name(path),
+                is_uniform: true,
                 property: info.data.field.name,
-                value: info.data.event.value
+                value: ResourceManager.get_texture(texture || '', atlas || '').texture
             });
+
+            const save_response = await AssetControl.save_file_data(path, JSON.stringify(material_data));
+            if (save_response.result != 1) {
+                Log.error('[updateUniformSampler2D]:', save_response.error_code, save_response.message);
+                return;
+            }
         });
     }
 
@@ -692,7 +746,7 @@ function AssetInspectorCreate() {
         const floats: { material_path: string, uniform_name: string, value: number }[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
+            const name = get_file_name(path);
             const material = ResourceManager.get_material(name);
             if (!material) return;
             const uniform = material.data.uniforms[info.field.name];
@@ -707,19 +761,29 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_FLOAT', floats);
     }
 
-    function updateUniformFloat(info: ChangeInfo) {
-        info.ids.forEach((id) => {
+    async function updateUniformFloat(info: ChangeInfo) {
+        info.ids.forEach(async (id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
-            const material = ResourceManager.get_material(name);
-            if (!material) return;
-            material.data.uniforms[info.data.field.name] = { value: info.data.event.value } as IUniform<number>;
-            material.data.needsUpdate = true;
+            const get_response = await AssetControl.get_file_data(path);
+            if (get_response.result != 1) {
+                Log.error('[updateUniformFloat]:', get_response.error_code, get_response.message);
+                return;
+            }
+            const material_data = JSON.parse(get_response.data!);
+            material_data.data[info.data.field.name] = Math.min(Math.max(info.data.event.value as number, 0), 100);
+
             EventBus.trigger('MATERIAL_CHANGED', {
-                material_name: material.name,
+                material_name: get_file_name(path),
+                is_uniform: true,
                 property: info.data.field.name,
                 value: info.data.event.value
             });
+
+            const save_response = await AssetControl.save_file_data(path, JSON.stringify(material_data));
+            if (save_response.result != 1) {
+                Log.error('[updateUniformFloat]:', save_response.error_code, save_response.message);
+                return;
+            }
         });
     }
 
@@ -727,7 +791,7 @@ function AssetInspectorCreate() {
         const ranges: { material_path: string, uniform_name: string, value: number }[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
+            const name = get_file_name(path);
             const material = ResourceManager.get_material(name);
             if (!material) return;
             const uniform = material.data.uniforms[info.field.name];
@@ -742,19 +806,29 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_RANGE', ranges);
     }
 
-    function updateUniformRange(info: ChangeInfo) {
-        info.ids.forEach((id) => {
+    async function updateUniformRange(info: ChangeInfo) {
+        info.ids.forEach(async (id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
-            const material = ResourceManager.get_material(name);
-            if (!material) return;
-            material.data.uniforms[info.data.field.name] = info.data.event.value as IUniform<number>;
-            material.data.needsUpdate = true;
+            const get_response = await AssetControl.get_file_data(path);
+            if (get_response.result != 1) {
+                Log.error('[updateUniformRange]:', get_response.error_code, get_response.message);
+                return;
+            }
+            const material_data = JSON.parse(get_response.data!);
+            material_data.data[info.data.field.name] = info.data.event.value;
+
             EventBus.trigger('MATERIAL_CHANGED', {
-                material_name: material.name,
+                material_name: get_file_name(path),
+                is_uniform: true,
                 property: info.data.field.name,
                 value: info.data.event.value
             });
+
+            const save_response = await AssetControl.save_file_data(path, JSON.stringify(material_data));
+            if (save_response.result != 1) {
+                Log.error('[updateUniformRange]:', save_response.error_code, save_response.message);
+                return;
+            }
         });
     }
 
@@ -762,7 +836,7 @@ function AssetInspectorCreate() {
         const vec2s: { material_path: string, uniform_name: string, value: Vector2 }[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
+            const name = get_file_name(path);
             const material = ResourceManager.get_material(name);
             if (!material) return;
             const uniform = material.data.uniforms[Object.keys(material.data.uniforms).find(key => material.uniforms[key].type === MaterialUniformType.VEC2) || ''];
@@ -777,19 +851,29 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_VEC2', vec2s);
     }
 
-    function updateUniformVec2(info: ChangeInfo) {
-        info.ids.forEach((id) => {
+    async function updateUniformVec2(info: ChangeInfo) {
+        info.ids.forEach(async (id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
-            const material = ResourceManager.get_material(name);
-            if (!material) return;
-            material.data.uniforms[info.data.field.name] = info.data.event.value as IUniform<Vector2>;
-            material.data.needsUpdate = true;
+            const get_response = await AssetControl.get_file_data(path);
+            if (get_response.result != 1) {
+                Log.error('[updateUniformVec2]:', get_response.error_code, get_response.message);
+                return;
+            }
+            const material_data = JSON.parse(get_response.data!);
+            material_data.data[info.data.field.name] = (info.data.event.value as Vector2).toArray();
+
             EventBus.trigger('MATERIAL_CHANGED', {
-                material_name: material.name,
+                material_name: get_file_name(path),
+                is_uniform: true,
                 property: info.data.field.name,
                 value: info.data.event.value
             });
+
+            const save_response = await AssetControl.save_file_data(path, JSON.stringify(material_data));
+            if (save_response.result != 1) {
+                Log.error('[updateUniformVec2]:', save_response.error_code, save_response.message);
+                return;
+            }
         });
     }
 
@@ -797,7 +881,7 @@ function AssetInspectorCreate() {
         const vec3s: { material_path: string, uniform_name: string, value: Vector3 }[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
+            const name = get_file_name(path);
             const material = ResourceManager.get_material(name);
             if (!material) return;
             const uniform = material.data.uniforms[info.field.name];
@@ -812,19 +896,29 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_VEC3', vec3s);
     }
 
-    function updateUniformVec3(info: ChangeInfo) {
-        info.ids.forEach((id) => {
+    async function updateUniformVec3(info: ChangeInfo) {
+        info.ids.forEach(async (id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
-            const material = ResourceManager.get_material(name);
-            if (!material) return;
-            material.data.uniforms[info.data.field.name] = info.data.event.value as IUniform<Vector3>;
-            material.data.needsUpdate = true;
+            const get_response = await AssetControl.get_file_data(path);
+            if (get_response.result != 1) {
+                Log.error('[updateUniformVec3]:', get_response.error_code, get_response.message);
+                return;
+            }
+            const material_data = JSON.parse(get_response.data!);
+            material_data.data[info.data.field.name] = (info.data.event.value as Vector3).toArray();
+
             EventBus.trigger('MATERIAL_CHANGED', {
-                material_name: material.name,
+                material_name: get_file_name(path),
+                is_uniform: true,
                 property: info.data.field.name,
                 value: info.data.event.value
             });
+
+            const save_response = await AssetControl.save_file_data(path, JSON.stringify(material_data));
+            if (save_response.result != 1) {
+                Log.error('[updateUniformVec3]:', save_response.error_code, save_response.message);
+                return;
+            }
         });
     }
 
@@ -832,7 +926,7 @@ function AssetInspectorCreate() {
         const vec4s: { material_path: string, uniform_name: string, value: Vector4 }[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
+            const name = get_file_name(path);
             const material = ResourceManager.get_material(name);
             if (!material) return;
             const uniform = material.data.uniforms[info.field.name];
@@ -847,19 +941,29 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_VEC4', vec4s);
     }
 
-    function updateUniformVec4(info: ChangeInfo) {
-        info.ids.forEach((id) => {
+    async function updateUniformVec4(info: ChangeInfo) {
+        info.ids.forEach(async (id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
-            const material = ResourceManager.get_material(name);
-            if (!material) return;
-            material.data.uniforms[info.data.field.name] = info.data.event.value as IUniform<Vector4>;
-            material.data.needsUpdate = true;
+            const get_response = await AssetControl.get_file_data(path);
+            if (get_response.result != 1) {
+                Log.error('[updateUniformVec4]:', get_response.error_code, get_response.message);
+                return;
+            }
+            const material_data = JSON.parse(get_response.data!);
+            material_data.data[info.data.field.name] = (info.data.event.value as Vector4).toArray();
+
             EventBus.trigger('MATERIAL_CHANGED', {
-                material_name: material.name,
+                material_name: get_file_name(path),
+                is_uniform: true,
                 property: info.data.field.name,
                 value: info.data.event.value
             });
+
+            const save_response = await AssetControl.save_file_data(path, JSON.stringify(material_data));
+            if (save_response.result != 1) {
+                Log.error('[updateUniformVec4]:', save_response.error_code, save_response.message);
+                return;
+            }
         });
     }
 
@@ -867,7 +971,7 @@ function AssetInspectorCreate() {
         const colors: { material_path: string, uniform_name: string, value: string }[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
+            const name = get_file_name(path);
             const material = ResourceManager.get_material(name);
             if (!material) return;
             const uniform = material.data.uniforms[Object.keys(material.data.uniforms).find(key => material.uniforms[key].type === MaterialUniformType.COLOR) || ''];
@@ -884,20 +988,73 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_COLOR', colors);
     }
 
-    function updateUniformColor(info: ChangeInfo) {
+    async function updateUniformColor(info: ChangeInfo) {
+        const color = new Color(info.data.event.value as string);
+        info.ids.forEach(async (id) => {
+            const path = _selected_materials[id];
+            const get_response = await AssetControl.get_file_data(path);
+            if (get_response.result != 1) {
+                Log.error('[updateUniformColor]:', get_response.error_code, get_response.message);
+                return;
+            }
+            const material_data = JSON.parse(get_response.data!);
+
+            material_data.data[info.data.field.name] = color.getHexString();
+
+            EventBus.trigger('MATERIAL_CHANGED', {
+                material_name: get_file_name(path),
+                is_uniform: true,
+                property: info.data.field.name,
+                value: hexToRGB(color.getHexString())
+            });
+
+            const save_response = await AssetControl.save_file_data(path, JSON.stringify(material_data));
+            if (save_response.result != 1) {
+                Log.error('[updateUniformColor]:', save_response.error_code, save_response.message);
+                return;
+            }
+        });
+    }
+
+    function saveMaterialTransparent(info: BeforeChangeInfo) {
+        const transparents: { material_path: string, value: boolean }[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
-            const name = get_file_name(get_basename(path));
+            const name = get_file_name(path);
             const material = ResourceManager.get_material(name);
             if (!material) return;
-            const color = new Color(info.data.event.value as string);
-            material.data.uniforms[info.data.field.name] = { value: new Vector3(color.r, color.g, color.b) } as IUniform<Vector3>;
-            material.data.needsUpdate = true;
-            EventBus.trigger('MATERIAL_CHANGED', {
-                material_name: material.name,
-                property: info.data.field.name,
-                value: info.data.event.value
+            transparents.push({
+                material_path: path,
+                value: material.data.transparent
             });
+        });
+        HistoryControl.add('MATERIAL_TRANSPARENT', transparents);
+    }
+
+    async function updateMaterialTransparent(info: ChangeInfo) {
+        const transparent = info.data.event.value as boolean;
+        info.ids.forEach(async (id) => {
+            const path = _selected_materials[id];
+            const get_response = await AssetControl.get_file_data(path);
+            if (get_response.result != 1) {
+                Log.error('[updateMaterialTransparent]:', get_response.error_code, get_response.message);
+                return;
+            }
+            const material_data = JSON.parse(get_response.data!);
+            material_data.transparent = transparent;
+
+            EventBus.trigger('MATERIAL_CHANGED', {
+                material_name: get_file_name(path),
+                is_uniform: false,
+                property: 'transparent',
+                value: transparent
+            });
+
+            const save_response = await AssetControl.save_file_data(path, JSON.stringify(material_data));
+            if (save_response.result != 1) {
+                Log.error('[updateMaterialTransparent]:', save_response.error_code, save_response.message);
+                return;
+            }
         });
     }
 
@@ -925,4 +1082,22 @@ function convertThreeJSFilterToFilterMode(filter: number): FilterMode {
         default:
             return FilterMode.LINEAR;
     }
+}
+
+function generateVertexProgramOptions() {
+    const vertex_options: { [key: string]: string } = {};
+    const vertex_programs = ResourceManager.get_all_vertex_programs();
+    vertex_programs.forEach((program) => {
+        vertex_options[program] = program;
+    });
+    return vertex_options;
+}
+
+function generateFragmentProgramOptions() {
+    const fragment_options: { [key: string]: string } = {};
+    const fragment_programs = ResourceManager.get_all_fragment_programs();
+    fragment_programs.forEach((program) => {
+        fragment_options[program] = program;
+    });
+    return fragment_options;
 }

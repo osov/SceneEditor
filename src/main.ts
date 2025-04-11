@@ -23,8 +23,9 @@ import { register_flow_map_control } from './controls/FlowMapControl';
 import { run_scene_stereo } from './test_scenes/scene_stereo';
 import { run_scene_inventory } from './test_scenes/scene_inventory';
 import { register_grass_tree_control } from './controls/GrassTreeControl';
-import { register_object_inspector } from './inspectors/ObjectInspector';
+import { register_mesh_inspector } from './inspectors/MeshInspector';
 import { register_asset_inspector } from './inspectors/AssetInspector';
+import { register_mesh_material_inspector } from './inspectors/MeshMaterialInspector';
 
 let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
 
@@ -54,8 +55,9 @@ register_grass_tree_control();
 register_control_manager();
 register_history_control();
 
-register_object_inspector();
+register_mesh_inspector();
 register_asset_inspector();
+register_mesh_material_inspector();
 
 
 const scenes = [

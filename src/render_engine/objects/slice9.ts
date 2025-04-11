@@ -1,7 +1,8 @@
 import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute } from "three";
 import { IBaseParameters, IObjectTypes } from "../types";
-import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
+import { convert_width_height_to_pivot_bb, copy_material, get_file_name, set_pivot_with_sync_pos } from "../helpers/utils";
 import { EntityPlane } from "./entity_plane";
+
 
 // todo optimize material list
 
@@ -77,6 +78,8 @@ interface SerializeData {
     atlas?: string;
     texture?: string;
     alpha?: number;
+    material?: string;
+    material_uniforms?: { [key: string]: any };
 }
 
 export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, slice_width = 0, slice_height = 0) {
@@ -114,6 +117,7 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         0, 0, 1, 1,
         0, 0, 1, 1,
     ]);
+
     geometry.setAttribute("uvData", new BufferAttribute(uvData, 4));
     geometry.setAttribute("color", new BufferAttribute(a_color, 3));
     geometry.setAttribute("sliceData", new BufferAttribute(slice_data, 4));
@@ -133,8 +137,10 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         geometry.attributes['position'].array[10] = bb[3].y;
         geometry.attributes['position'].needsUpdate = true;
         geometry.computeBoundingSphere();
+
         parameters.width = w;
         parameters.height = h;
+
         update_parameters();
     }
 
@@ -143,42 +149,64 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         const u_dimensions_y = parameters.slice_height / parameters.height;
         const u_border_x = parameters.slice_width / parameters.clip_width;
         const u_border_y = parameters.slice_height / parameters.clip_height;
-        for (let i = 0; i < 4; i++)
+        for (let i = 0; i < 4; i++) {
             geometry.attributes['sliceData'].setXYZW(i, u_dimensions_x, u_dimensions_y, u_border_x, u_border_y);
+        }
         geometry.attributes['sliceData'].needsUpdate = true;
+
+        // NOTE: добавляем define если есть slice
         if (parameters.slice_width > 0 || parameters.slice_height > 0) {
             if (material.defines['USE_SLICE'] == undefined) {
                 material.defines['USE_SLICE'] = '';
-                material.needsUpdate = true;
             }
         }
         else {
             if (material.defines['USE_SLICE'] != undefined) {
                 delete material.defines['USE_SLICE'];
-                material.needsUpdate = true;
             }
         }
+
+        // NOTE: добавляем define если есть texture
         if (parameters.texture == '') {
             if (material.defines['USE_TEXTURE'] != undefined) {
                 delete material.defines['USE_TEXTURE'];
-                material.needsUpdate = true;
             }
         }
         else if (material.defines['USE_TEXTURE'] == undefined) {
             material.defines['USE_TEXTURE'] = '';
-            material.needsUpdate = true;
         }
 
         material.needsUpdate = true;
     }
 
+    function set_material(new_material: ShaderMaterial) {
+        material = new_material;
+
+        // NOTE: если нету текстуры, то устанавливаем из только что установленного материала
+        if (parameters.texture == '') {
+            const texture_path = material.uniforms['u_texture'].value.path;
+            const texture_name = get_file_name(texture_path);
+            const texture_atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            set_texture(texture_name, texture_atlas || '');
+        } else {
+            set_texture(parameters.texture, parameters.atlas);
+        }
+    }
+
+    function get_material() {
+        return material;
+    }
 
     function set_texture(name: string, atlas = '') {
         parameters.texture = name;
         parameters.atlas = atlas;
+
         if (name != '') {
             const texture_data = ResourceManager.get_texture(name, atlas);
             material.uniforms['u_texture'].value = texture_data.texture;
+            if (material.userData.changed_uniforms && !material.userData.changed_uniforms.includes('u_texture')) {
+                material.userData.changed_uniforms.push('u_texture');
+            }
             parameters.clip_width = texture_data.size.x;
             parameters.clip_height = texture_data.size.y;
             for (let i = 0; i < 4; i++) {
@@ -251,6 +279,18 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
             data.atlas = parameters.atlas;
         }
 
+        // Serialize material name and modified uniforms
+        data.material = material.name;
+        if (material.userData.changed_uniforms && material.userData.changed_uniforms.length > 0) {
+            const modifiedUniforms: { [key: string]: any } = {};
+            for (const uniformName of material.userData.changed_uniforms) {
+                if (material.uniforms[uniformName]) {
+                    modifiedUniforms[uniformName] = material.uniforms[uniformName].value;
+                }
+            }
+            data.material_uniforms = modifiedUniforms;
+        }
+
         return data;
     }
 
@@ -269,10 +309,27 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         if (data.texture !== undefined || data.atlas !== undefined) {
             set_texture(data.texture || '', data.atlas || '');
         }
+
+        // Deserialize material and its uniforms
+        if (data.material) {
+            const newMaterial = copy_material(ResourceManager.get_material(data.material).data);
+            set_material(newMaterial);
+
+            // Apply modified uniforms if any
+            if (data.material_uniforms) {
+                for (const [key, value] of Object.entries(data.material_uniforms)) {
+                    if (material.uniforms[key]) {
+                        material.userData.changed_uniforms.push(key);
+                        material.uniforms[key].value = value;
+                    }
+                }
+            }
+        }
+
         update_parameters();
     }
 
-    return { set_size, set_slice, set_color, set_texture, get_bounds, set_pivot, set_anchor, serialize, deserialize, geometry, parameters };
+    return { set_size, set_slice, set_color, set_material, get_material, set_texture, get_bounds, set_pivot, set_anchor, serialize, deserialize, geometry, parameters };
 }
 
 
@@ -323,6 +380,10 @@ export class Slice9Mesh extends EntityPlane {
         this.template.set_color(hex_color);
     }
 
+    get_color() {
+        return this.template.parameters.color;
+    }
+
     set_slice(width: number, height: number) {
         this.template.set_slice(width, height);
     }
@@ -335,17 +396,18 @@ export class Slice9Mesh extends EntityPlane {
         return [this.template.parameters.texture, this.template.parameters.atlas];
     }
 
-    set_material(material: ShaderMaterial) {
-        const texture_info = this.get_texture();
-        this.template = CreateSlice9(material, this.template.parameters.width, this.template.parameters.height, this.template.parameters.slice_width, this.template.parameters.slice_height);
-        this.material = material;
-        this.geometry = this.template.geometry;
-        this.set_size(this.template.parameters.width, this.template.parameters.height);
-        this.set_texture(texture_info[0], texture_info[1]);
-    }
-
     set_texture(name: string, atlas = '') {
         this.template.set_texture(name, atlas);
+    }
+
+    set_material(material_name: string) {
+        const material = copy_material(ResourceManager.get_material(material_name).data);
+        this.template.set_material(material);
+        this.material = material;
+    }
+
+    get_material() {
+        return this.template.get_material();
     }
 
     get_bounds() {
@@ -354,10 +416,6 @@ export class Slice9Mesh extends EntityPlane {
         this.getWorldPosition(wp);
         this.getWorldScale(ws);
         return this.template.get_bounds(wp, ws);
-    }
-
-    get_color() {
-        return this.template.parameters.color;
     }
 
     set_pivot(x: number, y: number, is_sync = false) {
@@ -406,4 +464,4 @@ export class Slice9Mesh extends EntityPlane {
             this.set_alpha(data.alpha);
         }
     }
-}   
+}

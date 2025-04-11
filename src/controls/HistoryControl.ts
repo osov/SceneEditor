@@ -1,4 +1,4 @@
-import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData, MeshAtlasEventData, TextureAtlasEventData, MaterialVertexProgramEventData, MaterialFragmentProgramEventData, MaterialSampler2DEventData, MaterialFloatEventData, MaterialRangeEventData, MaterialVec2EventData, MaterialVec3EventData, MaterialVec4EventData, MaterialColorEventData } from "./types";
+import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, MeshMoveEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData, MeshAtlasEventData, TextureAtlasEventData, MaterialVertexProgramEventData, MaterialFragmentProgramEventData, MaterialSampler2DEventData, MaterialFloatEventData, MaterialRangeEventData, MaterialVec2EventData, MaterialVec3EventData, MaterialVec4EventData, MaterialColorEventData, MaterialTransparentEventData } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { GoSprite } from "../render_engine/objects/sub_types";
 import { get_keys } from "../modules/utils";
@@ -53,6 +53,7 @@ export type HistoryData = {
     MATERIAL_VEC3: MaterialVec3EventData
     MATERIAL_VEC4: MaterialVec4EventData
     MATERIAL_COLOR: MaterialColorEventData
+    MATERIAL_TRANSPARENT: MaterialTransparentEventData
 }
 
 type HistoryDataKeys = keyof HistoryData;
@@ -102,7 +103,9 @@ function HistoryControlCreate() {
         Log.log('WRITE: ', type, data_list);
     }
 
-    function undo() {
+    // TODO: для материалов нужно сделать запись обратно в файл вернувшегося значения
+
+    async function undo() {
         const current_scene_path = AssetControl.get_current_scene().path;
         const ctx_name = (current_scene_path) ? current_scene_path : 'test';
         let ctx = context_data[ctx_name];
@@ -306,7 +309,7 @@ function HistoryControlCreate() {
         } else if (type == 'TEXTURE_MIN_FILTER') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['TEXTURE_MIN_FILTER'];
-                const texture_name = get_file_name(get_basename(data.texture_path));
+                const texture_name = get_file_name(data.texture_path);
                 const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
                 if (atlas == null) {
                     Log.error('Not found atlas by texture: ', texture_name);
@@ -321,7 +324,7 @@ function HistoryControlCreate() {
         } else if (type == 'TEXTURE_MAG_FILTER') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['TEXTURE_MAG_FILTER'];
-                const texture_name = get_file_name(get_basename(data.texture_path));
+                const texture_name = get_file_name(data.texture_path);
                 const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
                 if (atlas == null) {
                     Log.error('Not found atlas by texture: ', texture_name);
@@ -347,18 +350,13 @@ function HistoryControlCreate() {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MESH_MATERIAL'];
                 const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
-                const material = ResourceManager.get_material(data.material);
-                if (material == undefined) {
-                    Log.error('Not found material: ', data.material);
-                    continue;
-                }
-                (mesh as Slice9Mesh).set_material(material.data);
+                (mesh as Slice9Mesh).set_material(data.material_name);
                 list_mesh.push(mesh);
             }
         } else if (type == 'TEXTURE_ATLAS') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['TEXTURE_ATLAS'];
-                const texture_name = get_file_name(get_basename(data.texture_path));
+                const texture_name = get_file_name(data.texture_path);
                 const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
                 ResourceManager.override_atlas_texture(old_atlas || '', data.atlas, texture_name);
                 list_textures.push(data.texture_path);
@@ -366,7 +364,7 @@ function HistoryControlCreate() {
         } else if (type == 'MATERIAL_VERTEX_PROGRAM') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MATERIAL_VERTEX_PROGRAM'];
-                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                const material = ResourceManager.get_material(get_file_name(data.material_path));
                 if (material == undefined) {
                     Log.error('Not found material: ', data.material_path);
                     continue;
@@ -374,11 +372,25 @@ function HistoryControlCreate() {
                 material.data.vertexShader = data.program;
                 material.data.needsUpdate = true;
                 list_materials.push(data.material_path);
+
+                // Update material file
+                const get_response = await AssetControl.get_file_data(data.material_path);
+                if (get_response.result != 1) {
+                    Log.error('[MATERIAL_VERTEX_PROGRAM undo]:', get_response.error_code, get_response.message);
+                    continue;
+                }
+                const material_data = JSON.parse(get_response.data!);
+                material_data.vertexShader = data.program;
+                const save_response = await AssetControl.save_file_data(data.material_path, JSON.stringify(material_data));
+                if (save_response.result != 1) {
+                    Log.error('[MATERIAL_VERTEX_PROGRAM undo]:', save_response.error_code, save_response.message);
+                    continue;
+                }
             }
         } else if (type == 'MATERIAL_FRAGMENT_PROGRAM') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MATERIAL_FRAGMENT_PROGRAM'];
-                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                const material = ResourceManager.get_material(get_file_name(data.material_path));
                 if (material == undefined) {
                     Log.error('Not found material: ', data.material_path);
                     continue;
@@ -386,11 +398,25 @@ function HistoryControlCreate() {
                 material.data.fragmentShader = data.program;
                 material.data.needsUpdate = true;
                 list_materials.push(data.material_path);
+
+                // Update material file
+                const get_response = await AssetControl.get_file_data(data.material_path);
+                if (get_response.result != 1) {
+                    Log.error('[MATERIAL_FRAGMENT_PROGRAM undo]:', get_response.error_code, get_response.message);
+                    continue;
+                }
+                const material_data = JSON.parse(get_response.data!);
+                material_data.fragmentShader = data.program;
+                const save_response = await AssetControl.save_file_data(data.material_path, JSON.stringify(material_data));
+                if (save_response.result != 1) {
+                    Log.error('[MATERIAL_FRAGMENT_PROGRAM undo]:', save_response.error_code, save_response.message);
+                    continue;
+                }
             }
         } else if (type == 'MATERIAL_SAMPLER2D') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MATERIAL_SAMPLER2D'];
-                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                const material = ResourceManager.get_material(get_file_name(data.material_path));
                 if (material == undefined) {
                     Log.error('Not found material: ', data.material_path);
                     continue;
@@ -398,11 +424,25 @@ function HistoryControlCreate() {
                 material.data.uniforms[data.uniform_name].value = ResourceManager.get_texture(data.value, '').texture;
                 material.data.needsUpdate = true;
                 list_materials.push(data.material_path);
+
+                // Update material file
+                const get_response = await AssetControl.get_file_data(data.material_path);
+                if (get_response.result != 1) {
+                    Log.error('[MATERIAL_SAMPLER2D undo]:', get_response.error_code, get_response.message);
+                    continue;
+                }
+                const material_data = JSON.parse(get_response.data!);
+                material_data.data[data.uniform_name] = data.value;
+                const save_response = await AssetControl.save_file_data(data.material_path, JSON.stringify(material_data));
+                if (save_response.result != 1) {
+                    Log.error('[MATERIAL_SAMPLER2D undo]:', save_response.error_code, save_response.message);
+                    continue;
+                }
             }
         } else if (type == 'MATERIAL_FLOAT') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MATERIAL_FLOAT'];
-                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                const material = ResourceManager.get_material(get_file_name(data.material_path));
                 if (material == undefined) {
                     Log.error('Not found material: ', data.material_path);
                     continue;
@@ -410,11 +450,25 @@ function HistoryControlCreate() {
                 material.data.uniforms[data.uniform_name].value = data.value;
                 material.data.needsUpdate = true;
                 list_materials.push(data.material_path);
+
+                // Update material file
+                const get_response = await AssetControl.get_file_data(data.material_path);
+                if (get_response.result != 1) {
+                    Log.error('[MATERIAL_FLOAT undo]:', get_response.error_code, get_response.message);
+                    continue;
+                }
+                const material_data = JSON.parse(get_response.data!);
+                material_data.data[data.uniform_name] = data.value;
+                const save_response = await AssetControl.save_file_data(data.material_path, JSON.stringify(material_data));
+                if (save_response.result != 1) {
+                    Log.error('[MATERIAL_FLOAT undo]:', save_response.error_code, save_response.message);
+                    continue;
+                }
             }
         } else if (type == 'MATERIAL_RANGE') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MATERIAL_RANGE'];
-                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                const material = ResourceManager.get_material(get_file_name(data.material_path));
                 if (material == undefined) {
                     Log.error('Not found material: ', data.material_path);
                     continue;
@@ -422,11 +476,25 @@ function HistoryControlCreate() {
                 material.data.uniforms[data.uniform_name].value = data.value;
                 material.data.needsUpdate = true;
                 list_materials.push(data.material_path);
+
+                // Update material file
+                const get_response = await AssetControl.get_file_data(data.material_path);
+                if (get_response.result != 1) {
+                    Log.error('[MATERIAL_RANGE undo]:', get_response.error_code, get_response.message);
+                    continue;
+                }
+                const material_data = JSON.parse(get_response.data!);
+                material_data.data[data.uniform_name] = data.value;
+                const save_response = await AssetControl.save_file_data(data.material_path, JSON.stringify(material_data));
+                if (save_response.result != 1) {
+                    Log.error('[MATERIAL_RANGE undo]:', save_response.error_code, save_response.message);
+                    continue;
+                }
             }
         } else if (type == 'MATERIAL_VEC2') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MATERIAL_VEC2'];
-                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                const material = ResourceManager.get_material(get_file_name(data.material_path));
                 if (material == undefined) {
                     Log.error('Not found material: ', data.material_path);
                     continue;
@@ -434,11 +502,25 @@ function HistoryControlCreate() {
                 material.data.uniforms[data.uniform_name].value = data.value;
                 material.data.needsUpdate = true;
                 list_materials.push(data.material_path);
+
+                // Update material file
+                const get_response = await AssetControl.get_file_data(data.material_path);
+                if (get_response.result != 1) {
+                    Log.error('[MATERIAL_VEC2 undo]:', get_response.error_code, get_response.message);
+                    continue;
+                }
+                const material_data = JSON.parse(get_response.data!);
+                material_data.data[data.uniform_name] = data.value;
+                const save_response = await AssetControl.save_file_data(data.material_path, JSON.stringify(material_data));
+                if (save_response.result != 1) {
+                    Log.error('[MATERIAL_VEC2 undo]:', save_response.error_code, save_response.message);
+                    continue;
+                }
             }
         } else if (type == 'MATERIAL_VEC3') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MATERIAL_VEC3'];
-                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                const material = ResourceManager.get_material(data.material_path);
                 if (material == undefined) {
                     Log.error('Not found material: ', data.material_path);
                     continue;
@@ -446,11 +528,25 @@ function HistoryControlCreate() {
                 material.data.uniforms[data.uniform_name].value = data.value;
                 material.data.needsUpdate = true;
                 list_materials.push(data.material_path);
+
+                // Update material file
+                const get_response = await AssetControl.get_file_data(data.material_path);
+                if (get_response.result != 1) {
+                    Log.error('[MATERIAL_VEC3 undo]:', get_response.error_code, get_response.message);
+                    continue;
+                }
+                const material_data = JSON.parse(get_response.data!);
+                material_data.data[data.uniform_name] = data.value;
+                const save_response = await AssetControl.save_file_data(data.material_path, JSON.stringify(material_data));
+                if (save_response.result != 1) {
+                    Log.error('[MATERIAL_VEC3 undo]:', save_response.error_code, save_response.message);
+                    continue;
+                }
             }
         } else if (type == 'MATERIAL_VEC4') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MATERIAL_VEC4'];
-                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                const material = ResourceManager.get_material(data.material_path);
                 if (material == undefined) {
                     Log.error('Not found material: ', data.material_path);
                     continue;
@@ -458,11 +554,25 @@ function HistoryControlCreate() {
                 material.data.uniforms[data.uniform_name].value = data.value;
                 material.data.needsUpdate = true;
                 list_materials.push(data.material_path);
+
+                // Update material file
+                const get_response = await AssetControl.get_file_data(data.material_path);
+                if (get_response.result != 1) {
+                    Log.error('[MATERIAL_VEC4 undo]:', get_response.error_code, get_response.message);
+                    continue;
+                }
+                const material_data = JSON.parse(get_response.data!);
+                material_data.data[data.uniform_name] = data.value;
+                const save_response = await AssetControl.save_file_data(data.material_path, JSON.stringify(material_data));
+                if (save_response.result != 1) {
+                    Log.error('[MATERIAL_VEC4 undo]:', save_response.error_code, save_response.message);
+                    continue;
+                }
             }
         } else if (type == 'MATERIAL_COLOR') {
             for (let i = 0; i < last.data.length; i++) {
                 const data = last.data[i] as HistoryData['MATERIAL_COLOR'];
-                const material = ResourceManager.get_material(get_file_name(get_basename(data.material_path)));
+                const material = ResourceManager.get_material(data.material_path);
                 if (material == undefined) {
                     Log.error('Not found material: ', data.material_path);
                     continue;
@@ -471,6 +581,46 @@ function HistoryControlCreate() {
                 material.data.uniforms[data.uniform_name].value = new Vector3(color.r, color.g, color.b);
                 material.data.needsUpdate = true;
                 list_materials.push(data.material_path);
+
+                // Update material file
+                const get_response = await AssetControl.get_file_data(data.material_path);
+                if (get_response.result != 1) {
+                    Log.error('[MATERIAL_COLOR undo]:', get_response.error_code, get_response.message);
+                    continue;
+                }
+                const material_data = JSON.parse(get_response.data!);
+                material_data.data[data.uniform_name] = data.value;
+                const save_response = await AssetControl.save_file_data(data.material_path, JSON.stringify(material_data));
+                if (save_response.result != 1) {
+                    Log.error('[MATERIAL_COLOR undo]:', save_response.error_code, save_response.message);
+                    continue;
+                }
+            }
+        } else if (type == 'MATERIAL_TRANSPARENT') {
+            for (let i = 0; i < last.data.length; i++) {
+                const data = last.data[i] as HistoryData['MATERIAL_TRANSPARENT'];
+                const material = ResourceManager.get_material(data.material_path);
+                if (material == undefined) {
+                    Log.error('Not found material: ', data.material_path);
+                    continue;
+                }
+                material.data.transparent = data.value;
+                material.data.needsUpdate = true;
+                list_materials.push(data.material_path);
+
+                // Update material file
+                const get_response = await AssetControl.get_file_data(data.material_path);
+                if (get_response.result != 1) {
+                    Log.error('[MATERIAL_TRANSPARENT undo]:', get_response.error_code, get_response.message);
+                    continue;
+                }
+                const material_data = JSON.parse(get_response.data!);
+                material_data.transparent = data.value;
+                const save_response = await AssetControl.save_file_data(data.material_path, JSON.stringify(material_data));
+                if (save_response.result != 1) {
+                    Log.error('[MATERIAL_TRANSPARENT undo]:', save_response.error_code, save_response.message);
+                    continue;
+                }
             }
         }
         if (list_mesh.length > 0) {

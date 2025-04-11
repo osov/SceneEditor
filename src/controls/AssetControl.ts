@@ -99,6 +99,16 @@ function AssetControlCreate() {
                     return ResourceManager.preload_atlas("/" + paths.atlas, "/" + paths.texture);
                 }
             }
+            else if (key == "vertex_programs") {
+                func = (path: string) => {
+                    return ResourceManager.track_vertex_program("/" + path);
+                }
+            }
+            else if (key == "fragment_programs") {
+                func = (path: string) => {
+                    return ResourceManager.track_fragment_program("/" + path);
+                }
+            }
             else func = async () => { };
             if (func != undefined) {
                 for (const path of paths) {
@@ -242,9 +252,22 @@ function AssetControlCreate() {
                 const data = ResourceManager.get_all_textures().find((info) => {
                     return (info.data.texture as any).path == `${SERVER_URL}${URL_PATHS.ASSETS}/${path}`;
                 });
-                event.dataTransfer.setData("text/plain", `${data?.atlas}/${data?.name}`);
+                event.dataTransfer.setData("text/plain", `${data?.name}`);
                 event.dataTransfer.setData("textureSize", `${data?.data?.size?.x}x${data?.data?.size?.y}`);
                 event.dataTransfer.setData("asset_type", ASSET_TEXTURE);
+                event.dataTransfer.setData("path", path);
+            });
+        });
+        const material_files = document.querySelectorAll<HTMLElement>(`[data-type=${ASSET_MATERIAL}]`);
+        material_files.forEach((file) => {
+            file.addEventListener("dragstart", (event: DragEvent) => {
+                if (!event.dataTransfer)
+                    return;
+                event.dataTransfer.clearData();
+                const path = file.getAttribute("data-path") || '';
+                const name = get_file_name(path);
+                event.dataTransfer.setData("text/plain", `${name}`);
+                event.dataTransfer.setData("asset_type", ASSET_MATERIAL);
                 event.dataTransfer.setData("path", path);
             });
         });

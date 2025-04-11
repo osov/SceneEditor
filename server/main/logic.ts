@@ -1,23 +1,30 @@
 
 import path from "path";
 import { PATH_PARAM_NAME, ERROR_TEXT, NAME_PARAM_NAME, PROJECT_PARAM_NAME, DATA_PARAM_NAME, NEW_PATH_PARAM_NAME } from "./const";
-import { exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, read_dir_assets, 
-    rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir, open_explorer } from "./fs_utils";
-import { ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD, 
-    SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD, 
-    MOVE_CMD, SET_CURRENT_SCENE_CMD, SCENE_EXT, OPEN_EXPLORER_CMD, allowed_ext, texture_ext, FSObject, ProjectPathsData, model_ext, 
+import {
+    exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, read_dir_assets,
+    rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir, open_explorer
+} from "./fs_utils";
+import {
+    ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD,
+    SAVE_DATA_CMD, GET_INFO_CMD, SAVE_INFO_CMD, GET_FOLDER_CMD, NEW_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, GET_PROJECTS_CMD,
+    MOVE_CMD, SET_CURRENT_SCENE_CMD, SCENE_EXT, OPEN_EXPLORER_CMD, allowed_ext, texture_ext, FSObject, ProjectPathsData, model_ext,
     FONT_EXT, ATLAS_EXT, LoadAtlasData,
     GET_SERVER_DATA_CMD,
-    MATERIAL_EXT} from "../../src/modules_editor/modules_editor_const";
+    MATERIAL_EXT,
+    VERTEX_PROGRAM_EXT,
+    FRAGMENT_PROGRAM_EXT
+} from "../../src/modules_editor/modules_editor_const";
 import { PromiseChains } from "./PromiseChains";
+import { log } from "console";
 
 
 const project_name_required_commands = [
-    LOAD_PROJECT_CMD, 
-    NEW_PROJECT_CMD, 
+    LOAD_PROJECT_CMD,
+    NEW_PROJECT_CMD,
 ];
 const project_exists_required_commands = [
-    LOAD_PROJECT_CMD, 
+    LOAD_PROJECT_CMD,
 ];
 
 const loaded_project_required_commands = [
@@ -38,20 +45,20 @@ const loaded_project_required_commands = [
 export function Logic(use_queues: boolean) {
     const _write = (use_queues) ? PromiseChains(Bun.write).push : Bun.write;
 
-    async function handle_command<T extends CommandId>(cmd_id: T, params: ServerCommands[T] | {current_project? : string}) {
-        log('cmd_id:', cmd_id); 
+    async function handle_command<T extends CommandId>(cmd_id: T, params: ServerCommands[T] | { current_project?: string }) {
+        log('cmd_id:', cmd_id);
 
         const err_resp = await project_name_required(cmd_id, params);
         if (err_resp) return err_resp;
 
         if (loaded_project_required_commands.includes(cmd_id) && !current.project)
-            return {message: ERROR_TEXT.PROJECT_NOT_LOADED, result: 0};
-        
+            return { message: ERROR_TEXT.PROJECT_NOT_LOADED, result: 0 };
+
         const project = current.project as string;
-     
+
         async function on_get_server_data() {
-            const response: ServerResponses[typeof GET_SERVER_DATA_CMD] = {data: current, result: 1};
-            return response;    
+            const response: ServerResponses[typeof GET_SERVER_DATA_CMD] = { data: current, result: 1 };
+            return response;
         }
 
         async function on_get_projects() {
@@ -62,10 +69,10 @@ export function Logic(use_queues: boolean) {
                 if (await exists(assets_folder_path) && await is_folder(assets_folder_path))
                     projects_list.push(proj.name)
             }
-            const response: ServerResponses[typeof GET_PROJECTS_CMD] = {data: projects_list, result: 1};
-            return response;    
+            const response: ServerResponses[typeof GET_PROJECTS_CMD] = { data: projects_list, result: 1 };
+            return response;
         }
-        
+
         async function on_load_project(cmd: ServerCommands[typeof LOAD_PROJECT_CMD]): Promise<ServerResponses[typeof LOAD_PROJECT_CMD]> {
             const assets_folder_path = get_assets_folder_path(cmd.project);
             const root_folder_assets = await read_dir_assets(assets_folder_path);
@@ -74,22 +81,22 @@ export function Logic(use_queues: boolean) {
             current.project = cmd.project;
             log(`${current.project} is current loaded project`);
             current.dir = "";
-            return {result: 1, data: {assets: root_folder_assets, name: cmd.project, paths}};
+            return { result: 1, data: { assets: root_folder_assets, name: cmd.project, paths } };
         }
 
         async function gather_paths(project: string, assets: FSObject[]) {
-            const paths: ProjectPathsData = {textures: [], atlases: [], models: [], fonts: [], materials: []};
+            const paths: ProjectPathsData = { textures: [], atlases: [], models: [], fonts: [], materials: [], vertex_programs: [], fragment_programs: [] };
             const atlases_textures: string[] = [];
             assets.forEach(async element => {
-                if (element.ext && model_ext.includes(element.ext)) 
+                if (element.ext && model_ext.includes(element.ext))
                     paths.models.push(element.path);
-                if (element.ext == FONT_EXT) 
+                if (element.ext == FONT_EXT)
                     paths.fonts.push(element.path);
                 if (element.ext == ATLAS_EXT) {
                     for (const ext of texture_ext) {
                         const texture_path = element.path.replace(`.${ATLAS_EXT}`, `.${ext}`);
                         if (await exists(get_asset_path(project, texture_path))) {
-                            const load_atlas_data: LoadAtlasData = {atlas: element.path, texture: texture_path};
+                            const load_atlas_data: LoadAtlasData = { atlas: element.path, texture: texture_path };
                             paths.atlases.push(load_atlas_data);
                             atlases_textures.push(texture_path);
                         }
@@ -97,6 +104,12 @@ export function Logic(use_queues: boolean) {
                 }
                 if (element.ext == MATERIAL_EXT) {
                     paths.materials.push(element.path);
+                }
+                if (element.ext == VERTEX_PROGRAM_EXT) {
+                    paths.vertex_programs.push(element.path);
+                }
+                if (element.ext == FRAGMENT_PROGRAM_EXT) {
+                    paths.fragment_programs.push(element.path);
                 }
             });
             assets.forEach(element => {
@@ -109,23 +122,23 @@ export function Logic(use_queues: boolean) {
         async function on_new_project(cmd: ServerCommands[typeof NEW_PROJECT_CMD]): Promise<ServerResponses[typeof NEW_PROJECT_CMD]> {
             const assets_folder_path = get_assets_folder_path(cmd.project);
             const project_exists = await exists(assets_folder_path);
-            if (project_exists) return {message: ERROR_TEXT.PROJECT_ALREADY_EXISTS, result: 0};
+            if (project_exists) return { message: ERROR_TEXT.PROJECT_ALREADY_EXISTS, result: 0 };
             new_project(cmd.project);
-            return {result: 1, data: {}};
+            return { result: 1, data: {} };
         }
 
         async function on_set_current_scene(cmd: ServerCommands[typeof SET_CURRENT_SCENE_CMD]): Promise<ServerResponses[typeof SET_CURRENT_SCENE_CMD]> {
             const asset_path = get_asset_path(project, cmd.path);
             const scene_exists = await exists(asset_path);
-            if (!scene_exists) return {message: ERROR_TEXT.SCENE_NOT_EXIST, result: 0};
+            if (!scene_exists) return { message: ERROR_TEXT.SCENE_NOT_EXIST, result: 0 };
             const name = path.basename(asset_path, `.${SCENE_EXT}`);
             if (current.scene.path != cmd.path) {
-                current.scene.path = cmd.path as string;    
+                current.scene.path = cmd.path as string;
                 current.scene.name = name as string;
-            } 
-            return {result: 1, data: { name, path: cmd.path }};
+            }
+            return { result: 1, data: { name, path: cmd.path } };
         }
-        
+
         async function on_save_data(cmd: ServerCommands[typeof SAVE_DATA_CMD]): Promise<ServerResponses[typeof SAVE_DATA_CMD]> {
             const data_path = get_data_file_path(project, cmd.path);
             const data_format = cmd.format
@@ -133,11 +146,11 @@ export function Logic(use_queues: boolean) {
             const data: string = cmd.data;
             let buffer_data: Buffer<ArrayBuffer> | undefined = undefined;
             if (!allowed_ext.includes(ext))
-                return {result: 0, message: ERROR_TEXT.WRONG_END_EXTENTION};
+                return { result: 0, message: ERROR_TEXT.WRONG_END_EXTENTION };
 
             if (data_format == "base64") {
                 if (!texture_ext.includes(ext)) {
-                    return {result: 0, message: ERROR_TEXT.WRONG_TEXTURE_EXTENTION};
+                    return { result: 0, message: ERROR_TEXT.WRONG_TEXTURE_EXTENTION };
                 }
                 let is_match = false;
                 for (const _ext of texture_ext) {
@@ -145,7 +158,7 @@ export function Logic(use_queues: boolean) {
                     if (data.search(template) == 0) {
                         is_match = true;
                         buffer_data = Buffer.from(data.replace(template, ""), 'base64');
-                    }    
+                    }
                 }
                 if (!is_match) {
                     buffer_data = Buffer.from(data, 'base64');
@@ -154,47 +167,47 @@ export function Logic(use_queues: boolean) {
             try {
                 const data_to_write = (data_format == "base64" && buffer_data) ? buffer_data : data;
                 await _write(data_path, data_to_write);
-                return {result: 1, data: {}};
-        
+                return { result: 1, data: {} };
+
             } catch (e) {
-                return {result: 0, message: `${ERROR_TEXT.CANT_WRITE_FILE}: ${e}`};
+                return { result: 0, message: `${ERROR_TEXT.CANT_WRITE_FILE}: ${e}` };
             }
         }
-        
+
         async function on_get_data(cmd: ServerCommands[typeof GET_DATA_CMD]): Promise<ServerResponses[typeof GET_DATA_CMD]> {
             const data_path = get_data_file_path(project, cmd.path);
             const file_exists = await exists(data_path);
             if (!file_exists)
-                return {message: ERROR_TEXT.FILE_NOT_EXIST, result: 0};
+                return { message: ERROR_TEXT.FILE_NOT_EXIST, result: 0 };
             const data_file = Bun.file(data_path);
             const text = await data_file.text();
             //const data = JSON.parse(text)
-            return {result: 1, data: text};
+            return { result: 1, data: text };
         }
-        
+
         async function on_new_folder(cmd: ServerCommands[typeof NEW_FOLDER_CMD]): Promise<ServerResponses[typeof NEW_FOLDER_CMD]> {
             const folder_path = get_asset_path(project, path.join(cmd.path, cmd.name));
             const dir_exists = await exists(folder_path);
             if (dir_exists)
-                return {message: `${ERROR_TEXT.FOLDER_ALREADY_EXISTS}: ${folder_path}`, result: 0};
+                return { message: `${ERROR_TEXT.FOLDER_ALREADY_EXISTS}: ${folder_path}`, result: 0 };
             await mk_dir(folder_path);
-            const data = {path: path.relative(get_assets_folder_path(project), folder_path).split("\\").join("/")}
-            return {result: 1, data};
+            const data = { path: path.relative(get_assets_folder_path(project), folder_path).split("\\").join("/") }
+            return { result: 1, data };
         }
-        
+
         async function on_get_folder(cmd: ServerCommands[typeof GET_FOLDER_CMD]): Promise<ServerResponses[typeof GET_FOLDER_CMD]> {
             const folder_path = get_asset_path(project, cmd.path);
             const dir_exists = await exists(folder_path);
             if (!dir_exists)
-                return {message: `${ERROR_TEXT.DIR_NOT_EXIST}: ${folder_path}`, result: 0};
+                return { message: `${ERROR_TEXT.DIR_NOT_EXIST}: ${folder_path}`, result: 0 };
             const root_folder = get_assets_folder_path(project);
             const dir_content = await read_dir_assets(folder_path, root_folder);
             if (current.dir != cmd.path) {
-                current.dir = cmd.path as string;      
-            } 
-            return {result: 1, data: dir_content};
+                current.dir = cmd.path as string;
+            }
+            return { result: 1, data: dir_content };
         }
-    
+
         async function copy_file(old_path: string, new_path: string) {
             const info = await read_metadata(project, old_path);
             if (info) {
@@ -204,7 +217,7 @@ export function Logic(use_queues: boolean) {
             const full_new_path = get_asset_path(project, new_path);
             await copy(full_old_path, full_new_path);
         }
-    
+
         async function copy_folder(old_path: string, new_path: string) {
             const root_folder = get_assets_folder_path(project);
             const full_old_path = get_asset_path(project, old_path);
@@ -221,28 +234,28 @@ export function Logic(use_queues: boolean) {
                     await copy_file(old_asset_path, new_asset_path);
             }
         }
-        
+
         async function on_copy(cmd: ServerCommands[typeof COPY_CMD]): Promise<ServerResponses[typeof COPY_CMD]> {
             // Не разрешаем делать копирование/замену корневой папки ассетов проекта
             if (cmd.path === "" || cmd.new_path === "")
-                return {message: ERROR_TEXT.COPY_CHANGE_ROOT, result: 0};
+                return { message: ERROR_TEXT.COPY_CHANGE_ROOT, result: 0 };
             const old_path = get_asset_path(project, cmd.path);
             const new_path = get_asset_path(project, cmd.new_path);
             const file_exists = await exists(old_path);
             if (!file_exists)
-                return {message: `${ERROR_TEXT.FILE_NOT_EXIST}: ${old_path}`, result: 0};
+                return { message: `${ERROR_TEXT.FILE_NOT_EXIST}: ${old_path}`, result: 0 };
             if (await is_folder(old_path)) {
-                if (!cmd.new_path.includes(cmd.path)) 
+                if (!cmd.new_path.includes(cmd.path))
                     await copy_folder(cmd.path, cmd.new_path)
-                else 
-                    return {message: `${ERROR_TEXT.RECURSIVE_FOLDER_COPYING}: ${old_path}`, result: 0};
+                else
+                    return { message: `${ERROR_TEXT.RECURSIVE_FOLDER_COPYING}: ${old_path}`, result: 0 };
             }
-                
-            else 
+
+            else
                 await copy_file(cmd.path, cmd.new_path);
-            return {result: 1, data: {new_path}};
+            return { result: 1, data: { new_path } };
         }
-    
+
         async function move_file(old_path: string, new_path: string) {
             const info = await read_metadata(project, old_path);
             if (info) {
@@ -253,7 +266,7 @@ export function Logic(use_queues: boolean) {
             const full_new_path = get_asset_path(project, new_path);
             await rename(full_old_path, full_new_path);
         }
-    
+
         async function move_folder(old_path: string, new_path: string) {
             const root_folder = get_assets_folder_path(project);
             const full_old_path = get_asset_path(project, old_path);
@@ -271,43 +284,43 @@ export function Logic(use_queues: boolean) {
             }
             await remove_path(full_old_path);
         }
-    
+
         async function on_move(cmd: ServerCommands[typeof MOVE_CMD]): Promise<ServerResponses[typeof MOVE_CMD]> {
             // Не разрешаем делать перемещение корневой папки ассетов проекта
             if (cmd.path === "" || cmd.new_path === "")
-                return {message: ERROR_TEXT.COPY_CHANGE_ROOT, result: 0};
+                return { message: ERROR_TEXT.COPY_CHANGE_ROOT, result: 0 };
             const old_path = get_asset_path(project, cmd.path);
             const new_path = get_asset_path(project, cmd.new_path);
             const file_exists = await exists(old_path);
             if (!file_exists)
-                return {message: `${ERROR_TEXT.FILE_NOT_EXIST}: ${old_path}`, result: 0};
+                return { message: `${ERROR_TEXT.FILE_NOT_EXIST}: ${old_path}`, result: 0 };
             if (await is_folder(old_path)) {
-                if (!cmd.new_path.includes(cmd.path)) 
+                if (!cmd.new_path.includes(cmd.path))
                     await move_folder(cmd.path, cmd.new_path)
-                else 
-                    return {message: `${ERROR_TEXT.RECURSIVE_FOLDER_COPYING}: ${old_path}`, result: 0};
+                else
+                    return { message: `${ERROR_TEXT.RECURSIVE_FOLDER_COPYING}: ${old_path}`, result: 0 };
             }
-            else 
+            else
                 await move_file(cmd.path, cmd.new_path);
-            return {result: 1, data: {new_path}};
+            return { result: 1, data: { new_path } };
         }
-        
+
         async function on_rename(cmd: ServerCommands[typeof RENAME_CMD]): Promise<ServerResponses[typeof RENAME_CMD]> {
             // Не разрешаем делать переименование корневой папки ассетов проекта
             if (cmd.path === "" || cmd.new_path === "")
-                return {message: ERROR_TEXT.COPY_CHANGE_ROOT, result: 0};
+                return { message: ERROR_TEXT.COPY_CHANGE_ROOT, result: 0 };
             const old_path = get_asset_path(project, cmd.path);
             const new_path = get_asset_path(project, cmd.new_path);
             const file_exists = await exists(old_path);
             if (!file_exists)
-                return {message: `${ERROR_TEXT.FILE_NOT_EXIST}: ${old_path}`, result: 0};
+                return { message: `${ERROR_TEXT.FILE_NOT_EXIST}: ${old_path}`, result: 0 };
             if (!await is_folder(old_path)) {
                 const ext1 = path.extname(old_path).slice(1);
                 const ext2 = path.extname(new_path).slice(1);
                 if (!allowed_ext.includes(ext1))
-                    return {result: 0, message: ERROR_TEXT.WRONG_ORIG_EXTENTION};
+                    return { result: 0, message: ERROR_TEXT.WRONG_ORIG_EXTENTION };
                 if (!allowed_ext.includes(ext2))
-                    return {result: 0, message: ERROR_TEXT.WRONG_END_EXTENTION};
+                    return { result: 0, message: ERROR_TEXT.WRONG_END_EXTENTION };
             }
             const info = await read_metadata(project, cmd.path);
             if (info) {
@@ -315,45 +328,45 @@ export function Logic(use_queues: boolean) {
                 await clear_metadata(project, cmd.path);
             }
             await rename(old_path, new_path);
-            return {result: 1, data: {new_path}};
+            return { result: 1, data: { new_path } };
         }
-        
+
         async function on_delete(cmd: ServerCommands[typeof DELETE_CMD]): Promise<ServerResponses[typeof DELETE_CMD]> {
             const asset_path = get_asset_path(project, cmd.path);
             const path = await remove_path(asset_path);
-    
+
             const info = await read_metadata(project, cmd.path);
             if (info) {
                 await clear_metadata(project, cmd.path);
             }
-    
-            return {result: 1, data: {path}};
+
+            return { result: 1, data: { path } };
         }
-        
+
         async function on_save_info(cmd: ServerCommands[typeof SAVE_INFO_CMD]): Promise<ServerResponses[typeof SAVE_INFO_CMD]> {
             const current = await read_metadata(project, cmd.path);
-            const updated = {...current, ...cmd.data};
+            const updated = { ...current, ...cmd.data };
             await write_metadata(project, cmd.path, updated);
-            return {result: 1, data: {}};
+            return { result: 1, data: {} };
         }
-        
+
         async function on_get_info(cmd: ServerCommands[typeof GET_INFO_CMD]): Promise<ServerResponses[typeof GET_INFO_CMD]> {
             let data: TRecursiveDict | undefined = undefined;
-            if (cmd.path)   
+            if (cmd.path)
                 data = await read_metadata(project, cmd.path);
-            else 
+            else
                 data = await get_all_metadata(project);
             if (data)
-                return {result: 1, data};
+                return { result: 1, data };
             else
-                return {result: 0, message: ERROR_TEXT.METAINFO_NOT_FOUND};
+                return { result: 0, message: ERROR_TEXT.METAINFO_NOT_FOUND };
         }
-    
+
         async function on_del_info(cmd: ServerCommands[typeof DEL_INFO_CMD]): Promise<ServerResponses[typeof DEL_INFO_CMD]> {
             const current = await read_metadata(project, cmd.path);
             if (current)
                 await clear_metadata(project, cmd.path);
-            return {result: 1, data: {}};
+            return { result: 1, data: {} };
         }
         const resp = check_fields(cmd_id, params);
         if (resp) return resp;
@@ -361,7 +374,7 @@ export function Logic(use_queues: boolean) {
         if (cmd_id == GET_SERVER_DATA_CMD) {
             return await on_get_server_data();
         }
-        
+
         if (cmd_id == GET_PROJECTS_CMD) {
             return await on_get_projects();
         }
@@ -373,7 +386,7 @@ export function Logic(use_queues: boolean) {
         if (cmd_id === LOAD_PROJECT_CMD) {
             return await on_load_project(params as ServerCommands[typeof LOAD_PROJECT_CMD]);
         }
-        
+
         if (cmd_id == SET_CURRENT_SCENE_CMD) {
             return await on_set_current_scene(params as ServerCommands[typeof SET_CURRENT_SCENE_CMD]);
         }
@@ -417,7 +430,7 @@ export function Logic(use_queues: boolean) {
         if (cmd_id == SAVE_DATA_CMD) {
             return await on_save_data(params as ServerCommands[typeof SAVE_DATA_CMD]);
         }
-        
+
         if (cmd_id == GET_DATA_CMD) {
             return await on_get_data(params as ServerCommands[typeof SAVE_DATA_CMD]);
         }
@@ -427,16 +440,16 @@ export function Logic(use_queues: boolean) {
             const path = data.path;
             const result = await open_explorer(project, path);
             if (result)
-                return {result: 1, data: {}} as ServerResponses[typeof OPEN_EXPLORER_CMD];
+                return { result: 1, data: {} } as ServerResponses[typeof OPEN_EXPLORER_CMD];
             else
-                return {result: 0, data: {}} as ServerResponses[typeof OPEN_EXPLORER_CMD];
+                return { result: 0, data: {} } as ServerResponses[typeof OPEN_EXPLORER_CMD];
         }
 
         // if (cmd_id === SEARCH_CMD) {
         // }
 
         Log.error('command not found', cmd_id);
-        return {message: ERROR_TEXT.COMMAND_NOT_FOUND, result: 0}
+        return { message: ERROR_TEXT.COMMAND_NOT_FOUND, result: 0 }
     }
 
     async function get_all_metadata(project_name: string) {
@@ -461,7 +474,7 @@ export function Logic(use_queues: boolean) {
         const all_metadata = await get_all_metadata(project_name);
         const key = dir.replaceAll(path.sep, "/");
         delete all_metadata[key];
-        await _write(data_file_path, JSON.stringify(all_metadata));    
+        await _write(data_file_path, JSON.stringify(all_metadata));
     }
 
     async function write_metadata(project_name: string, dir: string, data: TRecursiveDict) {
@@ -476,27 +489,27 @@ export function Logic(use_queues: boolean) {
         const full_path = get_asset_path(project_name, asset_path);
         const file = Bun.file(full_path);
         const exists = await file.exists();
-        if (exists) 
+        if (exists)
             return file;
     }
-    
+
     async function project_name_required(cmd_id: CommandId, params: any) {
-        if (!project_name_required_commands.includes(cmd_id)) 
+        if (!project_name_required_commands.includes(cmd_id))
             return;
         const project_name = params[PROJECT_PARAM_NAME];
         if (!project_name)
-            return {message: ERROR_TEXT.NO_PROJECT_NAME, result: 0};
-    
-        if (!project_exists_required_commands.includes(cmd_id)) 
+            return { message: ERROR_TEXT.NO_PROJECT_NAME, result: 0 };
+
+        if (!project_exists_required_commands.includes(cmd_id))
             return;
         const assets_folder_path = get_assets_folder_path(project_name);
         const project_exists = await exists(assets_folder_path);
-    
-        if (!project_exists) 
-            return {message: ERROR_TEXT.PROJECT_NOT_FOUND, result: 0}
+
+        if (!project_exists)
+            return { message: ERROR_TEXT.PROJECT_NOT_FOUND, result: 0 }
     }
-    
-    
+
+
     function check_fields(cmd_id: CommandId, params: any) {
         let wrong_fields: string[] = [];
         if (cmd_id === NEW_PROJECT_CMD)
@@ -529,18 +542,18 @@ export function Logic(use_queues: boolean) {
             wrong_fields = _check_fields(params, [PATH_PARAM_NAME]);
         if (cmd_id === OPEN_EXPLORER_CMD)
             wrong_fields = _check_fields(params, [PATH_PARAM_NAME]);
-        if (wrong_fields.length > 0) return {result: 0, message: `${ERROR_TEXT.SOME_FIELDS_WRONG}: ${wrong_fields}`}
-    
+        if (wrong_fields.length > 0) return { result: 0, message: `${ERROR_TEXT.SOME_FIELDS_WRONG}: ${wrong_fields}` }
+
         function _check_fields(data: any, fields: string[]) {
             let wrong_fields: string[] = [];
             for (const key of fields) {
-                if (data[key] === undefined || (key !== PATH_PARAM_NAME && data[key] === "")) 
+                if (data[key] === undefined || (key !== PATH_PARAM_NAME && data[key] === ""))
                     wrong_fields.push(key);
             }
             return wrong_fields;
         }
     }
 
-    return {handle_command, get_file, project_name_required}
+    return { handle_command, get_file, project_name_required }
 }
 

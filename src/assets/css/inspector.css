@@ -27,6 +27,7 @@
     --tp-plugin-thumbnail-list-width: 160px;
     --tp-plugin-thumbnail-list-thumb-size: 40px;
     --tp-plugin-thumbnail-list-dragging-color: lightgreen;
+    --tp-plugin-search-list-dragging-color: lightgreen;
 }
 
 .menu_right input {
@@ -38,18 +39,7 @@
     height: var(--inspector__body-height);
     max-height: var(--inspector__body-height);
 }
+
 .tp-thumbv_ovl {
     max-height: var(--tp-plugin-thumbnail-list-height);
-}
-
-/* для теста */
-
-#file-container {
-    display: flex;
-}
-
-#sprite-file {
-    width: 100px;
-    height: 100px;
-    margin: 5px;
 }

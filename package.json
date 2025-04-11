@@ -38,6 +38,6 @@
     "tweakpane4-extended-boolean-plugin": "^0.0.5",
     "tweakpane4-extended-vector-plugin": "^0.0.11",
     "tweakpane4-image-list-plugin": "1.1.3",
-    "tweakpane4-search-list-plugin": "1.1.1"
+    "tweakpane4-search-list-plugin": "2.0.0"
   }
 }

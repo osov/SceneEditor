@@ -127,7 +127,7 @@ export interface UVEventData {
 
 export interface MaterialEventData {
     id_mesh: number;
-    material: string;
+    material_name: string;
 }
 
 export interface MaterialVertexProgramEventData {
@@ -180,4 +180,9 @@ export interface MaterialColorEventData {
     material_path: string;
     uniform_name: string;
     value: string;
+}
+
+export interface MaterialTransparentEventData {
+    material_path: string;
+    value: boolean;
 }

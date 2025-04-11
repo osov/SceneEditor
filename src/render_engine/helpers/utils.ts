@@ -1,5 +1,6 @@
-import { BufferGeometry, Line, LineDashedMaterial, Object3D, Vector2, Vector3 } from "three";
+import { BufferGeometry, Line, LineDashedMaterial, Object3D, ShaderMaterial, Vector2, Vector3, Vector4, Texture, Color } from "three";
 import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
+import { deepClone } from "../../modules/utils";
 
 export function get_basename(path: string) {
     return path.split('/').reverse()[0];
@@ -151,3 +152,47 @@ export function make_ramk(width: number, height: number) {
     return line;
 }
 
+export function copy_material(material: ShaderMaterial) {
+    const copy = new ShaderMaterial({
+        name: material.name,
+        vertexShader: material.vertexShader,
+        fragmentShader: material.fragmentShader,
+        transparent: deepClone(material.transparent),
+        uniforms: {}
+    });
+
+    // Properly clone uniforms
+    for (const [key, uniform] of Object.entries(material.uniforms)) {
+        if (uniform.value instanceof Texture) {
+            const texture = new Texture();
+            texture.copy(uniform.value);
+            copy.uniforms[key] = { value: texture };
+        } else if (uniform.value instanceof Vector2) {
+            copy.uniforms[key] = { value: uniform.value.clone() };
+        } else if (uniform.value instanceof Vector3) {
+            copy.uniforms[key] = { value: uniform.value.clone() };
+        } else if (uniform.value instanceof Vector4) {
+            copy.uniforms[key] = { value: uniform.value.clone() };
+        } else if (uniform.value instanceof Color) {
+            copy.uniforms[key] = { value: uniform.value.clone() };
+        } else {
+            copy.uniforms[key] = { value: deepClone(uniform.value) };
+        }
+    }
+
+    copy.userData.is_copy = true;
+    copy.userData.changed_uniforms = [];
+    return copy;
+}
+
+export function try_record_to_changed_uniforms(material: ShaderMaterial, uniform_name: string) {
+    if (!material.userData.changed_uniforms) return false;
+    if (!material.userData.changed_uniforms.includes(uniform_name)) {
+        material.userData.changed_uniforms.push(uniform_name);
+    }
+    return true;
+}
+
+export function is_changed_uniform(material: ShaderMaterial, uniform_name: string) {
+    return material.userData.changed_uniforms.includes(uniform_name);
+}

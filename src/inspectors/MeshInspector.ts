@@ -1,50 +1,52 @@
-import { AdditiveBlending, MultiplyBlending, NormalBlending, SubtractiveBlending, Vector2, Vector3 } from "three";
+import { Vector2, Vector3 } from "three";
 import { degToRad, radToDeg } from "three/src/math/MathUtils";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { GoSprite, FlipMode } from "../render_engine/objects/sub_types";
 import { TextMesh } from "../render_engine/objects/text";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
-import { ChangeInfo, InspectorGroup, PropertyType, castTextureInfo, generateTextureOptions, getChangedInfo, getDraggedInfo, update_option, BeforeChangeInfo } from "../modules_editor/Inspector";
+import { ChangeInfo, InspectorGroup, PropertyType, BeforeChangeInfo } from "../modules_editor/Inspector";
 import { deepClone } from "../modules/utils";
 import { NameEventData, ActiveEventData, VisibleEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, PivotEventData, AnchorEventData, ColorEventData, AlphaEventData, TextureEventData, SliceEventData, TextEventData, FontEventData, FontSizeEventData, TextAlignEventData, LineHeightEventData, MeshAtlasEventData, BlendModeEventData, UVEventData, MaterialEventData } from "../controls/types";
+import { anchorToScreenPreset, castTextureInfo, convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode, generateAtlasOptions, generateMaterialOptions, generateTextureOptions, getChangedInfo, getDraggedInfo, pivotToScreenPreset, screenPresetToAnchorValue, screenPresetToPivotValue, update_option } from "./helpers";
+
 
 declare global {
-    const ObjectInspector: ReturnType<typeof ObjectInspectorCreate>;
+    const ObjectInspector: ReturnType<typeof MeshInspectorCreate>;
 }
 
-export function register_object_inspector() {
-    (window as any).ObjectInspector = ObjectInspectorCreate();
+export function register_mesh_inspector() {
+    (window as any).MeshInspector = MeshInspectorCreate();
 }
 
-
-export enum ObjectProperty {
-    ID = 'id',
-    TYPE = 'type',
-    NAME = 'name',
-    VISIBLE = 'visible',
-    ACTIVE = 'active',
-    POSITION = 'position',
-    ROTATION = 'rotation',
-    SCALE = 'scale',
-    SIZE = 'size',
-    PIVOT = 'pivot',
-    ANCHOR = 'anchor',
-    ANCHOR_PRESET = 'anchor_preset',
-    COLOR = 'color',
-    ALPHA = 'alpha',
-    TEXTURE = 'texture',
-    SLICE9 = 'slice9',
-    TEXT = 'text',
-    FONT = 'font',
-    FONT_SIZE = 'font_size',
-    TEXT_ALIGN = 'text_align',
-    ATLAS = 'atlas',
-    LINE_HEIGHT = 'line_height',
-    BLEND_MODE = 'blend_mode',
-    FLIP_VERTICAL = 'flip_vertical',
-    FLIP_HORIZONTAL = 'flip_horizontal',
-    FLIP_DIAGONAL = 'flip_diagonal',
-    MATERIAL = 'material',
+export enum MeshProperty {
+    ID = 'mesh_id',
+    TYPE = 'mesh_type',
+    NAME = 'mesh_name',
+    VISIBLE = 'mesh_visible',
+    ACTIVE = 'mesh_active',
+    POSITION = 'mesh_position',
+    ROTATION = 'mesh_rotation',
+    SCALE = 'mesh_scale',
+    SIZE = 'mesh_size',
+    PIVOT = 'mesh_pivot',
+    ANCHOR = 'mesh_anchor',
+    ANCHOR_PRESET = 'mesh_anchor_preset',
+    COLOR = 'mesh_color',
+    ALPHA = 'mesh_alpha',
+    TEXTURE = 'mesh_texture',
+    SLICE9 = 'mesh_slice9',
+    TEXT = 'mesh_text',
+    FONT = 'mesh_font',
+    FONT_SIZE = 'mesh_font_size',
+    TEXT_ALIGN = 'mesh_text_align',
+    ATLAS = 'mesh_atlas',
+    LINE_HEIGHT = 'mesh_line_height',
+    BLEND_MODE = 'mesh_blend_mode',
+    FLIP_VERTICAL = 'mesh_flip_vertical',
+    FLIP_HORIZONTAL = 'mesh_flip_horizontal',
+    FLIP_DIAGONAL = 'mesh_flip_diagonal',
+    MATERIAL = 'mesh_material',
+    MATERIAL_BUTTON = 'mesh_material_button',
 }
 
 export enum ScreenPointPreset {
@@ -78,16 +80,16 @@ export enum BlendMode {
 }
 
 
-function ObjectInspectorCreate() {
+function MeshInspectorCreate() {
     const _config: InspectorGroup[] = [
         {
             name: 'base',
             title: '',
             property_list: [
-                { name: ObjectProperty.TYPE, title: 'Тип', type: PropertyType.STRING, readonly: true },
-                { name: ObjectProperty.NAME, title: 'Название', type: PropertyType.STRING, onSave: saveName, onUpdate: updateName },
+                { name: MeshProperty.TYPE, title: 'Тип', type: PropertyType.STRING, readonly: true },
+                { name: MeshProperty.NAME, title: 'Название', type: PropertyType.STRING, onSave: saveName, onUpdate: updateName },
                 // { name: ObjectProperty.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN, onSave: saveVisible, onUpdate: updateVisible },
-                { name: ObjectProperty.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN, onSave: saveActive, onUpdate: updateActive }
+                { name: MeshProperty.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN, onSave: saveActive, onUpdate: updateActive }
             ]
         },
         {
@@ -95,7 +97,7 @@ function ObjectInspectorCreate() {
             title: 'Трансформ',
             property_list: [
                 {
-                    name: ObjectProperty.POSITION, title: 'Позиция', type: PropertyType.VECTOR_3, params: {
+                    name: MeshProperty.POSITION, title: 'Позиция', type: PropertyType.VECTOR_3, params: {
                         x: { format: (v: number) => v.toFixed(2), step: 0.1 },
                         y: { format: (v: number) => v.toFixed(2), step: 0.1 },
                         z: { format: (v: number) => v.toFixed(2), step: 0.1 },
@@ -105,7 +107,7 @@ function ObjectInspectorCreate() {
                     onRefresh: refreshPosition
                 },
                 {
-                    name: ObjectProperty.ROTATION, title: 'Вращение', type: PropertyType.VECTOR_3, params: {
+                    name: MeshProperty.ROTATION, title: 'Вращение', type: PropertyType.VECTOR_3, params: {
                         x: { format: (v: number) => v.toFixed(2) },
                         y: { format: (v: number) => v.toFixed(2) },
                         z: { format: (v: number) => v.toFixed(2) }
@@ -115,7 +117,7 @@ function ObjectInspectorCreate() {
                     onRefresh: refreshRotation
                 },
                 {
-                    name: ObjectProperty.SCALE, title: 'Маштаб', type: PropertyType.VECTOR_2, params: {
+                    name: MeshProperty.SCALE, title: 'Маштаб', type: PropertyType.VECTOR_2, params: {
                         x: { format: (v: number) => v.toFixed(2) },
                         y: { format: (v: number) => v.toFixed(2) },
                     },
@@ -124,7 +126,7 @@ function ObjectInspectorCreate() {
                     onRefresh: refreshScale
                 },
                 {
-                    name: ObjectProperty.PIVOT, title: 'Точка опоры', type: PropertyType.LIST_TEXT, params: {
+                    name: MeshProperty.PIVOT, title: 'Точка опоры', type: PropertyType.LIST_TEXT, params: {
                         'Центр': ScreenPointPreset.CENTER,
                         'Левый Верхний': ScreenPointPreset.TOP_LEFT,
                         'Центр Сверху': ScreenPointPreset.TOP_CENTER,
@@ -140,7 +142,7 @@ function ObjectInspectorCreate() {
                     onRefresh: refreshPivot
                 },
                 {
-                    name: ObjectProperty.SIZE, title: 'Размер', type: PropertyType.VECTOR_2, params: {
+                    name: MeshProperty.SIZE, title: 'Размер', type: PropertyType.VECTOR_2, params: {
                         x: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
                         y: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
                     },
@@ -155,7 +157,7 @@ function ObjectInspectorCreate() {
             title: 'Якорь',
             property_list: [
                 {
-                    name: ObjectProperty.ANCHOR, title: 'Значение', type: PropertyType.POINT_2D, params: {
+                    name: MeshProperty.ANCHOR, title: 'Значение', type: PropertyType.POINT_2D, params: {
                         x: { min: -1, max: 1, format: (v: number) => v.toFixed(2) },
                         y: { min: -1, max: 1, format: (v: number) => v.toFixed(2) }
                     },
@@ -164,7 +166,7 @@ function ObjectInspectorCreate() {
                     onRefresh: refreshAnchor
                 },
                 {
-                    name: ObjectProperty.ANCHOR_PRESET,
+                    name: MeshProperty.ANCHOR_PRESET,
                     title: 'Anchor Preset',
                     type: PropertyType.LIST_TEXT,
                     params: {
@@ -179,7 +181,8 @@ function ObjectInspectorCreate() {
                         'Bottom Right': 'Bottom Right'
                     },
                     onSave: (info: BeforeChangeInfo) => saveAnchorPreset(info),
-                    onUpdate: updateAnchorPreset
+                    onUpdate: updateAnchorPreset,
+                    onRefresh: refreshAnchorPreset
                 }
             ]
         },
@@ -187,9 +190,9 @@ function ObjectInspectorCreate() {
             name: 'graphics',
             title: 'Визуал',
             property_list: [
-                { name: ObjectProperty.COLOR, title: 'Цвет', type: PropertyType.COLOR, onSave: saveColor, onUpdate: updateColor },
+                { name: MeshProperty.COLOR, title: 'Цвет', type: PropertyType.COLOR, onSave: saveColor, onUpdate: updateColor },
                 {
-                    name: ObjectProperty.ALPHA,
+                    name: MeshProperty.ALPHA,
                     title: 'Alpha',
                     type: PropertyType.SLIDER,
                     params: {
@@ -200,19 +203,24 @@ function ObjectInspectorCreate() {
                     onSave: (info: BeforeChangeInfo) => saveAlpha(info),
                     onUpdate: updateAlpha
                 },
-                { name: ObjectProperty.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: generateAtlasOptions(), onSave: saveAtlas, onUpdate: updateAtlas },
+                { name: MeshProperty.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: generateAtlasOptions(), onSave: saveAtlas, onUpdate: updateAtlas },
                 {
-                    name: ObjectProperty.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: generateTextureOptions(),
+                    name: MeshProperty.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: generateTextureOptions(),
                     onSave: saveTexture,
                     onUpdate: updateTexture,
                 },
                 {
-                    name: ObjectProperty.MATERIAL, title: 'Материал', type: PropertyType.LIST_TEXT, params: generateMaterialOptions(),
+                    name: MeshProperty.MATERIAL, title: 'Материал', type: PropertyType.LIST_TEXT, params: generateMaterialOptions(),
                     onSave: saveMaterial,
                     onUpdate: updateMaterial
                 },
                 {
-                    name: ObjectProperty.SLICE9, title: 'Slice9', type: PropertyType.POINT_2D, params: {
+                    name: MeshProperty.MATERIAL_BUTTON,
+                    title: 'Настроить материал',
+                    type: PropertyType.BUTTON
+                },
+                {
+                    name: MeshProperty.SLICE9, title: 'Slice9', type: PropertyType.POINT_2D, params: {
                         x: { min: 0, max: 100, format: (v: number) => v.toFixed(2) },
                         y: { min: 0, max: 100, format: (v: number) => v.toFixed(2) }
                     },
@@ -221,7 +229,7 @@ function ObjectInspectorCreate() {
                     onRefresh: refreshSlice9
                 },
                 {
-                    name: ObjectProperty.BLEND_MODE, title: 'Режим смешивания', type: PropertyType.LIST_TEXT, params: {
+                    name: MeshProperty.BLEND_MODE, title: 'Режим смешивания', type: PropertyType.LIST_TEXT, params: {
                         'Нормальный': BlendMode.NORMAL,
                         'Сложение': BlendMode.ADD,
                         'Умножение': BlendMode.MULTIPLY,
@@ -237,23 +245,23 @@ function ObjectInspectorCreate() {
             name: 'flip',
             title: 'Отражение',
             property_list: [
-                { name: ObjectProperty.FLIP_VERTICAL, title: 'По вертикали', type: PropertyType.BOOLEAN, onSave: saveUV, onUpdate: updateFlipVertical, onRefresh: refreshFlipVertical },
-                { name: ObjectProperty.FLIP_HORIZONTAL, title: 'По горизонтали', type: PropertyType.BOOLEAN, onSave: saveUV, onUpdate: updateFlipHorizontal, onRefresh: refreshFlipHorizontal },
-                { name: ObjectProperty.FLIP_DIAGONAL, title: 'По диагонали', type: PropertyType.BOOLEAN, onSave: saveUV, onUpdate: updateFlipDiagonal, onRefresh: refreshFlipDiagonal }
+                { name: MeshProperty.FLIP_VERTICAL, title: 'По вертикали', type: PropertyType.BOOLEAN, onSave: saveUV, onUpdate: updateFlipVertical, onRefresh: refreshFlipVertical },
+                { name: MeshProperty.FLIP_HORIZONTAL, title: 'По горизонтали', type: PropertyType.BOOLEAN, onSave: saveUV, onUpdate: updateFlipHorizontal, onRefresh: refreshFlipHorizontal },
+                { name: MeshProperty.FLIP_DIAGONAL, title: 'По диагонали', type: PropertyType.BOOLEAN, onSave: saveUV, onUpdate: updateFlipDiagonal, onRefresh: refreshFlipDiagonal }
             ]
         },
         {
             name: 'text',
             title: 'Текст',
             property_list: [
-                { name: ObjectProperty.TEXT, title: 'Текст', type: PropertyType.STRING, onSave: saveText, onUpdate: updateText },
+                { name: MeshProperty.TEXT, title: 'Текст', type: PropertyType.STRING, onSave: saveText, onUpdate: updateText },
                 {
-                    name: ObjectProperty.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: ResourceManager.get_all_fonts(),
+                    name: MeshProperty.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: ResourceManager.get_all_fonts(),
                     onSave: saveFont,
                     onUpdate: updateFont
                 },
                 {
-                    name: ObjectProperty.FONT_SIZE, title: 'Размер шрифта', type: PropertyType.NUMBER, params: {
+                    name: MeshProperty.FONT_SIZE, title: 'Размер шрифта', type: PropertyType.NUMBER, params: {
                         min: 8, step: 1, format: (v: number) => v.toFixed(0)
                     },
                     onSave: saveFontSize,
@@ -261,7 +269,7 @@ function ObjectInspectorCreate() {
                     onRefresh: refreshFontSize
                 },
                 {
-                    name: ObjectProperty.TEXT_ALIGN, title: 'Выравнивание', type: PropertyType.LIST_TEXT, params: {
+                    name: MeshProperty.TEXT_ALIGN, title: 'Выравнивание', type: PropertyType.LIST_TEXT, params: {
                         'Центр': TextAlign.CENTER,
                         'Слева': TextAlign.LEFT,
                         'Справа': TextAlign.RIGHT,
@@ -271,7 +279,7 @@ function ObjectInspectorCreate() {
                     onUpdate: updateTextAlign
                 },
                 {
-                    name: ObjectProperty.LINE_HEIGHT, title: 'Высота строки', type: PropertyType.NUMBER, params: {
+                    name: MeshProperty.LINE_HEIGHT, title: 'Высота строки', type: PropertyType.NUMBER, params: {
                         min: 0.5, max: 3, step: 0.1, format: (v: number) => v.toFixed(2)
                     },
                     onSave: saveLineHeight,
@@ -282,7 +290,7 @@ function ObjectInspectorCreate() {
     ];
 
     let _selected_meshes: IBaseMeshAndThree[] = [];
-    
+
     function init() {
         subscribe();
     }
@@ -302,55 +310,55 @@ function ObjectInspectorCreate() {
         const data = list.map((value) => {
             const fields = [];
 
-            fields.push({ name: ObjectProperty.TYPE, data: value.type });
-            fields.push({ name: ObjectProperty.NAME, data: value.name });
+            fields.push({ name: MeshProperty.TYPE, data: value.type });
+            fields.push({ name: MeshProperty.NAME, data: value.name });
             // fields.push({ name: ObjectProperty.VISIBLE, data: value.get_visible() });
-            fields.push({ name: ObjectProperty.ACTIVE, data: value.get_active() });
+            fields.push({ name: MeshProperty.ACTIVE, data: value.get_active() });
 
             // NOTE: исключаем gui контейнер
             if (value.type != IObjectTypes.GUI_CONTAINER) {
 
                 // NOTE: трансформация
                 {
-                    fields.push({ name: ObjectProperty.POSITION, data: value.get_position() });
+                    fields.push({ name: MeshProperty.POSITION, data: value.get_position() });
 
                     const raw = value.rotation;
                     const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
-                    fields.push({ name: ObjectProperty.ROTATION, data: rotation });
+                    fields.push({ name: MeshProperty.ROTATION, data: rotation });
 
-                    fields.push({ name: ObjectProperty.SCALE, data: value.get_scale() });
+                    fields.push({ name: MeshProperty.SCALE, data: value.get_scale() });
                 }
 
                 // NOTE: gui поля
                 if ([IObjectTypes.GUI_BOX, IObjectTypes.GUI_TEXT].includes(value.type)) {
-                    fields.push({ name: ObjectProperty.SIZE, data: value.get_size() });
+                    fields.push({ name: MeshProperty.SIZE, data: value.get_size() });
 
                     const pivot_preset = pivotToScreenPreset(value.get_pivot());
-                    fields.push({ name: ObjectProperty.PIVOT, data: pivot_preset });
+                    fields.push({ name: MeshProperty.PIVOT, data: pivot_preset });
 
                     const anchor_preset = anchorToScreenPreset(value.get_anchor());
-                    fields.push({ name: ObjectProperty.ANCHOR_PRESET, data: anchor_preset });
-                    fields.push({ name: ObjectProperty.ANCHOR, data: value.get_anchor() });
+                    fields.push({ name: MeshProperty.ANCHOR_PRESET, data: anchor_preset });
+                    fields.push({ name: MeshProperty.ANCHOR, data: value.get_anchor() });
                 } else if (IObjectTypes.GO_SPRITE_COMPONENT == value.type || IObjectTypes.GO_LABEL_COMPONENT == value.type) {
-                    fields.push({ name: ObjectProperty.SIZE, data: value.get_size() });
+                    fields.push({ name: MeshProperty.SIZE, data: value.get_size() });
                 }
 
                 // NOTE: визуальные поля
                 if ([IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT].includes(value.type)) {
-                    fields.push({ name: ObjectProperty.COLOR, data: value.get_color() });
-                    fields.push({ name: ObjectProperty.ALPHA, data: (value as Slice9Mesh).get_alpha() });
+                    fields.push({ name: MeshProperty.COLOR, data: value.get_color() });
+                    fields.push({ name: MeshProperty.ALPHA, data: (value as Slice9Mesh).get_alpha() });
 
                     const atlas = (value as Slice9Mesh).get_texture()[1];
                     const texture = (value as Slice9Mesh).get_texture()[0];
-                    
+
                     // NOTE: обновляем конфиг атласов
-                    update_option(_config, ObjectProperty.ATLAS, generateAtlasOptions);
+                    update_option(_config, MeshProperty.ATLAS, generateAtlasOptions);
 
                     // NOTE: обновляем конфиг текстур только для выбранного атласа
-                    update_option(_config, ObjectProperty.TEXTURE, () => {
+                    update_option(_config, MeshProperty.TEXTURE, () => {
                         const list: any[] = [];
                         ResourceManager.get_all_textures().forEach((info) => {
-                            if(info.atlas != atlas) {
+                            if (info.atlas != atlas) {
                                 return;
                             }
                             list.push(castTextureInfo(info));
@@ -359,13 +367,20 @@ function ObjectInspectorCreate() {
                     });
 
                     // NOTE: обновляем конфиг материалов
-                    update_option(_config, ObjectProperty.MATERIAL, generateMaterialOptions);
+                    update_option(_config, MeshProperty.MATERIAL, generateMaterialOptions);
 
-                    fields.push({ name: ObjectProperty.ATLAS, data: atlas });
-                    fields.push({ name: ObjectProperty.TEXTURE, data: texture });
-                    fields.push({ name: ObjectProperty.MATERIAL, data: (value as Slice9Mesh).material.name || '' });
-                    fields.push({ name: ObjectProperty.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
-                    fields.push({ name: ObjectProperty.SLICE9, data: (value as Slice9Mesh).get_slice() });
+                    fields.push({ name: MeshProperty.ATLAS, data: atlas });
+                    fields.push({ name: MeshProperty.TEXTURE, data: texture });
+
+                    fields.push({ name: MeshProperty.MATERIAL, data: (value as Slice9Mesh).get_material().name || '' });
+                    fields.push({
+                        name: MeshProperty.MATERIAL_BUTTON, data: () => {
+                            MeshMaterialInspector.set_selected_mesh_material([(value as Slice9Mesh).get_material()]);
+                        }
+                    });
+
+                    fields.push({ name: MeshProperty.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
+                    fields.push({ name: MeshProperty.SLICE9, data: (value as Slice9Mesh).get_slice() });
 
                     // NOTE: отражение только для спрайта
                     if (value.type === IObjectTypes.GO_SPRITE_COMPONENT) {
@@ -374,49 +389,49 @@ function ObjectInspectorCreate() {
 
                         switch (currentFlip) {
                             case FlipMode.NONE:
-                                fields.push({ name: ObjectProperty.FLIP_DIAGONAL, data: false });
-                                fields.push({ name: ObjectProperty.FLIP_VERTICAL, data: false });
-                                fields.push({ name: ObjectProperty.FLIP_HORIZONTAL, data: false });
+                                fields.push({ name: MeshProperty.FLIP_DIAGONAL, data: false });
+                                fields.push({ name: MeshProperty.FLIP_VERTICAL, data: false });
+                                fields.push({ name: MeshProperty.FLIP_HORIZONTAL, data: false });
                                 break;
                             case FlipMode.VERTICAL:
-                                fields.push({ name: ObjectProperty.FLIP_DIAGONAL, data: false });
-                                fields.push({ name: ObjectProperty.FLIP_VERTICAL, data: true });
-                                fields.push({ name: ObjectProperty.FLIP_HORIZONTAL, data: false });
+                                fields.push({ name: MeshProperty.FLIP_DIAGONAL, data: false });
+                                fields.push({ name: MeshProperty.FLIP_VERTICAL, data: true });
+                                fields.push({ name: MeshProperty.FLIP_HORIZONTAL, data: false });
                                 break;
                             case FlipMode.HORIZONTAL:
-                                fields.push({ name: ObjectProperty.FLIP_DIAGONAL, data: false });
-                                fields.push({ name: ObjectProperty.FLIP_VERTICAL, data: false });
-                                fields.push({ name: ObjectProperty.FLIP_HORIZONTAL, data: true });
+                                fields.push({ name: MeshProperty.FLIP_DIAGONAL, data: false });
+                                fields.push({ name: MeshProperty.FLIP_VERTICAL, data: false });
+                                fields.push({ name: MeshProperty.FLIP_HORIZONTAL, data: true });
                                 break;
                             case FlipMode.DIAGONAL:
-                                fields.push({ name: ObjectProperty.FLIP_DIAGONAL, data: true });
-                                fields.push({ name: ObjectProperty.FLIP_VERTICAL, data: false });
-                                fields.push({ name: ObjectProperty.FLIP_HORIZONTAL, data: false });
+                                fields.push({ name: MeshProperty.FLIP_DIAGONAL, data: true });
+                                fields.push({ name: MeshProperty.FLIP_VERTICAL, data: false });
+                                fields.push({ name: MeshProperty.FLIP_HORIZONTAL, data: false });
                                 break;
                         }
                     }
                 }
 
                 // NOTE: обновляем конфиг шрифтов
-                update_option(_config, ObjectProperty.FONT, ResourceManager.get_all_fonts);
+                update_option(_config, MeshProperty.FONT, ResourceManager.get_all_fonts);
 
                 // NOTE: текстовые поля
                 if ([IObjectTypes.TEXT, IObjectTypes.GUI_TEXT, IObjectTypes.GO_LABEL_COMPONENT].includes(value.type)) {
-                    fields.push({ name: ObjectProperty.TEXT, data: (value as TextMesh).text });
-                    fields.push({ name: ObjectProperty.FONT, data: (value as TextMesh).font || '' });
-                    fields.push({ name: ObjectProperty.COLOR, data: value.get_color() });
-                    fields.push({ name: ObjectProperty.ALPHA, data: (value as TextMesh).fillOpacity });
+                    fields.push({ name: MeshProperty.TEXT, data: (value as TextMesh).text });
+                    fields.push({ name: MeshProperty.FONT, data: (value as TextMesh).font || '' });
+                    fields.push({ name: MeshProperty.COLOR, data: value.get_color() });
+                    fields.push({ name: MeshProperty.ALPHA, data: (value as TextMesh).fillOpacity });
 
                     const delta = new Vector3(1 * value.scale.x, 1 * value.scale.y);
                     const max_delta = Math.max(delta.x, delta.y);
                     const font_size = (value as TextMesh).fontSize * max_delta;
 
-                    fields.push({ name: ObjectProperty.FONT_SIZE, data: font_size });
-                    fields.push({ name: ObjectProperty.TEXT_ALIGN, data: (value as TextMesh).textAlign });
+                    fields.push({ name: MeshProperty.FONT_SIZE, data: font_size });
+                    fields.push({ name: MeshProperty.TEXT_ALIGN, data: (value as TextMesh).textAlign });
 
                     const line_height = (value as TextMesh).lineHeight;
-                    if (line_height == 'normal') fields.push({ name: ObjectProperty.LINE_HEIGHT, data: 1 });
-                    else fields.push({ name: ObjectProperty.LINE_HEIGHT, data: line_height });
+                    if (line_height == 'normal') fields.push({ name: MeshProperty.LINE_HEIGHT, data: 1 });
+                    else fields.push({ name: MeshProperty.LINE_HEIGHT, data: line_height });
                 }
             }
 
@@ -432,7 +447,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshPosition] Mesh not found for id:', ids);
             return;
         }
@@ -445,7 +460,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshRotation] Mesh not found for id:', ids);
             return;
         }
@@ -459,7 +474,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshScale] Mesh not found for id:', ids);
             return;
         }
@@ -472,7 +487,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshSize] Mesh not found for id:', ids);
             return;
         }
@@ -485,7 +500,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshPivot] Mesh not found for id:', ids);
             return;
         }
@@ -498,7 +513,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshAnchor] Mesh not found for id:', ids);
             return;
         }
@@ -511,7 +526,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshAnchorPreset] Mesh not found for id:', ids);
             return;
         }
@@ -524,7 +539,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshSlice9] Mesh not found for id:', ids);
             return;
         }
@@ -537,7 +552,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshFontSize] Mesh not found for id:', ids);
             return;
         }
@@ -552,7 +567,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshFlipVertical] Mesh not found for id:', ids);
             return;
         }
@@ -565,7 +580,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshFlipHorizontal] Mesh not found for id:', ids);
             return;
         }
@@ -578,7 +593,7 @@ function ObjectInspectorCreate() {
             return ids.includes(item.mesh_data.id);
         });
 
-        if(mesh == undefined) {
+        if (mesh == undefined) {
             Log.error('[refreshFlipDiagonal] Mesh not found for id:', ids);
             return;
         }
@@ -646,12 +661,12 @@ function ObjectInspectorCreate() {
             }
 
             actives.push({ id_mesh: id, state: mesh.get_active() });
-            
+
             if (mesh.children.length > 0) {
                 const children = getChildrenActive(mesh.children, mesh.get_active());
                 if (children.length > 0) actives.push(...children);
             }
-            
+
         });
 
         HistoryControl.add('MESH_ACTIVE', actives);
@@ -663,7 +678,7 @@ function ObjectInspectorCreate() {
             child.set_active(state);
             result.push({ id: child.mesh_data.id, visible: child.get_visible() });
             if (child.children.length > 0) {
-                const children = updateChildrenActive(child.children, state); 
+                const children = updateChildrenActive(child.children, state);
                 if (children.length > 0) result.push(...children);
             }
         });
@@ -684,14 +699,14 @@ function ObjectInspectorCreate() {
             }
 
             mesh.set_active(state);
-            ids.push({id, visible: mesh.get_visible()});
+            ids.push({ id, visible: mesh.get_visible() });
             if (mesh.children) {
-                const children = updateChildrenActive(mesh.children, state); 
+                const children = updateChildrenActive(mesh.children, state);
                 if (children.length > 0) ids.push(...children);
             }
         });
 
-        EventBus.trigger("SYS_GRAPH_ACTIVE", {list: ids, state});
+        EventBus.trigger("SYS_GRAPH_ACTIVE", { list: ids, state });
     }
 
     // function saveVisible(ids: number[]) {
@@ -898,7 +913,7 @@ function ObjectInspectorCreate() {
         SizeControl.draw();
 
         // для обновления размера шрифта
-        Inspector.refresh([ObjectProperty.FONT_SIZE]);
+        Inspector.refresh([MeshProperty.FONT_SIZE]);
     }
 
     function saveSize(info: BeforeChangeInfo) {
@@ -1044,10 +1059,10 @@ function ObjectInspectorCreate() {
         SizeControl.draw();
 
         if (info.data.event.last) {
-            Inspector.refresh([ObjectProperty.ANCHOR_PRESET]);
+            Inspector.refresh([MeshProperty.ANCHOR_PRESET]);
         }
 
-        Inspector.refresh([ObjectProperty.ANCHOR]);
+        Inspector.refresh([MeshProperty.ANCHOR]);
     }
 
     function saveAnchorPreset(info: BeforeChangeInfo) {
@@ -1086,7 +1101,7 @@ function ObjectInspectorCreate() {
         });
 
         SizeControl.draw();
-        Inspector.refresh([ObjectProperty.ANCHOR]);
+        Inspector.refresh([MeshProperty.ANCHOR]);
     }
 
     function saveColor(info: BeforeChangeInfo) {
@@ -1351,7 +1366,7 @@ function ObjectInspectorCreate() {
 
         TransformControl.set_proxy_in_average_point(_selected_meshes);
         SizeControl.draw();
-        Inspector.refresh([ObjectProperty.SCALE]);
+        Inspector.refresh([MeshProperty.SCALE]);
     }
 
     function saveTextAlign(info: BeforeChangeInfo) {
@@ -1441,7 +1456,7 @@ function ObjectInspectorCreate() {
     function updateAtlas(info: ChangeInfo) {
         const atlas = info.data.event.value as string;
         let texture = '';
-        for(const item of ResourceManager.get_all_textures()) {
+        for (const item of ResourceManager.get_all_textures()) {
             if (item.atlas == atlas) {
                 texture = item.name;
                 break;
@@ -1516,7 +1531,8 @@ function ObjectInspectorCreate() {
                 return;
             }
 
-            materials.push({ id_mesh: id, material: (mesh as any).material.name });
+            const material_name = (mesh as Slice9Mesh).get_material().name;
+            materials.push({ id_mesh: id, material_name });
         });
 
         HistoryControl.add('MESH_MATERIAL', materials);
@@ -1533,9 +1549,11 @@ function ObjectInspectorCreate() {
                 return;
             }
 
-            const material = info.data.event.value as string;
-            (mesh as Slice9Mesh).set_material(ResourceManager.get_material(material).data);
+            const material_name = info.data.event.value as string;
+            (mesh as Slice9Mesh).set_material(material_name);
         });
+
+        Inspector.refresh([MeshProperty.ATLAS, MeshProperty.TEXTURE]);
     }
 
     function saveUV(info: BeforeChangeInfo) {
@@ -1567,13 +1585,13 @@ function ObjectInspectorCreate() {
             if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                 const sprite = item as GoSprite;
                 sprite.set_flip(FlipMode.NONE);
-                if(info.data.event.value) { 
+                if (info.data.event.value) {
                     sprite.set_flip(FlipMode.VERTICAL);
                 }
             }
         });
 
-        Inspector.refresh([ObjectProperty.FLIP_DIAGONAL, ObjectProperty.FLIP_HORIZONTAL]);
+        Inspector.refresh([MeshProperty.FLIP_DIAGONAL, MeshProperty.FLIP_HORIZONTAL]);
     }
 
     function updateFlipHorizontal(info: ChangeInfo) {
@@ -1581,13 +1599,13 @@ function ObjectInspectorCreate() {
             if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                 const sprite = item as GoSprite;
                 sprite.set_flip(FlipMode.NONE);
-                if(info.data.event.value) { 
+                if (info.data.event.value) {
                     sprite.set_flip(FlipMode.HORIZONTAL);
                 }
             }
         });
 
-        Inspector.refresh([ObjectProperty.FLIP_DIAGONAL, ObjectProperty.FLIP_VERTICAL]);
+        Inspector.refresh([MeshProperty.FLIP_DIAGONAL, MeshProperty.FLIP_VERTICAL]);
     }
 
     function updateFlipDiagonal(info: ChangeInfo) {
@@ -1595,144 +1613,15 @@ function ObjectInspectorCreate() {
             if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                 const sprite = item as GoSprite;
                 sprite.set_flip(FlipMode.NONE);
-                if(info.data.event.value) { 
+                if (info.data.event.value) {
                     sprite.set_flip(FlipMode.DIAGONAL);
                 }
             }
         });
 
-        Inspector.refresh([ObjectProperty.FLIP_VERTICAL, ObjectProperty.FLIP_HORIZONTAL]);
+        Inspector.refresh([MeshProperty.FLIP_VERTICAL, MeshProperty.FLIP_HORIZONTAL]);
     }
 
     init();
     return {};
-}
-
-export function generateMaterialOptions() {
-    const materialOptions: { [key: string]: string } = {};
-    ResourceManager.get_all_materials().forEach(material => {
-        materialOptions[(material == 'default') ? 'Стандартный' : material] = material;
-    });
-    return materialOptions;
-}
-
-export function generateAtlasOptions() {
-    const data: {[key in string]: string} = {};
-    ResourceManager.get_all_atlases().forEach((atlas) => {
-        return data[atlas == '' ? 'Без атласа' : atlas] = atlas;
-    });
-    return data;
-}
-
-export function pivotToScreenPreset(pivot: Vector2) {
-    if (pivot.x == 0.5 && pivot.y == 0.5) {
-        return ScreenPointPreset.CENTER;
-    } else if (pivot.x == 0 && pivot.y == 1) {
-        return ScreenPointPreset.TOP_LEFT;
-    } else if (pivot.x == 0.5 && pivot.y == 1) {
-        return ScreenPointPreset.TOP_CENTER;
-    } else if (pivot.x == 1 && pivot.y == 1) {
-        return ScreenPointPreset.TOP_RIGHT;
-    } else if (pivot.x == 0 && pivot.y == 0.5) {
-        return ScreenPointPreset.LEFT_CENTER;
-    } else if (pivot.x == 1 && pivot.y == 0.5) {
-        return ScreenPointPreset.RIGHT_CENTER;
-    } else if (pivot.x == 0 && pivot.y == 0) {
-        return ScreenPointPreset.BOTTOM_LEFT;
-    } else if (pivot.x == 0.5 && pivot.y == 0) {
-        return ScreenPointPreset.BOTTOM_CENTER;
-    } else if (pivot.x == 1 && pivot.y == 0) {
-        return ScreenPointPreset.BOTTOM_RIGHT;
-    }
-
-    return ScreenPointPreset.CENTER;
-}
-
-export function screenPresetToPivotValue(preset: ScreenPointPreset) {
-    switch (preset) {
-        case ScreenPointPreset.CENTER: return new Vector2(0.5, 0.5);
-        case ScreenPointPreset.TOP_LEFT: return new Vector2(0, 1);
-        case ScreenPointPreset.TOP_CENTER: return new Vector2(0.5, 1);
-        case ScreenPointPreset.TOP_RIGHT: return new Vector2(1, 1);
-        case ScreenPointPreset.LEFT_CENTER: return new Vector2(0, 0.5);
-        case ScreenPointPreset.RIGHT_CENTER: return new Vector2(1, 0.5);
-        case ScreenPointPreset.BOTTOM_LEFT: return new Vector2(0, 0);
-        case ScreenPointPreset.BOTTOM_CENTER: return new Vector2(0.5, 0);
-        case ScreenPointPreset.BOTTOM_RIGHT: return new Vector2(1, 0);
-        default: return new Vector2(0.5, 0.5);
-    }
-}
-
-export function anchorToScreenPreset(anchor: Vector2) {
-    if (anchor.x == 0.5 && anchor.y == 0.5) {
-        return ScreenPointPreset.CENTER;
-    } else if (anchor.x == 0 && anchor.y == 1) {
-        return ScreenPointPreset.TOP_LEFT;
-    } else if (anchor.x == 0.5 && anchor.y == 1) {
-        return ScreenPointPreset.TOP_CENTER;
-    } else if (anchor.x == 1 && anchor.y == 1) {
-        return ScreenPointPreset.TOP_RIGHT;
-    } else if (anchor.x == 0 && anchor.y == 0.5) {
-        return ScreenPointPreset.LEFT_CENTER;
-    } else if (anchor.x == 1 && anchor.y == 0.5) {
-        return ScreenPointPreset.RIGHT_CENTER;
-    } else if (anchor.x == 0 && anchor.y == 0) {
-        return ScreenPointPreset.BOTTOM_LEFT;
-    } else if (anchor.x == 0.5 && anchor.y == 0) {
-        return ScreenPointPreset.BOTTOM_CENTER;
-    } else if (anchor.x == 1 && anchor.y == 0) {
-        return ScreenPointPreset.BOTTOM_RIGHT;
-    } else if (anchor.x == -1 && anchor.y == -1) {
-        return ScreenPointPreset.NONE;
-    }
-
-    return ScreenPointPreset.CUSTOM;
-}
-
-export function screenPresetToAnchorValue(preset: ScreenPointPreset) {
-    switch (preset) {
-        case ScreenPointPreset.CENTER: return new Vector2(0.5, 0.5);
-        case ScreenPointPreset.TOP_LEFT: return new Vector2(0, 1);
-        case ScreenPointPreset.TOP_CENTER: return new Vector2(0.5, 1);
-        case ScreenPointPreset.TOP_RIGHT: return new Vector2(1, 1);
-        case ScreenPointPreset.LEFT_CENTER: return new Vector2(0, 0.5);
-        case ScreenPointPreset.RIGHT_CENTER: return new Vector2(1, 0.5);
-        case ScreenPointPreset.BOTTOM_LEFT: return new Vector2(0, 0);
-        case ScreenPointPreset.BOTTOM_CENTER: return new Vector2(0.5, 0);
-        case ScreenPointPreset.BOTTOM_RIGHT: return new Vector2(1, 0);
-        case ScreenPointPreset.NONE: return new Vector2(-1, -1);
-        default: return new Vector2(0.5, 0.5);
-    }
-}
-
-function convertBlendModeToThreeJS(blend_mode: BlendMode): number {
-    switch (blend_mode) {
-        case BlendMode.NORMAL:
-            return NormalBlending;
-        case BlendMode.ADD:
-            return AdditiveBlending;
-        case BlendMode.MULTIPLY:
-            return MultiplyBlending;
-        case BlendMode.SUBTRACT:
-            return SubtractiveBlending;
-        // case BlendMode.CUSTOM:
-        //     return CustomBlending;
-        default:
-            return NormalBlending;
-    }
-}
-
-function convertThreeJSBlendingToBlendMode(blending: number): BlendMode {
-    switch (blending) {
-        case NormalBlending:
-            return BlendMode.NORMAL;
-        case AdditiveBlending:
-            return BlendMode.ADD;
-        case MultiplyBlending:
-            return BlendMode.MULTIPLY;
-        case SubtractiveBlending:
-            return BlendMode.SUBTRACT;
-        default:
-            return BlendMode.NORMAL;
-    }
 }

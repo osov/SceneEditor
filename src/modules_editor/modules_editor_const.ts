@@ -35,7 +35,8 @@ export type _SystemMessagesEditor = {
     SYS_ASSETS_SELECTED_MATERIALS: { paths: string[] },
     SYS_ASSETS_CLEAR_SELECTED: {},
     SYS_CHANGED_ATLAS_DATA: {},
-    MATERIAL_CHANGED: { material_name: string, property: string, value: any },
+    MATERIAL_CHANGED: TMaterialChanged,
+    MATERIAL_COPY_CHANGED: TMaterialChanged,
 };
 
 
@@ -97,6 +98,8 @@ export type ProjectPathsData = {
     atlases: LoadAtlasData[],
     models: string[],
     materials: string[],
+    vertex_programs: string[],
+    fragment_programs: string[],
 }
 export type ProjectLoadData = { assets: FSObject[], name: string, paths: ProjectPathsData }
 export type ProjectCache = { name?: string, current_dir: string, current_scene: { name?: string, path?: string } }
@@ -154,6 +157,8 @@ export const CACHE = '/server_cache.json';
 export const SCENE_EXT = `scn`;
 export const ATLAS_EXT = `tpsheet`;
 export const MATERIAL_EXT = `mtr`;
+export const VERTEX_PROGRAM_EXT = `vp`;
+export const FRAGMENT_PROGRAM_EXT = `fp`;
 export const FONT_EXT = `ttf`;
 
 export const CMD_NAME = [
@@ -196,5 +201,7 @@ export interface ProtocolWrapper {
 export type TDictionary<T> = { [key: number | string]: T };
 
 export type TRecursiveDict = { [Key: number | string]: TRecursiveDict | number | string };
-export type Segment = {p2: Vector2Like, p1: Vector2Like};
-export type Circle = {center: Vector2, radius: number};
+export type TMaterialChanged = { material_name: string, is_uniform: boolean, property: string, value: any };
+
+export type Segment = { p2: Vector2Like, p1: Vector2Like };
+export type Circle = { center: Vector2, radius: number };
