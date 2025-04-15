@@ -1,5 +1,5 @@
-import { LineSegments, Vector2, Vector2Like, Vector3, Vector4 } from "three";
-import { Circle, Segment } from "../modules_editor/modules_editor_const";
+import { Circle, Segment } from "2d-geometry";
+import { Vector3, Vector4 } from "three";
 
 export function get_hms() {
     var now = new Date();

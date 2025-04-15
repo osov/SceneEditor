@@ -202,6 +202,3 @@ export type TDictionary<T> = { [key: number | string]: T };
 
 export type TRecursiveDict = { [Key: number | string]: TRecursiveDict | number | string };
 export type TMaterialChanged = { material_name: string, is_uniform: boolean, property: string, value: any };
-
-export type Segment = { p2: Vector2Like, p1: Vector2Like };
-export type Circle = { center: Vector2, radius: number };

@@ -1,10 +1,11 @@
 import { PROJECT_NAME, SERVER_URL, WORLD_SCALAR } from "../config";
 import { run_debug_filemanager } from "../controls/AssetControl";
-import { Segment, URL_PATHS } from "../modules_editor/modules_editor_const";
+import { URL_PATHS } from "../modules_editor/modules_editor_const";
 import { get_all_tiled_textures, get_depth, MapData, preload_tiled_textures } from "../render_engine/parsers/tile_parser";
 import { IObjectTypes } from "../render_engine/types";
 import { TileLoader } from "../render_engine/tile_loader";
 import { calculate_borders, default_settings, MovementLogic } from "../modules/PlayerMovement";
+import { Segment } from "2d-geometry";
 
 const SORT_LAYER = 7;
 const SUB_SCALAR = WORLD_SCALAR;

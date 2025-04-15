@@ -20,6 +20,7 @@
     "vite-multiple-assets": "^2.2.5"
   },
   "dependencies": {
+    "2d-geometry": "^3.0.0",
     "@pangenerator/tweakpane-textarea-plugin": "^2.0.0",
     "@three.ez/instanced-mesh": "^0.3.0-alpha.10",
     "@tweakpane/core": "^2.0.5",

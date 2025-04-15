@@ -1,7 +1,7 @@
 import { AdditiveBlending, FloatType, MeshBasicMaterial, NearestFilter, RepeatWrapping, RGBAFormat, ShaderMaterial, Vector2, WebGLRenderTarget } from 'three'
 import { run_debug_filemanager } from '../controls/AssetControl';
 import { PROJECT_NAME, SERVER_URL, WORLD_SCALAR } from '../config';
-import { Segment, URL_PATHS } from '../modules_editor/modules_editor_const';
+import { URL_PATHS } from '../modules_editor/modules_editor_const';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
@@ -10,6 +10,7 @@ import { MapData, preload_tiled_textures, get_all_tiled_textures } from '../rend
 import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import { TileLoader } from '../render_engine/tile_loader';
 import { calculate_borders, default_settings, MovementLogic } from '../modules/PlayerMovement';
+import { Segment } from '2d-geometry';
 
 
 
@@ -67,7 +68,10 @@ export async function run_scene_light() {
         const movement_settings = {
             ...default_settings, 
             collide_radius: 2, 
+            max_try_dist: 0.5,
+            target_stop_distance: 0.2,
             speed: {WALK: 18},
+            blocked_move_max_dist: 0.01
         }
         const obstacles: Segment[] = [];
         const all_objects = SceneManager.get_scene_list();
