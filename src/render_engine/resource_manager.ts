@@ -27,6 +27,7 @@ export interface TextureData {
     texture: Texture;
     uvOffset: Vector2;
     uvScale: Vector2;
+    uv12: Vector4;
     size: Vector2;
 }
 
@@ -369,7 +370,15 @@ export function ResourceManagerModule() {
         if (atlases[atlas][name]) {
             Log.warn('texture exists already', name, atlas);
         }
-        atlases[atlas][name] = { data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
+        atlases[atlas][name] = {
+            data: {
+                texture,
+                uvOffset: new Vector2(0, 0),
+                uv12: new Vector4(0, 1, 1, 0),
+                uvScale: new Vector2(1, 1),
+                size: new Vector2(texture.image.width, texture.image.height)
+            }
+        };
 
         return atlases[atlas][name].data;
     }
@@ -389,7 +398,15 @@ export function ResourceManagerModule() {
             Log.warn('Texture already exists', name, atlas);
         }
 
-        atlases[atlas][name] = { data: { texture, uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1), size: new Vector2(texture.image.width, texture.image.height) } };
+        atlases[atlas][name] = {
+            data: {
+                texture,
+                uvOffset: new Vector2(0, 0),
+                uv12: new Vector4(0, 1, 1, 0),
+                uvScale: new Vector2(1, 1),
+                size: new Vector2(texture.image.width, texture.image.height)
+            }
+        };
 
         return atlases[atlas][name].data;
     }
@@ -419,6 +436,7 @@ export function ResourceManagerModule() {
                     texture,
                     size: new Vector2(texture.image.width * tex_data.uvScale[0], texture.image.width * tex_data.uvScale[1]),
                     uvOffset: new Vector2(tex_data.uvOffset[0], tex_data.uvOffset[1]),
+                    uv12: new Vector4(tex_data.uv12[0], tex_data.uv12[1], tex_data.uv12[2], tex_data.uv12[3]),
                     uvScale: new Vector2(tex_data.uvScale[0], tex_data.uvScale[1])
                 }
             };
@@ -592,7 +610,13 @@ export function ResourceManagerModule() {
     function get_texture(name: string, atlas = ''): TextureData {
         if (!has_texture_name(name, atlas)) {
             Log.error('Texture not found', name, atlas);
-            return { texture: bad_texture, size: new Vector2(128, 128), uvOffset: new Vector2(0, 0), uvScale: new Vector2(1, 1) };
+            return {
+                texture: bad_texture,
+                size: new Vector2(128, 128),
+                uvOffset: new Vector2(0, 0),
+                uv12: new Vector4(0, 1, 1, 0),
+                uvScale: new Vector2(1, 1)
+            };
         };
         return atlases[atlas][name].data;
     }

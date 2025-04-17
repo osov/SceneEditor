@@ -159,7 +159,7 @@ function FlowMapControlCreate() {
                 draw_canvas.loadTexture(texture_data.texture, () => material.uniforms.u_flowMap.value.needsUpdate = true);
             }
             else {
-                Popups.toast.error('[Карта потока] меш не найден:' + id);
+               //Log.error('[Карта потока] меш не найден:' + id);
             }
         }
     }
@@ -232,7 +232,7 @@ function FlowMapControlCreate() {
             return;
         const [material, draw_canvas] = await create_water_shader(mesh);
         tiles_info[key] = { material, draw_canvas };
-        log('activated flow', key)
+        //log('activated flow', key)
     }
 
     async function deactivate_flow(mesh: IBaseMeshAndThree) {

@@ -41,8 +41,8 @@ export function parse_unity_tp_sheet(fileContent: string): Record<string, Textur
 
 
 // Функция преобразования позиции и размера текстуры в UV-координаты
-export function convert_to_uv_coordinates(textureMap: Record<string, TextureData>, atlasWidth: number, atlasHeight: number): Record<string, { uvOffset: [number, number]; uvScale: [number, number] }> {
-    const uvData: Record<string, { uvOffset: [number, number]; uvScale: [number, number] }> = {};
+export function convert_to_uv_coordinates(textureMap: Record<string, TextureData>, atlasWidth: number, atlasHeight: number) {
+    const uvData: Record<string, { uvOffset: [number, number]; uv12: [number, number, number, number]; uvScale: [number, number] }> = {};
 
     Object.entries(textureMap).forEach(([name, data]) => {
         const { x, y } = data.position;
@@ -50,14 +50,24 @@ export function convert_to_uv_coordinates(textureMap: Record<string, TextureData
 
         // UV Offset (верхний левый угол)
         const uvOffsetX = x / atlasWidth;
-        const uvOffsetY =  y / atlasHeight; 
+        const uvOffsetY = y / atlasHeight; 
 
         // UV Scale (размер в UV-системе)
         const uvScaleX = width / atlasWidth;
         const uvScaleY = height / atlasHeight;
+        const u1 = x ;
+        const u2 = u1 + width;
+        const v1 = atlasHeight - height - y;
+        const v2 = v1 + height;
 
         uvData[name] = {
             uvOffset: [uvOffsetX, uvOffsetY],
+            uv12: [
+                u1 / atlasWidth, 
+                (atlasHeight - v1) / atlasHeight,
+                u2 / atlasWidth, 
+                (atlasHeight - v2) / atlasHeight 
+            ],
             uvScale: [uvScaleX, uvScaleY],
         };
     });
@@ -66,7 +76,7 @@ export function convert_to_uv_coordinates(textureMap: Record<string, TextureData
 }
 
 
-export function parse_tp_data_to_uv(tpData: string, atlasWidth: number, atlasHeight: number): Record<string, { uvOffset: [number, number]; uvScale: [number, number] }> {
+export function parse_tp_data_to_uv(tpData: string, atlasWidth: number, atlasHeight: number) {
     const textureMap = parse_unity_tp_sheet(tpData);
     return convert_to_uv_coordinates(textureMap, atlasWidth, atlasHeight);
 }

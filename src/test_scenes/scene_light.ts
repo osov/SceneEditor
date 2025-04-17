@@ -1,13 +1,12 @@
-import { AdditiveBlending, FloatType, MeshBasicMaterial, NearestFilter, RepeatWrapping, RGBAFormat, ShaderMaterial, Vector2, WebGLRenderTarget } from 'three'
+import { FloatType, NearestFilter, RGBAFormat, Vector2, WebGLRenderTarget } from 'three'
 import { run_debug_filemanager } from '../controls/AssetControl';
 import { PROJECT_NAME, SERVER_URL, WORLD_SCALAR } from '../config';
 import { URL_PATHS } from '../modules_editor/modules_editor_const';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { MapData, preload_tiled_textures, get_all_tiled_textures } from '../render_engine/parsers/tile_parser';
-import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
+import { IObjectTypes } from '../render_engine/types';
 import { TileLoader } from '../render_engine/tile_loader';
 import { calculate_borders, default_settings, MovementLogic } from '../modules/PlayerMovement';
 import { Segment } from '2d-geometry';
@@ -22,6 +21,7 @@ export async function run_scene_light() {
 
     ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
     await run_debug_filemanager(PROJECT_NAME);
+    await ResourceManager.preload_atlas('/test_assets/texture.tpsheet', '/test_assets/texture.png');
 
     const map_data = await ResourceManager.load_asset('/tiled/parsed_map.json') as MapData;
     preload_tiled_textures(map_data);
@@ -32,6 +32,7 @@ export async function run_scene_light() {
     //    const tex = all[id];
     //    ResourceManager.override_atlas_texture('', tex.atlas, tex.name);
     //}
+    //await ResourceManager.write_metadata();
 
 
     const world = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
@@ -50,7 +51,11 @@ export async function run_scene_light() {
     await GrassTreeControl.load_shader();
     await GrassTreeControl.load_saved_flows();
 
+    await PaintInspector.load_shader();
+
+
     await AssetControl.open_scene('/LIGHT.scn');
+    await PaintInspector.load_saved();
 
     const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
     am.set_mesh('Unarmed Idle');
@@ -66,11 +71,11 @@ export async function run_scene_light() {
     let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
     if (game_mode) {
         const movement_settings = {
-            ...default_settings, 
-            collide_radius: 2, 
+            ...default_settings,
+            collide_radius: 2,
             max_try_dist: 0.5,
             target_stop_distance: 0.2,
-            speed: {WALK: 18},
+            speed: { WALK: 18 },
             blocked_move_max_dist: 0.01
         }
         const obstacles: Segment[] = [];
@@ -111,8 +116,6 @@ export async function run_scene_light() {
     const lightRenderTarget = new WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetOptions);
 
     const composer = new EffectComposer(renderer);
-    const renderPass = new RenderPass(scene, camera);
-    composer.addPass(renderPass);
     const fp = (await AssetControl.get_file_data('shaders/light.fp')).data!;
     const lut_name = fp.split('\n')[0].substr(2).trim();
 
@@ -198,4 +201,6 @@ export async function run_scene_light() {
         camera.layers.mask = old;
 
     });
+
+
 }

@@ -159,7 +159,7 @@ function GrassTreeControlCreate() {
                 //draw_canvas.loadTexture(texture_data.texture, () => material.uniforms.u_flowMap.value.needsUpdate = true);
             }
             else {
-                Popups.toast.error('[Карта потока] меш не найден:' + id);
+                //Log.error('[Карта дерева] меш не найден:' + id);
             }
         }
     }
@@ -275,7 +275,7 @@ function GrassTreeControlCreate() {
             Popups.toast.success('Карта дерева сохранена:' + key);
         }
         else
-            Popups.toast.error('Ошибка сохранения карты потока:' + key);
+            Popups.toast.error('Ошибка сохранения карты дерева:' + key);
     }
 
 

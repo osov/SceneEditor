@@ -1,5 +1,5 @@
 import { BufferGeometry, Line, LineDashedMaterial, Object3D, ShaderMaterial, Vector2, Vector3, Vector4, Texture, Color } from "three";
-import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
+import { IBaseMeshAndThree, IBaseEntityAndThree, IObjectTypes } from "../types";
 import { deepClone } from "../../modules/utils";
 
 export function get_basename(path: string) {

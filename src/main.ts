@@ -26,6 +26,7 @@ import { register_grass_tree_control } from './controls/GrassTreeControl';
 import { register_mesh_inspector } from './inspectors/MeshInspector';
 import { register_asset_inspector } from './inspectors/AssetInspector';
 import { register_mesh_material_inspector } from './inspectors/MeshMaterialInspector';
+import { register_paint_inspector } from './inspectors/PaintInspector';
 
 let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
 
@@ -58,6 +59,7 @@ register_history_control();
 register_mesh_inspector();
 register_asset_inspector();
 register_mesh_material_inspector();
+register_paint_inspector();
 
 
 const scenes = [
