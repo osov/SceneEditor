@@ -190,7 +190,7 @@ body {
   user-select: none;
 }
 
-.menu_min a:hover {
+.menu_min a:hover:not(:first-child) {
   background-color: #3a7fbd;
 }
 

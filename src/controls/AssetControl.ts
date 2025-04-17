@@ -1130,7 +1130,7 @@ function AssetControlCreate() {
 
     init();
     return {
-        load_project, new_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene,
+        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene
     };
 }
 

@@ -33,6 +33,8 @@ export enum NodeAction {
     new_folder,
     new_scene,
     material_base,
+    scene_save,
+    scene_save_as,
 }
 
 export const NodeActionGui: number[] = [
