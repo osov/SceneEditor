@@ -77,8 +77,6 @@ export function CreateDrawCanvas(size_x: number, size_y: number, brush_size = 40
         x *= size_x;
         y *= size_y;
 
-
-
         let imageData = ctx.getImageData(x - brush_size, y - brush_size, brush_size * 2, brush_size * 2);
         let data = imageData.data;
 
@@ -89,7 +87,7 @@ export function CreateDrawCanvas(size_x: number, size_y: number, brush_size = 40
             let dist = Math.sqrt((px - brush_size) ** 2 + (py - brush_size) ** 2) / brush_size;
             if (dist > 1) continue;
 
-            let fade = 1 - dist; // Чем дальше от центра, тем меньше влияние
+            let fade = 1 - dist;
 
             let oldR = data[i];
             let oldG = data[i + 1];
@@ -102,6 +100,44 @@ export function CreateDrawCanvas(size_x: number, size_y: number, brush_size = 40
             data[i] = newR;
             data[i + 1] = newG;
             data[i + 2] = newB;
+        }
+
+        ctx.putImageData(imageData, x - brush_size, y - brush_size);
+    }
+
+    function draw_flow(x: number, y: number, dx: number, dy: number,flow_strength:number) {
+        x *= size_x;
+        y *= size_y;
+        let len = Math.sqrt(dx * dx + dy * dy);
+        if (len > 0) {
+            dx /= len;
+            dy /= len;
+        }
+
+        let centerR = Math.floor((dx * flow_strength + 1) * 127.5);
+        let centerG = Math.floor((dy * flow_strength + 1) * 127.5);
+        let centerB = (dx == 0 && dy == 0) ? 0 : 128;
+        let imageData = ctx.getImageData(x - brush_size, y - brush_size, brush_size * 2, brush_size * 2);
+        let data = imageData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+            let px = (i / 4) % (brush_size * 2);
+            let py = Math.floor(i / 4 / (brush_size * 2));
+
+            let dist = Math.sqrt((px - brush_size) ** 2 + (py - brush_size) ** 2) / brush_size;
+            if (dist > 1) continue;
+
+            let fade = 1 - dist;
+
+            let oldR = data[i];
+            let oldG = data[i + 1];
+
+            let newR = Math.floor(centerR * fade + oldR * (1 - fade));
+            let newG = Math.floor(centerG * fade + oldG * (1 - fade));
+
+            data[i] = newR;
+            data[i + 1] = newG;
+            data[i + 2] = centerB;
         }
 
         ctx.putImageData(imageData, x - brush_size, y - brush_size);
@@ -128,7 +164,7 @@ export function CreateDrawCanvas(size_x: number, size_y: number, brush_size = 40
         return canvas;
     }
 
-    return { draw, getCanvas, loadTexture, set_size };
+    return { draw, draw_flow, getCanvas, loadTexture, set_size };
 }
 
 export type IDrawCanvas = ReturnType<typeof CreateDrawCanvas>;

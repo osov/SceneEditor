@@ -219,12 +219,15 @@ function PaintInspectorCreate() {
         if (!selected_mesh)
             return;
         const material = (selected_mesh as any).material as ShaderMaterial;
-        if (info.data.field.name == InspectorProperty.TEX_RED)
-            set_texture_slot(0, info.data.event.value as string, material);
+        if (info.data.field.name == InspectorProperty.TEX_RED){
+            const tex_data = set_texture_slot(0, info.data.event.value as string, material);
+            material.uniforms.tex_size_repeat.value.x = tex_data.size.x;
+        }
         if (info.data.field.name == InspectorProperty.TEX_GREEN)
             set_texture_slot(1, info.data.event.value as string, material);
         if (info.data.field.name == InspectorProperty.TEX_BLUE)
             set_texture_slot(2, info.data.event.value as string, material);
+
         if (info.data.field.name == InspectorProperty.SIZE_RED)
             material.uniforms.tex_size_repeat.value.y = config_data[InspectorProperty.SIZE_RED];
         if (info.data.field.name == InspectorProperty.SIZE_GREEN)

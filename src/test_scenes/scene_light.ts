@@ -45,11 +45,11 @@ export async function run_scene_light() {
 
     FlowMapControl.init();
     await FlowMapControl.load_shader();
-    await FlowMapControl.load_saved_flows();
+    await FlowMapControl.load_saved();
 
     GrassTreeControl.init();
     await GrassTreeControl.load_shader();
-    await GrassTreeControl.load_saved_flows();
+    await GrassTreeControl.load_saved();
 
     await PaintInspector.load_shader();
 
