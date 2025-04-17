@@ -364,7 +364,7 @@ function SizeControlCreate() {
 
     function get_cursor_dir(wp: Vector3, bounds: number[], range = 5) {
         const dist = Math.abs(bounds[2] - bounds[0]);
-        range *= (dist / 150);
+        range *= (dist / 300);
         const tmp_dir = [0, 0];
         document.body.style.cursor = 'default';
         tmp_dir[0] = 0;
@@ -458,7 +458,7 @@ function SizeControlCreate() {
 
     function draw_debug_bb(bb: number[]) {
         const dist = Math.abs(bb[2] - bb[0]);
-        const SUB_SCALAR = Math.max(dist / 250, 0.1);
+        const SUB_SCALAR = Math.max(Math.min(dist / 250, 0.2), 0.1);
         for (let i = 0; i < bb_points.length; i++)
             bb_points[i].scale.setScalar(SUB_SCALAR);
         for (let i = 0; i < pivot_points.length; i++)
