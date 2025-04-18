@@ -1,4 +1,4 @@
-import { FloatType, NearestFilter, RGBAFormat, Vector2, WebGLRenderTarget } from 'three'
+import { FloatType, NearestFilter, RGBAFormat, Vector2, Vector3, WebGLRenderTarget } from 'three'
 import { run_debug_filemanager } from '../controls/AssetControl';
 import { PROJECT_NAME, SERVER_URL, WORLD_SCALAR } from '../config';
 import { URL_PATHS } from '../modules_editor/modules_editor_const';
@@ -43,6 +43,12 @@ export async function run_scene_light() {
     const tl = TileLoader(world, 256);
     tl.load(map_data);
 
+    //const spl = SceneManager.create(IObjectTypes.COMPONENT_SPLINE);
+    //spl.set_position(320, -245, 5000);
+    //spl.add_point(335, -240);
+    //spl.add_point(345, -260);
+    //SceneManager.add(spl);
+
     FlowMapControl.init();
     await FlowMapControl.load_shader();
     await FlowMapControl.load_saved();
@@ -54,7 +60,7 @@ export async function run_scene_light() {
     await PaintInspector.load_shader();
 
 
-    await AssetControl.open_scene('/LIGHT.scn');
+   // await AssetControl.open_scene('/LIGHT.scn');
     await PaintInspector.load_saved();
 
     const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
@@ -202,5 +208,6 @@ export async function run_scene_light() {
 
     });
 
+    ControlManager.update_graph(true, 'light');
 
 }

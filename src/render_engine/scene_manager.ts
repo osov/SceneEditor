@@ -8,6 +8,7 @@ import { deepClone } from "../modules/utils";
 import { GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
 import { AnimatedMesh } from "./objects/animated_mesh";
 import { EntityBase } from "./objects/entity_base";
+import { SplineComponent } from "./components/spline";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -31,7 +32,9 @@ type IMeshTypes = {
     [IObjectTypes.GO_CONTAINER]: GoContainer,
     [IObjectTypes.GO_SPRITE_COMPONENT]: GoSprite,
     [IObjectTypes.GO_LABEL_COMPONENT]: GoText,
-    [IObjectTypes.GO_MODEL_COMPONENT]: AnimatedMesh
+    [IObjectTypes.GO_MODEL_COMPONENT]: AnimatedMesh,
+
+    [IObjectTypes.COMPONENT_SPLINE]: SplineComponent
 
 
 
@@ -82,6 +85,8 @@ export function SceneManagerModule() {
             mesh = new GoText(params.text || '', params.width || default_size, params.height || default_size);
         else if (type == IObjectTypes.GO_MODEL_COMPONENT)
             mesh = new AnimatedMesh(params.width || default_size, params.height || default_size);
+        else if (type == IObjectTypes.COMPONENT_SPLINE)
+            mesh = new SplineComponent();
         else {
             Log.error('Unknown mesh type', type);
             mesh = new Slice9Mesh(32, 32);
@@ -126,8 +131,12 @@ export function SceneManagerModule() {
         if (m.children.length > 0) {
             data.children = [];
             for (let i = 0; i < m.children.length; i++)
-                if (is_base_mesh(m.children[i]))
-                    data.children.push(serialize_mesh(m.children[i] as IBaseEntityAndThree));
+                if (is_base_mesh(m.children[i])) {
+                    const bm = m.children[i] as IBaseEntityAndThree;
+                    if (bm.no_saving)
+                        continue;
+                    data.children.push(serialize_mesh(bm));
+                }
         }
         return data;
     }
@@ -323,6 +332,7 @@ export function SceneManagerModule() {
             old_scale.divide(parent_scale);
             mesh.scale.copy(old_scale);
         }
+        EventBus.trigger('SYS_MESH_MOVED_TO', { id: mesh.mesh_data.id, pid }, false);
     }
 
     function add(mesh: IBaseEntityAndThree, id_parent = -1, id_before = -1) {
@@ -335,9 +345,11 @@ export function SceneManagerModule() {
     }
 
     function remove(id: number) {
+        EventBus.trigger('SYS_MESH_REMOVE_BEFORE', { id: id }, false);
         const mesh = get_mesh_by_id(id);
         if (mesh)
             mesh.parent!.remove(mesh);
+        EventBus.trigger('SYS_MESH_REMOVE_AFTER', { id: id }, false);
     }
 
     function make_graph() {

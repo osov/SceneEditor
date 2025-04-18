@@ -24,6 +24,10 @@ export type _SystemMessagesEditor = {
     SYS_GRAPH_ACTIVE: { list: { id: number, visible: boolean }[], state: boolean },
     SYS_GRAPH_VISIBLE: { list: number[], state: boolean },
     SYS_GRAPH_DROP_IN_ASSETS: number,
+    SYS_MESH_REMOVE_BEFORE: { id: number },
+    SYS_MESH_REMOVE_AFTER: { id: number },
+    SYS_MESH_MOVED_TO: { id: number, pid: number },
+
     SYS_FILE_UPLOADED: FileUploadedData,
     SYS_ASSET_COPIED: { name: string, path: string, new_path: string },
     SYS_ASSET_MOVED: { name: string, path: string, new_path: string },

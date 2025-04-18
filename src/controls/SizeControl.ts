@@ -141,23 +141,25 @@ function SizeControlCreate() {
                     is_selected_anchor = false;
                 }
                 else {
-                    for (let i = 0; i < pivot_points.length; i++) {
-                        const pp = pivot_points[i];
-                        if (RenderEngine.is_intersected_mesh(new Vector2(e.x, e.y), pp)) {
-                            const pivot = index_to_pivot(i);
-                            HistoryControl.add('MESH_PIVOT', [{ id_mesh: mesh.mesh_data.id, pivot: mesh.get_pivot() }]);
-                            mesh.set_pivot(pivot.x, pivot.y, true);
-                            Inspector.refresh([MeshProperty.PIVOT]);
-                            // для текста почему-то прыгает размер и поэтому bb определяется неверно на ближайших кадрах
-                            // поэтому не обновляем draw_debug_bb
-                            for (let i = 0; i < pivot_points.length; i++)
-                                pivot_points[i].material.color.set(0xffffff);
-                            pivot_points[i].material.color.set(0xff0000);
-                            const wp = new Vector3();
-                            mesh.getWorldPosition(wp);
-                            debug_center.position.x = wp.x;
-                            debug_center.position.y = wp.y;
-                            // draw_debug_bb(get_bounds_from_list());
+                    if (is_supported_pivot()) {
+                        for (let i = 0; i < pivot_points.length; i++) {
+                            const pp = pivot_points[i];
+                            if (RenderEngine.is_intersected_mesh(new Vector2(e.x, e.y), pp)) {
+                                const pivot = index_to_pivot(i);
+                                HistoryControl.add('MESH_PIVOT', [{ id_mesh: mesh.mesh_data.id, pivot: mesh.get_pivot() }]);
+                                mesh.set_pivot(pivot.x, pivot.y, true);
+                                Inspector.refresh([MeshProperty.PIVOT]);
+                                // для текста почему-то прыгает размер и поэтому bb определяется неверно на ближайших кадрах
+                                // поэтому не обновляем draw_debug_bb
+                                for (let i = 0; i < pivot_points.length; i++)
+                                    pivot_points[i].material.color.set(0xffffff);
+                                pivot_points[i].material.color.set(0xff0000);
+                                const wp = new Vector3();
+                                mesh.getWorldPosition(wp);
+                                debug_center.position.x = wp.x;
+                                debug_center.position.y = wp.y;
+                                // draw_debug_bb(get_bounds_from_list());
+                            }
                         }
                     }
                 }
@@ -258,9 +260,11 @@ function SizeControlCreate() {
                     bounds2[1] -= dy * ws.y;
                     bounds2[2] -= dx * ws.x;
                     bounds2[3] += dy * ws.y;
-                    const tmp = get_cursor_dir(wp, bounds2);
-                    dir[0] = tmp[0];
-                    dir[1] = tmp[1];
+                    if (is_supported_size()) {
+                        const tmp = get_cursor_dir(wp, bounds2);
+                        dir[0] = tmp[0];
+                        dir[1] = tmp[1];
+                    }
                 }
                 draw_debug_bb(bounds);
                 Inspector.refresh([MeshProperty.SLICE9]);
@@ -272,9 +276,11 @@ function SizeControlCreate() {
                 return;
 
             if (!is_down) {
-                const tmp = get_cursor_dir(wp, bounds);
-                dir[0] = tmp[0];
-                dir[1] = tmp[1];
+                if (is_supported_size()) {
+                    const tmp = get_cursor_dir(wp, bounds);
+                    dir[0] = tmp[0];
+                    dir[1] = tmp[1];
+                }
             }
             if (is_down) {
                 offset_move = click_pos.clone().sub(wp).length();
@@ -325,7 +331,8 @@ function SizeControlCreate() {
                 }
                 if (dir[0] == 0 && dir[1] == 0) {
                     // если маленькое смещение и при этом не выделен никакой меш
-                    if (offset_move < 10 * WORLD_SCALAR) {
+                    // тк объект выделенный определяем по отпусканию кнопки, то тут мы зажимаем и либо что-то тащим либо нет
+                    if (offset_move < 1 * WORLD_SCALAR) {
                         let is_select = false;
                         for (let i = 0; i < selected_list.length; i++) {
                             const selected_go = selected_list[i];
@@ -458,7 +465,7 @@ function SizeControlCreate() {
 
     function draw_debug_bb(bb: number[]) {
         const dist = Math.abs(bb[2] - bb[0]);
-        const SUB_SCALAR = Math.max(Math.min(dist / 250, 0.2), 0.1);
+        const SUB_SCALAR = Math.max(Math.min(dist / 250, 0.2), 0.05);
         for (let i = 0; i < bb_points.length; i++)
             bb_points[i].scale.setScalar(SUB_SCALAR);
         for (let i = 0; i < pivot_points.length; i++)
@@ -562,6 +569,8 @@ function SizeControlCreate() {
     function draw_anchor_point(is_set_pos = false) {
         if (selected_list.length != 1)
             return;
+        if (!is_supported_anchor())
+            return;
         const mesh = selected_list[0];
         const wp = new Vector3();
         mesh.getWorldPosition(wp);
@@ -607,10 +616,11 @@ function SizeControlCreate() {
         debug_center.visible = visible;
     }
 
+
     function set_pivot_visible(visible: boolean) {
         if (visible && selected_list.length != 1)
             return;
-        if (visible && selected_list[0].type == IObjectTypes.GO_SPRITE_COMPONENT)
+        if (visible && !is_supported_pivot())
             return;
         anchor_mesh.visible = visible;
         pivot_points.forEach(p => p.visible = visible);
@@ -648,6 +658,26 @@ function SizeControlCreate() {
     function draw() {
         if (!is_active) return;
         draw_debug_bb(get_bounds_from_list());
+    }
+
+    function is_supported_pivot() {
+        if (selected_list.length > 0)
+            return (selected_list[0].type == IObjectTypes.GUI_BOX || selected_list[0].type == IObjectTypes.GUI_TEXT);
+        else
+            return false;
+    }
+
+    function is_supported_anchor() {
+        return is_supported_pivot();
+    }
+
+    function is_supported_size() {
+        for (let i = 0; i < selected_list.length; i++) {
+            const it = selected_list[i];
+            if (![IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_TEXT, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT, IObjectTypes.GO_LABEL_COMPONENT].includes(it.type))
+                return false;
+        }
+        return true;
     }
 
     init();

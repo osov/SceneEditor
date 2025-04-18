@@ -33,8 +33,8 @@ export function random_int(min: number, max: number) {
     return Math.floor(rand);
 }
 
-export function deepClone(obj: any) {
-    return JSON.parse(JSON.stringify(obj))
+export function deepClone<T>(obj: T) {
+    return JSON.parse(JSON.stringify(obj)) as T;
 }
 
 export function hexToRGB(hex: string): Vector3 {

@@ -162,10 +162,12 @@ function ActionsControlCreate() {
         const mesh_data: HistoryData['MESH_ADD'][] = [];
         for (let i = 0; i < list.length; i++) {
             const m = list[i];
-            mesh_data.push({ mesh: SceneManager.serialize_mesh(m), next_id: SceneManager.find_next_id_mesh(m) });
+            if (!(m.ignore_history?.includes('MESH_ADD')))
+                mesh_data.push({ mesh: SceneManager.serialize_mesh(m), next_id: SceneManager.find_next_id_mesh(m) });
             SceneManager.remove(m.mesh_data.id);
         }
-        HistoryControl.add('MESH_ADD', mesh_data);
+        if (mesh_data.length > 0)
+            HistoryControl.add('MESH_ADD', mesh_data);
         SelectControl.set_selected_list([]);
     }
 

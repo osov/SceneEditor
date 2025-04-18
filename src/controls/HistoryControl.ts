@@ -56,7 +56,7 @@ export type HistoryData = {
     MATERIAL_TRANSPARENT: MaterialTransparentEventData
 }
 
-type HistoryDataKeys = keyof HistoryData;
+export type HistoryDataKeys = keyof HistoryData;
 
 interface HistoryDataItem<T extends HistoryDataKeys> {
     type: T

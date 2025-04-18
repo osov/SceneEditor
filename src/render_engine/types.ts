@@ -1,4 +1,5 @@
 import { Object3D, Vector2, Vector3, Vector3Tuple, Vector4Tuple } from "three";
+import { HistoryDataKeys } from "../controls/HistoryControl";
 
 export enum IObjectTypes {
     EMPTY = '',
@@ -15,6 +16,8 @@ export enum IObjectTypes {
     GUI_BOX = 'box',
     GUI_TEXT = 'text',
 
+    COMPONENT_SPLINE = 'spline',
+
 };
 
 export enum PivotX {
@@ -29,6 +32,10 @@ export enum PivotY {
     BOTTOM = 0
 }
 
+export enum HistoryFlags {
+
+}
+
 export type OnTransformChanged = (e: IBaseEntityAndThree) => void;
 
 export interface IBaseEntity {
@@ -36,6 +43,7 @@ export interface IBaseEntity {
     mesh_data: { id: number };
     no_saving?: boolean;
     no_removing?: boolean;
+    ignore_history?:HistoryDataKeys[];
     set_position(x: number, y: number, z?: number): void
     get_position(): Vector3
     set_scale(x: number, y: number): void
