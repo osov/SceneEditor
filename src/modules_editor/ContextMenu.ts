@@ -1,4 +1,5 @@
 // import { deepClone } from "../modules/utils";
+import { NodeAction } from "../controls/ActionsControl";
 
 declare global {
     const ContextMenu: ReturnType<typeof ContextMenuCreate>;
@@ -153,6 +154,10 @@ function ContextMenuCreate() {
         if (mContextVisible && e.target.closest('.wr_menu__context .menu__context a') && e.button === 0) {
             menuContextClick(e);
         }
+
+        // call the scene context menu
+        const menu_scene_btn = e.target.closest(".menu_scene_btn");
+        if (menu_scene_btn) open(getContextMenuSceneItems(), e, menuContextSceneClick);
     }
 
     function menuContextClick(e: any): void {
@@ -175,6 +180,32 @@ function ContextMenuCreate() {
 
     function isVisible() {
         return mContextVisible;
+    }
+
+    function getContextMenuSceneItems(): MenuItem[] {
+        const cm_list: MenuItem[] = [];
+        cm_list.push({
+            text: 'Сцена', children: [
+                { text: 'создать', action: NodeAction.new_scene },
+                { text: 'сохранить', action: NodeAction.scene_save },
+                { text: 'сохранить как', action: NodeAction.scene_save_as },
+            ]
+        });
+        return cm_list;
+    }
+
+    function menuContextSceneClick(success: boolean, action?: number | string): void { 
+        if (!success || action == undefined || action == null) return;
+
+        const current_dir = localStorage.getItem("current_dir") || '';
+
+        if (action == NodeAction.new_scene || action == NodeAction.scene_save_as) {
+            AssetControl.new_scene_popup(current_dir);
+        }
+        
+        if (action == NodeAction.scene_save) {
+            AssetControl.save_current_scene();
+        }
     }
 
     EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);

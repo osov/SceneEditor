@@ -1333,32 +1333,6 @@ function TreeControlCreate() {
         });
     }
 
-    function getContextMenuSceneItems(): contextMenuItem[] {
-        const cm_list: contextMenuItem[] = [];
-        cm_list.push({
-            text: 'Сцена', children: [
-                getItemCM('создать', NodeAction.new_scene),
-                getItemCM('сохранить', NodeAction.scene_save),
-                getItemCM('сохранить как', NodeAction.scene_save_as),
-            ]
-        });
-        return cm_list;
-    }
-
-    function menuContextSceneClick(success: boolean, action?: number | string): void { 
-        if (!success || action == undefined || action == null) return;
-
-        const current_dir = localStorage.getItem("current_dir") || '';
-
-        if (action == NodeAction.new_scene || action == NodeAction.scene_save_as) {
-            AssetControl.new_scene_popup(current_dir);
-        }
-        
-        if (action == NodeAction.scene_save) {
-            AssetControl.save_current_scene();
-        }
-    }
-
     function updateDaD(): void {
 
         // устанавливаем ширину для span.tree__item_bg и .menu_left
@@ -1413,10 +1387,6 @@ function TreeControlCreate() {
             menu_section?.classList.remove("hide_menu");
             menu_section?.classList.toggle("active");
         }
-
-        const menu_scene_btn = event.target.closest(".menu_scene_btn");
-        if (menu_scene_btn) ContextMenu.open(getContextMenuSceneItems(), event, menuContextSceneClick);
-
     });
 
     let params = new URLSearchParams(document.location.search);
