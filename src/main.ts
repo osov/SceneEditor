@@ -28,51 +28,62 @@ import { register_asset_inspector } from './inspectors/AssetInspector';
 import { register_mesh_material_inspector } from './inspectors/MeshMaterialInspector';
 import { register_paint_inspector } from './inspectors/PaintInspector';
 
-let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
+function register_managers() {
+    register_manager();
+    register_engine();
+    register_resource_manager();
+    register_scene_manager();
+    RenderEngine.init();
+}
 
-register_manager();
-register_engine();
-RenderEngine.init();
+function register_controls() {
+    register_camera_control();
+    register_select_control();
+    register_size_control();
+    register_transform_control();
+    register_actions_control();
+    register_view_control();
+    register_asset_control();
+    register_tree_control();
+    register_popups();
+    register_contextmenu();
+    register_control_manager();
+    register_history_control();
+    register_flow_map_control();
+    register_grass_tree_control();
+}
+
+function register_inspectors() {
+    register_mesh_inspector();
+    register_asset_inspector();
+    register_mesh_material_inspector();
+    register_paint_inspector();
+}
+
+function run_selected_scene() {
+    const scenes = [
+        run_scene_simple,
+        run_scene_anim,
+        run_scene_card,
+        run_scene_light,
+        run_scene_stereo,
+        run_scene_inventory,
+    ];
+    const id = new URLSearchParams(document.location.search).get('scene');
+    if (id && !isNaN(Number(id)) && scenes[parseInt(id)])
+        scenes[parseInt(id)]();
+    else
+        scenes[0]();
+}
+
+register_managers();
+register_controls();
+register_inspectors();
+run_selected_scene();
+
+const game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
 RenderEngine.animate();
-
 Input.bind_events();
-register_resource_manager();
-register_scene_manager();
 
-register_camera_control();
-register_select_control();
 if (!game_mode)
     SelectControl.init();
-register_size_control();
-register_transform_control();
-register_actions_control();
-register_view_control();
-register_asset_control();
-register_tree_control();
-register_popups();
-register_contextmenu();
-register_flow_map_control();
-register_grass_tree_control();
-register_control_manager();
-register_history_control();
-
-register_mesh_inspector();
-register_asset_inspector();
-register_mesh_material_inspector();
-register_paint_inspector();
-
-
-const scenes = [
-    run_scene_simple,
-    run_scene_anim,
-    run_scene_card,
-    run_scene_light,
-    run_scene_stereo,
-    run_scene_inventory,
-];
-let id = new URLSearchParams(document.location.search).get('scene');
-if (id)
-    scenes[parseInt(id)]();
-else
-    scenes[0]();
-
