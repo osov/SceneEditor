@@ -199,12 +199,16 @@ function ContextMenuCreate() {
 
         const current_dir = localStorage.getItem("current_dir") || '';
 
-        if (action == NodeAction.new_scene || action == NodeAction.scene_save_as) {
+        if (action == NodeAction.new_scene) {
             AssetControl.new_scene_popup(current_dir);
         }
-        
+
         if (action == NodeAction.scene_save) {
             AssetControl.save_current_scene();
+        }
+
+        if (action == NodeAction.scene_save_as) {
+            AssetControl.new_scene_popup(current_dir, true, true);
         }
     }
 
