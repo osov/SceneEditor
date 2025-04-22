@@ -2,7 +2,7 @@ import { Vector2 } from "three";
 import { IBaseMesh } from "../types";
 import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
 import { EntityBase } from "./entity_base";
-import { WORLD_SCALAR } from "../../config";
+import { FLOAT_PRECISION, WORLD_SCALAR } from "../../config";
 
 
 export class EntityPlane extends EntityBase implements IBaseMesh {
@@ -64,7 +64,7 @@ export class EntityPlane extends EntityBase implements IBaseMesh {
 
         // NOTE: только если не 32 * WORLD_SCALAR
         if (size.x !== 32 * WORLD_SCALAR || size.y !== 32 * WORLD_SCALAR) {
-            data.size = size.toArray();
+            data.size = size.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION)));
         }
 
         // NOTE: только если не #fff

@@ -1,5 +1,5 @@
 
-import { Object3D, Quaternion, Vector3 } from "three";
+import { Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
 import { IBaseEntityAndThree, IBaseEntityData, IBaseMeshAndThree, IObjectTypes } from "./types";
@@ -9,6 +9,7 @@ import { GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./
 import { AnimatedMesh } from "./objects/animated_mesh";
 import { EntityBase } from "./objects/entity_base";
 import { SplineComponent } from "./components/spline";
+import { FLOAT_PRECISION } from "../config";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -136,9 +137,9 @@ export function SceneManagerModule() {
             type: m.type,
             name: m.name,
             visible: m.get_visible(),
-            position: wp.toArray(),
-            rotation: wr.toArray(),
-            scale: ws.toArray(),
+            position: wp.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as Vector3Tuple,
+            rotation: wr.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as Vector4Tuple,
+            scale: ws.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as Vector3Tuple,
             other_data: m.serialize(),
         };
         if (m.children.length > 0) {

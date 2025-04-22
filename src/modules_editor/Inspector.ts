@@ -6,6 +6,8 @@ import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plugin';
 import { deepClone } from '../modules/utils';
+import { Vector2, Vector3, Vector4 } from 'three';
+import { FLOAT_PRECISION } from '../config';
 
 
 declare global {
@@ -776,13 +778,26 @@ function InspectorModule() {
     function onChange(info: ChangeInfo) {
         const unique_field = _unique_fields.find(field => field.field == info.data.field);
         if (unique_field && unique_field.property.onChange) {
-            switch (unique_field.property.type) {
-                // NOTE: округляем значения для того чтобы не сохранять излишние знаки после запятой - сейчас 4
-                case PropertyType.NUMBER: case PropertyType.SLIDER:
-                    (info.data.event.value as number) = Number((info.data.event.value as number).toFixed(4));
-                    break;
-            }
+            cut_float_precision(info, unique_field);
             unique_field.property.onChange(info);
+        }
+    }
+
+    // NOTE: округляем значения для того чтобы не сохранять излишние знаки после запятой
+    function cut_float_precision(info: ChangeInfo, unique_field: { field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }) {
+        switch (unique_field.property.type) {
+            case PropertyType.NUMBER: case PropertyType.SLIDER:
+                (info.data.event.value as number) = Number((info.data.event.value as number).toFixed(FLOAT_PRECISION));
+                break;
+            case PropertyType.VECTOR_2:
+                (info.data.event.value as Vector2) = new Vector2(Number((info.data.event.value as Vector2).x.toFixed(FLOAT_PRECISION)), Number((info.data.event.value as Vector2).y.toFixed(FLOAT_PRECISION)));
+                break;
+            case PropertyType.VECTOR_3:
+                (info.data.event.value as Vector3) = new Vector3(Number((info.data.event.value as Vector3).x.toFixed(FLOAT_PRECISION)), Number((info.data.event.value as Vector3).y.toFixed(FLOAT_PRECISION)), Number((info.data.event.value as Vector3).z.toFixed(FLOAT_PRECISION)));
+                break;
+            case PropertyType.VECTOR_4:
+                (info.data.event.value as Vector4) = new Vector4(Number((info.data.event.value as Vector4).x.toFixed(FLOAT_PRECISION)), Number((info.data.event.value as Vector4).y.toFixed(FLOAT_PRECISION)), Number((info.data.event.value as Vector4).z.toFixed(FLOAT_PRECISION)), Number((info.data.event.value as Vector4).w.toFixed(FLOAT_PRECISION)));
+                break;
         }
     }
 
