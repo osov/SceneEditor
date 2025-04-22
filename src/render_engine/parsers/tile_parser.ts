@@ -2,6 +2,7 @@ import { Vector2, Vector3 } from "three";
 import { flip_geometry_x, flip_geometry_xy, flip_geometry_y, get_file_name, rotate_point } from "../helpers/utils";
 import { IBaseEntityAndThree } from "../types";
 
+
 // Флаги Tiled для отражения и вращения
 const FLIP_HORIZONTALLY_FLAG = 0x80000000;
 const FLIP_VERTICALLY_FLAG = 0x40000000;
@@ -42,6 +43,8 @@ export interface TileObject {
     h: number
     tid: number
     r?: number
+    polygon?: number[]
+    polyline?: number[]
 }
 
 interface ObjectLayer {
@@ -74,6 +77,8 @@ export interface RenderTileObject {
     height: number
     tile_id: number
     rotation?: number
+    polygon?: Vector2[]
+    polyline?: Vector2[]
 }
 
 interface RenderObjectLayer {
@@ -89,8 +94,8 @@ export interface RenderMapData {
 
 
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
-   // return id_layer * 2 - (y - height / 2) * 0.001;
-     return id_layer * 500 - (y - height / 2) * 5;
+    // return id_layer * 2 - (y - height / 2) * 0.001;
+    return id_layer * 500 - (y - height / 2) * 5;
 }
 
 
@@ -140,19 +145,45 @@ export function parse_tiled(data: MapData) {
     return render_data;
 }
 
+function make_polygon(points:number[]) {
+    const polygon:Vector2[] = [];
+    for (let i = 0; i < points.length; i += 2) {
+        polygon.push(new Vector2(points[i], points[i + 1]));
+    }
+    return polygon;
+}
+
 function create_objects(obj_layer: ObjectLayer) {
     const objects: RenderTileObject[] = [];
     for (const obj of obj_layer.objects) {
-        const new_pos = rotate_point(new Vector3(obj.x, -obj.y, 0), new Vector2(obj.w, obj.h), obj.r != undefined ? -obj.r : 0);
-        const data = {
-            x: new_pos.x + obj.w / 2,
-            y: new_pos.y + obj.h / 2,
-            width: obj.w,
-            height: obj.h,
-            tile_id: obj.tid,
-            rotation: obj.r
-        };
-        objects.push(data);
+        if (obj.polygon || obj.polyline) {
+            const new_pos = rotate_point(new Vector3(obj.x, -obj.y, 0), new Vector2(1, 1), obj.r != undefined ? -obj.r : 0);
+            const data:RenderTileObject = {
+                x: new_pos.x,
+                y: new_pos.y,
+                width: 0,
+                height: 0,
+                tile_id: -1,
+                rotation: obj.r,
+            };
+            if (obj.polygon)
+                data.polygon = make_polygon(obj.polygon);
+            if (obj.polyline)
+                data.polyline = make_polygon(obj.polyline);
+            objects.push(data);
+        }
+        else {
+            const new_pos = rotate_point(new Vector3(obj.x, -obj.y, 0), new Vector2(obj.w, obj.h), obj.r != undefined ? -obj.r : 0);
+            const data:RenderTileObject = {
+                x: new_pos.x + obj.w / 2,
+                y: new_pos.y + obj.h / 2,
+                width: obj.w,
+                height: obj.h,
+                tile_id: obj.tid,
+                rotation: obj.r
+            };
+            objects.push(data);
+        }
     }
     return objects;
 }

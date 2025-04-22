@@ -1115,28 +1115,32 @@ function TreeControlCreate() {
             ActionsControl.remove();
         }
         if (action == NodeAction.add_gui_container) {
-            ActionsControl.add_gui_container(copyItemDrag?.id);
+            ActionsControl.add_gui_container({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_gui_box) {
-            ActionsControl.add_gui_box({ id: copyItemDrag?.id, texture: '2', atlas: '', pos: { x: 0, y: 0 }, size: { w: 128, h: 40 } });
+            ActionsControl.add_gui_box({ pid: copyItemDrag?.id, texture: '2', atlas: '', pos: get_position_view(), size: { w: 128, h: 40 } });
         }
         if (action == NodeAction.add_gui_text) {
-            ActionsControl.add_gui_text(copyItemDrag?.id);
+            ActionsControl.add_gui_text({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_go_container) {
-            ActionsControl.add_go_container(copyItemDrag?.id);
+            ActionsControl.add_go_container({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_go_sprite_component) {
-            ActionsControl.add_go_sprite_component({ id: copyItemDrag?.id, texture: 'arrow1', atlas: 'example_atlas', pos: { x: 0, y: 0 }, size: { w: 64, h: 64 } });
+            ActionsControl.add_go_sprite_component({ pid: copyItemDrag?.id, texture: 'arrow1', atlas: 'example_atlas', pos: get_position_view(), size: { w: 64, h: 64 } });
         }
         if (action == NodeAction.add_go_label_component) {
-            ActionsControl.add_go_label_component(copyItemDrag?.id);
+            ActionsControl.add_go_label_component({pid:copyItemDrag?.id, pos:get_position_view()});
         }
         if (action == NodeAction.add_go_model_component) {
-            ActionsControl.add_go_model_component(copyItemDrag?.id);
+            ActionsControl.add_go_model_component({pid:copyItemDrag?.id, pos:get_position_view()});
         }
 
         copyItemDrag = null;
+    }
+
+    function get_position_view(){
+        return new Vector2();
     }
 
     function toggleEventListenerTexture(add: boolean = true) {
@@ -1234,7 +1238,7 @@ function TreeControlCreate() {
 
         const nType = isPos && list.length ? list[0]?.type : icon;
         const mouseUpPos = getMousePos(event);
-        const nPos = isPos && mouseUpPos ? { x: mouseUpPos?.x, y: mouseUpPos?.y } : { x: 0, y: 0 };
+        const nPos = isPos && mouseUpPos ? new Vector2( mouseUpPos?.x, mouseUpPos?.y ) : new Vector2(0, 0);
         const nId = isPos ? list[0]?.mesh_data.id : id;
 
         const arrSize = event.dataTransfer.getData("textureSize").split("x");
@@ -1242,14 +1246,14 @@ function TreeControlCreate() {
         const tHeight = +arrSize[1];
         const arrData = data.split("/");
         const pt: paramsTexture = {
-            id: nId,
+            pid: nId,
             texture: arrData[1],
             atlas: arrData[0],
             size: { w: tWidth || 128, h: tHeight || 128 },
             pos: nPos
         }
 
-        const noDrop = treeList.find((i) => i.id == pt.id && i.no_drop);
+        const noDrop = treeList.find((i) => i.id == pt.pid && i.no_drop);
         if (noDrop) {
             Popups.toast.open({ type: 'info', message: "В текущий объект запрещено добавлять дочерние!" });
             return;

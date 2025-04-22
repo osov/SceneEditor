@@ -3,6 +3,7 @@ import { HistoryData } from "./HistoryControl";
 import { IObjectTypes } from '../render_engine/types';
 import { TreeItem } from "./TreeControl";
 import { DEFOLD_LIMITS, WORLD_SCALAR } from "../config";
+import { Vector2 } from "three";
 
 declare global {
     const ActionsControl: ReturnType<typeof ActionsControlCreate>;
@@ -69,13 +70,16 @@ export const worldGui: string[] = [
     IObjectTypes.GUI_TEXT
 ];
 
+type ParamsPidPos = {
+    pid: number,
+    pos: Vector2
+};
+
 export type paramsTexture = {
-    id: number,
     texture: string,
     atlas: string,
     size: { w: number, h: number },
-    pos: { x: number, y: number }
-};
+} & ParamsPidPos;
 
 function ActionsControlCreate() {
     let copy_mesh_list: any[] = [];
@@ -171,40 +175,40 @@ function ActionsControlCreate() {
         SelectControl.set_selected_list([]);
     }
 
-    function add_gui_container(pid: number = -1) {
+    function add_gui_container(data:ParamsPidPos ) {
         const container = SceneManager.create(IObjectTypes.GUI_CONTAINER);
         if (!container) return;
-        container.set_position(0, 0);
-        sceneAddItem(container, pid);
+        container.set_position(data.pos.x, data.pos.y);
+        sceneAddItem(container, data.pid);
     }
 
     function add_gui_box(data: paramsTexture) {
         const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: data.size.w, height: data.size.h });
         if (!box) return;
         box.set_position(data.pos.x, data.pos.y);
-        SceneManager.move_mesh(box, data.id);
+        SceneManager.move_mesh(box, data.pid);
         box.scale.setScalar(1);
         box.set_color('#0f0')
         box.set_texture(data.texture, data.atlas);
         box.set_slice(8, 8);
-        sceneAddItem(box, data.id);
+        sceneAddItem(box, data.pid);
     }
 
-    function add_gui_text(pid: number = -1) {
+    function add_gui_text(data:ParamsPidPos) {
         const txt = SceneManager.create(IObjectTypes.GUI_TEXT, { text: 'Text', width: 128, height: 40 });
         if (!txt) return;
-        txt.set_position(0, 0);
+        txt.set_position(data.pos.x, data.pos.y);
         txt.set_color('#0f0');
         txt.scale.setScalar(1);
         txt.set_font('ShantellSans-Light11');
-        sceneAddItem(txt, pid);
+        sceneAddItem(txt, data.pid);
     }
 
-    function add_go_container(pid: number = -1) {
+    function add_go_container(data: ParamsPidPos) {
         const container = SceneManager.create(IObjectTypes.GO_CONTAINER);
         if (!container) return;
-        container.set_position(0, 0);
-        sceneAddItem(container, pid);
+        container.set_position(data.pos.x, data.pos.y);
+        sceneAddItem(container, data.pid);
     }
 
     function add_go_sprite_component(data: paramsTexture) {
@@ -212,22 +216,22 @@ function ActionsControlCreate() {
         if (!sprite) return;
         sprite.set_position(data.pos.x, data.pos.y);
         sprite.set_texture(data.texture, data.atlas);
-        sceneAddItem(sprite, data.id);
+        sceneAddItem(sprite, data.pid);
     }
 
-    function add_go_label_component(pid: number = -1) {
+    function add_go_label_component(data:ParamsPidPos) {
         const label = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, { text: 'label' });
         if (!label) return;
-        label.set_position(0, 0);
+        label.set_position(data.pos.x, data.pos.y);
         label.set_font('ShantellSans-Light11');
-        sceneAddItem(label, pid);
+        sceneAddItem(label, data.pid);
     }
-
-    function add_go_model_component(pid: number = -1) {
+    
+    function add_go_model_component(data:ParamsPidPos) {
         const model = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
         if (!model) return;
-        model.set_position(0, 0);
-        sceneAddItem(model, pid);
+        model.set_position(data.pos.x, data.pos.y);
+        sceneAddItem(model, data.pid);
     }
 
     function sceneAddItem(item: any, pid: number = -1) {
@@ -243,12 +247,12 @@ function ActionsControlCreate() {
         const spr = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: (data.size.w || 32) * WORLD_SCALAR, height: (data.size.h || 32) * WORLD_SCALAR });
         if (!spr || !go) return;
         go.set_position(data.pos.x, data.pos.y);
-        SceneManager.move_mesh(go, data.id);
+        SceneManager.move_mesh(go, data.pid);
         go.position.z = 0;
         spr.set_position(0, 0);
         spr.set_texture(data.texture, data.atlas);
         go.add(spr);
-        sceneAddItem(go, data.id);
+        sceneAddItem(go, data.pid);
     }
 
     function setUniqueNameMeshList(list: TreeItem[]): void {

@@ -1,5 +1,5 @@
-import { Vector3, Vector2 } from "three";
-import { WORLD_SCALAR } from "../config";
+import { Vector3, Vector2, Line, BufferGeometry, LineBasicMaterial } from "three";
+import { CAMERA_Z, WORLD_SCALAR } from "../config";
 import { rotate_point } from "./helpers/utils";
 import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData } from "./parsers/tile_parser";
 import { IObjectTypes } from "./types";
@@ -57,22 +57,46 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
             world.add(container);
             for (let tile of object_layer.objects) {
                 id_object++;
-                const tile_id = tile.tile_id & TILE_FLIP_MASK;
-                const tile_info = get_tile_texture(tile_id);
-                if (tile_info != undefined) {
-                    const tile_w = tile.width * WORLD_SCALAR;
-                    const tile_h = tile.height * WORLD_SCALAR;
-                    const x = tile.x * WORLD_SCALAR;
-                    const y = tile.y * WORLD_SCALAR;
-                    const z = get_depth(x, y, id_layer, tile_w, tile_h);
-                    const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
-                    plane.position.set(x, y, z);
-                    plane.set_texture(tile_info.name, tile_info.atlas);
-                    apply_tile_transform(plane, tile.tile_id);
-                    if (tile.rotation)
-                        plane.rotation.z = -tile.rotation! * Math.PI / 180;
-                    container.add(plane);
-                    plane.name = tile_info.name + '' + plane.mesh_data.id;
+                if (tile.polygon || tile.polyline) {
+                    const cx = tile.x * WORLD_SCALAR;
+                    const cy = tile.y * WORLD_SCALAR;
+                    const points = [];
+                    if (tile.polygon) {
+                        for (let point of tile.polygon) {
+                            points.push(new Vector2(cx + point.x * WORLD_SCALAR, cy - point.y * WORLD_SCALAR));
+                        }
+                        points.push(points[0]);
+                    }
+                    if (tile.polyline) {
+                        for (let point of tile.polyline) {
+                            points.push(new Vector2(cx + point.x * WORLD_SCALAR, cy - point.y * WORLD_SCALAR));
+                        }
+                    }
+                    const geometry = new BufferGeometry().setFromPoints(points);
+                    const material = new LineBasicMaterial({ color: 0xff0000 });
+
+                    const line = new Line(geometry, material);
+                    line.position.z = CAMERA_Z - 5;
+                    container.add(line);
+                }
+                else {
+                    const tile_id = tile.tile_id & TILE_FLIP_MASK;
+                    const tile_info = get_tile_texture(tile_id);
+                    if (tile_info != undefined) {
+                        const tile_w = tile.width * WORLD_SCALAR;
+                        const tile_h = tile.height * WORLD_SCALAR;
+                        const x = tile.x * WORLD_SCALAR;
+                        const y = tile.y * WORLD_SCALAR;
+                        const z = get_depth(x, y, id_layer, tile_w, tile_h);
+                        const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
+                        plane.position.set(x, y, z);
+                        plane.set_texture(tile_info.name, tile_info.atlas);
+                        apply_tile_transform(plane, tile.tile_id);
+                        if (tile.rotation)
+                            plane.rotation.z = -tile.rotation! * Math.PI / 180;
+                        container.add(plane);
+                        plane.name = tile_info.name + '' + plane.mesh_data.id;
+                    }
                 }
             }
         }
