@@ -4,7 +4,7 @@ import { URL_PATHS } from "../modules_editor/modules_editor_const";
 import { get_all_tiled_textures, get_depth, MapData, preload_tiled_textures } from "../render_engine/parsers/tile_parser";
 import { IObjectTypes } from "../render_engine/types";
 import { TileLoader } from "../render_engine/tile_loader";
-import { calculate_borders, default_settings, MovementLogic } from "../modules/PlayerMovement";
+import { calculate_borders, default_settings, MovementLogic, PathFinderMode, PlayerMovementSettings, test_pathfinder } from "../modules/PlayerMovement";
 import { Segment } from "2d-geometry";
 
 const SORT_LAYER = 7;
@@ -80,6 +80,15 @@ export async function run_scene_anim() {
 
     let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
     if (game_mode) {
+        const movement_settings: PlayerMovementSettings = {
+            ...default_settings,
+            path_finder_mode: PathFinderMode.WAY_PREDICTION,
+            collision_radius: 2,
+            max_try_dist: 0.5,
+            target_stop_distance: 0.2,
+            speed: { WALK: 23 },
+            blocked_move_min_dist: 0.01
+        }
         const obstacles: Segment[] = [];
         const all_objects = SceneManager.get_scene_list();
         for (const id in all_objects) {
@@ -88,8 +97,9 @@ export async function run_scene_anim() {
                 obstacles.push(...calculate_borders(obj))
             }
         }
-        const move_logic = MovementLogic(default_settings);
+        const move_logic = MovementLogic(movement_settings);
         move_logic.init(am, obstacles);
+        // test_pathfinder();
     }
 
     // console.log(JSON.stringify(SceneManager.save_scene()));

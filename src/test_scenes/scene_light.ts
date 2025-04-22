@@ -8,7 +8,7 @@ import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { MapData, preload_tiled_textures, get_all_tiled_textures } from '../render_engine/parsers/tile_parser';
 import { IObjectTypes } from '../render_engine/types';
 import { TileLoader } from '../render_engine/tile_loader';
-import { calculate_borders, default_settings, MovementLogic } from '../modules/PlayerMovement';
+import { calculate_borders, default_settings, MovementLogic, PathFinderMode, PlayerMovementSettings } from '../modules/PlayerMovement';
 import { Segment } from '2d-geometry';
 
 
@@ -76,13 +76,14 @@ export async function run_scene_light() {
 
     let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
     if (game_mode) {
-        const movement_settings = {
+        const movement_settings: PlayerMovementSettings = {
             ...default_settings,
-            collide_radius: 2,
+            path_finder_mode: PathFinderMode.WAY_PREDICTION,
+            collision_radius: 2,
             max_try_dist: 0.5,
             target_stop_distance: 0.2,
             speed: { WALK: 18 },
-            blocked_move_max_dist: 0.01
+            blocked_move_min_dist: 0.01
         }
         const obstacles: Segment[] = [];
         const all_objects = SceneManager.get_scene_list();
