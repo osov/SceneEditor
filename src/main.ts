@@ -25,7 +25,6 @@ import { run_scene_inventory } from './test_scenes/scene_inventory';
 import { register_grass_tree_control } from './controls/GrassTreeControl';
 import { register_mesh_inspector } from './inspectors/MeshInspector';
 import { register_asset_inspector } from './inspectors/AssetInspector';
-import { register_mesh_material_inspector } from './inspectors/MeshMaterialInspector';
 import { register_paint_inspector } from './inspectors/PaintInspector';
 
 function register_managers() {
@@ -56,7 +55,6 @@ function register_controls() {
 function register_inspectors() {
     register_mesh_inspector();
     register_asset_inspector();
-    register_mesh_material_inspector();
     register_paint_inspector();
 }
 

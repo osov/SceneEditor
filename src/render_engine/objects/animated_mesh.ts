@@ -34,7 +34,6 @@ const shader = {
 
 export class AnimatedMesh extends EntityPlane {
   public type = IObjectTypes.GO_MODEL_COMPONENT;
-  public mesh_data = { id: -1};
   private mixer = new AnimationMixer(this);
   private animations_list: { [k: string]: AnimationAction } = {};
   private activeAction: AnimationAction | null = null;
@@ -42,8 +41,8 @@ export class AnimatedMesh extends EntityPlane {
   private mesh_name = '';
   private materials: ShaderMaterial[] = [];
 
-  constructor(width = 1, height = 1) {
-    super();
+  constructor(id: number, width = 0, height = 0) {
+    super(id);
     this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
     this.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
     this.set_size(width, height);

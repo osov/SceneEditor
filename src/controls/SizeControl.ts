@@ -1,10 +1,11 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, LineDashedMaterial, BufferGeometry, Line, Object3DEventMap, Scene } from "three";
 import { IBaseMeshAndThree, IObjectTypes, PivotX, PivotY } from "../render_engine/types";
-import { AnchorEventData, PositionEventData, SizeEventData, SliceEventData } from "./types";
+import { MeshPropertyInfo } from "./types";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { is_base_mesh } from "../render_engine/helpers/utils";
 import { WORLD_SCALAR } from "../config";
 import { MeshProperty } from "../inspectors/MeshInspector";
+import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 
 declare global {
     const SizeControl: ReturnType<typeof SizeControlCreate>;
@@ -35,10 +36,10 @@ function SizeControlCreate() {
     let is_down = false;
     let is_active = false;
     let is_selected_anchor = false;
-    let old_size: SizeEventData[] = [];
-    let old_pos: PositionEventData[] = [];
-    let old_slice: SliceEventData[] = [];
-    let old_anchor: AnchorEventData[] = [];
+    let old_size: MeshPropertyInfo<{ size: Vector2, pos: Vector3 }>[] = [];
+    let old_pos: MeshPropertyInfo<Vector3>[] = [];
+    let old_slice: MeshPropertyInfo<Vector2>[] = [];
+    let old_anchor: MeshPropertyInfo<Vector2>[] = [];
     let is_changed_size = false;
     let is_changed_pos = false;
     let is_changed_slice = false;
@@ -146,7 +147,7 @@ function SizeControlCreate() {
                             const pp = pivot_points[i];
                             if (RenderEngine.is_intersected_mesh(new Vector2(e.x, e.y), pp)) {
                                 const pivot = index_to_pivot(i);
-                                HistoryControl.add('MESH_PIVOT', [{ id_mesh: mesh.mesh_data.id, pivot: mesh.get_pivot() }]);
+                                HistoryControl.add('MESH_PIVOT', [{ mesh_id: mesh.mesh_data.id, value: mesh.get_pivot() }], HistoryOwner.SIZE_CONTROL);
                                 mesh.set_pivot(pivot.x, pivot.y, true);
                                 Inspector.refresh([MeshProperty.PIVOT]);
                                 // для текста почему-то прыгает размер и поэтому bb определяется неверно на ближайших кадрах
@@ -188,27 +189,27 @@ function SizeControlCreate() {
             is_changed_pos = false;
             for (let i = 0; i < selected_list.length; i++) {
                 const m = selected_list[i];
-                old_pos.push({ id_mesh: m.mesh_data.id, position: m.position.clone() });
+                old_pos.push({ mesh_id: m.mesh_data.id, value: m.position.clone() });
             }
             old_size = [];
             is_changed_size = false;
             for (let i = 0; i < selected_list.length; i++) {
                 const m = selected_list[i];
-                old_size.push({ id_mesh: m.mesh_data.id, size: m.get_size(), position: m.position.clone() });
+                old_size.push({ mesh_id: m.mesh_data.id, value: { size: m.get_size(), pos: m.position.clone() } });
             }
             is_changed_slice = false;
             old_slice = [];
             for (let i = 0; i < selected_list.length; i++) {
                 const m = selected_list[i];
                 if (m instanceof Slice9Mesh) {
-                    old_slice.push({ id_mesh: m.mesh_data.id, slice: m.get_slice() });
+                    old_slice.push({ mesh_id: m.mesh_data.id, value: m.get_slice() });
                 }
             }
             is_changed_anchor = false;
             old_anchor = [];
             for (let i = 0; i < selected_list.length; i++) {
                 const m = selected_list[i];
-                old_anchor.push({ id_mesh: m.mesh_data.id, anchor: m.get_anchor() });
+                old_anchor.push({ mesh_id: m.mesh_data.id, value: m.get_anchor() });
             }
             if (RenderEngine.is_intersected_mesh(new Vector2(pointer.x, pointer.y), anchor_mesh))
                 is_selected_anchor = true;
@@ -221,19 +222,19 @@ function SizeControlCreate() {
             is_down = false;
             if (is_changed_pos) {
                 is_changed_pos = false;
-                HistoryControl.add('MESH_TRANSLATE', old_pos);
+                HistoryControl.add('MESH_TRANSLATE', old_pos, HistoryOwner.SIZE_CONTROL);
             }
             if (is_changed_size) {
                 is_changed_size = false;
-                HistoryControl.add('MESH_SIZE', old_size);
+                HistoryControl.add('MESH_SIZE', old_size, HistoryOwner.SIZE_CONTROL);
             }
             if (is_changed_slice) {
                 is_changed_slice = false;
-                HistoryControl.add('MESH_SLICE', old_slice);
+                HistoryControl.add('MESH_SLICE', old_slice, HistoryOwner.SIZE_CONTROL);
             }
             if (is_changed_anchor) {
                 is_changed_anchor = false;
-                HistoryControl.add('MESH_ANCHOR', old_anchor);
+                HistoryControl.add('MESH_ANCHOR', old_anchor, HistoryOwner.SIZE_CONTROL);
             }
         });
 
@@ -367,6 +368,57 @@ function SizeControlCreate() {
                 Inspector.refresh([MeshProperty.POSITION]);
             }
         });
+
+        EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
+            if (event.owner !== HistoryOwner.SIZE_CONTROL) return;
+
+            switch (event.type) {
+                case 'MESH_TRANSLATE':
+                    for (const data of event.data) {
+                        const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                        mesh.position.copy(data.value);
+                        mesh.transform_changed();
+                    }
+                    break;
+                case 'MESH_SIZE':
+                    for (const data of event.data) {
+                        const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                        mesh.set_size(data.value.size.x, data.value.size.y);
+                        mesh.position.copy(data.value.pos);
+                        mesh.transform_changed();
+                    }
+                    break;
+                case 'MESH_SLICE':
+                    for (const data of event.data) {
+                        const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                        if (mesh instanceof Slice9Mesh) {
+                            mesh.set_slice(data.value.x, data.value.y);
+                            mesh.transform_changed();
+                        }
+                    }
+                    break;
+                case 'MESH_ANCHOR':
+                    for (const data of event.data) {
+                        const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                        mesh.set_anchor(data.value.x, data.value.y);
+                        mesh.transform_changed();
+                    }
+                    break;
+                case 'MESH_PIVOT':
+                    for (const data of event.data) {
+                        const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                        mesh.set_pivot(data.value.x, data.value.y, true);
+                        mesh.transform_changed();
+                    }
+                    break;
+            }
+
+            // Update selection and graph
+            const meshes = event.data.map(data => SceneManager.get_mesh_by_id(data.mesh_id)!);
+            SelectControl.set_selected_list(meshes);
+            ControlManager.update_graph();
+        });
+
     }
 
     function get_cursor_dir(wp: Vector3, bounds: number[], range = 5) {

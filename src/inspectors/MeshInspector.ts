@@ -1,13 +1,19 @@
-import { Vector2, Vector3 } from "three";
+import { Euler, Vector2, Vector3, Vector4 } from "three";
 import { degToRad, radToDeg } from "three/src/math/MathUtils";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { GoSprite, FlipMode } from "../render_engine/objects/sub_types";
 import { TextMesh } from "../render_engine/objects/text";
-import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
-import { ChangeInfo, InspectorGroup, PropertyType, BeforeChangeInfo } from "../modules_editor/Inspector";
-import { deepClone } from "../modules/utils";
-import { NameEventData, ActiveEventData, VisibleEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, PivotEventData, AnchorEventData, ColorEventData, AlphaEventData, TextureEventData, SliceEventData, TextEventData, FontEventData, FontSizeEventData, TextAlignEventData, LineHeightEventData, MeshAtlasEventData, BlendModeEventData, UVEventData, MaterialEventData } from "../controls/types";
-import { anchorToScreenPreset, castTextureInfo, convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode, generateAtlasOptions, generateMaterialOptions, generateTextureOptions, getChangedInfo, getDraggedInfo, pivotToScreenPreset, screenPresetToAnchorValue, screenPresetToPivotValue, update_option } from "./helpers";
+import { IObjectTypes } from "../render_engine/types";
+import { ChangeInfo, InspectorGroup, PropertyType, BeforeChangeInfo, PropertyData, PropertyParams } from "../modules_editor/Inspector";
+import { deepClone, hexToRGB } from "../modules/utils";
+import { MeshMaterialUniformInfo, MeshPropertyInfo } from "../controls/types";
+import { anchorToScreenPreset, convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode, generateMaterialOptions, generateTextureOptions, getChangedInfo, getDraggedInfo, pivotToScreenPreset, screenPresetToAnchorValue, screenPresetToPivotValue, update_option } from "./helpers";
+import { IUniform, Texture } from "three";
+import { Color } from "three";
+import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
+import { rgbToHex } from "../modules/utils";
+import { get_file_name, is_base_mesh } from "../render_engine/helpers/utils";
+import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 
 
 declare global {
@@ -47,6 +53,13 @@ export enum MeshProperty {
     FLIP_DIAGONAL = 'mesh_flip_diagonal',
     MATERIAL = 'mesh_material',
     MATERIAL_BUTTON = 'mesh_material_button',
+    MATERIAL_UNIFORM_SAMPLER2D = 'mesh_material_uniform_sampler2d',
+    MATERIAL_UNIFORM_FLOAT = 'mesh_material_uniform_float',
+    MATERIAL_UNIFORM_RANGE = 'mesh_material_uniform_range',
+    MATERIAL_UNIFORM_VEC2 = 'mesh_material_uniform_vec2',
+    MATERIAL_UNIFORM_VEC3 = 'mesh_material_uniform_vec3',
+    MATERIAL_UNIFORM_VEC4 = 'mesh_material_uniform_vec4',
+    MATERIAL_UNIFORM_COLOR = 'mesh_material_uniform_color'
 }
 
 export enum ScreenPointPreset {
@@ -86,10 +99,11 @@ function MeshInspectorCreate() {
             name: 'base',
             title: '',
             property_list: [
+                // { name: MeshProperty.ID, title: 'ID', type: PropertyType.NUMBER, readonly: true },
                 { name: MeshProperty.TYPE, title: 'Тип', type: PropertyType.STRING, readonly: true },
-                { name: MeshProperty.NAME, title: 'Название', type: PropertyType.STRING, onSave: saveName, onUpdate: updateName },
+                { name: MeshProperty.NAME, title: 'Название', type: PropertyType.STRING, onBeforeChange: saveName, onChange: handleNameChange },
                 // { name: ObjectProperty.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN, onSave: saveVisible, onUpdate: updateVisible },
-                { name: MeshProperty.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN, onSave: saveActive, onUpdate: updateActive }
+                { name: MeshProperty.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN, onBeforeChange: saveActive, onChange: handleActiveChange }
             ]
         },
         {
@@ -102,8 +116,8 @@ function MeshInspectorCreate() {
                         y: { format: (v: number) => v.toFixed(2), step: 0.1 },
                         z: { format: (v: number) => v.toFixed(2), step: 0.1 },
                     },
-                    onSave: savePosition,
-                    onUpdate: updatePosition,
+                    onBeforeChange: savePosition,
+                    onChange: handlePositionChange,
                     onRefresh: refreshPosition
                 },
                 {
@@ -112,8 +126,8 @@ function MeshInspectorCreate() {
                         y: { format: (v: number) => v.toFixed(2) },
                         z: { format: (v: number) => v.toFixed(2) }
                     },
-                    onSave: saveRotation,
-                    onUpdate: updateRotation,
+                    onBeforeChange: saveRotation,
+                    onChange: handleRotationChange,
                     onRefresh: refreshRotation
                 },
                 {
@@ -121,8 +135,8 @@ function MeshInspectorCreate() {
                         x: { format: (v: number) => v.toFixed(2) },
                         y: { format: (v: number) => v.toFixed(2) },
                     },
-                    onSave: saveScale,
-                    onUpdate: updateScale,
+                    onBeforeChange: saveScale,
+                    onChange: handleScaleChange,
                     onRefresh: refreshScale
                 },
                 {
@@ -137,8 +151,8 @@ function MeshInspectorCreate() {
                         'Центр Снизу': ScreenPointPreset.BOTTOM_CENTER,
                         'Правый Нижний': ScreenPointPreset.BOTTOM_RIGHT
                     },
-                    onSave: savePivot,
-                    onUpdate: updatePivot,
+                    onBeforeChange: savePivot,
+                    onChange: handlePivotChange,
                     onRefresh: refreshPivot
                 },
                 {
@@ -146,8 +160,8 @@ function MeshInspectorCreate() {
                         x: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
                         y: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
                     },
-                    onSave: saveSize,
-                    onUpdate: updateSize,
+                    onBeforeChange: saveSize,
+                    onChange: handleSizeChange,
                     onRefresh: refreshSize
                 }
             ]
@@ -161,8 +175,8 @@ function MeshInspectorCreate() {
                         x: { min: -1, max: 1, format: (v: number) => v.toFixed(2) },
                         y: { min: -1, max: 1, format: (v: number) => v.toFixed(2) }
                     },
-                    onSave: saveAnchor,
-                    onUpdate: updateAnchor,
+                    onBeforeChange: saveAnchor,
+                    onChange: handleAnchorChange,
                     onRefresh: refreshAnchor
                 },
                 {
@@ -180,52 +194,142 @@ function MeshInspectorCreate() {
                         'Bottom Center': 'Bottom Center',
                         'Bottom Right': 'Bottom Right'
                     },
-                    onSave: (info: BeforeChangeInfo) => saveAnchorPreset(info),
-                    onUpdate: updateAnchorPreset,
+                    onBeforeChange: saveAnchorPreset,
+                    onChange: handleAnchorPresetChange,
                     onRefresh: refreshAnchorPreset
                 }
             ]
         },
         {
-            name: 'graphics',
-            title: 'Визуал',
+            name: 'text',
+            title: 'Текст',
             property_list: [
-                { name: MeshProperty.COLOR, title: 'Цвет', type: PropertyType.COLOR, onSave: saveColor, onUpdate: updateColor },
+                { name: MeshProperty.TEXT, title: 'Текст', type: PropertyType.STRING, onBeforeChange: saveText, onChange: handleTextChange },
                 {
-                    name: MeshProperty.ALPHA,
-                    title: 'Alpha',
+                    name: MeshProperty.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: ResourceManager.get_all_fonts(),
+                    onBeforeChange: saveFont,
+                    onChange: handleFontChange
+                },
+                {
+                    name: MeshProperty.FONT_SIZE, title: 'Размер шрифта', type: PropertyType.NUMBER, params: {
+                        min: 8, step: 1, format: (v: number) => v.toFixed(0)
+                    },
+                    onBeforeChange: saveFontSize,
+                    onChange: handleFontSizeChange,
+                    onRefresh: refreshFontSize
+                },
+                {
+                    name: MeshProperty.TEXT_ALIGN, title: 'Выравнивание', type: PropertyType.LIST_TEXT, params: {
+                        'Центр': TextAlign.CENTER,
+                        'Слева': TextAlign.LEFT,
+                        'Справа': TextAlign.RIGHT,
+                        'По ширине': TextAlign.JUSTIFY
+                    },
+                    onBeforeChange: saveTextAlign,
+                    onChange: handleTextAlignChange
+                },
+                {
+                    name: MeshProperty.LINE_HEIGHT, title: 'Высота строки', type: PropertyType.NUMBER, params: {
+                        min: 0.5, max: 3, step: 0.1, format: (v: number) => v.toFixed(2)
+                    },
+                    onBeforeChange: saveLineHeight,
+                    onChange: handleLineHeightChange
+                }
+            ]
+        },
+        {
+            name: 'material',
+            title: 'Материал',
+            property_list: [
+                {
+                    name: MeshProperty.MATERIAL, title: 'Шаблон', type: PropertyType.LIST_TEXT, params: generateMaterialOptions(),
+                    onBeforeChange: saveMaterial,
+                    onChange: handleMaterialChange
+                },
+
+                { name: MeshProperty.COLOR, title: 'Цвет', type: PropertyType.COLOR, onBeforeChange: saveColor, onChange: handleColorChange },
+                {
+                    name: MeshProperty.MATERIAL_UNIFORM_SAMPLER2D,
+                    title: 'Sampler2D',
+                    type: PropertyType.LIST_TEXTURES,
+                    params: () => generateTextureOptions(true),
+                    onBeforeChange: saveUniformSampler2D,
+                    onChange: handleUniformSampler2DChange
+                },
+                {
+                    name: MeshProperty.MATERIAL_UNIFORM_FLOAT,
+                    title: 'Float',
+                    type: PropertyType.NUMBER,
+                    params: {
+                        min: 0,
+                        max: 1,
+                        step: 0.01
+                    },
+                    onBeforeChange: saveUniformFloat,
+                    onChange: handleUniformFloatChange
+                },
+                {
+                    name: MeshProperty.MATERIAL_UNIFORM_RANGE,
+                    title: 'Range',
                     type: PropertyType.SLIDER,
                     params: {
                         min: 0,
                         max: 1,
                         step: 0.01
                     },
-                    onSave: (info: BeforeChangeInfo) => saveAlpha(info),
-                    onUpdate: updateAlpha
-                },
-                { name: MeshProperty.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: generateAtlasOptions(), onSave: saveAtlas, onUpdate: updateAtlas },
-                {
-                    name: MeshProperty.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: generateTextureOptions(),
-                    onSave: saveTexture,
-                    onUpdate: updateTexture,
+                    onBeforeChange: saveUniformRange,
+                    onChange: handleUniformRangeChange
                 },
                 {
-                    name: MeshProperty.MATERIAL, title: 'Материал', type: PropertyType.LIST_TEXT, params: generateMaterialOptions(),
-                    onSave: saveMaterial,
-                    onUpdate: updateMaterial
+                    name: MeshProperty.MATERIAL_UNIFORM_VEC2,
+                    title: 'Vec2',
+                    type: PropertyType.VECTOR_2,
+                    params: {
+                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
+                    },
+                    onBeforeChange: saveUniformVec2,
+                    onChange: handleUniformVec2Change
                 },
                 {
-                    name: MeshProperty.MATERIAL_BUTTON,
-                    title: 'Настроить материал',
-                    type: PropertyType.BUTTON
+                    name: MeshProperty.MATERIAL_UNIFORM_VEC3,
+                    title: 'Vec3',
+                    type: PropertyType.VECTOR_3,
+                    params: {
+                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
+                    },
+                    onBeforeChange: saveUniformVec3,
+                    onChange: handleUniformVec3Change
+                },
+                {
+                    name: MeshProperty.MATERIAL_UNIFORM_VEC4,
+                    title: 'Vec4',
+                    type: PropertyType.VECTOR_4,
+                    params: {
+                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
+                        w: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
+                    },
+                    onBeforeChange: saveUniformVec4,
+                    onChange: handleUniformVec4Change
+                },
+                {
+                    name: MeshProperty.MATERIAL_UNIFORM_COLOR,
+                    title: 'Color',
+                    type: PropertyType.COLOR,
+                    onBeforeChange: saveUniformColor,
+                    onChange: handleUniformColorChange
                 },
                 {
                     name: MeshProperty.SLICE9, title: 'Slice9', type: PropertyType.POINT_2D, params: {
                         x: { min: 0, max: 100, format: (v: number) => v.toFixed(2) },
                         y: { min: 0, max: 100, format: (v: number) => v.toFixed(2) }
                     },
-                    onSave: saveSlice,
-                    onUpdate: updateSlice,
+                    onBeforeChange: saveSlice,
+                    onChange: handleSliceChange,
                     onRefresh: refreshSlice9
                 },
                 {
@@ -236,60 +340,28 @@ function MeshInspectorCreate() {
                         'Вычитание': BlendMode.SUBTRACT,
                         // 'Пользовательский': BlendMode.CUSTOM
                     },
-                    onSave: saveBlendMode,
-                    onUpdate: updateBlendMode
+                    onBeforeChange: saveBlendMode,
+                    onChange: handleBlendModeChange
+                },
+                {
+                    name: MeshProperty.MATERIAL_BUTTON,
+                    title: 'Открыть оригинальный материал',
+                    type: PropertyType.BUTTON
                 },
             ]
         },
         {
-            name: 'flip',
+            name: 'Flip',
             title: 'Отражение',
             property_list: [
-                { name: MeshProperty.FLIP_VERTICAL, title: 'По вертикали', type: PropertyType.BOOLEAN, onSave: saveUV, onUpdate: updateFlipVertical, onRefresh: refreshFlipVertical },
-                { name: MeshProperty.FLIP_HORIZONTAL, title: 'По горизонтали', type: PropertyType.BOOLEAN, onSave: saveUV, onUpdate: updateFlipHorizontal, onRefresh: refreshFlipHorizontal },
-                { name: MeshProperty.FLIP_DIAGONAL, title: 'По диагонали', type: PropertyType.BOOLEAN, onSave: saveUV, onUpdate: updateFlipDiagonal, onRefresh: refreshFlipDiagonal }
-            ]
-        },
-        {
-            name: 'text',
-            title: 'Текст',
-            property_list: [
-                { name: MeshProperty.TEXT, title: 'Текст', type: PropertyType.STRING, onSave: saveText, onUpdate: updateText },
-                {
-                    name: MeshProperty.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: ResourceManager.get_all_fonts(),
-                    onSave: saveFont,
-                    onUpdate: updateFont
-                },
-                {
-                    name: MeshProperty.FONT_SIZE, title: 'Размер шрифта', type: PropertyType.NUMBER, params: {
-                        min: 8, step: 1, format: (v: number) => v.toFixed(0)
-                    },
-                    onSave: saveFontSize,
-                    onUpdate: updateFontSize,
-                    onRefresh: refreshFontSize
-                },
-                {
-                    name: MeshProperty.TEXT_ALIGN, title: 'Выравнивание', type: PropertyType.LIST_TEXT, params: {
-                        'Центр': TextAlign.CENTER,
-                        'Слева': TextAlign.LEFT,
-                        'Справа': TextAlign.RIGHT,
-                        'По ширине': TextAlign.JUSTIFY
-                    },
-                    onSave: saveTextAlign,
-                    onUpdate: updateTextAlign
-                },
-                {
-                    name: MeshProperty.LINE_HEIGHT, title: 'Высота строки', type: PropertyType.NUMBER, params: {
-                        min: 0.5, max: 3, step: 0.1, format: (v: number) => v.toFixed(2)
-                    },
-                    onSave: saveLineHeight,
-                    onUpdate: updateLineHeight
-                }
+                { name: MeshProperty.FLIP_VERTICAL, title: 'По вертикали', type: PropertyType.BOOLEAN, onBeforeChange: saveUV, onChange: handleFlipVerticalChange, onRefresh: refreshFlipVertical },
+                { name: MeshProperty.FLIP_HORIZONTAL, title: 'По горизонтали', type: PropertyType.BOOLEAN, onBeforeChange: saveUV, onChange: handleFlipHorizontalChange, onRefresh: refreshFlipHorizontal },
+                { name: MeshProperty.FLIP_DIAGONAL, title: 'По диагонали', type: PropertyType.BOOLEAN, onBeforeChange: saveUV, onChange: handleFlipDiagonalChange, onRefresh: refreshFlipDiagonal },
             ]
         }
     ];
 
-    let _selected_meshes: IBaseMeshAndThree[] = [];
+    let _selected_meshes: number[] = [];
 
     function init() {
         subscribe();
@@ -297,18 +369,27 @@ function MeshInspectorCreate() {
 
     function subscribe() {
         EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
-            set_selected_meshes(e.list);
+            set_selected_meshes(e.list.map((value) => value.mesh_data.id));
         });
 
         EventBus.on('SYS_UNSELECTED_MESH_LIST', () => {
             Inspector.clear();
         });
+
+        EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
+            if (event.owner != HistoryOwner.MESH_INSPECTOR) return;
+            undo(event);
+        });
     }
 
-    function set_selected_meshes(list: IBaseMeshAndThree[]) {
-        _selected_meshes = list;
+    function set_selected_meshes(mesh_ids: number[]) {
+        _selected_meshes = mesh_ids;
+
+        const list = SceneManager.get_scene_list().filter((item) => _selected_meshes.includes(item.mesh_data.id));
         const data = list.map((value) => {
-            const fields = [];
+            const fields: PropertyData<PropertyType>[] = [];
+
+            // fields.push({ name: MeshProperty.ID, data: value.mesh_data.id });
 
             fields.push({ name: MeshProperty.TYPE, data: value.type });
             fields.push({ name: MeshProperty.NAME, data: value.name });
@@ -345,42 +426,190 @@ function MeshInspectorCreate() {
 
                 // NOTE: визуальные поля
                 if ([IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT].includes(value.type)) {
-                    fields.push({ name: MeshProperty.COLOR, data: value.get_color() });
-                    fields.push({ name: MeshProperty.ALPHA, data: (value as Slice9Mesh).get_alpha() });
-
-                    const atlas = (value as Slice9Mesh).get_texture()[1];
-                    const texture = (value as Slice9Mesh).get_texture()[0];
-
-                    // NOTE: обновляем конфиг атласов
-                    update_option(_config, MeshProperty.ATLAS, generateAtlasOptions);
-
-                    // NOTE: обновляем конфиг текстур только для выбранного атласа
-                    update_option(_config, MeshProperty.TEXTURE, () => {
-                        const list: any[] = [];
-                        ResourceManager.get_all_textures().forEach((info) => {
-                            if (info.atlas != atlas) {
-                                return;
-                            }
-                            list.push(castTextureInfo(info));
-                        });
-                        return list;
-                    });
-
                     // NOTE: обновляем конфиг материалов
                     update_option(_config, MeshProperty.MATERIAL, generateMaterialOptions);
 
-                    fields.push({ name: MeshProperty.ATLAS, data: atlas });
-                    fields.push({ name: MeshProperty.TEXTURE, data: texture });
+                    fields.push({ name: MeshProperty.MATERIAL, data: (value as Slice9Mesh).material.name || '' });
 
-                    fields.push({ name: MeshProperty.MATERIAL, data: (value as Slice9Mesh).get_material().name || '' });
-                    fields.push({
-                        name: MeshProperty.MATERIAL_BUTTON, data: () => {
-                            MeshMaterialInspector.set_selected_mesh_material([(value as Slice9Mesh).get_material()]);
-                        }
-                    });
+                    fields.push({ name: MeshProperty.COLOR, data: value.get_color() });
 
                     fields.push({ name: MeshProperty.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
+
                     fields.push({ name: MeshProperty.SLICE9, data: (value as Slice9Mesh).get_slice() });
+
+                    // NOTE: обновляем конфиг текстур для sampler2d полeй
+                    update_option(_config, MeshProperty.MATERIAL_UNIFORM_SAMPLER2D, () => generateTextureOptions(true));
+
+                    // Add material properties
+                    const material = (value as Slice9Mesh).material;
+                    if (material) {
+                        const material_info = ResourceManager.get_material_info(material.name);
+                        if (material_info) {
+                            Object.entries(material.uniforms).forEach(([key, uniform]) => {
+                                const uniformInfo = material_info.uniforms[key];
+                                if (!uniformInfo) return;
+
+                                switch (uniformInfo.type) {
+                                    case MaterialUniformType.SAMPLER2D:
+                                        _config.forEach((group) => {
+                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_SAMPLER2D);
+                                            if (!property) return;
+                                            const newProperty = { ...property };
+                                            newProperty.name = key;
+                                            newProperty.title = key;
+                                            newProperty.readonly = uniformInfo.readonly;
+                                            group.property_list.push(newProperty);
+                                        });
+                                        const texture = uniform as IUniform<Texture>;
+                                        const texture_name = texture.value ? get_file_name((texture.value as any).path || '') : '';
+                                        const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+                                        fields.push({ name: key, data: `${atlas}/${texture_name}` });
+                                        break;
+                                    case MaterialUniformType.FLOAT:
+                                        _config.forEach((group) => {
+                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_FLOAT);
+                                            if (!property) return;
+                                            const newProperty = { ...property };
+                                            newProperty.name = key;
+                                            newProperty.title = key;
+                                            newProperty.readonly = uniformInfo.readonly;
+                                            group.property_list.push(newProperty);
+                                        });
+                                        const float = uniform as IUniform<number>;
+                                        fields.push({ name: key, data: float.value });
+                                        break;
+                                    case MaterialUniformType.RANGE:
+                                        _config.forEach((group) => {
+                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_RANGE);
+                                            if (!property) return;
+                                            const newProperty = { ...property };
+                                            newProperty.name = key;
+                                            newProperty.title = key;
+                                            newProperty.readonly = uniformInfo.readonly;
+                                            const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.RANGE];
+                                            newProperty.params = {
+                                                min: params.min,
+                                                max: params.max,
+                                                step: params.step
+                                            };
+                                            group.property_list.push(newProperty);
+                                        });
+                                        const range = uniform as IUniform<number>;
+                                        fields.push({ name: key, data: range.value });
+                                        break;
+                                    case MaterialUniformType.VEC2:
+                                        _config.forEach((group) => {
+                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_VEC2);
+                                            if (!property) return;
+                                            const newProperty = { ...property };
+                                            newProperty.name = key;
+                                            newProperty.title = key;
+                                            newProperty.readonly = uniformInfo.readonly;
+                                            const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC2];
+                                            const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_2];
+                                            newProperty.params = {
+                                                x: {
+                                                    min: params?.x?.min ?? defaultParams?.x?.min,
+                                                    max: params?.x?.max ?? defaultParams?.x?.max,
+                                                    step: params?.x?.step ?? defaultParams?.x?.step
+                                                },
+                                                y: {
+                                                    min: params?.y?.min ?? defaultParams?.y?.min,
+                                                    max: params?.y?.max ?? defaultParams?.y?.max,
+                                                    step: params?.y?.step ?? defaultParams?.y?.step
+                                                }
+                                            };
+                                            group.property_list.push(newProperty);
+                                        });
+                                        const vec2 = uniform as IUniform<Vector2>;
+                                        fields.push({ name: key, data: vec2.value });
+                                        break;
+                                    case MaterialUniformType.VEC3:
+                                        _config.forEach((group) => {
+                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_VEC3);
+                                            if (!property) return;
+                                            const newProperty = { ...property };
+                                            newProperty.name = key;
+                                            newProperty.title = key;
+                                            newProperty.readonly = uniformInfo.readonly;
+                                            const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC3];
+                                            const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_3];
+                                            newProperty.params = {
+                                                x: {
+                                                    min: params?.x?.min ?? defaultParams?.x?.min,
+                                                    max: params?.x?.max ?? defaultParams?.x?.max,
+                                                    step: params?.x?.step ?? defaultParams?.x?.step
+                                                },
+                                                y: {
+                                                    min: params?.y?.min ?? defaultParams?.y?.min,
+                                                    max: params?.y?.max ?? defaultParams?.y?.max,
+                                                    step: params?.y?.step ?? defaultParams?.y?.step
+                                                },
+                                                z: {
+                                                    min: params?.z?.min ?? defaultParams?.z?.min,
+                                                    max: params?.z?.max ?? defaultParams?.z?.max,
+                                                    step: params?.z?.step ?? defaultParams?.z?.step
+                                                }
+                                            };
+                                            group.property_list.push(newProperty);
+                                        });
+                                        const vec3 = uniform as IUniform<Vector3>;
+                                        fields.push({ name: key, data: vec3.value });
+                                        break;
+                                    case MaterialUniformType.VEC4:
+                                        _config.forEach((group) => {
+                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_VEC4);
+                                            if (!property) return;
+                                            const newProperty = { ...property };
+                                            newProperty.name = key;
+                                            newProperty.title = key;
+                                            newProperty.readonly = uniformInfo.readonly;
+                                            const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC4];
+                                            const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_4];
+                                            newProperty.params = {
+                                                x: {
+                                                    min: params?.x?.min ?? defaultParams?.x?.min,
+                                                    max: params?.x?.max ?? defaultParams?.x?.max,
+                                                    step: params?.x?.step ?? defaultParams?.x?.step
+                                                },
+                                                y: {
+                                                    min: params?.y?.min ?? defaultParams?.y?.min,
+                                                    max: params?.y?.max ?? defaultParams?.y?.max,
+                                                    step: params?.y?.step ?? defaultParams?.y?.step
+                                                },
+                                                z: {
+                                                    min: params?.z?.min ?? defaultParams?.z?.min,
+                                                    max: params?.z?.max ?? defaultParams?.z?.max,
+                                                    step: params?.z?.step ?? defaultParams?.z?.step
+                                                },
+                                                w: {
+                                                    min: params?.w?.min ?? defaultParams?.w?.min,
+                                                    max: params?.w?.max ?? defaultParams?.w?.max,
+                                                    step: params?.w?.step ?? defaultParams?.w?.step
+                                                }
+                                            };
+                                            group.property_list.push(newProperty);
+                                        });
+                                        const vec4 = uniform as IUniform<Vector4>;
+                                        fields.push({ name: key, data: vec4.value });
+                                        break;
+                                    case MaterialUniformType.COLOR:
+                                        _config.forEach((group) => {
+                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_COLOR);
+                                            if (!property) return;
+                                            const newProperty = { ...property };
+                                            newProperty.name = key;
+                                            newProperty.title = key;
+                                            newProperty.readonly = uniformInfo.readonly;
+                                            group.property_list.push(newProperty);
+                                        });
+                                        const color = uniform as IUniform<Vector3>;
+                                        fields.push({ name: key, data: rgbToHex(color.value) });
+                                        break;
+                                }
+                            });
+                        }
+                    }
 
                     // NOTE: отражение только для спрайта
                     if (value.type === IObjectTypes.GO_SPRITE_COMPONENT) {
@@ -409,6 +638,31 @@ function MeshInspectorCreate() {
                                 fields.push({ name: MeshProperty.FLIP_HORIZONTAL, data: false });
                                 break;
                         }
+                    }
+
+                    let selected_meshes_material = '';
+                    for (const id of list.map((value) => value.mesh_data.id)) {
+                        const mesh = SceneManager.get_mesh_by_id(id);
+                        if (mesh == undefined || !(mesh instanceof Slice9Mesh)) break;
+                        const material = (mesh as Slice9Mesh).material;
+                        if (material == undefined) break;
+                        if (selected_meshes_material == '') {
+                            selected_meshes_material = material.name;
+                        } else if (selected_meshes_material !== material.name) {
+                            selected_meshes_material = '';
+                            break;
+                        }
+                    }
+
+                    if (selected_meshes_material != '') {
+                        fields.push({
+                            name: MeshProperty.MATERIAL_BUTTON, data: () => {
+                                const material_info = ResourceManager.get_material_info(selected_meshes_material);
+                                if (material_info) {
+                                    AssetInspector.set_selected_materials([material_info.path]);
+                                }
+                            }
+                        });
                     }
                 }
 
@@ -443,203 +697,151 @@ function MeshInspectorCreate() {
     }
 
     function refreshPosition(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
             Log.error('[refreshPosition] Mesh not found for id:', ids);
             return;
         }
-
         return mesh.get_position();
     }
 
     function refreshRotation(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
             Log.error('[refreshRotation] Mesh not found for id:', ids);
             return;
         }
-
         const raw = mesh.rotation;
         return new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
     }
 
     function refreshScale(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
             Log.error('[refreshScale] Mesh not found for id:', ids);
             return;
         }
-
         return mesh.get_scale();
     }
 
     function refreshSize(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
             Log.error('[refreshSize] Mesh not found for id:', ids);
             return;
         }
-
         return mesh.get_size();
     }
 
     function refreshPivot(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
             Log.error('[refreshPivot] Mesh not found for id:', ids);
             return;
         }
-
         return pivotToScreenPreset(mesh.get_pivot());
     }
 
     function refreshAnchor(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
             Log.error('[refreshAnchor] Mesh not found for id:', ids);
             return;
         }
-
         return mesh.get_anchor();
     }
 
     function refreshAnchorPreset(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
             Log.error('[refreshAnchorPreset] Mesh not found for id:', ids);
             return;
         }
-
         return anchorToScreenPreset(mesh.get_anchor());
     }
 
     function refreshSlice9(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]) as Slice9Mesh;
         if (mesh == undefined) {
             Log.error('[refreshSlice9] Mesh not found for id:', ids);
             return;
         }
-
-        return (mesh as Slice9Mesh).get_slice();
+        return mesh.get_slice();
     }
 
     function refreshFontSize(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]) as TextMesh;
         if (mesh == undefined) {
             Log.error('[refreshFontSize] Mesh not found for id:', ids);
             return;
         }
-
         const delta = new Vector3(1 * mesh.scale.x, 1 * mesh.scale.y);
         const max_delta = Math.max(delta.x, delta.y);
-        return (mesh as TextMesh).fontSize * max_delta;
+        return mesh.fontSize * max_delta;
     }
 
     function refreshFlipVertical(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]) as GoSprite;
         if (mesh == undefined) {
             Log.error('[refreshFlipVertical] Mesh not found for id:', ids);
             return;
         }
-
-        return (mesh as GoSprite).get_flip() == FlipMode.VERTICAL;
+        return mesh.get_flip() == FlipMode.VERTICAL;
     }
 
     function refreshFlipHorizontal(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]) as GoSprite;
         if (mesh == undefined) {
             Log.error('[refreshFlipHorizontal] Mesh not found for id:', ids);
             return;
         }
-
-        return (mesh as GoSprite).get_flip() == FlipMode.HORIZONTAL;
+        return mesh.get_flip() == FlipMode.HORIZONTAL;
     }
 
     function refreshFlipDiagonal(ids: number[]) {
-        const mesh = _selected_meshes.find((item) => {
-            return ids.includes(item.mesh_data.id);
-        });
-
+        const mesh = SceneManager.get_mesh_by_id(ids[0]) as GoSprite;
         if (mesh == undefined) {
             Log.error('[refreshFlipDiagonal] Mesh not found for id:', ids);
             return;
         }
-
-        return (mesh as GoSprite).get_flip() == FlipMode.DIAGONAL;
+        return mesh.get_flip() == FlipMode.DIAGONAL;
     }
 
     function saveName(info: BeforeChangeInfo) {
-        const names: NameEventData[] = [];
+        const names: MeshPropertyInfo<string>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveName] Mesh not found for id:', id);
                 return;
             }
-
-            names.push({ id_mesh: id, name: mesh.name });
+            names.push({ mesh_id: id, value: mesh.name });
         });
-
-        HistoryControl.add('MESH_NAME', names);
+        HistoryControl.add('MESH_NAME', names, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateName(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+    function handleNameChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        updateName(data, info.data.event.last);
+    }
 
+    function updateName(data: MeshPropertyInfo<string>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateName] Mesh not found for id:', id);
+                Log.error('[updateName] Mesh not found for id:', item.mesh_id);
                 return;
             }
-
-            mesh.name = info.data.event.value as string;
+            mesh.name = item.value;
             ControlManager.update_graph();
-        });
+        }
     }
 
     function getChildrenActive(list: any[], state: boolean) {
-        let result: ActiveEventData[] = [];
-
+        let result: MeshPropertyInfo<boolean>[] = [];
         list.forEach((item: any) => {
-            result.push({ id_mesh: item.mesh_data.id, state: item.get_active() });
+            if (!is_base_mesh(item)) return;
+            result.push({ mesh_id: item.mesh_data.id, value: item.get_active() });
             if (item.children.length > 0) {
                 const children = getChildrenActive(item.children, state);
                 if (children.length > 0) result.push(...children);
@@ -649,32 +851,50 @@ function MeshInspectorCreate() {
     }
 
     function saveActive(info: BeforeChangeInfo) {
-        const actives: ActiveEventData[] = [];
+        const actives: MeshPropertyInfo<boolean>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveActive] Mesh not found for id:', id);
                 return;
             }
-
-            actives.push({ id_mesh: id, state: mesh.get_active() });
-
+            actives.push({ mesh_id: id, value: mesh.get_active() });
             if (mesh.children.length > 0) {
                 const children = getChildrenActive(mesh.children, mesh.get_active());
                 if (children.length > 0) actives.push(...children);
             }
-
         });
+        HistoryControl.add('MESH_ACTIVE', actives, HistoryOwner.MESH_INSPECTOR);
+    }
 
-        HistoryControl.add('MESH_ACTIVE', actives);
+    function handleActiveChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<boolean>(info);
+        updateActive(data, info.data.event.last);
+    }
+
+    function updateActive(data: MeshPropertyInfo<boolean>[], _: boolean) {
+        const ids: { id: number, visible: boolean }[] = [];
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updateActive] Mesh not found for id:', item.mesh_id);
+                return;
+            }
+            mesh.set_active(item.value);
+            ids.push({ id: item.mesh_id, visible: mesh.get_visible() });
+            if (mesh.children) {
+                const children = updateChildrenActive(mesh.children, item.value);
+                if (children.length > 0) ids.push(...children);
+            }
+
+            EventBus.trigger("SYS_GRAPH_ACTIVE", { list: ids, state: item.value });
+        }
     }
 
     function updateChildrenActive(children: any[], state: boolean) {
         const result: { id: number, visible: boolean }[] = [];
         children.forEach((child: any) => {
+            if (!is_base_mesh(child)) return;
             child.set_active(state);
             result.push({ id: child.mesh_data.id, visible: child.get_visible() });
             if (child.children.length > 0) {
@@ -685,941 +905,1217 @@ function MeshInspectorCreate() {
         return result;
     }
 
-    function updateActive(info: ChangeInfo) {
-        const ids: { id: number, visible: boolean }[] = [];
-        const state = info.data.event.value as boolean;
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Log.error('[updateActive] Mesh not found for id:', id);
-                return;
-            }
-
-            mesh.set_active(state);
-            ids.push({ id, visible: mesh.get_visible() });
-            if (mesh.children) {
-                const children = updateChildrenActive(mesh.children, state);
-                if (children.length > 0) ids.push(...children);
-            }
-        });
-
-        EventBus.trigger("SYS_GRAPH_ACTIVE", { list: ids, state });
-    }
-
-    // function saveVisible(ids: number[]) {
-    //     const visibles: VisibleEventData[] = [];
-    //     ids.forEach((id) => {
-    //         const mesh = _selected_meshes.find((item) => {
-    //             return item.mesh_data.id == id;
-    //         });
-
-    //         if (mesh == undefined) {
-    //             Log.error('[saveVisible] Mesh not found for id:', id);
-    //             return;
-    //         }
-
-    //         visibles.push({ id_mesh: id, state: mesh.get_visible() });
-    //     });
-
-    //     HistoryControl.add('MESH_VISIBLE', visibles);
-    // }
-
-    // function updateVisible(info: ChangeInfo) {
-    //     const state = info.data.event.value as boolean;
-
-    //     info.ids.forEach((id) => {
-    //         const mesh = _selected_meshes.find((item) => {
-    //             return item.mesh_data.id == id;
-    //         });
-
-    //         if (mesh == undefined) {
-    //             Log.error('[updateVisible] Mesh not found for id:', id);
-    //             return;
-    //         }
-
-    //         mesh.set_visible(state);
-    //     });
-
-    //     EventBus.trigger("SYS_GRAPH_VISIBLE", {list: info.ids, state});
-    // }
-
     function savePosition(info: BeforeChangeInfo) {
-        const oldPositions: PositionEventData[] = [];
+        const oldPositions: MeshPropertyInfo<Vector3>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[savePosition] Mesh not found for id:', id);
                 return;
             }
-
-            oldPositions.push({ id_mesh: mesh.mesh_data.id, position: deepClone(mesh.position) });
+            oldPositions.push({ mesh_id: mesh.mesh_data.id, value: deepClone(mesh.position) });
         });
-
-        HistoryControl.add("MESH_TRANSLATE", oldPositions);
+        HistoryControl.add("MESH_TRANSLATE", oldPositions, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updatePosition(info: ChangeInfo) {
+    function handlePositionChange(info: ChangeInfo) {
         const [isDraggedX, isDraggedY, isDraggedZ] = getDraggedInfo(info);
         const [isChangedX, isChangedY, isChangedZ] = getChangedInfo(info);
 
         const pos = info.data.event.value as Vector3;
-
         const averagePoint = new Vector3();
         averagePoint.copy(pos);
 
-        // NOTE: вычесляем среднее значение позиции между всеми обьектами
         if (isDraggedX || isDraggedY || isDraggedZ) {
             const sum = new Vector3(0, 0, 0);
             info.ids.forEach((id) => {
-                const mesh = _selected_meshes.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
+                const mesh = SceneManager.get_mesh_by_id(id);
                 if (mesh == undefined) {
                     Log.error('[updatePosition] Mesh not found for id:', id);
                     return;
                 }
-
                 sum.add(mesh.get_position());
             });
-
             averagePoint.copy(sum.divideScalar(info.ids.length));
         }
 
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+        const data = info.ids.map((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[updatePosition] Mesh not found for id:', id);
                 return;
             }
-
-            /* NOTE: высчитываем разницу среднего значения позиции и измененного значения в инспекторе
-                     (оно уже там стоит в среднем значени, ставиться на этапе сравнения осей в векторах) */
             const x = isDraggedX ? mesh.get_position().x + (pos.x - averagePoint.x) : isChangedX ? pos.x : mesh.get_position().x;
             const y = isDraggedY ? mesh.get_position().y + (pos.y - averagePoint.y) : isChangedY ? pos.y : mesh.get_position().y;
             const z = isDraggedZ ? mesh.get_position().z + (pos.z - averagePoint.z) : isChangedZ ? pos.z : mesh.get_position().z;
+            return { mesh_id: id, value: new Vector3(x, y, z) };
+        }).filter((item) => item != undefined);
 
-            mesh.set_position(x, y, z);
-        });
+        updatePosition(data, info.data.event.last);
+    }
 
-        TransformControl.set_proxy_in_average_point(_selected_meshes);
+    function updatePosition(data: MeshPropertyInfo<Vector3>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updatePosition] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_position(item.value.x, item.value.y, item.value.z);
+        }
+
+        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
+        TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
     }
 
     function saveRotation(info: BeforeChangeInfo) {
-        const oldRotations: RotationEventData[] = [];
+        const oldRotations: MeshPropertyInfo<Euler>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveRotation] Mesh not found for id:', id);
                 return;
             }
-
-            oldRotations.push({ id_mesh: id, rotation: deepClone(mesh.rotation) });
+            oldRotations.push({ mesh_id: id, value: deepClone(mesh.rotation) });
         });
-
-        HistoryControl.add("MESH_ROTATE", oldRotations);
+        HistoryControl.add("MESH_ROTATE", oldRotations, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateRotation(info: ChangeInfo) {
+    function handleRotationChange(info: ChangeInfo) {
         const [isChangedX, isChangedY, isChangedZ] = getChangedInfo(info);
-
         const rawRot = info.data.event.value as Vector3;
         const rot = new Vector3(degToRad(rawRot.x), degToRad(rawRot.y), degToRad(rawRot.z));
 
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+        const data = info.ids.map((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[updateRotation] Mesh not found for id:', id);
                 return;
             }
-
             const x = isChangedX ? rot.x : mesh.rotation.x;
             const y = isChangedY ? rot.y : mesh.rotation.y;
             const z = isChangedZ ? rot.z : mesh.rotation.z;
+            return { mesh_id: id, value: new Vector3(x, y, z) };
+        }).filter((item) => item != undefined);
 
-            mesh.rotation.set(x, y, z);
+        updateRotation(data, info.data.event.last);
+    }
+
+    function updateRotation(data: MeshPropertyInfo<Vector3>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updateRotation] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.rotation.set(item.value.x, item.value.y, item.value.z);
             mesh.transform_changed();
-        });
+        }
 
-        TransformControl.set_proxy_in_average_point(_selected_meshes);
+        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
+        TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
     }
 
     function saveScale(info: BeforeChangeInfo) {
-        const oldScales: ScaleEventData[] = [];
+        const oldScales: MeshPropertyInfo<Vector3>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveScale] Mesh not found for id:', id);
                 return;
             }
-
-            oldScales.push({ id_mesh: id, scale: deepClone(mesh.scale) });
+            oldScales.push({ mesh_id: id, value: deepClone(mesh.scale) });
         });
-
-        HistoryControl.add("MESH_SCALE", oldScales);
+        HistoryControl.add("MESH_SCALE", oldScales, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateScale(info: ChangeInfo) {
+    function handleScaleChange(info: ChangeInfo) {
         const [isChangedX, isChangedY] = getChangedInfo(info);
-
         const scale = info.data.event.value as Vector3;
 
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+        const data = info.ids.map((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[updateScale] Mesh not found for id:', id);
                 return;
             }
-
             const x = isChangedX ? scale.x : mesh.get_scale().x;
             const y = isChangedY ? scale.y : mesh.get_scale().y;
+            return { mesh_id: id, value: new Vector3(x, y, 1) };
+        }).filter((item) => item != undefined);
 
-            mesh.scale.set(x, y, 1);
+        updateScale(data, info.data.event.last);
+    }
+
+    function updateScale(data: MeshPropertyInfo<Vector3>[], last: boolean) {
+        if (!last) return;
+
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updateScale] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.scale.copy(item.value);
             mesh.transform_changed();
 
-            // если это текстовы меш, то от скейла зависит размер шрифта
             if ((mesh as TextMesh).fontSize) {
-                const delta = new Vector3(1 * scale.x, 1 * scale.y, scale.z);
+                const delta = new Vector3(1 * item.value.x, 1 * item.value.y, item.value.z);
                 const max_delta = Math.max(delta.x, delta.y);
-
                 (mesh as TextMesh).fontSize * max_delta;
             }
-        });
+        }
 
-        TransformControl.set_proxy_in_average_point(_selected_meshes);
+        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
+        TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
-
-        // для обновления размера шрифта
         Inspector.refresh([MeshProperty.FONT_SIZE]);
     }
 
     function saveSize(info: BeforeChangeInfo) {
-        const oldSizes: SizeEventData[] = [];
+        const oldSizes: MeshPropertyInfo<{ size: Vector2, pos: Vector3 }>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveSize] Mesh not found for id:', id);
                 return;
             }
-
-            oldSizes.push({ id_mesh: id, position: mesh.get_position(), size: mesh.get_size() });
+            oldSizes.push({ mesh_id: id, value: { pos: mesh.get_position(), size: mesh.get_size() } });
         });
-
-        HistoryControl.add('MESH_SIZE', oldSizes);
+        HistoryControl.add('MESH_SIZE', oldSizes, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateSize(info: ChangeInfo) {
-        const [isDraggedX, isDraggedY] = getDraggedInfo(info);
+    function handleSizeChange(info: ChangeInfo) {
         const [isChangedX, isChangedY] = getChangedInfo(info);
-
         const size = info.data.event.value as Vector2;
 
-        const averageSize = new Vector2();
-        averageSize.copy(size);
-
-        if (isDraggedX || isDraggedY) {
-            const sum = new Vector2(0, 0);
-            info.ids.forEach((id) => {
-                const mesh = _selected_meshes.find((item) => {
-                    return item.mesh_data.id == id;
-                });
-
-                if (mesh == undefined) {
-                    Log.error('[updateSize] Mesh not found for id:', id);
-                    return;
-                }
-
-                sum.add(mesh.get_size());
-            });
-
-            averageSize.copy(sum.divideScalar(info.ids.length));
-        }
-
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+        const data = info.ids.map((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[updateSize] Mesh not found for id:', id);
                 return;
             }
+            const x = isChangedX ? size.x : mesh.get_size().x;
+            const y = isChangedY ? size.y : mesh.get_size().y;
+            return { mesh_id: id, value: new Vector2(x, y) };
+        }).filter((item) => item != undefined);
 
-            const x = isDraggedX ? mesh.get_size().x + (size.x - averageSize.x) : isChangedX ? size.x : mesh.get_size().x;
-            const y = isDraggedY ? mesh.get_size().y + (size.y - averageSize.y) : isChangedY ? size.y : mesh.get_size().y;
+        updateSize(data, info.data.event.last);
+    }
 
-            mesh.set_size(x, y);
-        });
+    function updateSize(data: MeshPropertyInfo<Vector2>[], last: boolean) {
+        if (!last) return;
 
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updateSize] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_size(item.value.x, item.value.y);
+        }
+
+        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
+        TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
     }
 
     function savePivot(info: BeforeChangeInfo) {
-        const pivots: PivotEventData[] = [];
+        const pivots: MeshPropertyInfo<Vector2>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[savePivot] Mesh not found for id:', id);
                 return;
             }
-
-            pivots.push({ id_mesh: id, pivot: mesh.get_pivot() });
+            pivots.push({ mesh_id: id, value: mesh.get_pivot() });
         });
-
-        HistoryControl.add('MESH_PIVOT', pivots);
+        HistoryControl.add('MESH_PIVOT', pivots, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updatePivot(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+    function handlePivotChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<ScreenPointPreset>(info);
+        updatePivot(data, info.data.event.last);
+    }
 
+    function updatePivot(data: MeshPropertyInfo<ScreenPointPreset>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updatePivot] Mesh not found for id:', id);
+                Log.error('[updatePivot] Mesh not found for id:', item.mesh_id);
                 return;
             }
-
-            const pivot_preset = info.data.event.value as ScreenPointPreset;
+            const pivot_preset = item.value;
             const pivot = screenPresetToPivotValue(pivot_preset);
             mesh.set_pivot(pivot.x, pivot.y, true);
-        });
+        }
 
         SizeControl.draw();
     }
 
     function saveAnchor(info: BeforeChangeInfo) {
-        const anchors: AnchorEventData[] = [];
+        const anchors: MeshPropertyInfo<Vector2>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveAnchor] Mesh not found for id:', id);
                 return;
             }
-
-            anchors.push({ id_mesh: id, anchor: mesh.get_anchor() });
+            anchors.push({ mesh_id: id, value: mesh.get_anchor() });
         });
-
-        HistoryControl.add('MESH_ANCHOR', anchors);
+        HistoryControl.add('MESH_ANCHOR', anchors, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateAnchor(info: ChangeInfo) {
+    function handleAnchorChange(info: ChangeInfo) {
         const [isChangedX, isChangedY] = getChangedInfo(info);
-
         const anchor = info.data.event.value as Vector2;
 
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+        const data = info.ids.map((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[updateAnchor] Mesh not found for id:', id);
                 return;
             }
-
             const x = isChangedX ? anchor.x : mesh.get_anchor().x;
             const y = isChangedY ? anchor.y : mesh.get_anchor().y;
+            return { mesh_id: id, value: new Vector2(x, y) };
+        }).filter((item) => item != undefined);
 
-            mesh.set_anchor(x, y);
-        });
+        updateAnchor(data, info.data.event.last);
+    }
+
+    function updateAnchor(data: MeshPropertyInfo<Vector2>[], last: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updateAnchor] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_anchor(item.value.x, item.value.y);
+        }
 
         SizeControl.draw();
 
-        if (info.data.event.last) {
+        if (last) {
             Inspector.refresh([MeshProperty.ANCHOR_PRESET]);
         }
-
         Inspector.refresh([MeshProperty.ANCHOR]);
     }
 
     function saveAnchorPreset(info: BeforeChangeInfo) {
-        const anchors: AnchorEventData[] = [];
+        const anchors: MeshPropertyInfo<Vector2>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveAnchorPreset] Mesh not found for id:', id);
                 return;
             }
-
-            anchors.push({ id_mesh: id, anchor: mesh.get_anchor() });
+            anchors.push({ mesh_id: id, value: mesh.get_anchor() });
         });
-
-        HistoryControl.add('MESH_ANCHOR', anchors);
+        HistoryControl.add('MESH_ANCHOR', anchors, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateAnchorPreset(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+    function handleAnchorPresetChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<ScreenPointPreset>(info);
+        updateAnchorPreset(data, info.data.event.last);
+    }
 
+    function updateAnchorPreset(data: MeshPropertyInfo<ScreenPointPreset>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateAnchorPreset] Mesh not found for id:', id);
+                Log.error('[updateAnchorPreset] Mesh not found for id:', item.mesh_id);
                 return;
             }
-
-            const anchor = screenPresetToAnchorValue(info.data.event.value as ScreenPointPreset);
+            const anchor = screenPresetToAnchorValue(item.value);
             if (anchor) {
                 mesh.set_anchor(anchor.x, anchor.y);
             }
-        });
-
+        }
         SizeControl.draw();
         Inspector.refresh([MeshProperty.ANCHOR]);
     }
 
     function saveColor(info: BeforeChangeInfo) {
-        const colors: ColorEventData[] = [];
+        const colors: MeshPropertyInfo<string>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveColor] Mesh not found for id:', id);
                 return;
             }
-
-            colors.push({ id_mesh: id, color: mesh.get_color() });
+            colors.push({ mesh_id: id, value: mesh.get_color() });
         });
-
-        HistoryControl.add('MESH_COLOR', colors);
+        HistoryControl.add('MESH_COLOR', colors, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateColor(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+    function handleColorChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        updateColor(data, info.data.event.last);
+    }
 
+    function updateColor(data: MeshPropertyInfo<string>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateColor] Mesh not found for id:', id);
-                return;
+                Log.error('[updateColor] Mesh not found for id:', item.mesh_id);
+                continue;
             }
-
-            const color = info.data.event.value as string;
+            const color = item.value;
             mesh.set_color(color);
-        });
-    }
-
-    function saveAlpha(info: BeforeChangeInfo) {
-        const alphas: AlphaEventData[] = [];
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Log.error('[saveAlpha] Mesh not found for id:', id);
-                return;
-            }
-
-            if (mesh.type === IObjectTypes.TEXT || mesh.type === IObjectTypes.GUI_TEXT || mesh.type === IObjectTypes.GO_LABEL_COMPONENT) {
-                alphas.push({ id_mesh: id, alpha: deepClone((mesh as TextMesh).fillOpacity) });
-            } else if (mesh.type === IObjectTypes.SLICE9_PLANE || mesh.type === IObjectTypes.GUI_BOX || mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
-                alphas.push({ id_mesh: id, alpha: deepClone((mesh as Slice9Mesh).get_alpha()) });
-            }
-        });
-
-        HistoryControl.add('MESH_ALPHA', alphas);
-    }
-
-    function updateAlpha(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Log.error('[updateAlpha] Mesh not found for id:', id);
-                return;
-            }
-
-            const alpha = info.data.event.value as number;
-            if (mesh.type === IObjectTypes.TEXT || mesh.type === IObjectTypes.GUI_TEXT || mesh.type === IObjectTypes.GO_LABEL_COMPONENT) {
-                (mesh as TextMesh).fillOpacity = alpha;
-            } else if (mesh.type === IObjectTypes.SLICE9_PLANE || mesh.type === IObjectTypes.GUI_BOX || mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
-                (mesh as Slice9Mesh).set_alpha(alpha);
-            }
-        });
-    }
-
-    function saveTexture(info: BeforeChangeInfo) {
-        const textures: TextureEventData[] = [];
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Log.error('[saveTexture] Mesh not found for id:', id);
-                return;
-            }
-
-            const texture = mesh.get_texture()[0];
-            textures.push({ id_mesh: id, texture });
-        });
-
-        HistoryControl.add('MESH_TEXTURE', textures);
-    }
-
-    function updateTexture(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Log.error('[updateTexture] Mesh not found for id:', id);
-                return;
-            }
-
-            if (info.data.event.value) {
-                const atlas = (mesh as Slice9Mesh).get_texture()[1];
-                const texture = info.data.event.value as string;
-                (mesh as Slice9Mesh).set_texture(texture, atlas);
-            } else (mesh as Slice9Mesh).set_texture('');
-        });
+        }
     }
 
     function saveSlice(info: BeforeChangeInfo) {
-        const slices: SliceEventData[] = [];
+        const slices: MeshPropertyInfo<Vector2>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
             if (mesh == undefined) {
                 Log.error('[saveSlice] Mesh not found for id:', id);
                 return;
             }
-
-            slices.push({ id_mesh: id, slice: (mesh as Slice9Mesh).get_slice() });
+            slices.push({ mesh_id: id, value: mesh.get_slice() });
         });
-
-        HistoryControl.add('MESH_SLICE', slices);
+        HistoryControl.add('MESH_SLICE', slices, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateSlice(info: ChangeInfo) {
+    function handleSliceChange(info: ChangeInfo) {
         const [isChangedX, isChangedY] = getChangedInfo(info);
-
         const slice = info.data.event.value as Vector2;
 
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+        const data = info.ids.map((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
             if (mesh == undefined) {
                 Log.error('[updateSlice] Mesh not found for id:', id);
                 return;
             }
+            const x = isChangedX ? slice.x : mesh.get_slice().x;
+            const y = isChangedY ? slice.y : mesh.get_slice().y;
 
-            const x = isChangedX ? slice.x : (mesh as Slice9Mesh).get_slice().x;
-            const y = isChangedY ? slice.y : (mesh as Slice9Mesh).get_slice().y;
+            return { mesh_id: id, value: new Vector2(x, y) };
+        }).filter((item) => item != undefined);
 
-            (mesh as Slice9Mesh).set_slice(x, y);
-        });
+        updateSlice(data, info.data.event.last);
+    }
+
+    function updateSlice(data: MeshPropertyInfo<Vector2>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            if (mesh == undefined) {
+                Log.error('[updateSlice] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_slice(item.value.x, item.value.y);
+        }
     }
 
     function saveText(info: BeforeChangeInfo) {
-        const texts: TextEventData[] = [];
+        const texts: MeshPropertyInfo<string>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id) as TextMesh;
             if (mesh == undefined) {
                 Log.error('[saveText] Mesh not found for id:', id);
                 return;
             }
-
-            texts.push({ id_mesh: id, text: deepClone((mesh as TextMesh).text) });
+            texts.push({ mesh_id: id, value: deepClone(mesh.text) });
         });
-
-        HistoryControl.add('MESH_TEXT', texts);
+        HistoryControl.add('MESH_TEXT', texts, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateText(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+    function handleTextChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        updateText(data, info.data.event.last);
+    }
 
+    function updateText(data: MeshPropertyInfo<string>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[updateText] Mesh not found for id:', id);
-                return;
+                Log.error('[updateText] Mesh not found for id:', item.mesh_id);
+                continue;
             }
-
-            const text = info.data.event.value as string;
-            (mesh as TextMesh).text = text;
-        });
+            const text = item.value;
+            mesh.text = text;
+        }
     }
 
     function saveFont(info: BeforeChangeInfo) {
-        const fonts: FontEventData[] = [];
+        const fonts: MeshPropertyInfo<string>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id) as TextMesh;
             if (mesh == undefined) {
                 Log.error('[saveFont] Mesh not found for id:', id);
                 return;
             }
-
-            const oldFont = deepClone((mesh as TextMesh).font);
-            fonts.push({ id_mesh: id, font: oldFont ? oldFont : '' });
+            const oldFont = deepClone(mesh.font);
+            fonts.push({ mesh_id: id, value: oldFont ? oldFont : '' });
         });
-
-        HistoryControl.add('MESH_FONT', fonts);
+        HistoryControl.add('MESH_FONT', fonts, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateFont(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+    function handleFontChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        updateFont(data, info.data.event.last);
+    }
 
+    function updateFont(data: MeshPropertyInfo<string>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[updateFont] Mesh not found for id:', id);
-                return;
+                Log.error('[updateFont] Mesh not found for id:', item.mesh_id);
+                continue;
             }
-
-            const font = info.data.event.value as string;
-            (mesh as TextMesh).font = font;
-        });
+            const font = item.value;
+            mesh.font = font;
+        }
     }
 
     function saveFontSize(info: BeforeChangeInfo) {
-        const fontSizes: FontSizeEventData[] = [];
+        const fontSizes: MeshPropertyInfo<Vector3>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveFontSize] Mesh not found for id:', id);
                 return;
             }
-
             const oldScale = mesh.get_scale();
-            fontSizes.push({ id_mesh: id, scale: new Vector3(oldScale.x, oldScale.y, 1) });
+            fontSizes.push({ mesh_id: id, value: new Vector3(oldScale.x, oldScale.y, 1) });
         });
-
-        HistoryControl.add('MESH_FONT_SIZE', fontSizes);
+        HistoryControl.add('MESH_FONT_SIZE', fontSizes, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateFontSize(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+    function handleFontSizeChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateFontSize(data, info.data.event.last);
+    }
 
+    function updateFontSize(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[updateFontSize] Mesh not found for id:', id);
-                return;
+                Log.error('[updateFontSize] Mesh not found for id:', item.mesh_id);
+                continue;
             }
-
-            const font_size = info.data.event.value as number;
-            const delta = font_size / (mesh as TextMesh).fontSize;
-
+            const font_size = item.value;
+            const delta = font_size / mesh.fontSize;
             mesh.scale.set(1 * delta, 1 * delta, mesh.scale.z);
             mesh.transform_changed();
-        });
+        }
 
-        TransformControl.set_proxy_in_average_point(_selected_meshes);
+        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
+        TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
         Inspector.refresh([MeshProperty.SCALE]);
     }
 
     function saveTextAlign(info: BeforeChangeInfo) {
-        const textAligns: TextAlignEventData[] = [];
+        const textAligns: MeshPropertyInfo<'left' | 'right' | 'center' | 'justify'>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+            const mesh = SceneManager.get_mesh_by_id(id) as TextMesh;
             if (mesh == undefined) {
                 Log.error('[saveTextAlign] Mesh not found for id:', id);
                 return;
             }
-
-            textAligns.push({ id_mesh: id, text_align: deepClone((mesh as TextMesh).textAlign) });
+            textAligns.push({ mesh_id: id, value: deepClone(mesh.textAlign) });
         });
-
-        HistoryControl.add('MESH_TEXT_ALIGN', textAligns);
+        HistoryControl.add('MESH_TEXT_ALIGN', textAligns, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateTextAlign(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-            if (mesh == undefined) {
-                Log.error('[updateTextAlign] Mesh not found for id:', id);
-                return;
-            }
+    function handleTextAlignChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<any>(info);
+        updateTextAlign(data, info.data.event.last);
+    }
 
-            const text_align = info.data.event.value as any;
-            (mesh as TextMesh).textAlign = text_align;
-        });
+    function updateTextAlign(data: MeshPropertyInfo<any>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
+            if (mesh == undefined) {
+                Log.error('[updateTextAlign] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            const text_align = item.value as any;
+            mesh.textAlign = text_align;
+        }
     }
 
     function saveLineHeight(info: BeforeChangeInfo) {
-        const lineHeights: LineHeightEventData[] = [];
+        const lineHeights: MeshPropertyInfo<number | 'normal'>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+            const mesh = SceneManager.get_mesh_by_id(id) as TextMesh;
             if (mesh == undefined) {
                 Log.error('[saveLineHeight] Mesh not found for id:', id);
                 return;
             }
-
-            lineHeights.push({ id_mesh: id, line_height: deepClone((mesh as TextMesh).lineHeight) });
+            lineHeights.push({ mesh_id: id, value: deepClone(mesh.lineHeight) });
         });
-
-        HistoryControl.add('MESH_LINE_HEIGHT', lineHeights);
+        HistoryControl.add('MESH_LINE_HEIGHT', lineHeights, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateLineHeight(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+    function handleLineHeightChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateLineHeight(data, info.data.event.last);
+    }
+
+    function updateLineHeight(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[updateLineHeight] Mesh not found for id:', id);
-                return;
+                Log.error('[updateLineHeight] Mesh not found for id:', item.mesh_id);
+                continue;
             }
-
-            const line_height = info.data.event.value as number;
-            (mesh as TextMesh).lineHeight = line_height;
-        });
-    }
-
-    function saveAtlas(info: BeforeChangeInfo) {
-        const atlases: MeshAtlasEventData[] = [];
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Log.error('[saveAtlas] Mesh not found for id:', id);
-                return;
-            }
-
-            const atlas = mesh.get_texture()[1];
-            const texture = mesh.get_texture()[0];
-            atlases.push({ id_mesh: id, atlas, texture });
-        });
-
-        HistoryControl.add('MESH_ATLAS', atlases);
-    }
-
-    function updateAtlas(info: ChangeInfo) {
-        const atlas = info.data.event.value as string;
-        let texture = '';
-        for (const item of ResourceManager.get_all_textures()) {
-            if (item.atlas == atlas) {
-                texture = item.name;
-                break;
-            }
+            const line_height = item.value;
+            mesh.lineHeight = line_height;
         }
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Log.error('[updateAtlas] Mesh not found for id:', id);
-                return;
-            }
-
-            (mesh as Slice9Mesh).set_texture(texture, atlas);
-        });
-
-        // NOTE: на следующем кадре обновляем список выбранных мешей чтобы обновились опции текстур
-        // моментально обновить не можем так как мы сейчас в событии обновления поля которое под копотом делает dispose
-        // поэтому очистить инспектор и собрать поля занаво можно будет только после обновления поля
-        setTimeout(() => set_selected_meshes(_selected_meshes));
     }
 
     function saveBlendMode(info: BeforeChangeInfo) {
-        const blendModes: BlendModeEventData[] = [];
+        const blendModes: MeshPropertyInfo<BlendMode>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveBlendMode] Mesh not found for id:', id);
                 return;
             }
-
             blendModes.push({
-                id_mesh: id,
-                blend_mode: (mesh as any).material.blending
+                mesh_id: id,
+                value: (mesh as any).material.blending
             });
         });
-
-        HistoryControl.add('MESH_BLEND_MODE', blendModes);
+        HistoryControl.add('MESH_BLEND_MODE', blendModes, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateBlendMode(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+    function handleBlendModeChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<BlendMode>(info);
+        updateBlendMode(data, info.data.event.last);
+    }
 
+    function updateBlendMode(data: MeshPropertyInfo<BlendMode>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateBlendMode] Mesh not found for id:', id);
-                return;
+                Log.error('[updateBlendMode] Mesh not found for id:', item.mesh_id);
+                continue;
             }
-
-            const blend_mode = info.data.event.value as BlendMode;
+            const blend_mode = item.value as BlendMode;
             const threeBlendMode = convertBlendModeToThreeJS(blend_mode);
             (mesh as any).material.blending = threeBlendMode;
-        });
+        }
     }
 
     function saveMaterial(info: BeforeChangeInfo) {
-        const materials: MaterialEventData[] = [];
+        const materials: MeshPropertyInfo<string>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
             if (mesh == undefined) {
                 Log.error('[saveMaterial] Mesh not found for id:', id);
                 return;
             }
-
-            const material_name = (mesh as Slice9Mesh).get_material().name;
-            materials.push({ id_mesh: id, material_name });
+            const material_name = mesh.material.name;
+            materials.push({ mesh_id: id, value: material_name });
         });
-
-        HistoryControl.add('MESH_MATERIAL', materials);
+        HistoryControl.add('MESH_MATERIAL', materials, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateMaterial(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
+    function handleMaterialChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        updateMaterial(data, info.data.event.last);
+    }
 
+    function updateMaterial(data: MeshPropertyInfo<string>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
             if (mesh == undefined) {
-                Log.error('[updateMaterial] Mesh not found for id:', id);
+                Log.error('[updateMaterial] Mesh not found for id:', item.mesh_id);
                 return;
             }
+            const texture_info = mesh.get_texture();
+            const texture_name = texture_info[0];
+            const atlas = texture_info[1];
+            const has_texture = texture_name != '';
 
-            const material_name = info.data.event.value as string;
-            (mesh as Slice9Mesh).set_material(material_name);
+            const material_name = item.value as string;
+            mesh.set_material(material_name);
+
+            if (has_texture) {
+                mesh.set_texture(texture_name, atlas);
+            }
+            else {
+                const material = ResourceManager.get_material_by_mesh_id(material_name, item.mesh_id);
+                if (material) {
+                    if (material.uniforms['u_texture'].value != null) {
+                        const texture_name = material.uniforms['u_texture'].value.name;
+                        const atlas = material.uniforms['u_texture'].value.atlas;
+                        mesh.set_texture(texture_name, atlas);
+                    }
+                }
+            }
+        }
+
+        setTimeout(() => {
+            set_selected_meshes(_selected_meshes);
         });
-
-        Inspector.refresh([MeshProperty.ATLAS, MeshProperty.TEXTURE]);
     }
 
     function saveUV(info: BeforeChangeInfo) {
-        const uvs: UVEventData[] = [];
+        const uvs: MeshPropertyInfo<Float32Array>[] = [];
         info.ids.forEach((id) => {
-            const mesh = _selected_meshes.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveUV] Mesh not found for id:', id);
                 return;
             }
-
             if (mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                 const sprite = mesh as GoSprite;
                 uvs.push({
-                    id_mesh: id,
-                    uv: sprite.get_uv()
+                    mesh_id: id,
+                    value: sprite.get_uv()
                 });
             }
         });
-
-        HistoryControl.add('MESH_UV', uvs);
+        HistoryControl.add('MESH_UV', uvs, HistoryOwner.MESH_INSPECTOR);
     }
 
-    function updateFlipVertical(info: ChangeInfo) {
-        _selected_meshes.forEach((item) => {
-            if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
-                const sprite = item as GoSprite;
-                sprite.set_flip(FlipMode.NONE);
-                if (info.data.event.value) {
-                    sprite.set_flip(FlipMode.VERTICAL);
+    function handleFlipVerticalChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<boolean>(info);
+        updateFlipVertical(data, info.data.event.last);
+    }
+
+    function updateFlipVertical(data: { mesh_id: number, value: boolean }[], last: boolean) {
+        data.forEach(item => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as GoSprite;
+            if (mesh?.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                mesh.set_flip(FlipMode.NONE);
+                if (item.value) {
+                    mesh.set_flip(FlipMode.VERTICAL);
                 }
             }
         });
 
-        Inspector.refresh([MeshProperty.FLIP_DIAGONAL, MeshProperty.FLIP_HORIZONTAL]);
+        if (last) {
+            Inspector.refresh([MeshProperty.FLIP_DIAGONAL, MeshProperty.FLIP_HORIZONTAL]);
+        }
     }
 
-    function updateFlipHorizontal(info: ChangeInfo) {
-        _selected_meshes.forEach((item) => {
-            if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
-                const sprite = item as GoSprite;
-                sprite.set_flip(FlipMode.NONE);
-                if (info.data.event.value) {
-                    sprite.set_flip(FlipMode.HORIZONTAL);
+    function handleFlipHorizontalChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<boolean>(info);
+        updateFlipHorizontal(data, info.data.event.last);
+    }
+
+    function updateFlipHorizontal(data: { mesh_id: number, value: boolean }[], last: boolean) {
+        data.forEach(item => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as GoSprite;
+            if (mesh?.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                mesh.set_flip(FlipMode.NONE);
+                if (item.value) {
+                    mesh.set_flip(FlipMode.HORIZONTAL);
                 }
             }
         });
 
-        Inspector.refresh([MeshProperty.FLIP_DIAGONAL, MeshProperty.FLIP_VERTICAL]);
+        if (last) {
+            Inspector.refresh([MeshProperty.FLIP_DIAGONAL, MeshProperty.FLIP_VERTICAL]);
+        }
     }
 
-    function updateFlipDiagonal(info: ChangeInfo) {
-        _selected_meshes.forEach((item) => {
-            if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
-                const sprite = item as GoSprite;
-                sprite.set_flip(FlipMode.NONE);
-                if (info.data.event.value) {
-                    sprite.set_flip(FlipMode.DIAGONAL);
+    function handleFlipDiagonalChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<boolean>(info);
+        updateFlipDiagonal(data, info.data.event.last);
+    }
+
+    function updateFlipDiagonal(data: { mesh_id: number, value: boolean }[], last: boolean) {
+        data.forEach(item => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as GoSprite;
+            if (mesh?.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                mesh.set_flip(FlipMode.NONE);
+                if (item.value) {
+                    mesh.set_flip(FlipMode.DIAGONAL);
                 }
             }
         });
 
-        Inspector.refresh([MeshProperty.FLIP_VERTICAL, MeshProperty.FLIP_HORIZONTAL]);
+        if (last) {
+            Inspector.refresh([MeshProperty.FLIP_VERTICAL, MeshProperty.FLIP_HORIZONTAL]);
+        }
+    }
+
+    function saveUniformSampler2D(info: BeforeChangeInfo) {
+        const sampler2Ds: MeshMaterialUniformInfo<string>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            const uniform = material.uniforms[info.field.name];
+            if (uniform) {
+                sampler2Ds.push({
+                    mesh_id: id,
+                    uniform_name: info.field.name,
+                    value: uniform.value?.path || ''
+                });
+            }
+        });
+        HistoryControl.add('MESH_MATERIAL_SAMPLER2D', sampler2Ds, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleUniformSampler2DChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshMaterialData<string>(info);
+        updateUniformSampler2D(data, info.data.event.last);
+    }
+
+    function updateUniformSampler2D(data: MeshMaterialUniformInfo<string>[], _: boolean) {
+        data.forEach((item) => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = ResourceManager.get_material_by_mesh_id(mesh.material.name, item.mesh_id);
+            if (!material) return;
+
+            const texture_name = get_file_name(item.value as string || '');
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+            const texture = ResourceManager.get_texture(texture_name, atlas).texture;
+            if (!texture) return;
+
+            if (item.uniform_name == 'u_texture') {
+                mesh.set_texture(texture_name, atlas);
+            }
+            else {
+                ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, texture);
+                ResourceManager.set_material_define_for_mesh(mesh, material.name, 'USE_TEXTURE', '');
+            }
+
+            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+                mesh_id: item.mesh_id,
+                is_uniform: true,
+                property: item.uniform_name,
+                value: texture
+            });
+        });
+    }
+
+    function saveUniformFloat(info: BeforeChangeInfo) {
+        const floats: MeshMaterialUniformInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            const uniform = material.uniforms[info.field.name];
+            if (uniform) {
+                floats.push({
+                    mesh_id: id,
+                    uniform_name: info.field.name,
+                    value: uniform.value
+                });
+            }
+        });
+        HistoryControl.add('MESH_MATERIAL_FLOAT', floats, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleUniformFloatChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshMaterialData<number>(info);
+        updateUniformFloat(data, info.data.event.last);
+    }
+
+    function updateUniformFloat(data: MeshMaterialUniformInfo<number>[], _: boolean) {
+        data.forEach((item) => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, item.value as number);
+
+            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+                mesh_id: item.mesh_id,
+                is_uniform: true,
+                property: item.uniform_name,
+                value: item.value
+            });
+        });
+    }
+
+    function saveUniformRange(info: BeforeChangeInfo) {
+        const ranges: MeshMaterialUniformInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            const uniform = material.uniforms[info.field.name];
+            if (uniform) {
+                ranges.push({
+                    mesh_id: id,
+                    uniform_name: info.field.name,
+                    value: uniform.value
+                });
+            }
+        });
+        HistoryControl.add('MESH_MATERIAL_RANGE', ranges, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleUniformRangeChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshMaterialData<number>(info);
+        updateUniformRange(data, info.data.event.last);
+    }
+
+    function updateUniformRange(data: MeshMaterialUniformInfo<number>[], _: boolean) {
+        data.forEach((item) => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, item.value);
+
+            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+                mesh_id: item.mesh_id,
+                is_uniform: true,
+                property: item.uniform_name,
+                value: item.value
+            });
+        });
+    }
+
+    function saveUniformVec2(info: BeforeChangeInfo) {
+        const vec2s: MeshMaterialUniformInfo<Vector2>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            const uniform = material.uniforms[info.field.name];
+            if (uniform) {
+                vec2s.push({
+                    mesh_id: id,
+                    uniform_name: info.field.name,
+                    value: uniform.value
+                });
+            }
+        });
+        HistoryControl.add('MESH_MATERIAL_VEC2', vec2s, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleUniformVec2Change(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshMaterialData<Vector2>(info);
+        updateUniformVec2(data, info.data.event.last);
+    }
+
+    function updateUniformVec2(data: MeshMaterialUniformInfo<Vector2>[], last: boolean) {
+        if (!last) return;
+
+        data.forEach((item) => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, item.value);
+
+            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+                mesh_id: item.mesh_id,
+                is_uniform: true,
+                property: item.uniform_name,
+                value: item.value
+            });
+        });
+    }
+
+    function saveUniformVec3(info: BeforeChangeInfo) {
+        const vec3s: MeshMaterialUniformInfo<Vector3>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            const uniform = material.uniforms[info.field.name];
+            if (uniform) {
+                vec3s.push({
+                    mesh_id: id,
+                    uniform_name: info.field.name,
+                    value: uniform.value
+                });
+            }
+        });
+        HistoryControl.add('MESH_MATERIAL_VEC3', vec3s, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleUniformVec3Change(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshMaterialData<Vector3>(info);
+        updateUniformVec3(data, info.data.event.last);
+    }
+
+    function updateUniformVec3(data: MeshMaterialUniformInfo<Vector3>[], last: boolean) {
+        if (!last) return;
+
+        data.forEach((item) => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, item.value);
+
+            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+                mesh_id: item.mesh_id,
+                is_uniform: true,
+                property: item.uniform_name,
+                value: item.value
+            });
+        });
+    }
+
+    function saveUniformVec4(info: BeforeChangeInfo) {
+        const vec4s: MeshMaterialUniformInfo<Vector4>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            const uniform = material.uniforms[info.field.name];
+            if (uniform) {
+                vec4s.push({
+                    mesh_id: id,
+                    uniform_name: info.field.name,
+                    value: uniform.value
+                });
+            }
+        });
+        HistoryControl.add('MESH_MATERIAL_VEC4', vec4s, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleUniformVec4Change(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshMaterialData<Vector4>(info);
+        updateUniformVec4(data, info.data.event.last);
+    }
+
+    function updateUniformVec4(data: MeshMaterialUniformInfo<Vector4>[], last: boolean) {
+        if (!last) return;
+
+        data.forEach((item) => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, item.value);
+
+            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+                mesh_id: item.mesh_id,
+                is_uniform: true,
+                property: item.uniform_name,
+                value: item.value
+            });
+        });
+    }
+
+    function saveUniformColor(info: BeforeChangeInfo) {
+        const colors: MeshMaterialUniformInfo<string>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            const uniform = material.uniforms[info.field.name];
+            if (uniform) {
+                const color = new Color();
+                color.setRGB(uniform.value.x, uniform.value.y, uniform.value.z);
+                colors.push({
+                    mesh_id: id,
+                    uniform_name: info.field.name,
+                    value: color.getHexString()
+                });
+            }
+        });
+        HistoryControl.add('MESH_MATERIAL_COLOR', colors, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleUniformColorChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshMaterialData<string>(info);
+        updateUniformColor(data, info.data.event.last);
+    }
+
+    function updateUniformColor(data: MeshMaterialUniformInfo<string>[], last: boolean) {
+        if (!last) return;
+
+        data.forEach((item) => {
+            const rgb = hexToRGB(item.value);
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            if (!mesh) return;
+
+            const material = mesh.material;
+            if (!material) return;
+
+            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, rgb);
+
+            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+                mesh_id: item.mesh_id,
+                is_uniform: true,
+                property: item.uniform_name,
+                value: rgb
+            });
+        });
+    }
+
+    function undo(event: THistoryUndo) {
+        if (event.owner !== HistoryOwner.MESH_INSPECTOR) return;
+
+        switch (event.type) {
+            case 'MESH_NAME':
+                const names = event.data as MeshPropertyInfo<string>[];
+                updateName(names, true);
+                break;
+            case 'MESH_ACTIVE':
+                const actives = event.data as MeshPropertyInfo<boolean>[];
+                updateActive(actives, true);
+                break;
+            case 'MESH_TRANSLATE':
+                const positions = event.data as MeshPropertyInfo<Vector3>[];
+                updatePosition(positions, true);
+                break;
+            case 'MESH_ROTATE':
+                const rotations = event.data as MeshPropertyInfo<Vector3>[];
+                updateRotation(rotations, true);
+                break;
+            case 'MESH_SCALE':
+                const scales = event.data as MeshPropertyInfo<Vector3>[];
+                updateScale(scales, true);
+                break;
+            case 'MESH_SIZE':
+                const sizes = event.data as MeshPropertyInfo<{ size: Vector2, pos: Vector3 }>[];
+                updateSize(sizes.map(item => ({ mesh_id: item.mesh_id, value: item.value.size })), true);
+                break;
+            case 'MESH_PIVOT':
+                const pivots = event.data as MeshPropertyInfo<ScreenPointPreset>[];
+                updatePivot(pivots, true);
+                break;
+            case 'MESH_ANCHOR':
+                const anchors = event.data as MeshPropertyInfo<Vector2>[];
+                updateAnchor(anchors, true);
+                break;
+            case 'MESH_COLOR':
+                const colors = event.data as MeshPropertyInfo<string>[];
+                updateColor(colors, true);
+                break;
+            case 'MESH_UV':
+                const uvs = event.data as MeshPropertyInfo<Float32Array>[];
+                uvs.forEach(uv => {
+                    const mesh = SceneManager.get_mesh_by_id(uv.mesh_id) as GoSprite;
+                    if (mesh?.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                        const geometry = mesh.geometry;
+                        geometry.attributes.uv.array.set(uv.value);
+                        geometry.attributes.uv.needsUpdate = true;
+                        mesh.transform_changed();
+                    }
+                });
+                break;
+            case 'MESH_SLICE':
+                const slices = event.data as MeshPropertyInfo<Vector2>[];
+                updateSlice(slices, true);
+                break;
+            case 'MESH_TEXT':
+                const texts = event.data as MeshPropertyInfo<string>[];
+                updateText(texts, true);
+                break;
+            case 'MESH_FONT':
+                const fonts = event.data as MeshPropertyInfo<string>[];
+                updateFont(fonts, true);
+                break;
+            case 'MESH_FONT_SIZE':
+                const fontSizes = event.data as MeshPropertyInfo<number>[];
+                updateFontSize(fontSizes, true);
+                break;
+            case 'MESH_TEXT_ALIGN':
+                const textAligns = event.data as MeshPropertyInfo<TextAlign>[];
+                updateTextAlign(textAligns, true);
+                break;
+            case 'MESH_LINE_HEIGHT':
+                const lineHeights = event.data as MeshPropertyInfo<number>[];
+                updateLineHeight(lineHeights, true);
+                break;
+            case 'MESH_BLEND_MODE':
+                const blendModes = event.data as MeshPropertyInfo<BlendMode>[];
+                updateBlendMode(blendModes, true);
+                break;
+            case 'MESH_MATERIAL':
+                const materials = event.data as MeshPropertyInfo<string>[];
+                updateMaterial(materials, true);
+                break;
+            case 'MESH_MATERIAL_SAMPLER2D':
+                const sampler2Ds = event.data as MeshMaterialUniformInfo<string>[];
+                updateUniformSampler2D(sampler2Ds, true);
+                break;
+            case 'MESH_MATERIAL_FLOAT':
+                const floats = event.data as MeshMaterialUniformInfo<number>[];
+                updateUniformFloat(floats, true);
+                break;
+            case 'MESH_MATERIAL_RANGE':
+                const ranges = event.data as MeshMaterialUniformInfo<number>[];
+                updateUniformRange(ranges, true);
+                break;
+            case 'MESH_MATERIAL_VEC2':
+                const vec2s = event.data as MeshMaterialUniformInfo<Vector2>[];
+                updateUniformVec2(vec2s, true);
+                break;
+            case 'MESH_MATERIAL_VEC3':
+                const vec3s = event.data as MeshMaterialUniformInfo<Vector3>[];
+                updateUniformVec3(vec3s, true);
+                break;
+            case 'MESH_MATERIAL_VEC4':
+                const vec4s = event.data as MeshMaterialUniformInfo<Vector4>[];
+                updateUniformVec4(vec4s, true);
+                break;
+            case 'MESH_MATERIAL_COLOR':
+                const materialColors = event.data as MeshMaterialUniformInfo<string>[];
+                updateUniformColor(materialColors, true);
+                break;
+        }
+
+        set_selected_meshes(_selected_meshes);
+    }
+
+    function convertChangeInfoToMeshData<T>(info: ChangeInfo): { mesh_id: number, value: T }[] {
+        const value = info.data.event.value as T;
+        return info.ids.map(id => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[convertChangeInfoToMeshData] Mesh not found for id:', id);
+                return null;
+            }
+            return { mesh_id: id, value };
+        }).filter(item => item != null) as { mesh_id: number, value: T }[];
+    }
+
+    function convertChangeInfoToMeshMaterialData<T>(info: ChangeInfo): { mesh_id: number, uniform_name: string, value: T }[] {
+        const value = info.data.event.value as T;
+        return info.ids.map(id => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[convertChangeInfoToMeshData] Mesh not found for id:', id);
+                return null;
+            }
+            return { mesh_id: id, uniform_name: info.data.field.name, value };
+        }).filter(item => item != null) as { mesh_id: number, uniform_name: string, value: T }[];
     }
 
     init();

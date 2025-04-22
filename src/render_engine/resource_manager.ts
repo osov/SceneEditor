@@ -1,16 +1,16 @@
 import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4 } from 'three';
-import { get_file_name, is_changed_uniform } from './helpers/utils';
+import { copy_material, get_file_name, get_material_hash } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
-import { FSEvent, TMaterialChanged, TRecursiveDict } from '../modules_editor/modules_editor_const';
+import { FSEvent, TRecursiveDict } from '../modules_editor/modules_editor_const';
 import { shader } from './objects/entity_base';
-import { hexToRGB } from '../modules/utils';
+import { deepClone, hexToRGB } from '../modules/utils';
 import { Slice9Mesh } from './objects/slice9';
-import { IObjectTypes } from './types';
+
 
 declare global {
     const ResourceManager: ReturnType<typeof ResourceManagerModule>;
@@ -44,7 +44,7 @@ interface AnimationInfo {
 }
 
 export type MaterialUniformParams = {
-    [MaterialUniformType.FLOAT]: { min?: number, max?: number, step?: number };
+    [MaterialUniformType.FLOAT]: {};
     [MaterialUniformType.RANGE]: { min?: number, max?: number, step?: number };
     [MaterialUniformType.VEC2]: {
         x: { min?: number, max?: number, step?: number };
@@ -71,14 +71,37 @@ export interface MaterialUniform<T extends keyof MaterialUniformParams> {
     readonly?: boolean;
 }
 
+export interface MaterialInstance {
+    changed_uniforms: string[];
+    data: ShaderMaterial;
+}
+
 export interface MaterialInfo {
     name: string;
+    path: string;
     vertexShader: string;
     fragmentShader: string;
     uniforms: {
         [key: string]: MaterialUniform<keyof MaterialUniformParams>
     };
-    data: ShaderMaterial;
+    // NOTE: храним hash оригинального материала, для сравнений
+    origin: string;
+    // NOTE: храним все копии материала, получение по хешу
+    instances: {
+        [key: string]: ShaderMaterial;
+    };
+    // NOTE: для того чтобы быстро найти используемый мешем материал
+    mesh_id_to_material_hash: {
+        [key: number]: string;
+    };
+    // NOTE: для того чтобы быстро найти меши которые используют один и тот же материал
+    material_hash_to_mesh_ids: {
+        [key: string]: number[];
+    };
+    // NOTE: для того чтобы быстро найти измененные юниформы у копии материала
+    material_hash_to_changed_uniforms: {
+        [key: string]: string[];
+    };
 }
 
 export enum MaterialUniformType {
@@ -117,74 +140,13 @@ export function ResourceManagerModule() {
                 await on_file_change(event);
             }
         });
-
-        EventBus.on('MATERIAL_CHANGED', async (info: TMaterialChanged) => {
-            const material = get_material(info.material_name);
-            const copies = get_material_copies(info.material_name);
-            if (material) {
-                if (!info.is_uniform) {
-                    switch (info.property) {
-                        case 'vertexShader':
-                            material.vertexShader = info.value;
-                            const vertexShader = await get_file_data(info.value);
-                            if (!vertexShader) break;
-                            material.data.vertexShader = vertexShader;
-                            material.data.needsUpdate = true;
-                            copies.forEach((copy) => {
-                                copy.vertexShader = vertexShader;
-                                copy.needsUpdate = true;
-                            });
-                            break;
-                        case 'fragmentShader':
-                            material.fragmentShader = info.value;
-                            const fragmentShader = await get_file_data(info.value);
-                            if (!fragmentShader) break;
-                            material.data.fragmentShader = fragmentShader;
-                            material.data.needsUpdate = true;
-                            copies.forEach((copy) => {
-                                copy.fragmentShader = fragmentShader;
-                                copy.needsUpdate = true;
-                            });
-                            break;
-                        default:
-                            if (!Object.hasOwn(material, info.property)) {
-                                Log.error('[MATERIAL_CHANGED] property not found:', info.property, material);
-                                return;
-                            }
-                            (material as any)[info.property] = info.value;
-                            material.data.needsUpdate = true;
-
-                            copies.forEach((copy) => {
-                                if (!Object.hasOwn(copy, info.property)) {
-                                    Log.error('[MATERIAL_CHANGED] copy property not found:', info.property, copy);
-                                    return;
-                                }
-                                if (!is_changed_uniform(copy, info.property)) {
-                                    (copy as any)[info.property].value = info.value;
-                                    copy.needsUpdate = true;
-                                }
-                            });
-                            break;
-                    }
-                } else {
-                    material.data.uniforms[info.property].value = info.value;
-                    material.data.needsUpdate = true;
-                    copies.forEach((copy) => {
-                        if (!is_changed_uniform(copy, info.property)) {
-                            copy.uniforms[info.property].value = info.value;
-                            copy.needsUpdate = true;
-                        }
-                    });
-                }
-            }
-        });
     }
 
     async function on_file_change(event: FSEvent) {
         switch (event.ext) {
             case 'vp': await on_vertex_shader_change(event.path); break;
             case 'fp': await on_fragment_shader_change(event.path); break;
-            case 'mtr': await on_material_change(event.path); break;
+            case 'mtr': await on_material_file_change(event.path); break;
         }
     }
 
@@ -200,14 +162,20 @@ export function ResourceManagerModule() {
     async function on_vertex_shader_change(path: string) {
         const vertexShader = await get_file_data(path);
         if (!vertexShader) return;
-        // NOTE: беребираем оригинальные материалы и копии
+
+        // NOTE: изменяем оригинальные материалы и копии
         for (const material_info of Object.values(materials)) {
             if (material_info.vertexShader == path) {
-                material_info.data.vertexShader = vertexShader;
-                material_info.data.needsUpdate = true;
+                const origin = get_material_by_hash(material_info.name, material_info.origin);
+                if (!origin) continue;
 
-                const copies = get_material_copies(material_info.data.name);
-                copies.forEach((copy) => {
+                origin.vertexShader = vertexShader;
+                origin.needsUpdate = true;
+
+                Object.keys(material_info.instances).filter((hash) => hash != material_info.origin).forEach((hash) => {
+                    const copy = get_material_by_hash(material_info.name, hash);
+                    if (!copy) return;
+
                     copy.vertexShader = vertexShader;
                     copy.needsUpdate = true;
                 });
@@ -218,14 +186,20 @@ export function ResourceManagerModule() {
     async function on_fragment_shader_change(path: string) {
         const fragmentShader = await get_file_data(path);
         if (!fragmentShader) return;
-        // NOTE: беребираем оригинальные материалы и копии
+
+        // NOTE: изменяем оригинальные материалы и копии
         for (const material_info of Object.values(materials)) {
             if (material_info.fragmentShader == path) {
-                material_info.data.fragmentShader = fragmentShader;
-                material_info.data.needsUpdate = true;
+                const origin = get_material_by_hash(material_info.name, material_info.origin);
+                if (!origin) continue;
 
-                const copies = get_material_copies(material_info.data.name);
-                copies.forEach((copy) => {
+                origin.fragmentShader = fragmentShader;
+                origin.needsUpdate = true;
+
+                Object.keys(material_info.instances).filter((hash) => hash != material_info.origin).forEach((hash) => {
+                    const copy = get_material_by_hash(material_info.name, hash);
+                    if (!copy) return;
+
                     copy.fragmentShader = fragmentShader;
                     copy.needsUpdate = true;
                 });
@@ -233,93 +207,185 @@ export function ResourceManagerModule() {
         }
     }
 
-    async function on_material_change(path: string) {
-        const updatedMaterial = await load_material(path);
-        if (!updatedMaterial) return;
+    async function on_material_file_change(path: string) {
+        const changed_material_info = await load_material(path);
+        if (!changed_material_info) return;
 
-        const existingMaterial = get_material(get_file_name(path));
-        if (!existingMaterial) return;
+        const changed_origin = changed_material_info.instances[changed_material_info.origin];
+        if (!changed_origin) return;
 
-        // Get all Slice9 meshes using this material
-        const copies = get_material_copies(existingMaterial.name);
+        const material_name = get_file_name(path);
+        const material_info = get_material_info(material_name);
+        if (!material_info) return;
 
-        // Update shaders if changed
-        if (existingMaterial.vertexShader != updatedMaterial.vertexShader) {
-            existingMaterial.vertexShader = updatedMaterial.vertexShader;
-            const vertexShader = await get_file_data(updatedMaterial.vertexShader);
-            if (vertexShader) {
-                existingMaterial.data.vertexShader = vertexShader;
-                existingMaterial.data.needsUpdate = true;
+        const origin = get_material_by_hash(material_info.name, material_info.origin);
+        if (!origin) return;
 
-                // Update vertex shader in all copies
-                copies.forEach(mesh => {
-                    const meshMaterial = mesh;
-                    meshMaterial.vertexShader = vertexShader;
-                    meshMaterial.needsUpdate = true;
-                });
-            }
+        // NOTE: обновляем шейдеры
+        if (material_info.vertexShader != changed_material_info.vertexShader) {
+            material_info.vertexShader = changed_material_info.vertexShader;
+            await on_vertex_shader_change(changed_material_info.vertexShader);
         }
 
-        if (existingMaterial.fragmentShader != updatedMaterial.fragmentShader) {
-            existingMaterial.fragmentShader = updatedMaterial.fragmentShader;
-            const fragmentShader = await get_file_data(updatedMaterial.fragmentShader);
-            if (fragmentShader) {
-                existingMaterial.data.fragmentShader = fragmentShader;
-                existingMaterial.data.needsUpdate = true;
-
-                // Update fragment shader in all copies
-                copies.forEach(mesh => {
-                    const meshMaterial = mesh;
-                    meshMaterial.fragmentShader = fragmentShader;
-                    meshMaterial.needsUpdate = true;
-                });
-            }
+        if (material_info.fragmentShader != changed_material_info.fragmentShader) {
+            material_info.fragmentShader = changed_material_info.fragmentShader;
+            await on_fragment_shader_change(changed_material_info.fragmentShader);
         }
 
-        // Check for new/updated uniforms
-        for (const [key, uniform] of Object.entries(updatedMaterial.uniforms)) {
-            if (!existingMaterial.uniforms[key] || existingMaterial.uniforms[key] != uniform) {
-                existingMaterial.uniforms[key] = { ...uniform };
-                existingMaterial.data.uniforms[key] = updatedMaterial.data.uniforms[key];
+        // NOTE: обновляем прозрачность
+        if (origin.transparent != changed_origin.transparent) {
+            origin.transparent = changed_origin.transparent;
+            origin.needsUpdate = true;
 
-                copies.forEach(material => {
-                    if (!material.userData.changed_uniforms.includes(key)) {
-                        material.uniforms[key] = updatedMaterial.data.uniforms[key];
-                        material.needsUpdate = true;
+            // Update transparency in all copies if they match old value
+            Object.keys(material_info.instances).filter((hash) => hash != material_info.origin).forEach((hash) => {
+                const copy = get_material_by_hash(material_info.name, hash);
+                if (!copy) return;
+
+                copy.transparent = changed_origin.transparent;
+                copy.needsUpdate = true;
+            });
+        }
+
+        // NOTE: обновляем или добавляем новые юниформы если они не существуют
+        for (const [key, uniform] of Object.entries(changed_material_info.uniforms)) {
+            const undefined_uniform = material_info.uniforms[key] == undefined;
+            if (undefined_uniform || material_info.uniforms[key] != uniform) {
+                material_info.uniforms[key] = { ...uniform };
+                origin.uniforms[key] = changed_origin.uniforms[key];
+
+                // NOTE/TODO: возможно здесь тоже нужно будет перезаписывать hash и переорганизовывать копии, так как может быть кейс при котором в юниформе оригинального материала обновилось значение, на то, которое есть в одной из копий, и тогда нет смысла иметь копии в которых отличается только это значение
+
+                Object.keys(material_info.instances).filter((hash) => hash != material_info.origin).forEach((hash) => {
+                    const copy = get_material_by_hash(material_info.name, hash);
+                    if (!copy) return;
+
+                    // NOTE: обновляем только те копии, которые не изменяли этот юниформ
+                    const is_changed_uniform = material_info.material_hash_to_changed_uniforms[hash].includes(key);
+                    if (undefined_uniform || !is_changed_uniform) {
+                        copy.uniforms[key] = changed_origin.uniforms[key];
+                        copy.needsUpdate = true;
                     }
                 });
             }
         }
 
-        // Check for removed uniforms
-        for (const key of Object.keys(existingMaterial.uniforms)) {
-            if (!updatedMaterial.uniforms[key]) {
-                delete existingMaterial.uniforms[key];
-                delete existingMaterial.data.uniforms[key];
+        // NOTE: удаляем юниформы если они не существуют в измененном материале
+        for (const key of Object.keys(material_info.uniforms)) {
+            if (!changed_material_info.uniforms[key]) {
+                delete material_info.uniforms[key];
+                delete origin.uniforms[key];
 
-                // Remove uniform from all copies if they match old value
-                copies.forEach(mesh => {
-                    const meshMaterial = mesh;
-                    delete meshMaterial.uniforms[key];
-                    meshMaterial.needsUpdate = true;
+                Object.keys(material_info.instances).filter((hash) => hash != material_info.origin).forEach((hash) => {
+                    const copy = get_material_by_hash(material_info.name, hash);
+                    if (!copy) return;
+
+                    // NOTE: проверяем будут ли в этой копии еще измененные юниформы если удалить текущую
+
+                    const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
+                    const changed_uniform_index = changed_uniforms.indexOf(key);
+                    if (changed_uniform_index == -1) {
+                        Log.error('[on_material_file_change] changed_uniform_index not found', key, material_info);
+                        return;
+                    }
+
+                    changed_uniforms.splice(changed_uniform_index, 1);
+
+                    // NOTE: больше измененных юниформ нет, удаляем копию и cсылаем все подвязанные к ней меши на оригинальный материал
+                    if (changed_uniforms.length == 0) {
+                        delete material_info.instances[hash];
+                        delete material_info.material_hash_to_changed_uniforms[hash];
+
+                        const ids = deepClone(material_info.material_hash_to_mesh_ids[hash]);
+                        delete material_info.material_hash_to_mesh_ids[hash];
+
+                        ids.forEach((id: number) => {
+                            material_info.material_hash_to_mesh_ids[material_info.origin].push(id);
+                            material_info.mesh_id_to_material_hash[id] = material_info.origin;
+
+                            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+                            if (!mesh) return;
+
+                            mesh.set_material(material_info.name);
+                        });
+
+                        return;
+                    }
+
+                    // NOTE: перегенерируем hash и переорганизуем копии
+
+                    const new_material = copy_material(copy);
+                    delete new_material.uniforms[key];
+                    new_material.needsUpdate = true;
+                    const new_hash = get_material_hash(new_material);
+
+                    // NOTE: все значения как в оригинале
+                    if (material_info.origin == new_hash) {
+                        delete material_info.instances[hash];
+                        delete material_info.material_hash_to_changed_uniforms[hash];
+
+                        const ids = deepClone(material_info.material_hash_to_mesh_ids[hash]);
+                        delete material_info.material_hash_to_mesh_ids[hash];
+
+                        ids.forEach((id: number) => {
+                            material_info.material_hash_to_mesh_ids[material_info.origin].push(id);
+                            material_info.mesh_id_to_material_hash[id] = material_info.origin;
+
+                            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+                            if (!mesh) return;
+
+                            mesh.set_material(material_info.name);
+                        });
+
+                        return;
+                    }
+
+                    // NOTE: копия с такими же значениями уже существует
+                    if (material_info.instances[new_hash]) {
+                        delete material_info.instances[hash];
+                        delete material_info.material_hash_to_changed_uniforms[hash];
+
+                        const ids = deepClone(material_info.material_hash_to_mesh_ids[hash]);
+                        delete material_info.material_hash_to_mesh_ids[hash];
+
+                        ids.forEach((id: number) => {
+                            material_info.material_hash_to_mesh_ids[new_hash].push(id);
+                            material_info.mesh_id_to_material_hash[id] = new_hash;
+
+                            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+                            if (!mesh) return;
+
+                            mesh.set_material(material_info.name);
+                        });
+
+                        return;
+                    }
+
+                    // NOTE: создаем новую копию
+
+                    material_info.instances[new_hash] = new_material;
+
+                    delete material_info.instances[hash];
+                    delete material_info.material_hash_to_changed_uniforms[hash];
+
+                    const ids = deepClone(material_info.material_hash_to_mesh_ids[hash]);
+                    delete material_info.material_hash_to_mesh_ids[hash];
+
+                    ids.forEach((id: number) => {
+                        material_info.material_hash_to_mesh_ids[new_hash].push(id);
+                        material_info.mesh_id_to_material_hash[id] = new_hash;
+
+                        const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+                        if (!mesh) return;
+
+                        mesh.set_material(material_info.name);
+                    });
                 });
             }
         }
-
-        // Update transparency if changed
-        if (existingMaterial.data.transparent != updatedMaterial.data.transparent) {
-            existingMaterial.data.transparent = updatedMaterial.data.transparent;
-            existingMaterial.data.needsUpdate = true;
-
-            // Update transparency in all copies if they match old value
-            copies.forEach(material => {
-                if (!material.userData.changed_uniforms.includes('transparent')) {
-                    material.transparent = updatedMaterial.data.transparent;
-                    material.needsUpdate = true;
-                }
-            });
-        }
     }
+
+
 
     function set_project_path(path: string) {
         project_path = path;
@@ -470,7 +536,7 @@ export function ResourceManagerModule() {
         return vertex_programs[name] != undefined;
     }
 
-    async function track_vertex_program(path: string) {
+    async function preload_vertex_program(path: string) {
         const name = get_file_name(path);
         if (has_vertex_program(name)) {
             Log.warn('vertex program exists', name, path);
@@ -483,7 +549,7 @@ export function ResourceManagerModule() {
         return fragment_programs[name] != undefined;
     }
 
-    async function track_fragment_program(path: string) {
+    async function preload_fragment_program(path: string) {
         const name = get_file_name(path);
         if (has_fragment_program(name)) {
             Log.warn('fragment program exists', name, path);
@@ -499,58 +565,68 @@ export function ResourceManagerModule() {
             return;
         }
 
-        const material_info = JSON.parse(response.data!);
-
-        const material = {} as MaterialInfo;
+        const data = JSON.parse(response.data!);
+        const material_info = {} as MaterialInfo;
         const name = get_file_name(path);
-        material.name = name;
-        material.vertexShader = material_info.vertexShader;
-        material.fragmentShader = material_info.fragmentShader;
-        material.uniforms = {};
 
-        material.data = new ShaderMaterial();
-        material.data.name = material.name;
+        material_info.name = name;
+        material_info.path = path;
+        material_info.vertexShader = data.vertexShader;
+        material_info.fragmentShader = data.fragmentShader;
+        material_info.uniforms = {};
+        material_info.instances = {};
+        material_info.mesh_id_to_material_hash = {};
+        material_info.material_hash_to_mesh_ids = {};
+        material_info.material_hash_to_changed_uniforms = {};
 
-        Object.keys(material_info.uniforms).forEach((key) => {
-            material.uniforms[key] = {
-                type: material_info.uniforms[key].type,
-                params: { ...material_info.uniforms[key] }, // TODO: сейчас тут лишние данные
-                readonly: material_info.uniforms[key].readonly
+        const material = new ShaderMaterial();
+        material.name = material_info.name;
+
+        const vertexShader = await AssetControl.get_file_data(data.vertexShader);
+        material.vertexShader = (vertexShader.result && vertexShader.data) ? await vertexShader.data : shader.vertexShader;
+
+        const fragmentShader = await AssetControl.get_file_data(data.fragmentShader);
+        material.fragmentShader = (fragmentShader.result && fragmentShader.data) ? await fragmentShader.data : shader.fragmentShader;
+
+        material.transparent = data.transparent;
+
+        Object.keys(data.uniforms).forEach((key) => {
+            material_info.uniforms[key] = {
+                type: data.uniforms[key].type,
+                params: { ...data.uniforms[key].params },
+                readonly: data.uniforms[key].readonly
             };
-            switch (material_info.uniforms[key].type) {
+            switch (data.uniforms[key].type) {
                 case MaterialUniformType.SAMPLER2D:
-                    const texture_name = get_file_name(material_info.data[key] || '');
+                    const texture_name = get_file_name(data.data[key] || '');
                     const atlas = get_atlas_by_texture_name(texture_name);
                     const texture_data = get_texture(texture_name, atlas || '');
-                    material.data.uniforms[key] = { value: texture_data.texture } as IUniform<Texture>;
+                    material.uniforms[key] = { value: texture_data.texture } as IUniform<Texture>;
                     break;
                 case MaterialUniformType.VEC2:
-                    material.data.uniforms[key] = { value: new Vector2(...material_info.data[key]) } as IUniform<Vector2>;
+                    material.uniforms[key] = { value: new Vector2(...data.data[key]) } as IUniform<Vector2>;
                     break;
                 case MaterialUniformType.VEC3:
-                    material.data.uniforms[key] = { value: new Vector3(...material_info.data[key]) } as IUniform<Vector3>;
+                    material.uniforms[key] = { value: new Vector3(...data.data[key]) } as IUniform<Vector3>;
                     break;
                 case MaterialUniformType.VEC4:
-                    material.data.uniforms[key] = { value: new Vector4(...material_info.data[key]) } as IUniform<Vector4>;
+                    material.uniforms[key] = { value: new Vector4(...data.data[key]) } as IUniform<Vector4>;
                     break;
                 case MaterialUniformType.COLOR:
-                    material.data.uniforms[key] = { value: hexToRGB(material_info.data[key]) } as IUniform<Vector3>;
+                    material.uniforms[key] = { value: hexToRGB(data.data[key]) } as IUniform<Vector3>;
                     break;
                 default:
-                    material.data.uniforms[key] = { value: material_info.data[key] };
+                    material.uniforms[key] = { value: data.data[key] };
                     break;
             }
         });
 
-        const vertexShader = await AssetControl.get_file_data(material_info.vertexShader);
-        material.data.vertexShader = (vertexShader.result && vertexShader.data) ? await vertexShader.data : shader.vertexShader;
+        material_info.origin = get_material_hash(material);
 
-        const fragmentShader = await AssetControl.get_file_data(material_info.fragmentShader);
-        material.data.fragmentShader = (fragmentShader.result && fragmentShader.data) ? await fragmentShader.data : shader.fragmentShader;
+        material_info.instances[material_info.origin] = material;
+        material_info.material_hash_to_mesh_ids[material_info.origin] = [];
 
-        material.data.transparent = material_info.transparent;
-
-        return material;
+        return material_info;
     }
 
     async function preload_material(path: string) {
@@ -567,20 +643,246 @@ export function ResourceManagerModule() {
         return material;
     }
 
-    function get_material(name: string) {
-        return materials[name];
+    function get_material_info(name: string) {
+        const material_info = materials[name];
+        if (!material_info) {
+            Log.error('Material info not found', name, materials);
+            return null;
+        }
+        return material_info;
     }
 
-    function get_material_copies(material_name: string) {
-        return SceneManager.get_scene_list()
-            .filter((mesh) => {
-                if (mesh.type == IObjectTypes.GO_SPRITE_COMPONENT || mesh.type == IObjectTypes.GUI_BOX) {
-                    const mesh_material = (mesh as Slice9Mesh).get_material();
-                    return mesh_material.name == material_name;
+    function is_material_origin_hash(material_name: string, hash: string) {
+        const material_info = get_material_info(material_name);
+        if (!material_info) return false;
+        return material_info.origin == hash;
+    }
+
+    function get_material_by_hash(material_name: string, hash: string) {
+        const material_info = get_material_info(material_name);
+        if (!material_info) return null;
+        const material = material_info.instances[hash];
+        if (!material) {
+            Log.error('Material by hash not found', hash, material_info);
+            return null;
+        }
+        return material;
+    }
+
+    function get_material_hash_by_mesh_id(material_name: string, mesh_id: number) {
+        const material_info = get_material_info(material_name);
+        if (!material_info) return null;
+        const hash = material_info.mesh_id_to_material_hash[mesh_id];
+        if (!hash) {
+            Log.error('Material hash by mesh id not found', mesh_id, material_info);
+            return null;
+        }
+        return hash;
+    }
+
+    function get_material_by_mesh_id(material_name: string, mesh_id: number) {
+        const material_info = get_material_info(material_name);
+        if (!material_info) return null;
+        const hash = material_info.mesh_id_to_material_hash[mesh_id];
+        // NOTE: если hash не найден, то устанавливаем hash в origin и возвращаем оригинальный материал
+        if (!hash) {
+            material_info.mesh_id_to_material_hash[mesh_id] = material_info.origin;
+            material_info.material_hash_to_mesh_ids[material_info.origin].push(mesh_id);
+            return get_material_by_hash(material_name, material_info.origin);
+        }
+        return get_material_by_hash(material_name, hash);
+    }
+
+    function set_to_origin(material_info: MaterialInfo, mesh_id: number, hash: string) {
+        const mesh_id_index = material_info.material_hash_to_mesh_ids[hash].indexOf(mesh_id);
+        if (mesh_id_index != -1) {
+            material_info.material_hash_to_mesh_ids[hash].splice(mesh_id_index, 1);
+            if (material_info.material_hash_to_mesh_ids[hash].length == 0 && hash != material_info.origin) {
+                // NOTE: если нет мешей которые используют этот материал, то удаляем материал
+                delete material_info.material_hash_to_mesh_ids[hash];
+                delete material_info.instances[hash];
+            }
+        } else {
+            Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
+        }
+        material_info.mesh_id_to_material_hash[mesh_id] = material_info.origin;
+        material_info.material_hash_to_mesh_ids[material_info.origin].push(mesh_id);
+    }
+
+    function set_to_existing_copy(material_info: MaterialInfo, mesh_id: number, new_hash: string, hash: string) {
+        const mesh_id_index = material_info.material_hash_to_mesh_ids[hash].indexOf(mesh_id);
+        if (mesh_id_index != -1) {
+            material_info.material_hash_to_mesh_ids[hash].splice(mesh_id_index, 1);
+            if (material_info.material_hash_to_mesh_ids[hash].length == 0 && hash != material_info.origin && new_hash != hash) {
+                // NOTE: если нет мешей которые используют этот материал, то удаляем материал
+                delete material_info.material_hash_to_mesh_ids[hash];
+                delete material_info.instances[hash];
+            }
+        } else {
+            Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
+        }
+
+        material_info.material_hash_to_mesh_ids[new_hash].push(mesh_id);
+        material_info.mesh_id_to_material_hash[mesh_id] = new_hash;
+
+        const prev_changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
+        prev_changed_uniforms.forEach((uniform) => {
+            if (!material_info.material_hash_to_changed_uniforms[new_hash].includes(uniform)) {
+                material_info.material_hash_to_changed_uniforms[new_hash].push(uniform);
+            }
+        });
+    }
+
+    function set_to_new_copy(material_info: MaterialInfo, mesh_id: number, hash: string, new_hash: string, copy: ShaderMaterial) {
+        const mesh_id_index = material_info.material_hash_to_mesh_ids[hash].indexOf(mesh_id);
+        if (mesh_id_index != -1) {
+            material_info.material_hash_to_mesh_ids[hash].splice(mesh_id_index, 1);
+            if (material_info.material_hash_to_mesh_ids[hash].length == 0 && hash != material_info.origin) {
+                // NOTE: если нет мешей которые используют этот материал, то удаляем материал
+                delete material_info.material_hash_to_mesh_ids[hash];
+                delete material_info.instances[hash];
+            }
+        } else {
+            Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
+        }
+
+        material_info.instances[new_hash] = copy;
+
+        material_info.mesh_id_to_material_hash[mesh_id] = new_hash;
+
+        material_info.material_hash_to_mesh_ids[new_hash] = [];
+        material_info.material_hash_to_mesh_ids[new_hash].push(mesh_id);
+
+        const copy_prev_changed_uniforms = deepClone(material_info.material_hash_to_changed_uniforms[hash] || []);
+        material_info.material_hash_to_changed_uniforms[new_hash] = copy_prev_changed_uniforms;
+    }
+
+    function set_material_uniform_for_mesh<T>(mesh: Slice9Mesh, material_name: string, uniform_name: string, value: T) {
+        const mesh_id = mesh.mesh_data.id;
+
+        const material_info = get_material_info(material_name);
+        if (!material_info) return;
+
+        const uniform = material_info.uniforms[uniform_name];
+        if (!uniform) {
+            Log.error('Uniform not found', uniform_name, material_name);
+            return;
+        }
+
+        const mesh_material = get_material_by_mesh_id(material_name, mesh_id);
+        if (!mesh_material) return;
+
+        const hash = material_info.mesh_id_to_material_hash[mesh_id];
+
+        const mesh_material_copy = copy_material(mesh_material);
+        mesh_material_copy.uniforms[uniform_name].value = value;
+
+        const new_hash = get_material_hash(mesh_material_copy);
+
+        if (material_info.origin == new_hash) {
+            set_to_origin(material_info, mesh_id, hash);
+            mesh.set_material(material_info.name);
+            return;
+        }
+
+        // NOTE: проверяем, существует ли копия материала с таким hash
+        if (material_info.instances[new_hash]) {
+            set_to_existing_copy(material_info, mesh_id, new_hash, hash);
+            mesh.set_material(material_info.name);
+            return;
+        }
+
+        // NOTE: создаем новую копию
+        set_to_new_copy(material_info, mesh_id, hash, new_hash, mesh_material_copy);
+
+        if (!material_info.material_hash_to_changed_uniforms[new_hash].includes(uniform_name)) {
+            material_info.material_hash_to_changed_uniforms[new_hash].push(uniform_name);
+        }
+
+        mesh.set_material(material_info.name);
+    }
+
+    function set_material_define_for_mesh<T>(mesh: Slice9Mesh, material_name: string, define_name: string, value?: T) {
+        const mesh_id = mesh.mesh_data.id;
+
+        const material_info = get_material_info(material_name);
+        if (!material_info) return;
+
+        const material = get_material_by_mesh_id(material_name, mesh_id);
+        if (!material) return;
+
+        const hash = material_info.mesh_id_to_material_hash[mesh_id];
+
+        const material_copy = copy_material(material);
+
+        if (value != undefined) {
+            if (material_copy.defines == undefined) {
+                material_copy.defines = {};
+            }
+            material_copy.defines[define_name] = value;
+        } else {
+            if (material_copy.defines && material_copy.defines[define_name] != undefined) {
+                delete material_copy.defines[define_name];
+            }
+        }
+
+        const new_hash = get_material_hash(material_copy);
+
+        if (material_info.origin == new_hash) {
+            set_to_origin(material_info, mesh_id, hash);
+            mesh.set_material(material_name);
+            return;
+        }
+
+        // NOTE: проверяем, существует ли копия материала с таким hash
+        if (material_info.instances[new_hash]) {
+            set_to_existing_copy(material_info, mesh_id, new_hash, hash);
+            mesh.set_material(material_info.name);
+            return;
+        }
+
+        // NOTE: создаем новую копию
+        set_to_new_copy(material_info, mesh_id, hash, new_hash, material_copy);
+
+        mesh.set_material(material_info.name);
+    }
+
+    function unlink_material_for_mesh(material_name: string, mesh_id: number) {
+        const material_info = get_material_info(material_name);
+        if (!material_info) return;
+
+        const hash = material_info.mesh_id_to_material_hash[mesh_id];
+
+        const mesh_id_index = material_info.material_hash_to_mesh_ids[hash].indexOf(mesh_id);
+        if (mesh_id_index != -1) {
+            material_info.material_hash_to_mesh_ids[hash].splice(mesh_id_index, 1);
+            if (material_info.material_hash_to_mesh_ids[hash].length == 0 && hash != material_info.origin) {
+                delete material_info.material_hash_to_mesh_ids[hash];
+                delete material_info.instances[hash];
+            }
+        } else {
+            Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
+        }
+
+        delete material_info.mesh_id_to_material_hash[mesh_id];
+    }
+
+    function get_info_about_unique_materials() {
+        const unique_materials: { [key: string]: { origin: string, copies: string[] } } = {};
+        for (const material_name in materials) {
+            const material_info = get_material_info(material_name);
+            if (material_info) {
+                unique_materials[material_name] = {
+                    origin: material_info.origin,
+                    copies: []
+                };
+                for (const hash in material_info.instances) {
+                    if (hash == material_info.origin) continue;
+                    unique_materials[material_name].copies.push(hash);
                 }
-                return false;
-            })
-            .map((mesh) => (mesh as Slice9Mesh).get_material());
+            }
+        }
+        return unique_materials;
     }
 
     function get_all_fonts() {
@@ -638,6 +940,8 @@ export function ResourceManagerModule() {
                 return atlas_name;
             }
         }
+
+        Log.error('Atlas not found', texture_name);
         return null;
     }
 
@@ -864,7 +1168,6 @@ export function ResourceManagerModule() {
 
     // NOTE: считываем всю информацию из metadata и обновляем ресурсы
     async function update_from_metadata() {
-        Log.log('Update resource manager from metadata');
         try {
             const metadata = await ClientAPI.get_info('atlases');
             if (!metadata.result) {
@@ -884,7 +1187,6 @@ export function ResourceManagerModule() {
                     const old_atlas = get_atlas_by_texture_name(texture_name);
                     override_atlas_texture(old_atlas || '', atlas_name, texture_name);
 
-                    // Update texture filters if they exist in metadata
                     if (typeof texture_data === 'object' && texture_data !== null) {
                         const data = texture_data as { minFilter?: MinificationTextureFilter; magFilter?: MagnificationTextureFilter };
                         if (has_texture_name(texture_name, atlas_name)) {
@@ -914,12 +1216,19 @@ export function ResourceManagerModule() {
         preload_texture,
         preload_font,
         preload_material,
-        track_vertex_program,
-        track_fragment_program,
+        preload_vertex_program,
+        preload_fragment_program,
         get_vertex_program_path,
         get_fragment_program_path,
-        get_material,
-        get_material_copies,
+        get_material_info,
+        is_material_origin_hash,
+        get_material_by_hash,
+        get_material_hash_by_mesh_id,
+        get_material_by_mesh_id,
+        set_material_uniform_for_mesh,
+        set_material_define_for_mesh,
+        unlink_material_for_mesh,
+        get_info_about_unique_materials,
         get_font,
         get_texture,
         free_texture,

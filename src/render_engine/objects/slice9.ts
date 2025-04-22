@@ -1,8 +1,8 @@
-import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute } from "three";
+import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute, Texture } from "three";
 import { IBaseParameters, IObjectTypes } from "../types";
-import { convert_width_height_to_pivot_bb, copy_material, get_file_name, set_pivot_with_sync_pos } from "../helpers/utils";
+import { convert_width_height_to_pivot_bb, get_file_name, set_pivot_with_sync_pos } from "../helpers/utils";
 import { EntityPlane } from "./entity_plane";
-
+import { MaterialUniformType } from "../resource_manager";
 
 // todo optimize material list
 
@@ -75,14 +75,11 @@ export const shader = {
 interface SerializeData {
     slice_width?: number;
     slice_height?: number;
-    atlas?: string;
-    texture?: string;
-    alpha?: number;
-    material?: string;
+    material_name?: string;
     material_uniforms?: { [key: string]: any };
 }
 
-export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, slice_width = 0, slice_height = 0) {
+export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width = 1, height = 1, slice_width = 0, slice_height = 0) {
     const parameters: IBaseParameters = {
         pivot_x: 0.5,
         pivot_y: 0.5,
@@ -154,47 +151,19 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         }
         geometry.attributes['sliceData'].needsUpdate = true;
 
-        // NOTE: добавляем define если есть slice
-        if (parameters.slice_width > 0 || parameters.slice_height > 0) {
-            if (material.defines['USE_SLICE'] == undefined) {
-                material.defines['USE_SLICE'] = '';
-            }
-        }
-        else {
-            if (material.defines['USE_SLICE'] != undefined) {
-                delete material.defines['USE_SLICE'];
-            }
-        }
+        // NOTE: добавляем или убираем define в зависимости от значения slice
+        const slice_value = (parameters.slice_width > 0 || parameters.slice_height > 0) ? '' : undefined;
+        ResourceManager.set_material_define_for_mesh(mesh, material.name, 'USE_SLICE', slice_value);
 
-        // NOTE: добавляем define если есть texture
-        if (parameters.texture == '') {
-            if (material.defines['USE_TEXTURE'] != undefined) {
-                delete material.defines['USE_TEXTURE'];
-            }
-        }
-        else if (material.defines['USE_TEXTURE'] == undefined) {
-            material.defines['USE_TEXTURE'] = '';
-        }
+        // NOTE: добавляем или убираем define в зависимости от значения texture
+        const texture_value = (parameters.texture != '') ? '' : undefined;
+        ResourceManager.set_material_define_for_mesh(mesh, material.name, 'USE_TEXTURE', texture_value);
 
         material.needsUpdate = true;
     }
 
     function set_material(new_material: ShaderMaterial) {
         material = new_material;
-
-        // NOTE: если нету текстуры, то устанавливаем из только что установленного материала
-        if (parameters.texture == '') {
-            const texture_path = material.uniforms['u_texture'].value.path;
-            const texture_name = get_file_name(texture_path);
-            const texture_atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
-            set_texture(texture_name, texture_atlas || '');
-        } else {
-            set_texture(parameters.texture, parameters.atlas);
-        }
-    }
-
-    function get_material() {
-        return material;
     }
 
     function set_texture(name: string, atlas = '') {
@@ -203,10 +172,8 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
 
         if (name != '') {
             const texture_data = ResourceManager.get_texture(name, atlas);
-            material.uniforms['u_texture'].value = texture_data.texture;
-            if (material.userData.changed_uniforms && !material.userData.changed_uniforms.includes('u_texture')) {
-                material.userData.changed_uniforms.push('u_texture');
-            }
+            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, 'u_texture', texture_data.texture);
+
             parameters.clip_width = texture_data.size.x;
             parameters.clip_height = texture_data.size.y;
             for (let i = 0; i < 4; i++) {
@@ -218,7 +185,8 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
             geometry.attributes['uvData'].needsUpdate = true;
         }
         else {
-            material.uniforms['u_texture'].value = null;
+            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, 'u_texture', null);
+
             parameters.clip_width = 1;
             parameters.clip_height = 1;
         }
@@ -240,6 +208,10 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
             geometry.attributes['color'].array[3 * i + 2] = clr.b;
         }
         geometry.attributes['color'].needsUpdate = true;
+    }
+
+    function set_alpha(value: number) {
+        ResourceManager.set_material_uniform_for_mesh(mesh, material.name, 'alpha', value);
     }
 
     function get_bounds(wp: Vector3, ws: Vector3) {
@@ -266,28 +238,42 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
     function serialize(): SerializeData {
         const data: SerializeData = {};
 
-        if (parameters.slice_width !== 0) {
-            data.slice_width = parameters.slice_width;
-        }
-        if (parameters.slice_height !== 0) {
-            data.slice_height = parameters.slice_height;
-        }
-        if (parameters.texture !== '') {
-            data.texture = parameters.texture;
-        }
-        if (parameters.atlas !== '') {
-            data.atlas = parameters.atlas;
+        if (material.name != 'default') {
+            data.material_name = material.name;
         }
 
-        // Serialize material name and modified uniforms
-        data.material = material.name;
-        if (material.userData.changed_uniforms && material.userData.changed_uniforms.length > 0) {
-            const modifiedUniforms: { [key: string]: any } = {};
-            for (const uniformName of material.userData.changed_uniforms) {
-                if (material.uniforms[uniformName]) {
-                    modifiedUniforms[uniformName] = material.uniforms[uniformName].value;
+        if (parameters.slice_width != 0) {
+            data.slice_width = parameters.slice_width;
+        }
+        if (parameters.slice_height != 0) {
+            data.slice_height = parameters.slice_height;
+        }
+
+        const material_info = ResourceManager.get_material_info(material.name);
+        if (!material_info) return data;
+
+        const hash = ResourceManager.get_material_hash_by_mesh_id(material.name, mesh.mesh_data.id);
+        if (!hash) return data;
+
+        const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
+        if (!changed_uniforms) return data;
+
+        const modifiedUniforms: { [key: string]: any } = {};
+        for (const uniformName of changed_uniforms) {
+            if (material.uniforms[uniformName]) {
+                const uniform = material.uniforms[uniformName];
+                if (uniform.value instanceof Texture) {
+                    // For texture uniforms, save the texture name and atlas instead of the full Texture object
+                    const texture_name = get_file_name((uniform.value as any).path || '');
+                    const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+                    modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
+                } else {
+                    modifiedUniforms[uniformName] = uniform.value;
                 }
             }
+        }
+
+        if (Object.keys(modifiedUniforms).length > 0) {
             data.material_uniforms = modifiedUniforms;
         }
 
@@ -300,28 +286,25 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         set_texture('', '');
 
         // NOTE: затем переопределяем значения
-        if (data.slice_width !== undefined) {
+        if (data.slice_width != undefined) {
             parameters.slice_width = data.slice_width;
         }
-        if (data.slice_height !== undefined) {
+        if (data.slice_height != undefined) {
             parameters.slice_height = data.slice_height;
         }
-        if (data.texture !== undefined || data.atlas !== undefined) {
-            set_texture(data.texture || '', data.atlas || '');
-        }
 
-        // Deserialize material and its uniforms
-        if (data.material) {
-            const newMaterial = copy_material(ResourceManager.get_material(data.material).data);
-            set_material(newMaterial);
+        // NOTE: применяем измененные uniforms, если они есть
+        if (data.material_uniforms) {
+            for (const [key, value] of Object.entries(data.material_uniforms)) {
+                const material_info = ResourceManager.get_material_info(material.name);
+                if (!material_info) continue;
 
-            // Apply modified uniforms if any
-            if (data.material_uniforms) {
-                for (const [key, value] of Object.entries(data.material_uniforms)) {
-                    if (material.uniforms[key]) {
-                        material.userData.changed_uniforms.push(key);
-                        material.uniforms[key].value = value;
-                    }
+                const uniform_info = material_info.uniforms[key];
+                if (!uniform_info) continue;
+
+                if (uniform_info.type === MaterialUniformType.SAMPLER2D && typeof value === 'string') {
+                    const [atlas, texture_name] = value.split('/');
+                    set_texture(texture_name, atlas);
                 }
             }
         }
@@ -329,42 +312,33 @@ export function CreateSlice9(material: ShaderMaterial, width = 1, height = 1, sl
         update_parameters();
     }
 
-    return { set_size, set_slice, set_color, set_material, get_material, set_texture, get_bounds, set_pivot, set_anchor, serialize, deserialize, geometry, parameters };
+    return { set_size, set_slice, set_color, set_alpha, set_material, set_texture, get_bounds, set_pivot, set_anchor, serialize, deserialize, geometry, parameters };
 }
 
 
 export class Slice9Mesh extends EntityPlane {
     public type = IObjectTypes.SLICE9_PLANE;
-    public mesh_data = { id: -1 };
     private template: ReturnType<typeof CreateSlice9>;
-    private _alpha: number = 1.0;
 
-    constructor(width = 1, height = 1, slice_width = 0, slice_height = 0, custom_material?: ShaderMaterial) {
-        super();
+    constructor(id: number, width = 1, height = 1, slice_width = 0, slice_height = 0, custom_material?: ShaderMaterial) {
+        super(id);
         this.matrixAutoUpdate = true;
-        const material = custom_material ? custom_material : new ShaderMaterial({
-            name: 'default',
-            uniforms: {
-                u_texture: { value: null },
-                alpha: { value: 1.0 }
-            },
-            vertexShader: shader.vertexShader,
-            fragmentShader: shader.fragmentShader,
-            transparent: true
-        });
-        this.template = CreateSlice9(material, width, height, slice_width, slice_height);
+        // NOTE: по хорошему бы наверное default материал переместить из проекта в ресурсы редактора, чтобы он всегда был доступен, или может зашить его в ResourceManager при создании materials - чтобы стандарнтый был сразу в памяти
+        const default_material = ResourceManager.get_material_by_mesh_id('default', id)!;
+        const material = custom_material ? custom_material : default_material;
+        this.template = CreateSlice9(this, material, width, height, slice_width, slice_height);
         this.material = material;
         this.geometry = this.template.geometry;
         this.set_size(width, height);
+        this.set_alpha(1.0);
     }
 
     get_alpha(): number {
-        return this._alpha;
+        return this.material.uniforms.alpha.value;
     }
 
     set_alpha(value: number) {
-        this._alpha = value;
-        (this.material as ShaderMaterial).uniforms.alpha.value = value;
+        this.template.set_alpha(value);
     }
 
     set_size(w: number, h: number) {
@@ -401,13 +375,10 @@ export class Slice9Mesh extends EntityPlane {
     }
 
     set_material(material_name: string) {
-        const material = copy_material(ResourceManager.get_material(material_name).data);
+        const material = ResourceManager.get_material_by_mesh_id(material_name, this.mesh_data.id);
+        if (!material) return;
         this.template.set_material(material);
         this.material = material;
-    }
-
-    get_material() {
-        return this.template.get_material();
     }
 
     get_bounds() {
@@ -441,27 +412,20 @@ export class Slice9Mesh extends EntityPlane {
         this.template.set_anchor(x, y);
     }
 
+    dispose() {
+        ResourceManager.unlink_material_for_mesh(this.material.name, this.mesh_data.id);
+    }
+
     serialize() {
-        const data: SerializeData = { ...super.serialize(), ...this.template.serialize() };
-
-        // NOTE: только если не 1.0
-        if (this._alpha !== 1.0) {
-            data.alpha = this._alpha;
-        }
-
-        return data;
+        return { ...super.serialize(), ...this.template.serialize() };
     }
 
     deserialize(data: SerializeData) {
+        if (data.material_name != undefined) {
+            this.set_material(data.material_name);
+        }
+
         super.deserialize(data);
         this.template.deserialize(data);
-
-        // NOTE: сначала устанавливаем значение по умолчанию
-        this._alpha = 1.0;
-
-        // NOTE: затем переопределяем значение
-        if (data.alpha !== undefined) {
-            this.set_alpha(data.alpha);
-        }
     }
 }

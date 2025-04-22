@@ -1,8 +1,9 @@
 import { TransformControls, TransformControlsMode } from 'three/examples/jsm/controls/TransformControls.js';
 import { Euler, Object3D, Vector3 } from 'three';
-import { PositionEventData, RotationEventData, ScaleEventData } from './types';
+import { MeshPropertyInfo } from './types';
 import { IBaseEntityAndThree } from '../render_engine/types';
 import { MeshProperty } from '../inspectors/MeshInspector';
+import { HistoryOwner, THistoryUndo } from '../modules_editor/modules_editor_const';
 
 declare global {
     const TransformControl: ReturnType<typeof TransformControlCreate>;
@@ -151,35 +152,35 @@ function TransformControlCreate() {
 
     /** записывает сохраненные предыдущие значения позиций выбранных обьектов в историю изменений */
     function write_previous_positions_in_historty() {
-        const pos_data: PositionEventData[] = [];
+        const pos_data: MeshPropertyInfo<Vector3>[] = [];
         for (let i = 0; i < selectedObjects.length; i++) {
             const object = selectedObjects[i];
             const position = _oldPositions[i].clone();
-            pos_data.push({ id_mesh: object.mesh_data.id, position, });
+            pos_data.push({ mesh_id: object.mesh_data.id, value: position });
         }
-        HistoryControl.add('MESH_TRANSLATE', pos_data);
+        HistoryControl.add('MESH_TRANSLATE', pos_data, HistoryOwner.TRANSFORM_CONTROL);
     }
 
     /** записывает сохраненные предыдущие значения вращений выбранных обьектов в историю изменений */
     function write_previous_rotations_in_historty() {
-        const rot_data: RotationEventData[] = [];
+        const rot_data: MeshPropertyInfo<Euler>[] = [];
         for (let i = 0; i < selectedObjects.length; i++) {
             const object = selectedObjects[i];
             const rotation = _oldRotations[i].clone();
-            rot_data.push({ id_mesh: object.mesh_data.id, rotation, });
+            rot_data.push({ mesh_id: object.mesh_data.id, value: rotation });
         }
-        HistoryControl.add('MESH_ROTATE', rot_data);
+        HistoryControl.add('MESH_ROTATE', rot_data, HistoryOwner.TRANSFORM_CONTROL);
     }
 
     /** записывает сохраненные предыдущие значения маштабов обьектов (по умолчанию выбранных) в историю изменений */
     function write_previous_scales_in_historty(objects = selectedObjects) {
-        const scale_data: ScaleEventData[] = [];
+        const scale_data: MeshPropertyInfo<Vector3>[] = [];
         for (let i = 0; i < objects.length; i++) {
             const object = objects[i];
             const scale = _oldScales[i].clone();
-            scale_data.push({ id_mesh: object.mesh_data.id, scale, });
+            scale_data.push({ mesh_id: object.mesh_data.id, value: scale });
         }
-        HistoryControl.add('MESH_SCALE', scale_data);
+        HistoryControl.add('MESH_SCALE', scale_data, HistoryOwner.TRANSFORM_CONTROL);
     }
 
     function is_selected(mesh: IBaseEntityAndThree) {
@@ -280,6 +281,40 @@ function TransformControlCreate() {
         }
 
     }
+
+    // Subscribe to undo events
+    EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
+        if (event.owner !== HistoryOwner.TRANSFORM_CONTROL) return;
+
+        switch (event.type) {
+            case 'MESH_TRANSLATE':
+                for (const data of event.data) {
+                    const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                    mesh.position.copy(data.value);
+                    mesh.transform_changed();
+                }
+                break;
+            case 'MESH_ROTATE':
+                for (const data of event.data) {
+                    const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                    mesh.rotation.copy(data.value);
+                    mesh.transform_changed();
+                }
+                break;
+            case 'MESH_SCALE':
+                for (const data of event.data) {
+                    const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                    mesh.scale.copy(data.value);
+                    mesh.transform_changed();
+                }
+                break;
+        }
+
+        // Update selection and graph
+        const meshes = event.data.map(data => SceneManager.get_mesh_by_id(data.mesh_id)!);
+        SelectControl.set_selected_list(meshes);
+        ControlManager.update_graph();
+    });
 
     return {
         set_active, set_selected_list, set_mode, detach,

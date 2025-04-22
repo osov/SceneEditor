@@ -1,3 +1,5 @@
+// TODO: если перемещаем файл материала, то нужно обновить путь до него в ResourceManager
+
 import { SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
 import {
     ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, AssetType, DataFormatType, FILE_UPLOAD_CMD,
@@ -101,12 +103,12 @@ function AssetControlCreate() {
             }
             else if (key == "vertex_programs") {
                 func = (path: string) => {
-                    return ResourceManager.track_vertex_program("/" + path);
+                    return ResourceManager.preload_vertex_program("/" + path);
                 }
             }
             else if (key == "fragment_programs") {
                 func = (path: string) => {
-                    return ResourceManager.track_fragment_program("/" + path);
+                    return ResourceManager.preload_fragment_program("/" + path);
                 }
             }
             else func = async () => { };

@@ -1,6 +1,6 @@
 import { BufferGeometry, Line, LineDashedMaterial, Object3D, ShaderMaterial, Vector2, Vector3, Vector4, Texture, Color } from "three";
-import { IBaseMeshAndThree, IBaseEntityAndThree, IObjectTypes } from "../types";
-import { deepClone } from "../../modules/utils";
+import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
+import { deepClone, getObjectHash } from "../../modules/utils";
 
 export function get_basename(path: string) {
     return path.split('/').reverse()[0];
@@ -158,7 +158,8 @@ export function copy_material(material: ShaderMaterial) {
         vertexShader: material.vertexShader,
         fragmentShader: material.fragmentShader,
         transparent: deepClone(material.transparent),
-        uniforms: {}
+        uniforms: {},
+        defines: deepClone(material.defines)
     });
 
     // Properly clone uniforms
@@ -166,14 +167,13 @@ export function copy_material(material: ShaderMaterial) {
         if (uniform.value instanceof Texture) {
             const texture = new Texture();
             texture.copy(uniform.value);
+            (texture as any).path = (uniform.value as any).path;
             copy.uniforms[key] = { value: texture };
         } else if (uniform.value instanceof Vector2) {
             copy.uniforms[key] = { value: uniform.value.clone() };
         } else if (uniform.value instanceof Vector3) {
             copy.uniforms[key] = { value: uniform.value.clone() };
         } else if (uniform.value instanceof Vector4) {
-            copy.uniforms[key] = { value: uniform.value.clone() };
-        } else if (uniform.value instanceof Color) {
             copy.uniforms[key] = { value: uniform.value.clone() };
         } else {
             copy.uniforms[key] = { value: deepClone(uniform.value) };
@@ -185,14 +185,10 @@ export function copy_material(material: ShaderMaterial) {
     return copy;
 }
 
-export function try_record_to_changed_uniforms(material: ShaderMaterial, uniform_name: string) {
-    if (!material.userData.changed_uniforms) return false;
-    if (!material.userData.changed_uniforms.includes(uniform_name)) {
-        material.userData.changed_uniforms.push(uniform_name);
-    }
-    return true;
-}
-
-export function is_changed_uniform(material: ShaderMaterial, uniform_name: string) {
-    return material.userData.changed_uniforms.includes(uniform_name);
+export function get_material_hash(material: ShaderMaterial) {
+    const hash = getObjectHash({
+        uniforms: material.uniforms,
+        defines: material.defines
+    });
+    return hash;
 }

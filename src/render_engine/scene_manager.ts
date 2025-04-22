@@ -58,40 +58,58 @@ export function SceneManagerModule() {
         const default_size = 32;
 
         // base
-        if (type == IObjectTypes.ENTITY)
-            mesh = new EntityBase();
-        else if (type == IObjectTypes.ENTITY)
-            mesh = new EntityBase();
-        else if (type == IObjectTypes.SLICE9_PLANE)
-            mesh = new Slice9Mesh(params.width || default_size, params.height || default_size, params.slice_width || 0, params.slice_height || 0);
-        else if (type == IObjectTypes.TEXT)
-            mesh = new TextMesh(params.text || '', params.width || default_size, params.height || default_size);
+        if (type == IObjectTypes.ENTITY) {
+            mesh = new EntityBase(check_id_is_available_or_generate_new(id));
+        }
+        else if (type == IObjectTypes.ENTITY) {
+            mesh = new EntityBase(check_id_is_available_or_generate_new(id));
+        }
+        else if (type == IObjectTypes.SLICE9_PLANE) {
+            mesh = new Slice9Mesh(check_id_is_available_or_generate_new(id), params.width || default_size, params.height || default_size, params.slice_width || 0, params.slice_height || 0);
+        }
+        else if (type == IObjectTypes.TEXT) {
+            mesh = new TextMesh(check_id_is_available_or_generate_new(id), params.text || '', params.width || default_size, params.height || default_size);
+        }
 
         // gui
-        else if (type == IObjectTypes.GUI_CONTAINER)
-            mesh = new GuiContainer();
-        else if (type == IObjectTypes.GUI_BOX)
-            mesh = new GuiBox(params.width || default_size, params.height || default_size, params.slice_width || 0, params.slice_height || 0);
-        else if (type == IObjectTypes.GUI_TEXT)
-            mesh = new GuiText(params.text || '', params.width || default_size, params.height || default_size);
+        else if (type == IObjectTypes.GUI_CONTAINER) {
+            mesh = new GuiContainer(check_id_is_available_or_generate_new(id));
+        }
+        else if (type == IObjectTypes.GUI_BOX) {
+            mesh = new GuiBox(check_id_is_available_or_generate_new(id), params.width || default_size, params.height || default_size, params.slice_width || 0, params.slice_height || 0);
+        }
+        else if (type == IObjectTypes.GUI_TEXT) {
+            mesh = new GuiText(check_id_is_available_or_generate_new(id), params.text || '', params.width || default_size, params.height || default_size);
+        }
 
         // go
-        else if (type == IObjectTypes.GO_CONTAINER)
-            mesh = new GoContainer();
+        else if (type == IObjectTypes.GO_CONTAINER) {
+            mesh = new GoContainer(check_id_is_available_or_generate_new(id));
+        }
         // go components
-        else if (type == IObjectTypes.GO_SPRITE_COMPONENT)
-            mesh = new GoSprite(params.width || default_size, params.height || default_size, params.slice_width || 0, params.slice_height || 0);
-        else if (type == IObjectTypes.GO_LABEL_COMPONENT)
-            mesh = new GoText(params.text || '', params.width || default_size, params.height || default_size);
-        else if (type == IObjectTypes.GO_MODEL_COMPONENT)
-            mesh = new AnimatedMesh(params.width || default_size, params.height || default_size);
+        else if (type == IObjectTypes.GO_SPRITE_COMPONENT) {
+            mesh = new GoSprite(check_id_is_available_or_generate_new(id), params.width || default_size, params.height || default_size, params.slice_width || 0, params.slice_height || 0);
+        }
+        else if (type == IObjectTypes.GO_LABEL_COMPONENT) {
+            mesh = new GoText(check_id_is_available_or_generate_new(id), params.text || '', params.width || default_size, params.height || default_size);
+        }
+        else if (type == IObjectTypes.GO_MODEL_COMPONENT) {
+            mesh = new AnimatedMesh(check_id_is_available_or_generate_new(id), params.width || default_size, params.height || default_size);
+        }
         else if (type == IObjectTypes.COMPONENT_SPLINE)
             mesh = new SplineComponent();
         else {
             Log.error('Unknown mesh type', type);
-            mesh = new Slice9Mesh(32, 32);
+            mesh = new Slice9Mesh(check_id_is_available_or_generate_new(id), 32, 32);
             //mesh.set_color('#f00');
         }
+
+        mesh.name = type + mesh.mesh_data.id;
+        mesh.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
+        return mesh as IMeshTypes[T];
+    }
+
+    function check_id_is_available_or_generate_new(id: number) {
         if (id != -1) {
             const m = get_mesh_by_id(id);
             if (m) {
@@ -99,14 +117,9 @@ export function SceneManagerModule() {
                 Log.error('mesh with id already exists', id, 'generated new id', new_id);
                 id = new_id;
             }
-            mesh.mesh_data.id = id;
+            return id;
         }
-        else {
-            mesh.mesh_data.id = get_unique_id();
-        }
-        mesh.name = type + mesh.mesh_data.id;
-        mesh.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
-        return mesh as IMeshTypes[T];
+        return get_unique_id();
     }
 
     function serialize_mesh(m: IBaseEntityAndThree) {
@@ -167,6 +180,11 @@ export function SceneManagerModule() {
                 const m = (_m as any as IBaseEntityAndThree);
                 if (m.no_removing)
                     continue;
+                for (let j = m.children.length - 1; j >= 0; j--) {
+                    const c = m.children[j];
+                    if (c instanceof Slice9Mesh)
+                        c.dispose();
+                }
                 scene.remove(m);
             }
         }
@@ -347,9 +365,12 @@ export function SceneManagerModule() {
     function remove(id: number) {
         EventBus.trigger('SYS_MESH_REMOVE_BEFORE', { id: id }, false);
         const mesh = get_mesh_by_id(id);
-        if (mesh)
+        if (mesh) {
+            if (mesh instanceof Slice9Mesh)
+                mesh.dispose();
             mesh.parent!.remove(mesh);
-        EventBus.trigger('SYS_MESH_REMOVE_AFTER', { id: id }, false);
+            EventBus.trigger('SYS_MESH_REMOVE_AFTER', { id: id }, false);
+        }
     }
 
     function make_graph() {

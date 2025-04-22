@@ -1,7 +1,8 @@
 import { TextureInfo } from "../render_engine/resource_manager";
 import { ChangeInfo, InspectorGroup, PropertyParams, PropertyType } from "../modules_editor/Inspector";
 import { BlendMode, ScreenPointPreset } from "./MeshInspector";
-import { AdditiveBlending, MultiplyBlending, NormalBlending, SubtractiveBlending, Vector2 } from "three";
+import { AdditiveBlending, LinearFilter, MultiplyBlending, NearestFilter, NormalBlending, SubtractiveBlending, Vector2 } from "three";
+import { FilterMode } from "./AssetInspector";
 
 
 export function update_option<T extends PropertyType>(config: InspectorGroup[], property_name: string, method: () => PropertyParams[T]) {
@@ -247,4 +248,44 @@ export function convertThreeJSBlendingToBlendMode(blending: number): BlendMode {
         default:
             return BlendMode.NORMAL;
     }
+}
+
+export function convertFilterModeToThreeJS(filter_mode: FilterMode): number {
+    switch (filter_mode) {
+        case FilterMode.NEAREST:
+            return NearestFilter;
+        case FilterMode.LINEAR:
+            return LinearFilter;
+        default:
+            return LinearFilter;
+    }
+}
+
+export function convertThreeJSFilterToFilterMode(filter: number): FilterMode {
+    switch (filter) {
+        case NearestFilter:
+            return FilterMode.NEAREST;
+        case LinearFilter:
+            return FilterMode.LINEAR;
+        default:
+            return FilterMode.LINEAR;
+    }
+}
+
+export function generateVertexProgramOptions() {
+    const vertex_options: { [key: string]: string } = {};
+    const vertex_programs = ResourceManager.get_all_vertex_programs();
+    vertex_programs.forEach((program) => {
+        vertex_options[program] = program;
+    });
+    return vertex_options;
+}
+
+export function generateFragmentProgramOptions() {
+    const fragment_options: { [key: string]: string } = {};
+    const fragment_programs = ResourceManager.get_all_fragment_programs();
+    fragment_programs.forEach((program) => {
+        fragment_options[program] = program;
+    });
+    return fragment_options;
 }

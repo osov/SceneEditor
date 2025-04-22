@@ -1,7 +1,6 @@
 import { WatchEventType } from "fs";
 import { IBaseMeshAndThree } from "../render_engine/types";
 import { VoidMessage } from "../modules/modules_const";
-import { Vector2, Vector2Like } from "three";
 
 export type ServerCommands = AssetsCommands;
 export type ServerResponses = AssetsResponses;
@@ -39,10 +38,10 @@ export type _SystemMessagesEditor = {
     SYS_ASSETS_SELECTED_MATERIALS: { paths: string[] },
     SYS_ASSETS_CLEAR_SELECTED: {},
     SYS_CHANGED_ATLAS_DATA: {},
-    MATERIAL_CHANGED: TMaterialChanged,
-    MATERIAL_COPY_CHANGED: TMaterialChanged,
+    SYS_MATERIAL_CHANGED: TMaterialChanged,
+    SYS_MESH_MATERIAL_CHANGED: TMeshMaterialChanged,
+    SYS_HISTORY_UNDO: THistoryUndo,
 };
-
 
 export type AssetsCommands = {
     [GET_SERVER_DATA_CMD]: VoidMessage,
@@ -206,3 +205,17 @@ export type TDictionary<T> = { [key: number | string]: T };
 
 export type TRecursiveDict = { [Key: number | string]: TRecursiveDict | number | string };
 export type TMaterialChanged = { material_name: string, is_uniform: boolean, property: string, value: any };
+export type TMeshMaterialChanged = { mesh_id: number, is_uniform: boolean, property: string, value: any };
+
+export type THistoryUndo = { type: string, data: any[], owner: number };
+
+export enum HistoryOwner {
+    TRANSFORM_CONTROL,
+    SIZE_CONTROL,
+    MESH_INSPECTOR,
+    ASSET_INSPECTOR,
+    MATERIAL_CONTROL,
+    TEXTURE_CONTROL,
+    TEXT_CONTROL,
+    SCENE_CONTROL
+};

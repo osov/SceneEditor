@@ -87,7 +87,7 @@ function ControlManagerCreate() {
         EventBus.on('SYS_GRAPH_CHANGE_NAME', (e) => {
             const mesh = SceneManager.get_mesh_by_id(e.id);
             if (!mesh) return Log.error('mesh is null', e.id);
-            HistoryControl.add('MESH_NAME', [{ id_mesh: e.id, name: mesh.name }]);
+            HistoryControl.add('MESH_NAME', [{ mesh_id: e.id, name: mesh.name }]);
             mesh.name = e.name;
             SelectControl.set_selected_list([mesh]);
             update_graph();
@@ -186,7 +186,7 @@ function ControlManagerCreate() {
             if ((!item.get_active() || ids.includes(item.mesh_data.id)) && item.children.length > 0) {
                 item.children.forEach((child: any) => {
                     ids.push(child.mesh_data.id);
-                }) 
+                })
             }
         });
         return ids;
@@ -268,7 +268,7 @@ function ControlManagerCreate() {
         });
     }
 
-    
+
 
 
     init();

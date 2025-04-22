@@ -1,15 +1,15 @@
-import {  IObjectTypes } from "../types";
+import { IObjectTypes } from "../types";
 import { Slice9Mesh } from "./slice9";
 import { TextMesh } from "./text";
 import { EntityBase } from "./entity_base";
 import { flip_geometry_x, flip_geometry_y, flip_geometry_xy } from "../helpers/utils";
 
 
-export class GuiContainer extends EntityBase  {
+export class GuiContainer extends EntityBase {
     public type = IObjectTypes.GUI_CONTAINER;
 
-    constructor() {
-        super();
+    constructor(id: number) {
+        super(id);
         this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
         this.layers.disable(RenderEngine.DC_LAYERS.GUI_LAYER);
     }
@@ -22,8 +22,8 @@ export class GuiContainer extends EntityBase  {
 export class GoContainer extends EntityBase {
     public type = IObjectTypes.GO_CONTAINER;
 
-    constructor() {
-        super();
+    constructor(id: number) {
+        super(id);
         this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
         this.layers.disable(RenderEngine.DC_LAYERS.GUI_LAYER);
     }
@@ -62,7 +62,7 @@ export class GoSprite extends Slice9Mesh {
     get_flip(): FlipMode {
         const geometry = this.geometry;
         const uv = geometry.attributes.uv;
-        
+
         if (!this.original_uv) {
             return FlipMode.NONE;
         }
@@ -97,7 +97,7 @@ export class GoSprite extends Slice9Mesh {
             if (is_horizontal) return FlipMode.HORIZONTAL;
             if (is_vertical) return FlipMode.VERTICAL;
         }
-        
+
         return FlipMode.NONE;
     }
 
@@ -135,11 +135,11 @@ export class GoSprite extends Slice9Mesh {
             ...super.serialize(),
             current_uv: Array.from(this.geometry.attributes.uv.array)
         };
-        
+
         if (this.original_uv) {
             data.original_uv = Array.from(this.original_uv);
         }
-        
+
         return data;
     }
 

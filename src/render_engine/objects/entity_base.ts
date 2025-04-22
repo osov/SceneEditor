@@ -36,8 +36,9 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
         clip_height: 1
     };
 
-    constructor() {
+    constructor(id: number) {
         super(new PlaneGeometry(tmp_size, tmp_size), shader);
+        this.mesh_data.id = id;
     }
 
     set_position(x: number, y: number, z?: number) {

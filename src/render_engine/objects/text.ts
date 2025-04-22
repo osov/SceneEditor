@@ -38,8 +38,9 @@ export class TextMesh extends Text implements IBaseMesh {
         font: '',
     };
 
-    constructor(text = '', width = 1, height = 1) {
+    constructor(id: number, text = '', width = 1, height = 1) {
         super();
+        this.mesh_data.id = id;
         this.textAlign = 'center';
         this.anchorX = '50%';
         this.anchorY = '50%';
@@ -187,7 +188,7 @@ export class TextMesh extends Text implements IBaseMesh {
 
     serialize(): SerializeData {
         const data: SerializeData = {};
-        
+
         if (this.text != '') {
             data.text = this.text;
         }
@@ -197,7 +198,7 @@ export class TextMesh extends Text implements IBaseMesh {
         if (this.fontSize != 32) {
             data.font_size = this.fontSize;
         }
-        
+
         return data;
     }
 
@@ -206,7 +207,7 @@ export class TextMesh extends Text implements IBaseMesh {
         this.fontSize = 32;
         this.set_font('', false);
         this.set_text('');
-        
+
         // NOTE: затем переопределяем значения
         if (data.font_size !== undefined) {
             this.fontSize = data.font_size;

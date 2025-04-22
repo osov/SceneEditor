@@ -162,3 +162,78 @@ export function circle_line_intersect(circle: Circle, line: Segment) {
     }
     return ret;
 }
+
+export function getObjectHash<T>(obj: T): string {
+    // Сначала отсортируем ключи объекта, чтобы порядок полей не влиял на хэш
+    const sortedObj = sortObjectDeep(obj);
+    // Преобразуем объект в строку и создадим хэш
+    const str = JSON.stringify(sortedObj);
+    return stringToHash(str);
+}
+
+// Рекурсивная сортировка всех вложенных объектов
+function sortObjectDeep(obj: any): any {
+    if (obj === null || typeof obj !== 'object') {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(sortObjectDeep);
+    }
+
+    // Получаем все ключи и сортируем их
+    const sortedKeys = Object.keys(obj).sort();
+    const result: any = {};
+
+    // Создаем новый объект с отсортированными ключами
+    for (const key of sortedKeys) {
+        result[key] = sortObjectDeep(obj[key]);
+    }
+
+    return result;
+}
+
+export function stringToHash(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash.toString(16); // Преобразуем в hex строку
+}
+
+export function getObjectDifferences<T>(obj1: T, obj2: T): { [key: string]: { old: any, new: any } } {
+    const differences: { [key: string]: { old: any, new: any } } = {};
+
+    const compareValues = (path: string, val1: any, val2: any) => {
+        if (val1 === val2) return;
+
+        if (typeof val1 !== typeof val2) {
+            differences[path] = { old: val1, new: val2 };
+            return;
+        }
+
+        if (typeof val1 === 'object' && val1 !== null && val2 !== null) {
+            const keys1 = Object.keys(val1).sort();
+            const keys2 = Object.keys(val2).sort();
+            const allKeys = new Set([...keys1, ...keys2]);
+
+            for (const key of allKeys) {
+                const newPath = path ? `${path}.${key}` : key;
+                if (!keys1.includes(key)) {
+                    differences[newPath] = { old: undefined, new: val2[key] };
+                } else if (!keys2.includes(key)) {
+                    differences[newPath] = { old: val1[key], new: undefined };
+                } else {
+                    compareValues(newPath, val1[key], val2[key]);
+                }
+            }
+        } else {
+            differences[path] = { old: val1, new: val2 };
+        }
+    };
+
+    compareValues('', obj1, obj2);
+    return differences;
+}

@@ -70,9 +70,9 @@ export interface PropertyItem<T extends PropertyType> {
     type: T;
     params?: PropertyParams[T];
     readonly?: boolean;
-    onSave?: SaveCallback;
-    onUpdate?: UpdateCallback;
-    onRefresh?: RefreshCallback<T>;
+    onBeforeChange?: OnBeforeChangeCallback;
+    onChange?: OnChangeCallback;
+    onRefresh?: OnRefreshCallback<T>;
 }
 
 export interface InspectorGroup {
@@ -108,9 +108,9 @@ export interface ChangeInfo {
 
 export type ChangeEvent = TpChangeEvent<unknown, BindingApi<unknown, unknown>>;
 
-export type SaveCallback = (info: BeforeChangeInfo) => void;
-export type UpdateCallback = (info: ChangeInfo) => void;
-export type RefreshCallback<T extends PropertyType> = (ids: number[]) => PropertyValues[T] | undefined;
+export type OnBeforeChangeCallback = (info: BeforeChangeInfo) => void;
+export type OnChangeCallback = (info: ChangeInfo) => void;
+export type OnRefreshCallback<T extends PropertyType> = (ids: number[]) => PropertyValues[T] | undefined;
 
 type Property = string;
 
@@ -147,7 +147,7 @@ function InspectorModule() {
     let _unique_fields: { ids: number[], field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }[];
     let _data: ObjectData[];
 
-    // Track vector fields that need to be checked for different values
+    // NOTE: Track vector fields that need to be checked for different values
     let _vector_fields: { field: PropertyData<PropertyType>, property: PropertyItem<PropertyType> }[] = []
 
     let _is_first = true;
@@ -289,38 +289,38 @@ function InspectorModule() {
             if (result) {
                 // копируем чтобы не менялось в конфиге
                 const copy = deepClone(result);
-                copy.onSave = result.onSave;
-                copy.onUpdate = result.onUpdate;
+                copy.onBeforeChange = result.onBeforeChange;
+                copy.onChange = result.onChange;
                 copy.onRefresh = result.onRefresh;
                 // отдельно копируем callback, он есть только в NUMBER и в PointNd поэтому пока тут
                 if (result.type == PropertyType.NUMBER) {
                     const number_params = (result.params as PropertyParams[PropertyType.NUMBER]);
                     if (result.params && (result.params as PropertyParams[PropertyType.NUMBER]).format) {
-                        copy.params.format = number_params.format;
+                        (copy.params! as PropertyParams[PropertyType.NUMBER]).format = number_params.format;
                     }
                 }
 
                 if (result.type == PropertyType.VECTOR_2 || result.type == PropertyType.VECTOR_3 || result.type == PropertyType.VECTOR_4 || result.type == PropertyType.POINT_2D) {
                     const v2p = (result.params as PropertyParams[PropertyType.VECTOR_2]);
                     if (result.params && (result.params as PropertyParams[PropertyType.VECTOR_2]).x && (result.params as PropertyParams[PropertyType.VECTOR_2]).x.format) {
-                        copy.params.x.format = v2p.x.format;
+                        (copy.params! as PropertyParams[PropertyType.VECTOR_2]).x.format = v2p.x.format;
                     }
                     if (result.params && (result.params as PropertyParams[PropertyType.VECTOR_2]).y && (result.params as PropertyParams[PropertyType.VECTOR_2]).y.format) {
-                        copy.params.y.format = v2p.y.format;
+                        (copy.params! as PropertyParams[PropertyType.VECTOR_2]).y.format = v2p.y.format;
                     }
                 }
 
                 if (result.type == PropertyType.VECTOR_3 || result.type == PropertyType.VECTOR_4) {
                     const v3p = (result.params as PropertyParams[PropertyType.VECTOR_3]);
                     if (result.params && (result.params as PropertyParams[PropertyType.VECTOR_3]).z && (result.params as PropertyParams[PropertyType.VECTOR_3]).z.format) {
-                        copy.params.z.format = v3p.z.format;
+                        (copy.params! as PropertyParams[PropertyType.VECTOR_3]).z.format = v3p.z.format;
                     }
                 }
 
                 if (result.type == PropertyType.VECTOR_4) {
                     const v4p = (result.params as PropertyParams[PropertyType.VECTOR_4]);
                     if (result.params && (result.params as PropertyParams[PropertyType.VECTOR_4]).w && (result.params as PropertyParams[PropertyType.VECTOR_4]).w.format) {
-                        copy.params.w.format = v4p.w.format;
+                        (copy.params! as PropertyParams[PropertyType.VECTOR_4]).w.format = v4p.w.format;
                     }
                 }
 
@@ -615,7 +615,7 @@ function InspectorModule() {
 
                 _is_first = false;
 
-                saveValue({
+                onBeforeChange({
                     ids,
                     field,
                     property
@@ -636,7 +636,7 @@ function InspectorModule() {
                     return;
                 }
 
-                updatedValue({
+                onChange({
                     ids,
                     data: {
                         field,
@@ -766,17 +766,23 @@ function InspectorModule() {
         }
     }
 
-    function saveValue(info: BeforeChangeInfo) {
+    function onBeforeChange(info: BeforeChangeInfo) {
         const unique_field = _unique_fields.find(field => field.field == info.field);
-        if (unique_field && unique_field.property.onSave) {
-            unique_field.property.onSave(info);
+        if (unique_field && unique_field.property.onBeforeChange) {
+            unique_field.property.onBeforeChange(info);
         }
     }
 
-    function updatedValue(info: ChangeInfo) {
+    function onChange(info: ChangeInfo) {
         const unique_field = _unique_fields.find(field => field.field == info.data.field);
-        if (unique_field && unique_field.property.onUpdate) {
-            unique_field.property.onUpdate(info);
+        if (unique_field && unique_field.property.onChange) {
+            switch (unique_field.property.type) {
+                // NOTE: округляем значения для того чтобы не сохранять излишние знаки после запятой - сейчас 4
+                case PropertyType.NUMBER: case PropertyType.SLIDER:
+                    (info.data.event.value as number) = Number((info.data.event.value as number).toFixed(4));
+                    break;
+            }
+            unique_field.property.onChange(info);
         }
     }
 
