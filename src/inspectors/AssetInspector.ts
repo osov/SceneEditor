@@ -641,7 +641,7 @@ function AssetInspectorCreate() {
                     is_uniform: false,
                     property: 'vertexShader',
                     value: item.program
-                });
+                }, false);
             }
         }
     }
@@ -682,7 +682,7 @@ function AssetInspectorCreate() {
                     is_uniform: false,
                     property: 'fragmentShader',
                     value: item.program
-                });
+                }, false);
             }
         }
     }
@@ -731,7 +731,7 @@ function AssetInspectorCreate() {
                     is_uniform: true,
                     property: item.uniform_name,
                     value: item.value
-                });
+                }, false);
             }
         }
     }
@@ -780,7 +780,7 @@ function AssetInspectorCreate() {
                     is_uniform: true,
                     property: item.uniform_name,
                     value: item.value
-                });
+                }, false);
             }
         }
     }
@@ -829,7 +829,7 @@ function AssetInspectorCreate() {
                     is_uniform: true,
                     property: item.uniform_name,
                     value: item.value
-                });
+                }, false);
             }
         }
     }
@@ -878,7 +878,7 @@ function AssetInspectorCreate() {
                     is_uniform: true,
                     property: item.uniform_name,
                     value: item.value
-                });
+                }, false);
             }
         }
     }
@@ -927,7 +927,7 @@ function AssetInspectorCreate() {
                     is_uniform: true,
                     property: item.uniform_name,
                     value: item.value
-                });
+                }, false);
             }
         }
     }
@@ -976,7 +976,7 @@ function AssetInspectorCreate() {
                     is_uniform: true,
                     property: item.uniform_name,
                     value: item.value
-                });
+                }, false);
             }
         }
     }
@@ -1028,7 +1028,7 @@ function AssetInspectorCreate() {
                     is_uniform: true,
                     property: item.uniform_name,
                     value: hexToRGB(color.getHexString())
-                });
+                }, false);
             }
         }
     }
@@ -1072,7 +1072,7 @@ function AssetInspectorCreate() {
                     is_uniform: false,
                     property: 'transparent',
                     value: item.value
-                });
+                }, false);
             }
         }
     }
