@@ -934,7 +934,9 @@ export function ResourceManagerModule() {
 
     function get_texture(name: string, atlas = ''): TextureData {
         if (!has_texture_name(name, atlas)) {
-            Log.error('Texture not found', name, atlas);
+            if (name != '') {
+                Log.error('Texture not found', name, atlas);
+            }
             return {
                 texture: bad_texture,
                 size: new Vector2(128, 128),
@@ -958,6 +960,10 @@ export function ResourceManagerModule() {
     }
 
     function get_atlas_by_texture_name(texture_name: string): string | null {
+        if (texture_name == '') {
+            return '';
+        }
+
         for (const [atlas_name, textures] of Object.entries(atlases)) {
             if (textures[texture_name]) {
                 return atlas_name;
