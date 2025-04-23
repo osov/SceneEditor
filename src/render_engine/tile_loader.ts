@@ -96,6 +96,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                             plane.rotation.z = -tile.rotation! * Math.PI / 180;
                         container.add(plane);
                         plane.name = tile_info.name + '' + plane.mesh_data.id;
+                        plane.userData = { tile };
                     }
                 }
             }

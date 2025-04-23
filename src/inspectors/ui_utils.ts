@@ -1,5 +1,7 @@
 import { Texture, Vector2 } from "three";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
+import { RenderTileData, RenderTileObject } from "../render_engine/parsers/tile_parser";
+import { Slice9Mesh } from "../render_engine/objects/slice9";
 
 
 export function get_selected_one_mesh() {
@@ -9,31 +11,36 @@ export function get_selected_one_mesh() {
     const mesh = selected_list[0];
     if (mesh.type != IObjectTypes.GO_SPRITE_COMPONENT)
         return;
-    return mesh;
+    return mesh as Slice9Mesh;
 }
 
 
 export function get_hash_by_mesh(mesh: IBaseMeshAndThree) {
     let key = mesh.name;
-    if (mesh.userData && mesh.userData.tile)
-        key = mesh.userData.tile.x + '.' + mesh.userData.tile.y;
+    if (mesh.userData && mesh.userData.tile) {
+        const tile = mesh.userData.tile as (RenderTileObject | RenderTileData);
+        if ('id_object' in tile)
+            key = tile.id_object + '';
+        else
+            key = tile.id + '_' + tile.x + '.' + tile.y;
+    }
     return key;
 }
 
 
 export function get_mesh_by_hash(key: string) {
-    let m!: IBaseMeshAndThree;
+    let m!: Slice9Mesh;
     RenderEngine.scene.traverse((child) => {
-        const k = get_hash_by_mesh(child as IBaseMeshAndThree);
+        const k = get_hash_by_mesh(child as Slice9Mesh);
         if (k == key)
-            m = child as IBaseMeshAndThree;
+            m = child as Slice9Mesh;
     });
     return m;
 }
 
 
 const last_pos = new Vector2();
-export function get_raycast_point_uv(x: number, y: number, mesh: IBaseMeshAndThree) {
+export function get_raycast_point_uv(x: number, y: number, mesh: Slice9Mesh) {
     const raycaster = RenderEngine.raycaster;
     const camera = RenderEngine.camera;
     raycaster.setFromCamera(new Vector2(x, y), camera);
@@ -51,11 +58,11 @@ export function set_raycast_last_pos(x: number, y: number) {
     last_pos.set(x, y);
 }
 
-export function get_name_atlas_by_texture(tex:Texture){
+export function get_name_atlas_by_texture(tex: Texture) {
     const all = ResourceManager.get_all_textures();
     for (let i = 0; i < all.length; i++) {
         if (all[i].data.texture == tex)
-            return all[i].atlas + '/' +  all[i].name; 
+            return all[i].atlas + '/' + all[i].name;
     }
     return '';
 }
@@ -105,7 +112,7 @@ export function CreateDrawCanvas(size_x: number, size_y: number, brush_size = 40
         ctx.putImageData(imageData, x - brush_size, y - brush_size);
     }
 
-    function draw_flow(x: number, y: number, dx: number, dy: number,flow_strength:number) {
+    function draw_flow(x: number, y: number, dx: number, dy: number, flow_strength: number) {
         x *= size_x;
         y *= size_y;
         let len = Math.sqrt(dx * dx + dy * dy);

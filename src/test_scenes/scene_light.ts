@@ -50,11 +50,9 @@ export async function run_scene_light() {
     //SceneManager.add(spl);
 
     FlowMapControl.init();
-    await FlowMapControl.load_shader();
     await FlowMapControl.load_saved();
 
     GrassTreeControl.init();
-    await GrassTreeControl.load_shader();
     await GrassTreeControl.load_saved();
 
     await PaintInspector.load_shader();
@@ -211,12 +209,12 @@ export async function run_scene_light() {
 
     ControlManager.update_graph(true, 'light');
 
-    let time = 0;
+    const now = System.now_with_ms();
     EventBus.on('SYS_ON_UPDATE', (e) => {
-        time += e.dt;
         const materials = ResourceManager.get_all_materials();
+        const t = System.now_with_ms() - now;
         for (const m of materials)
-            ResourceManager.set_material_uniform_for_original(m, 'u_time', time);
+            ResourceManager.set_material_uniform_for_original(m, 'u_time', t);
     });
 
 }

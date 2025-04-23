@@ -1,7 +1,6 @@
-import { ShaderMaterial } from "three";
 import { IBaseMeshAndThree } from "../render_engine/types";
-import { shader } from "../render_engine/objects/slice9";
 import { get_selected_one_mesh, get_hash_by_mesh, get_mesh_by_hash } from "../inspectors/ui_utils";
+import { Slice9Mesh } from "../render_engine/objects/slice9";
 
 declare global {
     const GrassTreeControl: ReturnType<typeof GrassTreeControlCreate>;
@@ -12,8 +11,8 @@ export function register_grass_tree_control() {
 }
 
 interface GrassTreeInfo {
-    speed: number;
-    size: number;
+    u_amplitude: number;
+    u_frequency: number;
 }
 
 type FileData = { [id: string]: GrassTreeInfo };
@@ -22,14 +21,9 @@ type FileData = { [id: string]: GrassTreeInfo };
 
 function GrassTreeControlCreate() {
 
-    const mesh_list: { [k: string]: { material: ShaderMaterial } } = {};
+    const mesh_list: { [k: string]: boolean } = {};
     const dir_path = '/tree/';
-    const fp_path = 'shaders/tree.fp';
-    const vp_path = 'shaders/tree.vp';
-    let shader_fp = '';
-    let shader_vp = '';
-    let selected_mesh: IBaseMeshAndThree | undefined;
-    const now = System.now_with_ms();
+    let selected_mesh: Slice9Mesh | undefined;
 
     async function load_data() {
         const data = await ClientAPI.get_data(dir_path + 'data.txt');
@@ -95,102 +89,56 @@ function GrassTreeControlCreate() {
             const mesh = get_mesh_by_hash(id);
             if (mesh) {
                 await activate(mesh);
+                ResourceManager.set_material_uniform_for_mesh(mesh, 'u_amplitude', data[id].u_amplitude);
+                ResourceManager.set_material_uniform_for_mesh(mesh, 'u_frequency', data[id].u_frequency);
             }
             else {
                 //Log.error('[Карта дерева] меш не найден:' + id);
             }
         }
     }
-    async function load_shader() {
-        shader_fp = (await AssetControl.get_file_data(fp_path)).data!;
-        shader_vp = (await AssetControl.get_file_data(vp_path)).data!;
-        EventBus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {
-            let is_change = false;
-            for (let i = 0; i < e.events.length; i++) {
-                const ev = e.events[i];
-                if (ev.path == fp_path || ev.path == vp_path)
-                    is_change = true;
-            }
-            if (is_change) {
-                shader_fp = (await AssetControl.get_file_data(fp_path)).data!;
-                shader_vp = (await AssetControl.get_file_data(vp_path)).data!;
-                for (const key in mesh_list) {
-                    const { material } = mesh_list[key];
-                    material.fragmentShader = shader_fp;
-                    material.vertexShader = shader_vp;
-                    material.needsUpdate = true;
-                }
-            }
-        });
-    }
 
-    async function create_shader(mesh: IBaseMeshAndThree): Promise<[ShaderMaterial]> {
-
-        const mat: ShaderMaterial = new ShaderMaterial({
-            uniforms: {
-                u_texture: { value: null },
-                u_time: { value: 0.0 },
-            },
-            vertexShader: shader_vp,
-            fragmentShader: shader_fp,
-            transparent: true
-        });
-        EventBus.on('SYS_ON_UPDATE', (e) => mat.uniforms.u_time.value = System.now_with_ms() - now);
-        const tex = mesh.get_texture();
-        const texture = ResourceManager.get_texture(tex[0], tex[1]).texture;
-        //texture.wrapS = texture.wrapT = RepeatWrapping;
-        //texture.needsUpdate = true;
-        mat.uniforms.u_texture.value = texture;
-
-
-        (mesh as any).material = mat;
-        return [mat];
-    }
-
-    async function activate(mesh: IBaseMeshAndThree) {
+    async function activate(mesh: Slice9Mesh) {
         const key = get_hash_by_mesh(mesh);
         selected_mesh = mesh;
         if (mesh_list[key])
             return;
-        const [material] = await create_shader(mesh);
-        mesh_list[key] = { material };
-        log('activated flow', key)
+        const tex_atlas = mesh.get_texture();
+        mesh.set_material('tree');
+        mesh.set_texture(tex_atlas[0], tex_atlas[1]);
+        mesh_list[key] = true;
+        log('activated', key)
     }
 
-    async function deactivate(mesh: IBaseMeshAndThree) {
+    async function deactivate(mesh: Slice9Mesh) {
         const key = get_hash_by_mesh(mesh);
         if (!mesh_list[key])
             return;
-        const mat = new ShaderMaterial({
-            uniforms: {
-                u_texture: { value: mesh_list[key].material.uniforms.u_texture.value },
-                alpha: { value: 1.0 }
-            },
-            vertexShader: shader.vertexShader,
-            fragmentShader: shader.fragmentShader,
-            transparent: true
-        });
-        mat.defines['USE_TEXTURE'] = '';
-        (selected_mesh as any).material = mat;
+        const tex_atlas = mesh.get_texture();
+        mesh.set_material('default');
+        mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         selected_mesh = undefined;
         delete mesh_list[key];
-        // save flow data
+        // save data
         const flow_data = await load_data();
         delete flow_data[key];
         await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(flow_data));
-        log('deactivated flow', key)
+        log('deactivated', key)
     }
 
-    async function save_map(mesh: IBaseMeshAndThree) {
+    async function save_map(mesh: Slice9Mesh) {
         const key = get_hash_by_mesh(mesh);
         if (!mesh_list[key])
             return;
+        const mat = mesh.material;
+        if (mat.name != 'tree')
+            return;
         const flow_data = await load_data();
-        flow_data[key] = { speed: 1.0, size: 1.0 };
+        flow_data[key] = { u_amplitude: mat.uniforms.u_amplitude.value, u_frequency: mat.uniforms.u_frequency.value };
         await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(flow_data));
         Popups.toast.success('Карта дерева сохранена:' + key);
     }
 
 
-    return { init, load_shader, load_saved }
+    return { init, load_saved }
 }

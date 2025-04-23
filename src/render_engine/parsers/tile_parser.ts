@@ -42,6 +42,7 @@ export interface TileObject {
     w: number;
     h: number
     tid: number
+    id:number
     r?: number
     polygon?: number[]
     polyline?: number[]
@@ -59,7 +60,7 @@ export interface MapData {
 }
 
 
-interface RenderTileData {
+export interface RenderTileData {
     x: number;
     y: number;
     id: number;
@@ -76,6 +77,7 @@ export interface RenderTileObject {
     width: number;
     height: number
     tile_id: number
+    id_object:number;
     rotation?: number
     polygon?: Vector2[]
     polyline?: Vector2[]
@@ -164,6 +166,7 @@ function create_objects(obj_layer: ObjectLayer) {
                 width: 0,
                 height: 0,
                 tile_id: -1,
+                id_object:obj.id,
                 rotation: obj.r,
             };
             if (obj.polygon)
@@ -180,6 +183,7 @@ function create_objects(obj_layer: ObjectLayer) {
                 width: obj.w,
                 height: obj.h,
                 tile_id: obj.tid,
+                id_object:obj.id,
                 rotation: obj.r
             };
             objects.push(data);
