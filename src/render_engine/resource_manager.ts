@@ -166,7 +166,7 @@ export function ResourceManagerModule() {
 
         // NOTE: изменяем оригинальные материалы и копии
         for (const material_info of Object.values(materials)) {
-            if (material_info.vertexShader == path) {
+            if (material_info.vertexShader == '/' + path) {
                 const origin = get_material_by_hash(material_info.name, material_info.origin);
                 if (!origin) continue;
 
@@ -190,7 +190,7 @@ export function ResourceManagerModule() {
 
         // NOTE: изменяем оригинальные материалы и копии
         for (const material_info of Object.values(materials)) {
-            if (material_info.fragmentShader == path) {
+            if (material_info.fragmentShader == '/' + path) {
                 const origin = get_material_by_hash(material_info.name, material_info.origin);
                 if (!origin) continue;
 
