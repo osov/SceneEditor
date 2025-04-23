@@ -281,6 +281,7 @@ function AssetInspectorCreate() {
                     Object.entries(origin.uniforms).forEach(([key, uniform]) => {
                         const uniformInfo = material_info.uniforms[key];
                         if (!uniformInfo) return;
+                        if (uniformInfo.hide) return;
                         switch (uniformInfo.type) {
                             case MaterialUniformType.SAMPLER2D:
                                 _config.forEach((group) => {

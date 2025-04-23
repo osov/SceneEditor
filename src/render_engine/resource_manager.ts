@@ -69,6 +69,7 @@ export interface MaterialUniform<T extends keyof MaterialUniformParams> {
     type: T;
     params: MaterialUniformParams[T];
     readonly?: boolean;
+    hide?: boolean;
 }
 
 export interface MaterialInstance {
@@ -594,7 +595,8 @@ export function ResourceManagerModule() {
             material_info.uniforms[key] = {
                 type: data.uniforms[key].type,
                 params: { ...data.uniforms[key].params },
-                readonly: data.uniforms[key].readonly
+                readonly: data.uniforms[key].readonly,
+                hide: data.uniforms[key].hide
             };
             switch (data.uniforms[key].type) {
                 case MaterialUniformType.SAMPLER2D:
