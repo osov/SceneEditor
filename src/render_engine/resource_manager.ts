@@ -236,7 +236,6 @@ export function ResourceManagerModule() {
         // NOTE: обновляем прозрачность
         if (origin.transparent != changed_origin.transparent) {
             origin.transparent = changed_origin.transparent;
-            origin.needsUpdate = true;
 
             // Update transparency in all copies if they match old value
             Object.keys(material_info.instances).filter((hash) => hash != material_info.origin).forEach((hash) => {
@@ -244,7 +243,6 @@ export function ResourceManagerModule() {
                 if (!copy) return;
 
                 copy.transparent = changed_origin.transparent;
-                copy.needsUpdate = true;
             });
         }
 
@@ -265,7 +263,6 @@ export function ResourceManagerModule() {
                     const is_changed_uniform = material_info.material_hash_to_changed_uniforms[hash].includes(key);
                     if (undefined_uniform || !is_changed_uniform) {
                         copy.uniforms[key] = changed_origin.uniforms[key];
-                        copy.needsUpdate = true;
                     }
                 });
             }
@@ -317,7 +314,6 @@ export function ResourceManagerModule() {
 
                     const new_material = copy_material(copy);
                     delete new_material.uniforms[key];
-                    new_material.needsUpdate = true;
                     const new_hash = get_material_hash(new_material);
 
                     // NOTE: все значения как в оригинале
@@ -766,8 +762,11 @@ export function ResourceManagerModule() {
         const material = material_info.instances[material_info.origin];
         if (!material) return;
 
+        // не все материалы будут иметь эту юниформу и если в оригинале нет то смысла идти дальше нет
+        if (material.uniforms[uniform_name] == undefined)
+            return;
+
         material.uniforms[uniform_name].value = value;
-        material.needsUpdate = true;
 
         Object.keys(material_info.instances).filter((hash) => hash != material_info.origin).forEach((hash) => {
             const copy = get_material_by_hash(material_info.name, hash);
@@ -777,7 +776,6 @@ export function ResourceManagerModule() {
             const is_changed_uniform = material_info.material_hash_to_changed_uniforms[hash].includes(uniform_name);
             if (!is_changed_uniform) {
                 copy.uniforms[uniform_name] = material.uniforms[uniform_name];
-                copy.needsUpdate = true;
             }
         });
     }

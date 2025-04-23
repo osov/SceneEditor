@@ -60,7 +60,7 @@ export async function run_scene_light() {
     await PaintInspector.load_shader();
 
 
-   // await AssetControl.open_scene('/LIGHT.scn');
+    // await AssetControl.open_scene('/LIGHT.scn');
     await PaintInspector.load_saved();
 
     const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
@@ -210,5 +210,13 @@ export async function run_scene_light() {
     });
 
     ControlManager.update_graph(true, 'light');
+
+    let time = 0;
+    EventBus.on('SYS_ON_UPDATE', (e) => {
+        time += e.dt;
+        const materials = ResourceManager.get_all_materials();
+        for (const m of materials)
+            ResourceManager.set_material_uniform_for_original(m, 'u_time', time);
+    });
 
 }
