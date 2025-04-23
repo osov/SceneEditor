@@ -757,6 +757,29 @@ export function ResourceManagerModule() {
         material_info.material_hash_to_changed_uniforms[new_hash] = copy_prev_changed_uniforms;
     }
 
+    function set_material_uniform_for_original<T>(material_name: string, uniform_name: string, value: T) {
+        const material_info = get_material_info(material_name);
+        if (!material_info) return;
+
+        const material = material_info.instances[material_info.origin];
+        if (!material) return;
+
+        material.uniforms[uniform_name].value = value;
+        material.needsUpdate = true;
+
+        Object.keys(material_info.instances).filter((hash) => hash != material_info.origin).forEach((hash) => {
+            const copy = get_material_by_hash(material_info.name, hash);
+            if (!copy) return;
+
+            // NOTE: обновляем только те копии, которые не изменяли этот юниформ
+            const is_changed_uniform = material_info.material_hash_to_changed_uniforms[hash].includes(uniform_name);
+            if (!is_changed_uniform) {
+                copy.uniforms[uniform_name] = material.uniforms[uniform_name];
+                copy.needsUpdate = true;
+            }
+        });
+    }
+
     function set_material_uniform_for_mesh<T>(mesh: Slice9Mesh, material_name: string, uniform_name: string, value: T) {
         const mesh_id = mesh.mesh_data.id;
 
@@ -1225,6 +1248,7 @@ export function ResourceManagerModule() {
         get_material_by_hash,
         get_material_hash_by_mesh_id,
         get_material_by_mesh_id,
+        set_material_uniform_for_original,
         set_material_uniform_for_mesh,
         set_material_define_for_mesh,
         unlink_material_for_mesh,

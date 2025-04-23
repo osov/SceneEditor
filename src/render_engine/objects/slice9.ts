@@ -330,7 +330,7 @@ export class Slice9Mesh extends EntityPlane {
         this.material = material;
         this.geometry = this.template.geometry;
         this.set_size(width, height);
-        this.set_alpha(1.0);
+        // this.set_alpha(1.0);
     }
 
     get_alpha(): number {
