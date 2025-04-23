@@ -633,7 +633,7 @@ function AssetInspectorCreate() {
             if (get_response.result != 1) continue;
             const material_data = JSON.parse(get_response.data!);
             material_data.vertexShader = item.program;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data));
+            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
 
             if (last) {
                 EventBus.trigger('SYS_MATERIAL_CHANGED', {
@@ -674,7 +674,7 @@ function AssetInspectorCreate() {
             if (get_response.result != 1) continue;
             const material_data = JSON.parse(get_response.data!);
             material_data.fragmentShader = item.program;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data));
+            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
 
             if (last) {
                 EventBus.trigger('SYS_MATERIAL_CHANGED', {
@@ -723,7 +723,7 @@ function AssetInspectorCreate() {
             if (get_response.result != 1) continue;
             const material_data = JSON.parse(get_response.data!);
             material_data.data[item.uniform_name] = item.value || null;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data));
+            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
 
             if (last) {
                 EventBus.trigger('SYS_MATERIAL_CHANGED', {
@@ -772,7 +772,7 @@ function AssetInspectorCreate() {
             if (get_response.result != 1) continue;
             const material_data = JSON.parse(get_response.data!);
             material_data.data[item.uniform_name] = item.value;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data));
+            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
 
             if (last) {
                 EventBus.trigger('SYS_MATERIAL_CHANGED', {
@@ -821,7 +821,7 @@ function AssetInspectorCreate() {
             if (get_response.result != 1) continue;
             const material_data = JSON.parse(get_response.data!);
             material_data.data[item.uniform_name] = item.value;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data));
+            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
 
             if (last) {
                 EventBus.trigger('SYS_MATERIAL_CHANGED', {
@@ -870,7 +870,7 @@ function AssetInspectorCreate() {
             if (get_response.result != 1) continue;
             const material_data = JSON.parse(get_response.data!);
             material_data.data[item.uniform_name] = item.value.toArray();
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data));
+            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
 
             if (last) {
                 EventBus.trigger('SYS_MATERIAL_CHANGED', {
@@ -919,7 +919,7 @@ function AssetInspectorCreate() {
             if (get_response.result != 1) continue;
             const material_data = JSON.parse(get_response.data!);
             material_data.data[item.uniform_name] = item.value.toArray();
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data));
+            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
 
             if (last) {
                 EventBus.trigger('SYS_MATERIAL_CHANGED', {
@@ -968,7 +968,7 @@ function AssetInspectorCreate() {
             if (get_response.result != 1) continue;
             const material_data = JSON.parse(get_response.data!);
             material_data.data[item.uniform_name] = item.value.toArray();
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data));
+            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
 
             if (last) {
                 EventBus.trigger('SYS_MATERIAL_CHANGED', {
@@ -1019,7 +1019,7 @@ function AssetInspectorCreate() {
             if (get_response.result != 1) continue;
             const material_data = JSON.parse(get_response.data!);
             material_data.data[item.uniform_name] = item.value;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data));
+            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
 
             if (last) {
                 const color = new Color(item.value);
@@ -1064,7 +1064,7 @@ function AssetInspectorCreate() {
             if (get_response.result != 1) continue;
             const material_data = JSON.parse(get_response.data!);
             material_data.transparent = item.value;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data));
+            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
 
             if (last) {
                 EventBus.trigger('SYS_MATERIAL_CHANGED', {
