@@ -1683,8 +1683,8 @@ function MeshInspectorCreate() {
                 mesh.set_texture(texture_name, atlas);
             }
             else {
-                ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, texture);
-                ResourceManager.set_material_define_for_mesh(mesh, material.name, 'USE_TEXTURE', '');
+                ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, texture);
+                ResourceManager.set_material_define_for_mesh(mesh, 'USE_TEXTURE', '');
             }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
@@ -1692,7 +1692,7 @@ function MeshInspectorCreate() {
                 is_uniform: true,
                 property: item.uniform_name,
                 value: texture
-            });
+            }, false);
         });
     }
 
@@ -1730,14 +1730,14 @@ function MeshInspectorCreate() {
             const material = mesh.material;
             if (!material) return;
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, item.value as number);
+            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value as number);
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: item.value
-            });
+            }, false);
         });
     }
 
@@ -1775,14 +1775,14 @@ function MeshInspectorCreate() {
             const material = mesh.material;
             if (!material) return;
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, item.value);
+            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: item.value
-            });
+            }, false);
         });
     }
 
@@ -1822,14 +1822,14 @@ function MeshInspectorCreate() {
             const material = mesh.material;
             if (!material) return;
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, item.value);
+            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: item.value
-            });
+            }, false);
         });
     }
 
@@ -1869,14 +1869,14 @@ function MeshInspectorCreate() {
             const material = mesh.material;
             if (!material) return;
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, item.value);
+            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: item.value
-            });
+            }, false);
         });
     }
 
@@ -1916,14 +1916,14 @@ function MeshInspectorCreate() {
             const material = mesh.material;
             if (!material) return;
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, item.value);
+            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: item.value
-            });
+            }, false);
         });
     }
 
@@ -1966,14 +1966,14 @@ function MeshInspectorCreate() {
             const material = mesh.material;
             if (!material) return;
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, item.uniform_name, rgb);
+            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, rgb);
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: rgb
-            });
+            }, false);
         });
     }
 

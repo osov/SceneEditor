@@ -780,8 +780,9 @@ export function ResourceManagerModule() {
         });
     }
 
-    function set_material_uniform_for_mesh<T>(mesh: Slice9Mesh, material_name: string, uniform_name: string, value: T) {
+    function set_material_uniform_for_mesh<T>(mesh: Slice9Mesh, uniform_name: string, value: T) {
         const mesh_id = mesh.mesh_data.id;
+        const material_name = mesh.material.name;
 
         const material_info = get_material_info(material_name);
         if (!material_info) return;
@@ -825,9 +826,9 @@ export function ResourceManagerModule() {
         mesh.set_material(material_info.name);
     }
 
-    function set_material_define_for_mesh<T>(mesh: Slice9Mesh, material_name: string, define_name: string, value?: T) {
+    function set_material_define_for_mesh<T>(mesh: Slice9Mesh, define_name: string, value?: T) {
         const mesh_id = mesh.mesh_data.id;
-
+        const material_name = mesh.material.name;
         const material_info = get_material_info(material_name);
         if (!material_info) return;
 

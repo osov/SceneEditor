@@ -153,11 +153,11 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
 
         // NOTE: добавляем или убираем define в зависимости от значения slice
         const slice_value = (parameters.slice_width > 0 || parameters.slice_height > 0) ? '' : undefined;
-        ResourceManager.set_material_define_for_mesh(mesh, material.name, 'USE_SLICE', slice_value);
+        ResourceManager.set_material_define_for_mesh(mesh, 'USE_SLICE', slice_value);
 
         // NOTE: добавляем или убираем define в зависимости от значения texture
         const texture_value = (parameters.texture != '') ? '' : undefined;
-        ResourceManager.set_material_define_for_mesh(mesh, material.name, 'USE_TEXTURE', texture_value);
+        ResourceManager.set_material_define_for_mesh(mesh, 'USE_TEXTURE', texture_value);
 
         material.needsUpdate = true;
     }
@@ -172,7 +172,7 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
 
         if (name != '') {
             const texture_data = ResourceManager.get_texture(name, atlas);
-            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, 'u_texture', texture_data.texture);
+            ResourceManager.set_material_uniform_for_mesh(mesh, 'u_texture', texture_data.texture);
 
             parameters.clip_width = texture_data.size.x;
             parameters.clip_height = texture_data.size.y;
@@ -185,7 +185,7 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
             geometry.attributes['uvData'].needsUpdate = true;
         }
         else {
-            ResourceManager.set_material_uniform_for_mesh(mesh, material.name, 'u_texture', null);
+            ResourceManager.set_material_uniform_for_mesh(mesh, 'u_texture', null);
 
             parameters.clip_width = 1;
             parameters.clip_height = 1;
@@ -211,7 +211,7 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
     }
 
     function set_alpha(value: number) {
-        ResourceManager.set_material_uniform_for_mesh(mesh, material.name, 'alpha', value);
+        ResourceManager.set_material_uniform_for_mesh(mesh, 'alpha', value);
     }
 
     function get_bounds(wp: Vector3, ws: Vector3) {
