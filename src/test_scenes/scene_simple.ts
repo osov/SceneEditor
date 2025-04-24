@@ -74,7 +74,7 @@ export async function run_scene_simple() {
   gui1.add(box1);
 
 
-  ResourceManager.set_material_uniform_for_original('default', 'alpha', 0.5);
+  //ResourceManager.set_material_uniform_for_original('default', 'alpha', 0.5);
 
 
 
