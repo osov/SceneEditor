@@ -79,5 +79,13 @@ export async function run_scene_simple() {
   spl.cmp.add_point(345, -260);
   SceneManager.add(spl);
 
+  const now = System.now_with_ms();
+  EventBus.on('SYS_ON_UPDATE', (e) => {
+    const materials = ResourceManager.get_all_materials();
+    const t = System.now_with_ms() - now;
+    for (const m of materials)
+      ResourceManager.set_material_uniform_for_original(m, 'u_time', t);
+  });
+
   ControlManager.update_graph(true, 'test');
 }

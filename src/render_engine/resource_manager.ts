@@ -815,7 +815,8 @@ export function ResourceManagerModule() {
             }
         });
 
-        if (is_save) {
+        const is_readonly = material_info.uniforms[uniform_name].readonly;
+        if (is_save && !is_readonly) {
             // NOTE: обновляем значение в файле
             const get_response = await AssetControl.get_file_data(material_info.path);
             if (get_response.result != 1) return;
