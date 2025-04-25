@@ -20,23 +20,8 @@ export interface AssetTextureInfo<T> {
     value: T;
 }
 
-export interface AssetMaterialUniformInfo<T> {
+export interface AssetMaterialInfo<T> {
     material_path: string;
-    uniform_name: string;
+    name: string;
     value: T;
-}
-
-export interface MaterialVertexProgramEventData {
-    material_path: string;
-    program: string;
-}
-
-export interface MaterialFragmentProgramEventData {
-    material_path: string;
-    program: string;
-}
-
-export interface MaterialTransparentEventData {
-    material_path: string;
-    value: boolean;
 }

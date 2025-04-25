@@ -6,6 +6,7 @@ import { HistoryData } from "./HistoryControl";
 import { cbDataItem, Action } from "../modules_editor/Popups";
 import Stats from 'stats.js';
 import { DEFOLD_LIMITS } from "../config";
+import { HistoryOwner, THistoryUndo, TMaterialChanged } from "../modules_editor/modules_editor_const";
 
 declare global {
     const ControlManager: ReturnType<typeof ControlManagerCreate>;
@@ -73,7 +74,7 @@ function ControlManagerCreate() {
                 saved_list.push({ id_mesh: id, pid: pid, next_id: SceneManager.find_next_id_mesh(mesh) });
                 mesh_list.push(mesh);
             }
-            HistoryControl.add('MESH_MOVE', saved_list);
+            HistoryControl.add('MESH_MOVE', saved_list, HistoryOwner.CONTROL_MANAGER);
             // move
             for (let i = 0; i < e.id_mesh_list.length; i++) {
                 const id = e.id_mesh_list[i];
@@ -87,11 +88,17 @@ function ControlManagerCreate() {
         EventBus.on('SYS_GRAPH_CHANGE_NAME', (e) => {
             const mesh = SceneManager.get_mesh_by_id(e.id);
             if (!mesh) return Log.error('mesh is null', e.id);
-            HistoryControl.add('MESH_NAME', [{ mesh_id: e.id, name: mesh.name }]);
+            HistoryControl.add('MESH_NAME', [{ mesh_id: e.id, value: mesh.name }], HistoryOwner.CONTROL_MANAGER);
             mesh.name = e.name;
             SelectControl.set_selected_list([mesh]);
             update_graph();
         });
+
+        EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
+            if (event.owner != HistoryOwner.CONTROL_MANAGER) return;
+            undo(event);
+        });
+
         set_active_control('size_transform_btn');
         init_stats();
         CameraControl.load_state('');
@@ -268,8 +275,27 @@ function ControlManagerCreate() {
         });
     }
 
-
-
+    function undo(event: THistoryUndo) {
+        const mesh_list: IBaseMeshAndThree[] = [];
+        switch (event.type) {
+            case 'MESH_NAME':
+                for (const data of event.data) {
+                    const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                    mesh.name = data.value;
+                    mesh_list.push(mesh);
+                }
+                break;
+            case 'MESH_MOVE':
+                for (const data of event.data) {
+                    const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
+                    SceneManager.move_mesh(mesh, data.pid, data.next_id);
+                    mesh_list.push(mesh);
+                }
+                break;
+        }
+        SelectControl.set_selected_list(mesh_list);
+        update_graph();
+    }
 
     init();
     return { clear_all_controls, set_active_control, get_tree_graph, update_graph, get_current_scene_name, open_atlas_manager, inc_draw_calls, clear_draw_calls };

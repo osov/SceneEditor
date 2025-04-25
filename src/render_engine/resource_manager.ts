@@ -755,19 +755,36 @@ export function ResourceManagerModule() {
         material_info.material_hash_to_changed_uniforms[new_hash] = copy_prev_changed_uniforms;
     }
 
-    function set_material_uniform_for_original<T>(material_name: string, uniform_name: string, value: T) {
+    async function set_material_uniform_for_original<T>(material_name: string, uniform_name: string, value: T, is_save = true) {
         const material_info = get_material_info(material_name);
         if (!material_info) return;
 
         const material = material_info.instances[material_info.origin];
         if (!material) return;
 
-        // не все материалы будут иметь эту юниформу и если в оригинале нет то смысла идти дальше нет
-        if (material.uniforms[uniform_name] == undefined)
-            return;
+        if (material.uniforms[uniform_name] == undefined) return;
 
         material.uniforms[uniform_name].value = value;
 
+        // // NOTE: обновляем hash оригинального материала
+        // const new_origin_hash = get_material_hash(material);
+        // if (new_origin_hash != material_info.origin) {
+        //     material_info.instances[new_origin_hash] = deepClone(material);
+        //     delete material_info.instances[material_info.origin];
+
+        //     material_info.material_hash_to_mesh_ids[material_info.origin].forEach((mesh_id) => {
+        //         material_info.mesh_id_to_material_hash[mesh_id] = new_origin_hash;
+        //     });
+
+        //     const mesh_ids = material_info.material_hash_to_mesh_ids[material_info.origin];
+        //     material_info.material_hash_to_mesh_ids[new_origin_hash] = deepClone(mesh_ids);
+
+        //     delete material_info.material_hash_to_mesh_ids[material_info.origin];
+
+        //     material_info.origin = new_origin_hash;
+        // }
+
+        // NOTE: проходимся по всем копиям материала
         Object.keys(material_info.instances).filter((hash) => hash != material_info.origin).forEach((hash) => {
             const copy = get_material_by_hash(material_info.name, hash);
             if (!copy) return;
@@ -776,8 +793,46 @@ export function ResourceManagerModule() {
             const is_changed_uniform = material_info.material_hash_to_changed_uniforms[hash].includes(uniform_name);
             if (!is_changed_uniform) {
                 copy.uniforms[uniform_name] = material.uniforms[uniform_name];
+
+                // // NOTE: обновляем hash в копии материала
+                // const new_hash = get_material_hash(copy);
+                // material_info.instances[new_hash] = copy;
+                // delete material_info.instances[hash];
+
+                // material_info.material_hash_to_mesh_ids[hash].forEach((mesh_id) => {
+                //     material_info.mesh_id_to_material_hash[mesh_id] = new_hash;
+                // });
+
+                // const mesh_ids = material_info.material_hash_to_mesh_ids[hash];
+                // material_info.material_hash_to_mesh_ids[new_hash] = deepClone(mesh_ids);
+
+                // delete material_info.material_hash_to_mesh_ids[hash];
+
+                // const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
+                // material_info.material_hash_to_changed_uniforms[new_hash] = deepClone(changed_uniforms);
+
+                // delete material_info.material_hash_to_changed_uniforms[hash];
             }
         });
+
+        if (is_save) {
+            // NOTE: обновляем значение в файле
+            const get_response = await AssetControl.get_file_data(material_info.path);
+            if (get_response.result != 1) return;
+
+            const material_data = JSON.parse(get_response.data!);
+
+            // NOTE: в случае если юниформа это текстура, то составляем строку атлас/текстура
+            if (value instanceof Texture) {
+                const texture_name = get_file_name((value as any).path || '');
+                const atlas = get_atlas_by_texture_name(texture_name) || '';
+                material_data.data[uniform_name] = `${atlas}/${texture_name}`;
+            } else {
+                material_data.data[uniform_name] = value;
+            }
+
+            await AssetControl.save_file_data(material_info.path, JSON.stringify(material_data, null, 2));
+        }
     }
 
     function set_material_uniform_for_mesh<T>(mesh: Slice9Mesh, uniform_name: string, value: T) {

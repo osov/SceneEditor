@@ -1,9 +1,10 @@
 import { format_list_without_children } from "../render_engine/helpers/utils";
 import { HistoryData } from "./HistoryControl";
-import { IObjectTypes } from '../render_engine/types';
+import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import { TreeItem } from "./TreeControl";
 import { DEFOLD_LIMITS, WORLD_SCALAR } from "../config";
 import { Vector2 } from "three";
+import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 
 declare global {
     const ActionsControl: ReturnType<typeof ActionsControlCreate>;
@@ -85,6 +86,11 @@ function ActionsControlCreate() {
     let copy_mesh_list: any[] = [];
     let is_cut: boolean = false;
 
+    EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
+        if (event.owner != HistoryOwner.ACTIONS_CONTROL) return;
+        undo(event);
+    });
+
     function cut() {
         copy();
         if (copy_mesh_list.length > 0) {
@@ -150,7 +156,7 @@ function ActionsControlCreate() {
         }
         setUniqueNameMeshList(ControlManager.get_tree_graph());
 
-        HistoryControl.add('MESH_DELETE', mesh_ids);
+        HistoryControl.add('MESH_DELETE', mesh_ids, HistoryOwner.ACTIONS_CONTROL);
         SelectControl.set_selected_list(mesh_list);
     }
 
@@ -171,11 +177,11 @@ function ActionsControlCreate() {
             SceneManager.remove(m.mesh_data.id);
         }
         if (mesh_data.length > 0)
-            HistoryControl.add('MESH_ADD', mesh_data);
+            HistoryControl.add('MESH_ADD', mesh_data, HistoryOwner.ACTIONS_CONTROL);
         SelectControl.set_selected_list([]);
     }
 
-    function add_gui_container(data:ParamsPidPos ) {
+    function add_gui_container(data: ParamsPidPos) {
         const container = SceneManager.create(IObjectTypes.GUI_CONTAINER);
         if (!container) return;
         container.set_position(data.pos.x, data.pos.y);
@@ -194,7 +200,7 @@ function ActionsControlCreate() {
         sceneAddItem(box, data.pid);
     }
 
-    function add_gui_text(data:ParamsPidPos) {
+    function add_gui_text(data: ParamsPidPos) {
         const txt = SceneManager.create(IObjectTypes.GUI_TEXT, { text: 'Text', width: 128, height: 40 });
         if (!txt) return;
         txt.set_position(data.pos.x, data.pos.y);
@@ -219,15 +225,15 @@ function ActionsControlCreate() {
         sceneAddItem(sprite, data.pid);
     }
 
-    function add_go_label_component(data:ParamsPidPos) {
+    function add_go_label_component(data: ParamsPidPos) {
         const label = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, { text: 'label' });
         if (!label) return;
         label.set_position(data.pos.x, data.pos.y);
         label.set_font('ShantellSans-Light11');
         sceneAddItem(label, data.pid);
     }
-    
-    function add_go_model_component(data:ParamsPidPos) {
+
+    function add_go_model_component(data: ParamsPidPos) {
         const model = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
         if (!model) return;
         model.set_position(data.pos.x, data.pos.y);
@@ -238,7 +244,7 @@ function ActionsControlCreate() {
         if (!item) return;
         const parent = SceneManager.get_mesh_by_id(pid);
         parent ? parent.add(item) : SceneManager.add(item, pid);
-        HistoryControl.add('MESH_DELETE', [{ id_mesh: item.mesh_data.id }]);
+        HistoryControl.add('MESH_DELETE', [{ id_mesh: item.mesh_data.id }], HistoryOwner.ACTIONS_CONTROL);
         SelectControl.set_selected_list([item]);
     }
 
@@ -386,6 +392,35 @@ function ActionsControlCreate() {
         }
 
         return result;
+    }
+
+    function undo(event: THistoryUndo) {
+        const mesh_list: IBaseMeshAndThree[] = [];
+        switch (event.type) {
+            case 'MESH_DELETE':
+                const mesh_ids = event.data;
+                for (const id of mesh_ids) {
+                    SceneManager.remove(id.id_mesh);
+                }
+                SizeControl.detach()
+                break;
+            case 'MESH_ADD':
+                for (const data of event.data) {
+                    const mesh_data = data.mesh;
+                    const parent = mesh_data.pid == -1 ? RenderEngine.scene : SceneManager.get_mesh_by_id(mesh_data.pid);
+                    if (!parent) {
+                        Log.error('parent is null', mesh_data);
+                        return;
+                    }
+                    const m = SceneManager.deserialize_mesh(mesh_data, true, parent);
+                    parent.add(m);
+                    SceneManager.move_mesh(m, mesh_data.pid, data.next_id);
+                    mesh_list.push(m);
+                }
+                break;
+        }
+        SelectControl.set_selected_list(mesh_list);
+        ControlManager.update_graph();
     }
 
     return {

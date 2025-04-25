@@ -73,14 +73,11 @@ export async function run_scene_simple() {
   box1.set_color('#0f0')
   gui1.add(box1);
 
-
-  //ResourceManager.set_material_uniform_for_original('default', 'alpha', 0.5);
-
-    const spl = SceneManager.create(IObjectTypes.COMPONENT);
-    spl.set_position(320, -245, 5000);
-    spl.cmp.add_point(335, -240);
-    spl.cmp.add_point(345, -260);
-    SceneManager.add(spl);
+  const spl = SceneManager.create(IObjectTypes.COMPONENT);
+  spl.set_position(320, -245, 5000);
+  spl.cmp.add_point(335, -240);
+  spl.cmp.add_point(345, -260);
+  SceneManager.add(spl);
 
   ControlManager.update_graph(true, 'test');
 }

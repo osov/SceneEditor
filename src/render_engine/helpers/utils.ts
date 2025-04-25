@@ -159,7 +159,7 @@ export function copy_material(material: ShaderMaterial) {
         fragmentShader: material.fragmentShader,
         transparent: deepClone(material.transparent),
         uniforms: {},
-        defines: deepClone(material.defines)
+        defines: deepClone(material.defines || {})
     });
 
     // Properly clone uniforms

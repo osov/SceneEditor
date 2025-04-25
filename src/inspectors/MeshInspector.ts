@@ -913,7 +913,7 @@ function MeshInspectorCreate() {
                 Log.error('[savePosition] Mesh not found for id:', id);
                 return;
             }
-            oldPositions.push({ mesh_id: mesh.mesh_data.id, value: deepClone(mesh.position) });
+            oldPositions.push({ mesh_id: mesh.mesh_data.id, value: mesh.position.clone() });
         });
         HistoryControl.add("MESH_TRANSLATE", oldPositions, HistoryOwner.MESH_INSPECTOR);
     }
@@ -977,7 +977,7 @@ function MeshInspectorCreate() {
                 Log.error('[saveRotation] Mesh not found for id:', id);
                 return;
             }
-            oldRotations.push({ mesh_id: id, value: deepClone(mesh.rotation) });
+            oldRotations.push({ mesh_id: id, value: mesh.rotation.clone() });
         });
         HistoryControl.add("MESH_ROTATE", oldRotations, HistoryOwner.MESH_INSPECTOR);
     }
@@ -996,13 +996,13 @@ function MeshInspectorCreate() {
             const x = isChangedX ? rot.x : mesh.rotation.x;
             const y = isChangedY ? rot.y : mesh.rotation.y;
             const z = isChangedZ ? rot.z : mesh.rotation.z;
-            return { mesh_id: id, value: new Vector3(x, y, z) };
+            return { mesh_id: id, value: new Euler(x, y, z) };
         }).filter((item) => item != undefined);
 
         updateRotation(data, info.data.event.last);
     }
 
-    function updateRotation(data: MeshPropertyInfo<Vector3>[], _: boolean) {
+    function updateRotation(data: MeshPropertyInfo<Euler>[], _: boolean) {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
@@ -1978,8 +1978,6 @@ function MeshInspectorCreate() {
     }
 
     function undo(event: THistoryUndo) {
-        if (event.owner !== HistoryOwner.MESH_INSPECTOR) return;
-
         switch (event.type) {
             case 'MESH_NAME':
                 const names = event.data as MeshPropertyInfo<string>[];
@@ -1994,7 +1992,7 @@ function MeshInspectorCreate() {
                 updatePosition(positions, true);
                 break;
             case 'MESH_ROTATE':
-                const rotations = event.data as MeshPropertyInfo<Vector3>[];
+                const rotations = event.data as MeshPropertyInfo<Euler>[];
                 updateRotation(rotations, true);
                 break;
             case 'MESH_SCALE':

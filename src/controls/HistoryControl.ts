@@ -1,6 +1,6 @@
 import { Euler, MagnificationTextureFilter, MinificationTextureFilter, Vector2, Vector3, Vector4 } from "three";
 import { get_keys } from "../modules/utils";
-import { MeshMoveEventData, MaterialVertexProgramEventData, MaterialFragmentProgramEventData, MaterialTransparentEventData, MeshMaterialUniformInfo, MeshPropertyInfo, AssetMaterialUniformInfo, AssetTextureInfo } from "./types";
+import { MeshMoveEventData, MeshMaterialUniformInfo, MeshPropertyInfo, AssetTextureInfo, AssetMaterialInfo } from "./types";
 import { BlendMode } from "../inspectors/MeshInspector";
 
 
@@ -43,16 +43,16 @@ export type HistoryData = {
     MESH_MATERIAL_VEC4: MeshMaterialUniformInfo<Vector4>
     MESH_MATERIAL_COLOR: MeshMaterialUniformInfo<string>
     MESH_MATERIAL_TRANSPARENT: MeshMaterialUniformInfo<boolean>
-    MATERIAL_VERTEX_PROGRAM: MaterialVertexProgramEventData
-    MATERIAL_FRAGMENT_PROGRAM: MaterialFragmentProgramEventData
-    MATERIAL_SAMPLER2D: AssetMaterialUniformInfo<string>
-    MATERIAL_FLOAT: AssetMaterialUniformInfo<number>
-    MATERIAL_RANGE: AssetMaterialUniformInfo<number>
-    MATERIAL_VEC2: AssetMaterialUniformInfo<Vector2>
-    MATERIAL_VEC3: AssetMaterialUniformInfo<Vector3>
-    MATERIAL_VEC4: AssetMaterialUniformInfo<Vector4>
-    MATERIAL_COLOR: AssetMaterialUniformInfo<string>
-    MATERIAL_TRANSPARENT: MaterialTransparentEventData
+    MATERIAL_VERTEX_PROGRAM: AssetMaterialInfo<string>
+    MATERIAL_FRAGMENT_PROGRAM: AssetMaterialInfo<string>
+    MATERIAL_SAMPLER2D: AssetMaterialInfo<string>
+    MATERIAL_FLOAT: AssetMaterialInfo<number>
+    MATERIAL_RANGE: AssetMaterialInfo<number>
+    MATERIAL_VEC2: AssetMaterialInfo<Vector2>
+    MATERIAL_VEC3: AssetMaterialInfo<Vector3>
+    MATERIAL_VEC4: AssetMaterialInfo<Vector4>
+    MATERIAL_COLOR: AssetMaterialInfo<string>
+    MATERIAL_TRANSPARENT: AssetMaterialInfo<boolean>
     TEXTURE_MIN_FILTER: AssetTextureInfo<MinificationTextureFilter>
     TEXTURE_MAG_FILTER: AssetTextureInfo<MagnificationTextureFilter>
     TEXTURE_ATLAS: AssetTextureInfo<string>

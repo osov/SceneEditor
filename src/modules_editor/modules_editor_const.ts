@@ -210,6 +210,7 @@ export type TMeshMaterialChanged = { mesh_id: number, is_uniform: boolean, prope
 export type THistoryUndo = { type: string, data: any[], owner: number };
 
 export enum HistoryOwner {
+    CONTROL_MANAGER,
     TRANSFORM_CONTROL,
     SIZE_CONTROL,
     MESH_INSPECTOR,
@@ -217,5 +218,6 @@ export enum HistoryOwner {
     MATERIAL_CONTROL,
     TEXTURE_CONTROL,
     TEXT_CONTROL,
-    SCENE_CONTROL
+    SCENE_CONTROL,
+    ACTIONS_CONTROL,
 };

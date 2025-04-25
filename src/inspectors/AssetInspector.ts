@@ -6,8 +6,8 @@ import { get_file_name } from "../render_engine/helpers/utils";
 import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
 import { IObjectTypes, IBaseMesh } from "../render_engine/types";
 import { InspectorGroup, PropertyData, PropertyType, ChangeInfo, BeforeChangeInfo, PropertyParams } from "../modules_editor/Inspector";
-import { MaterialVertexProgramEventData, MaterialFragmentProgramEventData, MaterialTransparentEventData, AssetMaterialUniformInfo, AssetTextureInfo } from "../controls/types";
-import { hexToRGB, rgbToHex } from "../modules/utils";
+import { AssetTextureInfo, AssetMaterialInfo } from "../controls/types";
+import { rgbToHex } from "../modules/utils";
 import { convertFilterModeToThreeJS, convertThreeJSFilterToFilterMode, generateAtlasOptions, generateFragmentProgramOptions, generateTextureOptions, generateVertexProgramOptions, update_option } from "./helpers";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 
@@ -118,14 +118,14 @@ function AssetInspectorCreate() {
                     type: PropertyType.LIST_TEXTURES,
                     params: generateTextureOptions(true),
                     onBeforeChange: saveUniformSampler2D,
-                    onChange: handleUniformSampler2DChange
+                    onChange: handleUniformChange<string>
                 },
                 {
                     name: AssetProperty.UNIFORM_FLOAT,
                     title: 'Float',
                     type: PropertyType.NUMBER,
                     onBeforeChange: saveUniformFloat,
-                    onChange: handleUniformFloatChange
+                    onChange: handleUniformChange<number>
                 },
                 {
                     name: AssetProperty.UNIFORM_RANGE,
@@ -137,7 +137,7 @@ function AssetInspectorCreate() {
                         step: 0.01
                     },
                     onBeforeChange: saveUniformRange,
-                    onChange: handleUniformRangeChange
+                    onChange: handleUniformChange<number>
                 },
                 {
                     name: AssetProperty.UNIFORM_VEC2,
@@ -148,7 +148,7 @@ function AssetInspectorCreate() {
                         y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
                     },
                     onBeforeChange: saveUniformVec2,
-                    onChange: handleUniformVec2Change
+                    onChange: handleUniformChange<Vector2>
                 },
                 {
                     name: AssetProperty.UNIFORM_VEC3,
@@ -160,7 +160,7 @@ function AssetInspectorCreate() {
                         z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
                     },
                     onBeforeChange: saveUniformVec3,
-                    onChange: handleUniformVec3Change
+                    onChange: handleUniformChange<Vector3>
                 },
                 {
                     name: AssetProperty.UNIFORM_VEC4,
@@ -173,14 +173,14 @@ function AssetInspectorCreate() {
                         w: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
                     },
                     onBeforeChange: saveUniformVec4,
-                    onChange: handleUniformVec4Change
+                    onChange: handleUniformChange<Vector4>
                 },
                 {
                     name: AssetProperty.UNIFORM_COLOR,
                     title: 'Color',
                     type: PropertyType.COLOR,
                     onBeforeChange: saveUniformColor,
-                    onChange: handleUniformColorChange
+                    onChange: handleUniformChange<string>
                 }
             ]
         }
@@ -322,10 +322,11 @@ function AssetInspectorCreate() {
                                     newProperty.title = key;
                                     newProperty.readonly = uniformInfo.readonly;
                                     const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.RANGE];
+                                    const defaultParams = property.params as PropertyParams[PropertyType.SLIDER];
                                     newProperty.params = {
-                                        min: params.min,
-                                        max: params.max,
-                                        step: params.step
+                                        min: params.min ?? defaultParams.min,
+                                        max: params.max ?? defaultParams.max,
+                                        step: params.step ?? defaultParams.step
                                     };
                                     group.property_list.push(newProperty);
                                 });
@@ -606,8 +607,27 @@ function AssetInspectorCreate() {
         }
     }
 
+    async function updateMaterialProperty<T>(data: AssetMaterialInfo<T>[], last: boolean) {
+        for (const item of data) {
+            EventBus.trigger('SYS_MATERIAL_CHANGED', {
+                material_name: get_file_name(item.material_path),
+                is_uniform: false,
+                property: item.name,
+                value: item.value
+            }, false);
+
+            if (last) {
+                const get_response = await AssetControl.get_file_data(item.material_path);
+                if (get_response.result != 1) continue;
+                const material_data = JSON.parse(get_response.data!);
+                material_data[item.name] = item.value;
+                await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
+            }
+        }
+    }
+
     function saveMaterialVertexProgram(info: BeforeChangeInfo) {
-        const vertexPrograms: MaterialVertexProgramEventData[] = [];
+        const vertexPrograms: AssetMaterialInfo<string>[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
@@ -617,7 +637,8 @@ function AssetInspectorCreate() {
             if (!origin) return;
             vertexPrograms.push({
                 material_path: path,
-                program: origin.vertexShader
+                name: 'vertexShader',
+                value: origin.vertexShader
             });
         });
         HistoryControl.add('MATERIAL_VERTEX_PROGRAM', vertexPrograms, HistoryOwner.ASSET_INSPECTOR);
@@ -625,30 +646,11 @@ function AssetInspectorCreate() {
 
     function handleMaterialVertexProgramChange(info: ChangeInfo) {
         const data = convertChangeInfoToMaterialData<string>(info);
-        updateMaterialVertexProgram(data.map(item => ({ material_path: item.material_path, program: item.value })), info.data.event.last);
-    }
-
-    async function updateMaterialVertexProgram(data: MaterialVertexProgramEventData[], last: boolean) {
-        for (const item of data) {
-            const get_response = await AssetControl.get_file_data(item.material_path);
-            if (get_response.result != 1) continue;
-            const material_data = JSON.parse(get_response.data!);
-            material_data.vertexShader = item.program;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
-
-            if (last) {
-                EventBus.trigger('SYS_MATERIAL_CHANGED', {
-                    material_name: get_file_name(item.material_path),
-                    is_uniform: false,
-                    property: 'vertexShader',
-                    value: item.program
-                }, false);
-            }
-        }
+        updateMaterialProperty(data, info.data.event.last);
     }
 
     function saveMaterialFragmentProgram(info: BeforeChangeInfo) {
-        const fragmentPrograms: MaterialFragmentProgramEventData[] = [];
+        const fragmentPrograms: AssetMaterialInfo<string>[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
@@ -658,7 +660,8 @@ function AssetInspectorCreate() {
             if (!origin) return;
             fragmentPrograms.push({
                 material_path: path,
-                program: origin.fragmentShader
+                name: 'fragmentShader',
+                value: origin.fragmentShader
             });
         });
         HistoryControl.add('MATERIAL_FRAGMENT_PROGRAM', fragmentPrograms, HistoryOwner.ASSET_INSPECTOR);
@@ -666,30 +669,62 @@ function AssetInspectorCreate() {
 
     async function handleMaterialFragmentProgramChange(info: ChangeInfo) {
         const data = convertChangeInfoToMaterialData<string>(info);
-        await updateMaterialFragmentProgram(data.map(item => ({ material_path: item.material_path, program: item.value })), info.data.event.last);
+        await updateMaterialProperty(data, info.data.event.last);
     }
 
-    async function updateMaterialFragmentProgram(data: MaterialFragmentProgramEventData[], last: boolean) {
-        for (const item of data) {
-            const get_response = await AssetControl.get_file_data(item.material_path);
-            if (get_response.result != 1) continue;
-            const material_data = JSON.parse(get_response.data!);
-            material_data.fragmentShader = item.program;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
+    function saveMaterialTransparent(info: BeforeChangeInfo) {
+        const transparents: AssetMaterialInfo<boolean>[] = [];
+        info.ids.forEach((id) => {
+            const path = _selected_materials[id];
+            const name = get_file_name(path);
+            const material_info = ResourceManager.get_material_info(name);
+            if (!material_info) return;
+            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
+            if (!origin) return;
+            transparents.push({
+                material_path: path,
+                name: 'transparent',
+                value: origin.transparent
+            });
+        });
+        HistoryControl.add('MATERIAL_TRANSPARENT', transparents, HistoryOwner.ASSET_INSPECTOR);
+    }
 
-            if (last) {
-                EventBus.trigger('SYS_MATERIAL_CHANGED', {
-                    material_name: get_file_name(item.material_path),
-                    is_uniform: false,
-                    property: 'fragmentShader',
-                    value: item.program
-                }, false);
-            }
+    async function handleMaterialTransparentChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMaterialData<boolean>(info);
+        await updateMaterialProperty(data, info.data.event.last);
+    }
+
+    async function handleUniformChange<T>(info: ChangeInfo) {
+        const data = convertChangeInfoToMaterialData<T>(info);
+        await updateUniform(data, info.data.event.last);
+    }
+
+    async function updateUniform<T>(data: AssetMaterialInfo<T>[], last: boolean) {
+        for (const item of data) {
+            // EventBus.trigger('SYS_MATERIAL_CHANGED', {
+            //     material_name: get_file_name(item.material_path),
+            //     is_uniform: true,
+            //     property: item.name,
+            //     value: item.value
+            // }, false);
+
+            ResourceManager.set_material_uniform_for_original(get_file_name(item.material_path), item.name, item.value, last);
+
+            // if (last) {
+            //     const get_response = await AssetControl.get_file_data(item.material_path);
+            //     if (get_response.result != 1) continue;
+
+            //     const material_data = JSON.parse(get_response.data!);
+            //     material_data.data[item.name] = item.value;
+
+            //     await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
+            // }
         }
     }
 
     function saveUniformSampler2D(info: BeforeChangeInfo) {
-        const sampler2Ds: AssetMaterialUniformInfo<string>[] = [];
+        const sampler2Ds: AssetMaterialInfo<string>[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
@@ -699,46 +734,20 @@ function AssetInspectorCreate() {
             if (!origin) return;
             const uniform = origin.uniforms[info.field.name];
             if (uniform) {
+                const texture_name = get_file_name(uniform.value.path);
+                const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
                 sampler2Ds.push({
                     material_path: path,
-                    uniform_name: info.field.name,
-                    value: uniform.value?.image?.src || ''
+                    name: info.field.name,
+                    value: `${atlas}/${texture_name}`
                 });
             }
         });
         HistoryControl.add('MATERIAL_SAMPLER2D', sampler2Ds, HistoryOwner.ASSET_INSPECTOR);
     }
 
-    async function handleUniformSampler2DChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMaterialData<string>(info);
-        await updateUniformSampler2D(data.map(item => ({
-            material_path: item.material_path,
-            uniform_name: item.uniform_name!,
-            value: item.value
-        })), info.data.event.last);
-    }
-
-    async function updateUniformSampler2D(data: AssetMaterialUniformInfo<string>[], last: boolean) {
-        for (const item of data) {
-            const get_response = await AssetControl.get_file_data(item.material_path);
-            if (get_response.result != 1) continue;
-            const material_data = JSON.parse(get_response.data!);
-            material_data.data[item.uniform_name] = item.value || null;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
-
-            if (last) {
-                EventBus.trigger('SYS_MATERIAL_CHANGED', {
-                    material_name: get_file_name(item.material_path),
-                    is_uniform: true,
-                    property: item.uniform_name,
-                    value: item.value
-                }, false);
-            }
-        }
-    }
-
     function saveUniformFloat(info: BeforeChangeInfo) {
-        const floats: AssetMaterialUniformInfo<number>[] = [];
+        const floats: AssetMaterialInfo<number>[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
@@ -750,7 +759,7 @@ function AssetInspectorCreate() {
             if (uniform) {
                 floats.push({
                     material_path: path,
-                    uniform_name: info.field.name,
+                    name: info.field.name,
                     value: uniform.value
                 });
             }
@@ -758,36 +767,8 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_FLOAT', floats, HistoryOwner.ASSET_INSPECTOR);
     }
 
-    async function handleUniformFloatChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMaterialData<number>(info);
-        await updateUniformFloat(data.map(item => ({
-            material_path: item.material_path,
-            uniform_name: item.uniform_name!,
-            value: item.value
-        })), info.data.event.last);
-    }
-
-    async function updateUniformFloat(data: AssetMaterialUniformInfo<number>[], last: boolean) {
-        for (const item of data) {
-            const get_response = await AssetControl.get_file_data(item.material_path);
-            if (get_response.result != 1) continue;
-            const material_data = JSON.parse(get_response.data!);
-            material_data.data[item.uniform_name] = item.value;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
-
-            if (last) {
-                EventBus.trigger('SYS_MATERIAL_CHANGED', {
-                    material_name: get_file_name(item.material_path),
-                    is_uniform: true,
-                    property: item.uniform_name,
-                    value: item.value
-                }, false);
-            }
-        }
-    }
-
     function saveUniformRange(info: BeforeChangeInfo) {
-        const ranges: AssetMaterialUniformInfo<number>[] = [];
+        const ranges: AssetMaterialInfo<number>[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
@@ -799,7 +780,7 @@ function AssetInspectorCreate() {
             if (uniform) {
                 ranges.push({
                     material_path: path,
-                    uniform_name: info.field.name,
+                    name: info.field.name,
                     value: uniform.value
                 });
             }
@@ -807,36 +788,8 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_RANGE', ranges, HistoryOwner.ASSET_INSPECTOR);
     }
 
-    async function handleUniformRangeChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMaterialData<number>(info);
-        await updateUniformRange(data.map(item => ({
-            material_path: item.material_path,
-            uniform_name: item.uniform_name!,
-            value: item.value
-        })), info.data.event.last);
-    }
-
-    async function updateUniformRange(data: AssetMaterialUniformInfo<number>[], last: boolean) {
-        for (const item of data) {
-            const get_response = await AssetControl.get_file_data(item.material_path);
-            if (get_response.result != 1) continue;
-            const material_data = JSON.parse(get_response.data!);
-            material_data.data[item.uniform_name] = item.value;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
-
-            if (last) {
-                EventBus.trigger('SYS_MATERIAL_CHANGED', {
-                    material_name: get_file_name(item.material_path),
-                    is_uniform: true,
-                    property: item.uniform_name,
-                    value: item.value
-                }, false);
-            }
-        }
-    }
-
     function saveUniformVec2(info: BeforeChangeInfo) {
-        const vec2s: AssetMaterialUniformInfo<Vector2>[] = [];
+        const vec2s: AssetMaterialInfo<Vector2>[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
@@ -848,7 +801,7 @@ function AssetInspectorCreate() {
             if (uniform) {
                 vec2s.push({
                     material_path: path,
-                    uniform_name: info.field.name,
+                    name: info.field.name,
                     value: uniform.value
                 });
             }
@@ -856,36 +809,8 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_VEC2', vec2s, HistoryOwner.ASSET_INSPECTOR);
     }
 
-    async function handleUniformVec2Change(info: ChangeInfo) {
-        const data = convertChangeInfoToMaterialData<Vector2>(info);
-        await updateUniformVec2(data.map(item => ({
-            material_path: item.material_path,
-            uniform_name: item.uniform_name!,
-            value: item.value
-        })), info.data.event.last);
-    }
-
-    async function updateUniformVec2(data: AssetMaterialUniformInfo<Vector2>[], last: boolean) {
-        for (const item of data) {
-            const get_response = await AssetControl.get_file_data(item.material_path);
-            if (get_response.result != 1) continue;
-            const material_data = JSON.parse(get_response.data!);
-            material_data.data[item.uniform_name] = item.value.toArray();
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
-
-            if (last) {
-                EventBus.trigger('SYS_MATERIAL_CHANGED', {
-                    material_name: get_file_name(item.material_path),
-                    is_uniform: true,
-                    property: item.uniform_name,
-                    value: item.value
-                }, false);
-            }
-        }
-    }
-
     function saveUniformVec3(info: BeforeChangeInfo) {
-        const vec3s: AssetMaterialUniformInfo<Vector3>[] = [];
+        const vec3s: AssetMaterialInfo<Vector3>[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
@@ -897,7 +822,7 @@ function AssetInspectorCreate() {
             if (uniform) {
                 vec3s.push({
                     material_path: path,
-                    uniform_name: info.field.name,
+                    name: info.field.name,
                     value: uniform.value
                 });
             }
@@ -905,36 +830,8 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_VEC3', vec3s, HistoryOwner.ASSET_INSPECTOR);
     }
 
-    async function handleUniformVec3Change(info: ChangeInfo) {
-        const data = convertChangeInfoToMaterialData<Vector3>(info);
-        await updateUniformVec3(data.map(item => ({
-            material_path: item.material_path,
-            uniform_name: item.uniform_name!,
-            value: item.value
-        })), info.data.event.last);
-    }
-
-    async function updateUniformVec3(data: AssetMaterialUniformInfo<Vector3>[], last: boolean) {
-        for (const item of data) {
-            const get_response = await AssetControl.get_file_data(item.material_path);
-            if (get_response.result != 1) continue;
-            const material_data = JSON.parse(get_response.data!);
-            material_data.data[item.uniform_name] = item.value.toArray();
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
-
-            if (last) {
-                EventBus.trigger('SYS_MATERIAL_CHANGED', {
-                    material_name: get_file_name(item.material_path),
-                    is_uniform: true,
-                    property: item.uniform_name,
-                    value: item.value
-                }, false);
-            }
-        }
-    }
-
     function saveUniformVec4(info: BeforeChangeInfo) {
-        const vec4s: AssetMaterialUniformInfo<Vector4>[] = [];
+        const vec4s: AssetMaterialInfo<Vector4>[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
@@ -946,7 +843,7 @@ function AssetInspectorCreate() {
             if (uniform) {
                 vec4s.push({
                     material_path: path,
-                    uniform_name: info.field.name,
+                    name: info.field.name,
                     value: uniform.value
                 });
             }
@@ -954,36 +851,8 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_VEC4', vec4s, HistoryOwner.ASSET_INSPECTOR);
     }
 
-    async function handleUniformVec4Change(info: ChangeInfo) {
-        const data = convertChangeInfoToMaterialData<Vector4>(info);
-        await updateUniformVec4(data.map(item => ({
-            material_path: item.material_path,
-            uniform_name: item.uniform_name!,
-            value: item.value
-        })), info.data.event.last);
-    }
-
-    async function updateUniformVec4(data: AssetMaterialUniformInfo<Vector4>[], last: boolean) {
-        for (const item of data) {
-            const get_response = await AssetControl.get_file_data(item.material_path);
-            if (get_response.result != 1) continue;
-            const material_data = JSON.parse(get_response.data!);
-            material_data.data[item.uniform_name] = item.value.toArray();
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
-
-            if (last) {
-                EventBus.trigger('SYS_MATERIAL_CHANGED', {
-                    material_name: get_file_name(item.material_path),
-                    is_uniform: true,
-                    property: item.uniform_name,
-                    value: item.value
-                }, false);
-            }
-        }
-    }
-
     function saveUniformColor(info: BeforeChangeInfo) {
-        const colors: AssetMaterialUniformInfo<string>[] = [];
+        const colors: AssetMaterialInfo<string>[] = [];
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
@@ -997,7 +866,7 @@ function AssetInspectorCreate() {
                 color.setRGB(uniform.value.x, uniform.value.y, uniform.value.z);
                 colors.push({
                     material_path: path,
-                    uniform_name: info.field.name,
+                    name: info.field.name,
                     value: color.getHexString()
                 });
             }
@@ -1005,90 +874,17 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_COLOR', colors, HistoryOwner.ASSET_INSPECTOR);
     }
 
-    async function handleUniformColorChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMaterialData<string>(info);
-        await updateUniformColor(data.map(item => ({
-            material_path: item.material_path,
-            uniform_name: item.uniform_name!,
-            value: item.value
-        })), info.data.event.last);
-    }
-
-    async function updateUniformColor(data: AssetMaterialUniformInfo<string>[], last: boolean) {
-        for (const item of data) {
-            const get_response = await AssetControl.get_file_data(item.material_path);
-            if (get_response.result != 1) continue;
-            const material_data = JSON.parse(get_response.data!);
-            material_data.data[item.uniform_name] = item.value;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
-
-            if (last) {
-                const color = new Color(item.value);
-                EventBus.trigger('SYS_MATERIAL_CHANGED', {
-                    material_name: get_file_name(item.material_path),
-                    is_uniform: true,
-                    property: item.uniform_name,
-                    value: hexToRGB(color.getHexString())
-                }, false);
-            }
-        }
-    }
-
-    function saveMaterialTransparent(info: BeforeChangeInfo) {
-        const transparents: MaterialTransparentEventData[] = [];
-        info.ids.forEach((id) => {
-            const path = _selected_materials[id];
-            const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
-            if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
-            if (!origin) return;
-            transparents.push({
-                material_path: path,
-                value: origin.transparent
-            });
-        });
-        HistoryControl.add('MATERIAL_TRANSPARENT', transparents, HistoryOwner.ASSET_INSPECTOR);
-    }
-
-    async function handleMaterialTransparentChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMaterialData<boolean>(info);
-        await updateMaterialTransparent(data.map(item => ({
-            material_path: item.material_path,
-            value: item.value
-        })), info.data.event.last);
-    }
-
-    async function updateMaterialTransparent(data: MaterialTransparentEventData[], last: boolean) {
-        for (const item of data) {
-            const get_response = await AssetControl.get_file_data(item.material_path);
-            if (get_response.result != 1) continue;
-            const material_data = JSON.parse(get_response.data!);
-            material_data.transparent = item.value;
-            await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
-
-            if (last) {
-                EventBus.trigger('SYS_MATERIAL_CHANGED', {
-                    material_name: get_file_name(item.material_path),
-                    is_uniform: false,
-                    property: 'transparent',
-                    value: item.value
-                }, false);
-            }
-        }
-    }
-
-    function convertChangeInfoToMaterialData<T>(info: ChangeInfo): { material_path: string, uniform_name?: string, value: T }[] {
+    function convertChangeInfoToMaterialData<T>(info: ChangeInfo): { material_path: string, name: string, value: T }[] {
         const value = info.data.event.value as T;
         return info.ids.map(id => {
             const path = _selected_materials[id];
             if (path == null) return null;
             return {
                 material_path: path,
-                uniform_name: info.data.field?.name,
+                name: info.data.field?.name,
                 value
             };
-        }).filter(item => item != null) as { material_path: string, uniform_name?: string, value: T }[];
+        }).filter(item => item != null) as { material_path: string, name: string, value: T }[];
     }
 
     function convertChangeInfoToTextureData<T>(info: ChangeInfo): { texture_path: string, value: T }[] {
@@ -1104,72 +900,83 @@ function AssetInspectorCreate() {
     }
 
     async function undo(event: THistoryUndo) {
-        if (event.owner !== HistoryOwner.ASSET_INSPECTOR) return;
-
         switch (event.type) {
             case 'TEXTURE_ATLAS':
                 const atlases = event.data as AssetTextureInfo<string>[];
                 await updateAssetAtlas(atlases, true);
+                set_selected_textures(_selected_textures);
                 break;
 
             case 'TEXTURE_MIN_FILTER':
                 const minFilters = event.data as AssetTextureInfo<MinificationTextureFilter>[];
                 await updateMinFilter(minFilters, true);
+                set_selected_textures(_selected_textures);
                 break;
 
             case 'TEXTURE_MAG_FILTER':
                 const magFilters = event.data as AssetTextureInfo<MagnificationTextureFilter>[];
                 await updateMagFilter(magFilters, true);
+                set_selected_textures(_selected_textures);
                 break;
 
             case 'MATERIAL_VERTEX_PROGRAM':
-                const vertexPrograms = event.data as MaterialVertexProgramEventData[];
-                await updateMaterialVertexProgram(vertexPrograms, true);
+                const vertexPrograms = event.data as AssetMaterialInfo<string>[];
+                await updateMaterialProperty(vertexPrograms, true);
+                set_selected_materials(_selected_materials);
                 break;
 
             case 'MATERIAL_FRAGMENT_PROGRAM':
-                const fragmentPrograms = event.data as MaterialFragmentProgramEventData[];
-                await updateMaterialFragmentProgram(fragmentPrograms, true);
-                break;
-
-            case 'MATERIAL_SAMPLER2D':
-                const sampler2Ds = event.data as AssetMaterialUniformInfo<string>[];
-                await updateUniformSampler2D(sampler2Ds, true);
-                break;
-
-            case 'MATERIAL_FLOAT':
-                const floats = event.data as AssetMaterialUniformInfo<number>[];
-                await updateUniformFloat(floats, true);
-                break;
-
-            case 'MATERIAL_RANGE':
-                const ranges = event.data as AssetMaterialUniformInfo<number>[];
-                await updateUniformRange(ranges, true);
-                break;
-
-            case 'MATERIAL_VEC2':
-                const vec2s = event.data as AssetMaterialUniformInfo<Vector2>[];
-                await updateUniformVec2(vec2s, true);
-                break;
-
-            case 'MATERIAL_VEC3':
-                const vec3s = event.data as AssetMaterialUniformInfo<Vector3>[];
-                await updateUniformVec3(vec3s, true);
-                break;
-
-            case 'MATERIAL_VEC4':
-                const vec4s = event.data as AssetMaterialUniformInfo<Vector4>[];
-                await updateUniformVec4(vec4s, true);
-                break;
-
-            case 'MATERIAL_COLOR':
-                const colors = event.data as AssetMaterialUniformInfo<string>[];
-                await updateUniformColor(colors, true);
+                const fragmentPrograms = event.data as AssetMaterialInfo<string>[];
+                await updateMaterialProperty(fragmentPrograms, true);
+                set_selected_materials(_selected_materials);
                 break;
 
             case 'MATERIAL_TRANSPARENT':
-                const transparents = event.data as MaterialTransparentEventData[];
-                await updateMaterialTransparent(transparents, true);
+                const transparents = event.data as AssetMaterialInfo<boolean>[];
+                await updateMaterialProperty(transparents, true);
+                set_selected_materials(_selected_materials);
+                break;
+
+            case 'MATERIAL_SAMPLER2D':
+                const sampler2Ds = event.data as AssetMaterialInfo<string>[];
+                await updateUniform(sampler2Ds, true);
+                set_selected_materials(_selected_materials);
+                break;
+
+            case 'MATERIAL_FLOAT':
+                const floats = event.data as AssetMaterialInfo<number>[];
+                await updateUniform(floats, true);
+                set_selected_materials(_selected_materials);
+                break;
+
+            case 'MATERIAL_RANGE':
+                const ranges = event.data as AssetMaterialInfo<number>[];
+                await updateUniform(ranges, true);
+                set_selected_materials(_selected_materials);
+                break;
+
+            case 'MATERIAL_VEC2':
+                const vec2s = event.data as AssetMaterialInfo<Vector2>[];
+                await updateUniform(vec2s, true);
+                set_selected_materials(_selected_materials);
+                break;
+
+            case 'MATERIAL_VEC3':
+                const vec3s = event.data as AssetMaterialInfo<Vector3>[];
+                await updateUniform(vec3s, true);
+                set_selected_materials(_selected_materials);
+                break;
+
+            case 'MATERIAL_VEC4':
+                const vec4s = event.data as AssetMaterialInfo<Vector4>[];
+                await updateUniform(vec4s, true);
+                set_selected_materials(_selected_materials);
+                break;
+
+            case 'MATERIAL_COLOR':
+                const colors = event.data as AssetMaterialInfo<string>[];
+                await updateUniform(colors, true);
+                set_selected_materials(_selected_materials);
                 break;
         }
     }

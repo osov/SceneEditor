@@ -210,5 +210,4 @@ export async function run_scene_light() {
         for (const m of materials)
             ResourceManager.set_material_uniform_for_original(m, 'u_time', t);
     });
-
 }
