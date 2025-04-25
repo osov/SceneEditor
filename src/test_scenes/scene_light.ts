@@ -43,12 +43,6 @@ export async function run_scene_light() {
     const tl = TileLoader(world, 256);
     tl.load(map_data);
 
-    //const spl = SceneManager.create(IObjectTypes.COMPONENT_SPLINE);
-    //spl.set_position(320, -245, 5000);
-    //spl.add_point(335, -240);
-    //spl.add_point(345, -260);
-    //SceneManager.add(spl);
-
     FlowMapControl.init();
     await FlowMapControl.load_saved();
 

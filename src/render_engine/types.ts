@@ -16,7 +16,7 @@ export enum IObjectTypes {
     GUI_BOX = 'box',
     GUI_TEXT = 'text',
 
-    COMPONENT_SPLINE = 'spline',
+    COMPONENT = 'component',
 
 };
 

@@ -8,7 +8,7 @@ import { deepClone } from "../modules/utils";
 import { GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
 import { AnimatedMesh } from "./objects/animated_mesh";
 import { EntityBase } from "./objects/entity_base";
-import { SplineComponent } from "./components/spline";
+import { Component } from "./components/container_component";
 import { FLOAT_PRECISION } from "../config";
 
 declare global {
@@ -35,7 +35,7 @@ type IMeshTypes = {
     [IObjectTypes.GO_LABEL_COMPONENT]: GoText,
     [IObjectTypes.GO_MODEL_COMPONENT]: AnimatedMesh,
 
-    [IObjectTypes.COMPONENT_SPLINE]: SplineComponent
+    [IObjectTypes.COMPONENT]: Component
 
 
 
@@ -97,8 +97,8 @@ export function SceneManagerModule() {
         else if (type == IObjectTypes.GO_MODEL_COMPONENT) {
             mesh = new AnimatedMesh(check_id_is_available_or_generate_new(id), params.width || default_size, params.height || default_size);
         }
-        else if (type == IObjectTypes.COMPONENT_SPLINE)
-            mesh = new SplineComponent();
+        else if (type == IObjectTypes.COMPONENT)
+            mesh = new Component(check_id_is_available_or_generate_new(id));
         else {
             Log.error('Unknown mesh type', type);
             mesh = new Slice9Mesh(check_id_is_available_or_generate_new(id), 32, 32);
