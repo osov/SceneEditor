@@ -131,12 +131,14 @@ function FlowMapControlCreate() {
                 if (material.uniforms.u_flowMap) {
                     const draw_canvas = mesh_list[id];
                     const texture_data = ResourceManager.get_texture(id);
-                    draw_canvas.loadTexture(texture_data.texture, () => material.uniforms.u_flowMap.value.needsUpdate = true);
+                    draw_canvas.loadTexture(texture_data.texture, () => {
+                        // именно mesh.material, а не material, тк ниже set_material_uniform_for_mesh создает копию материала и нам нужно у актуального именно изменить
+                        mesh.material.uniforms.u_flowMap.value.needsUpdate = true; 
+                    });
                 }
                 for (const k in flow_info) {
-                    if (material.uniforms[k]) {
-                        material.uniforms[k].value = flow_info[k as keyof FlowInfo];
-                    }
+                    if (material.uniforms[k] && !['u_time', 'u_flowMap'].includes(k) )
+                        ResourceManager.set_material_uniform_for_mesh(mesh, k, flow_info[k as keyof FlowInfo]);
                 }
             }
             else {
