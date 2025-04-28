@@ -4,7 +4,7 @@ import { URL_PATHS } from "../modules_editor/modules_editor_const";
 import { get_all_tiled_textures, get_depth, MapData, preload_tiled_textures } from "../render_engine/parsers/tile_parser";
 import { IObjectTypes } from "../render_engine/types";
 import { TileLoader } from "../render_engine/tile_loader";
-import { calculate_borders, default_settings, MovementLogic, PathFinderMode, PlayerMovementSettings, test_pathfinder } from "../modules/PlayerMovement";
+import { default_settings, load_obstacles, MovementLogic, PathFinderMode, PlayerMovementSettings } from "../modules/PlayerMovement";
 import { Segment } from "2d-geometry";
 
 const SORT_LAYER = 7;
@@ -86,20 +86,18 @@ export async function run_scene_anim() {
             collision_radius: 2,
             max_try_dist: 0.5,
             target_stop_distance: 0.2,
-            speed: { WALK: 23 },
-            blocked_move_min_dist: 0.01
+            blocked_move_min_dist: 0.01,
+            debug: true,
         }
-        const obstacles: Segment[] = [];
-        const all_objects = SceneManager.get_scene_list();
-        for (const id in all_objects) {
-            const obj = all_objects[id];
-            if (obj.name.includes("Fence")) {
-                obstacles.push(...calculate_borders(obj))
-            }
-        }
+        const obstacles = load_obstacles(map_data);
         const move_logic = MovementLogic(movement_settings);
-        move_logic.init(am, obstacles);
-        // test_pathfinder();
+        move_logic.init({model: am, obstacles});
+        EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
+            if (e.key == 'ь' || e.key == 'm') {
+                if (move_logic.check_obstacles_enabled()) move_logic.enable_obstacles(false);
+                else move_logic.enable_obstacles(true);
+            }
+        })
     }
 
     // console.log(JSON.stringify(SceneManager.save_scene()));

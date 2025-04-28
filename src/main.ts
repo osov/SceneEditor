@@ -26,6 +26,7 @@ import { register_grass_tree_control } from './controls/GrassTreeControl';
 import { register_mesh_inspector } from './inspectors/MeshInspector';
 import { register_asset_inspector } from './inspectors/AssetInspector';
 import { register_paint_inspector } from './inspectors/PaintInspector';
+import { run_scene_empty } from './test_scenes/scene_empty';
 
 function register_managers() {
     register_manager();
@@ -66,6 +67,7 @@ function run_selected_scene() {
         run_scene_light,
         run_scene_stereo,
         run_scene_inventory,
+        run_scene_empty,
     ];
     const id = new URLSearchParams(document.location.search).get('scene');
     if (id && !isNaN(Number(id)) && scenes[parseInt(id)])

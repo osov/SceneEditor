@@ -75,7 +75,8 @@ export async function run_scene_light() {
             max_try_dist: 0.5,
             target_stop_distance: 0.2,
             speed: { WALK: 18 },
-            blocked_move_min_dist: 0.01
+            blocked_move_min_dist: 0.01,
+            debug: true,
         }
         const obstacles: Segment[] = [];
         const all_objects = SceneManager.get_scene_list();
@@ -86,7 +87,13 @@ export async function run_scene_light() {
             }
         }
         const move_logic = MovementLogic(movement_settings);
-        move_logic.init(am, obstacles);
+        move_logic.init({model: am, obstacles});
+        EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
+            if (e.key == 'ь' || e.key == 'm') {
+                if (move_logic.check_obstacles_enabled()) move_logic.enable_obstacles(false);
+                else move_logic.enable_obstacles(true);
+            }
+        })
     }
 
     function rebuild_light() {

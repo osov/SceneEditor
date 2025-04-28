@@ -1,6 +1,6 @@
-import { Euler, Vector2, Vector2Like, Vector3, } from 'three';
+import { Euler, LineBasicMaterial, Vector2, Vector2Like, Vector3, Line as GeomLine, BufferGeometry } from 'three';
 import { AnimatedMesh } from '../render_engine/objects/animated_mesh';
-import { get_depth } from '../render_engine/parsers/tile_parser';
+import { get_depth, MapData, parse_tiled } from '../render_engine/parsers/tile_parser';
 import {
     Point,
     Vector, 
@@ -8,9 +8,15 @@ import {
     Segment,  
     Arc, 
     Circle,
+    CW,
+    CCW,
 } from '2d-geometry';
-import { degToRad } from './utils';
+import { EQ_0 } from './utils';
 import { radToDeg } from 'three/src/math/MathUtils.js';
+import { IObjectTypes } from '../render_engine/types';
+import { CAMERA_Z, WORLD_SCALAR } from '../config';
+import { GoContainer } from '../render_engine/objects/sub_types';
+
 
 export enum PointerControl {
     FOLLOW_DIRECTION,   // Двигается в направлении курсора, пока зажата ЛКМ  
@@ -20,13 +26,17 @@ export enum PointerControl {
 
 export enum PathFinderMode {
     BASIC,
-    WAY_PREDICTION
+    WAY_PREDICTION,
 }
 
 const point_zero = new Point(0, 0);
 
 export type PlayerMovementSettings = {
-    path_finder_mode: PathFinderMode, 
+    max_predicted_way_intervals: number,  // Макс. количество отрезков прогнозируемого пути, на котором цикл построения пути завершится преждевременно
+    min_predicted_way_lenght: number,     // TODO: Проверить, нужно ли это делать, или можно обойтись без минимальной длины прогнозируемого пути
+    predicted_way_lenght_mult: number,    // Множитель длины пути для построения пути с запасом
+    collision_min_error: number,          // Минимальное расстояние сближения с припятствиями, для предотвращения соприкосновений геометрий
+    path_finder_mode: PathFinderMode,     
     pointer_control: PointerControl,
     keys_control: boolean,         // TODO: управление через клавиатуру
     model_layer: number,    
@@ -37,10 +47,12 @@ export type PlayerMovementSettings = {
     update_way_angle: number,      // Минимальный угол изменения направления движения, при котором произойдёт обновление прогнозируемого пути
     block_move_min_angle: number,  // Минимальный угол между нормалью к препятствию и направлением движения, при котором возможно движение вдоль препятствия
     speed: SpeedSettings,
-    collision_radius: number,
+    collision_radius: number,      // Радиус столкновения управляемого персонажа с препятствиями
     max_try_dist: number,          // Только для BASIC режима расчёта пути, шаг проверки столкновений с препятствиями
     max_blocked_move_time: number, // Время нахождения застрявшего игрока в одной позиции, после которого движение приостановится
     blocked_move_min_dist: number, // Минимальное расстояние для перемещения, меньше него позиция остаётся прежней.
+    debug?: boolean,
+    clear_drawn_lines?: boolean,   // Если false, все рисуемые линии остаются после update
 }
 
 type AnimationNames = {
@@ -54,7 +66,7 @@ type SpeedSettings = {
     RUN?: number,
 }
 
-enum RotationType {
+enum RotateDirection {
     CW,    // clockwise
     CCW,   // counterclockwise
 }
@@ -77,22 +89,29 @@ type PredictNextMoveData = {
 }
 
 type ClosestObstacleData = {
-    obstacle: Segment | undefined;
-    distance: number;
-    point: undefined;
-    distance_segment: Segment | undefined;
-    is_vertice: boolean;
+    obstacle?: Segment,
+    distance: number,
+    point?: Point,
+    distance_segment?: Segment | Arc,
+    is_vertice: boolean,
 }
 
+type OffsetBuildOption = "all" | "arc" | "segment";
+
+const DRAWN_ARC_EDGES_AMOUNT = 60;
 
 export const default_settings: PlayerMovementSettings = {
+    max_predicted_way_intervals: 10,
+    min_predicted_way_lenght: 4,
+    predicted_way_lenght_mult: 1.5,
+    collision_min_error: 0.001,
     path_finder_mode: PathFinderMode.BASIC,
     pointer_control: PointerControl.FOLLOW_POINTER,
     keys_control: true,
     target_stop_distance: 2,
     model_layer: 15, 
     animation_names: {IDLE: "idle", WALK: "walk"},
-    update_interval: 2,
+    update_interval: 2.5,
     min_update_interval: 0.2,
     update_way_angle: 5 * Math.PI / 180,
     block_move_min_angle: 15 * Math.PI / 180,
@@ -101,6 +120,7 @@ export const default_settings: PlayerMovementSettings = {
     max_try_dist: 0.2,
     max_blocked_move_time: 5,
     blocked_move_min_dist: 0.006,
+    clear_drawn_lines: true,
 }
 
 function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
@@ -125,6 +145,77 @@ function interpolate_with_wrapping(start: number, end: number, percent: number, 
     return interpolated_val;
 }
   
+export function calculate_borders(obj: {position: Vector3, rotation: Euler, get_pivot: () => Vector2, get_size: () => Vector2}): Segment[] {
+    const size = obj.get_size().divideScalar(2);
+    const pos = obj.position;
+    const rotation = obj.rotation;
+    const local_top_left = new Vector3(-size.x, size.y, 0);
+    const local_top_right = new Vector3(size.x, size.y, 0);
+    const local_bottom_left = new Vector3(-size.x, -size.y, 0);
+    const local_bottom_right = new Vector3(size.x, -size.y, 0);
+    const top_left = local_top_left.applyEuler(rotation).add(pos);
+    const top_right = local_top_right.applyEuler(rotation).add(pos);
+    const bottom_left = local_bottom_left.applyEuler(rotation).add(pos);
+    const bottom_right = local_bottom_right.applyEuler(rotation).add(pos);
+    const tl = new Point({x: top_left.x, y: top_left.y});
+    const tr = new Point({x: top_right.x, y: top_right.y});
+    const bl = new Point({x: bottom_left.x, y: bottom_left.y});
+    const br = new Point({x: bottom_right.x, y: bottom_right.y});
+    return [
+        new Segment(tl, tr),
+        new Segment(tr, bl),
+        new Segment(bl, br),
+        new Segment(br, tl),
+    ];
+}
+
+export function load_obstacles(map_data: MapData) {
+    const obstacles: Segment[] = [];
+    const render_data = parse_tiled(map_data);
+    for (let object_layer of render_data.objects_layers) {
+        for (let tile of object_layer.objects) {
+            if (tile.polygon || tile.polyline) {
+                const cx = tile.x * WORLD_SCALAR;
+                const cy = tile.y * WORLD_SCALAR;
+                if (tile.polygon) {
+                    for (let i = 0; i < tile.polygon.length - 1; i ++) {
+                        const s_x = tile.polygon[i].x;
+                        const s_y = tile.polygon[i].y;
+                        const e_x = tile.polygon[i + 1].x;
+                        const e_y = tile.polygon[i + 1].y;
+                        const start = new Point(cx + s_x * WORLD_SCALAR, cy - s_y * WORLD_SCALAR);
+                        const end = new Point(cx + e_x * WORLD_SCALAR, cy - e_y * WORLD_SCALAR);
+                        const seg = new Segment(start, end);
+                        obstacles.push(seg);
+                    }
+                    
+                    const s_x = tile.polygon[tile.polygon.length - 1].x;
+                    const s_y = tile.polygon[tile.polygon.length - 1].y;
+                    const e_x = tile.polygon[0].x;
+                    const e_y = tile.polygon[0].y;
+                    const start = new Point(cx + s_x * WORLD_SCALAR, cy - s_y * WORLD_SCALAR);
+                    const end = new Point(cx + e_x * WORLD_SCALAR, cy - e_y * WORLD_SCALAR);
+                    const seg = new Segment(start, end);
+                    obstacles.push(seg);
+                }
+                if (tile.polyline) {
+                    for (let i = 0; i < tile.polyline.length - 1; i ++) {
+                        const s_x = tile.polyline[i].x;
+                        const s_y = tile.polyline[i].y;
+                        const e_x = tile.polyline[i + 1].x;
+                        const e_y = tile.polyline[i + 1].y;
+                        const start = new Point(cx + s_x * WORLD_SCALAR, cy - s_y * WORLD_SCALAR);
+                        const end = new Point(cx + e_x * WORLD_SCALAR, cy - e_y * WORLD_SCALAR);
+                        const seg = new Segment(start, end);
+                        obstacles.push(seg);
+                    }
+                }
+            }
+        }
+    }
+    return obstacles;
+}
+
 
 export function MovementLogic(settings: PlayerMovementSettings = default_settings) {
     let pointer = new Point(0, 0);
@@ -145,13 +236,14 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
     let blocked_move_time = 0;
     let has_target = false;
 
-    function init(model: AnimatedMesh, _obstacles: Segment[] = []) {
+    function init(init_data: {model: AnimatedMesh, obstacles: Segment[]}) {
+        const model = init_data.model;
         target = new Point(model.position.x, model.position.y);
         PF.set_current_pos(target);
         PF.set_target(new Point(model.position.x, model.position.y), true);
         position.x = model.position.x;
         position.y = model.position.y;
-        obstacles.push(..._obstacles);
+        obstacles.push(...init_data.obstacles);
 
         if ([PointerControl.FOLLOW_POINTER, PointerControl.FOLLOW_DIRECTION].includes(pointer_control)) {
             EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
@@ -245,7 +337,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
         function update_position(dt: number) {
             const start_pos = new Point(model.position.x, model.position.y);
             const end_pos = PF.get_next_pos(start_pos, dt); 
-            if (end_pos.x == start_pos.x && end_pos.y == start_pos.y) {
+            if (!end_pos || (end_pos.equalTo(start_pos))) {
                 stop_movement();
                 return;
             };
@@ -284,39 +376,25 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
         PF.set_direction(direction);
     }
 
-    return {init}
+    function enable_obstacles(enable = true) {
+        PF.enable_obstacles(enable)
+    }
+
+    function check_obstacles_enabled() {
+        return PF.check_obstacles_enabled();
+    }
+
+    return {init, enable_obstacles, check_obstacles_enabled}
 }
 
-export function calculate_borders(obj: {position: Vector3, rotation: Euler, get_pivot: () => Vector2, get_size: () => Vector2}): Segment[] {
-    const size = obj.get_size().divideScalar(2);
-    const pos = obj.position;
-    const rotation = obj.rotation;
-    const local_top_left = new Vector3(-size.x, size.y, 0);
-    const local_top_right = new Vector3(size.x, size.y, 0);
-    const local_bottom_left = new Vector3(-size.x, -size.y, 0);
-    const local_bottom_right = new Vector3(size.x, -size.y, 0);
-    const top_left = local_top_left.applyEuler(rotation).add(pos);
-    const top_right = local_top_right.applyEuler(rotation).add(pos);
-    const bottom_left = local_bottom_left.applyEuler(rotation).add(pos);
-    const bottom_right = local_bottom_right.applyEuler(rotation).add(pos);
-    const tl = new Point({x: top_left.x, y: top_left.y});
-    const tr = new Point({x: top_right.x, y: top_right.y});
-    const bl = new Point({x: bottom_left.x, y: bottom_left.y});
-    const br = new Point({x: bottom_right.x, y: bottom_right.y});
-    return [
-        new Segment(tl, tr),
-        new Segment(tr, bl),
-        new Segment(bl, br),
-        new Segment(br, tl),
-    ];
-}
-function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
-    const predicted_way_lenght_mult = 1.0;
-    const collision_min_error = 0.001;
-    const rays_number = 2;
-    const max_intervals = 10;
+
+export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
+    const max_intervals =  settings.max_predicted_way_intervals;
     const mode = settings.path_finder_mode;
     const speed = settings.speed;
+    const min_predicted_way_lenght = settings.min_predicted_way_lenght;
+    const predicted_way_lenght_mult = settings.predicted_way_lenght_mult;
+    const collision_min_error = settings.collision_min_error;
     const blocked_move_min_dist = settings.blocked_move_min_dist;
     const move_min_angle = settings.block_move_min_angle;
     const max_try_dist = settings.max_try_dist;
@@ -324,6 +402,8 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
     const update_t_interval = settings.update_interval;
     const min_update_t_interval = settings.min_update_interval;
     const update_way_angle = settings.update_way_angle;
+    const debug =  settings.debug;
+    const clear_drawn_lines =  settings.clear_drawn_lines;
     const way_intervals: (Segment | Arc)[] = [];
     let current_pos = new Point(0, 0);
     let current_target = new Point(0, 0);
@@ -331,7 +411,17 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
     let current_dir = new Vector(0, 0);
     let last_check_dir = new Vector(0, 0);
     let time_elapsed = 0;
+    let checking_obstacles = true;
     let obstacles = (_obstacles) ? _obstacles : [];
+    const player_container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    player_container.name = 'player collision circle';
+    SceneManager.add(player_container);
+    const way_container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    way_container.name = 'way intervals';
+    SceneManager.add(way_container);
+    const marked_obstacles = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    marked_obstacles.name = 'marked obstacles';
+    SceneManager.add(marked_obstacles);
     
     if (mode == PathFinderMode.WAY_PREDICTION) {
         EventBus.on('SYS_ON_UPDATE', (e) => {
@@ -340,14 +430,14 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
             if (check_dir_change()) {
                 if (time_elapsed >= min_update_t_interval) {
                     last_check_dir = current_dir.clone();
-                    update_way();
+                    update_predicted_way();
                     time_elapsed = 0;
                 }
             }
             else {
                 if (time_elapsed >= update_t_interval) {
                     last_check_dir = current_dir.clone();
-                    update_way();
+                    update_predicted_way();
                     time_elapsed = 0;
                 }
             }
@@ -359,74 +449,233 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
         if (last_check_dir.length == 0 && current_dir.length != last_check_dir.length)
             result = true;
         else if (current_dir.length != 0 && last_check_dir.length != 0) {
-            const d_angle = vec_angle(current_dir, last_check_dir);
+            const d_angle = Math.abs(vec_angle(current_dir, last_check_dir));
             result = (d_angle > update_way_angle);
         }
         return result;
     }
 
-    function update_way() {
+    function enable_obstacles(enable = true) {
+        checking_obstacles = enable;
+        log(`Obstacles ${(enable) ? 'enabled' : 'disabled'}`)
+    }
+    function check_obstacles_enabled() {
+        return checking_obstacles;
+    }
+
+    function _add_line(a: Point, b: Point, container: GoContainer, color = 0x22ff77) {
+        const point_a = new Vector2(a.x,  a.y);
+        const point_b = new Vector2(b.x,  b.y);
+        const points: Vector2[] = [point_a, point_b];
+        const geometry = new BufferGeometry().setFromPoints(points);
+        const material = new LineBasicMaterial({ color });
+        const line = new GeomLine(geometry, material);
+        line.position.z = CAMERA_Z - 0.01;
+        container.add(line);
+    }
+
+    function _add_arc(arc: Arc, container: GoContainer, color = 0x22ff77) {
+        const step = 2 * Math.PI * arc.r / DRAWN_ARC_EDGES_AMOUNT;
+        let lenght_remains = arc.length;
+        let _allowed_way = arc;
+        while (lenght_remains > 0 && _allowed_way) {
+            const move = (step < _allowed_way.length) ? step : _allowed_way.length;
+            lenght_remains -= move;
+            const sub_arcs = _allowed_way.splitAtLength(move);
+            const move_arc = sub_arcs[0];
+            _allowed_way = sub_arcs[1];
+            _add_line(move_arc.start, move_arc.end, container, color);
+        }
+    }
+
+    function draw_predicted_way() {
+        if (clear_drawn_lines)
+            way_container.clear();
+        for (const s of way_intervals) {
+            if (s.name == 'arc') {
+                const arc = s as Arc;
+                _add_arc(arc, way_container);
+            }
+            else {
+                _add_line(s.start, s.end, way_container);
+            }
+        }
+    }
+
+    function update_predicted_way() {
         let way_required = get_required_way(update_t_interval);
         let lenght_remains = way_required.length;
         const data: PredictNextMoveData = {next_do: NextMoveType.STRAIGHT_LINE, way_required, lenght_remains};
         way_intervals.splice(0, way_intervals.length);
         let counter = 0;
-        while (data.lenght_remains > collision_min_error && counter < max_intervals) {
-            if (data.next_do == NextMoveType.STRAIGHT_LINE) linear_move(data);
-            else if (data.next_do == NextMoveType.SLIDE_OBSTACLE) slide_obstacle_move(data);
-            else if (data.next_do == NextMoveType.BYPASS_ANGLE) bypass_angle(data);
-            else if (data.next_do == NextMoveType.STOP) return;
+        while (data.lenght_remains >= collision_min_error && counter < max_intervals) {
+            if (debug) 
+                log(`Next move in predicted way:`, NextMoveType[data.next_do]);
+            if (data.next_do == NextMoveType.STRAIGHT_LINE) {
+                linear_move(data);
+            }
+            else if (data.next_do == NextMoveType.BYPASS_ANGLE) {
+                bypass_angle(data);
+            }
+            else if (data.next_do == NextMoveType.SLIDE_OBSTACLE) {
+                slide_obstacle(data);
+            }
+            else if (data.next_do == NextMoveType.STOP) break;
             counter ++;
         }
-        // log("update_way", way_required, way_intervals)
+        if (debug) draw_predicted_way();
     }
 
     function bypass_angle(data: PredictNextMoveData) {
-        const point = data.vertice_to_bypass as Point;
-        const s_pos = data.way_required.start;
-        data.next_do = NextMoveType.STOP; 
-    }
-
-    function slide_obstacle_move(data: PredictNextMoveData) {
         const obstacle = data.obstacle_to_slide as Segment;
+        const point = data.vertice_to_bypass as Point;
+        const ostacle_vec = (point.equalTo(obstacle.start)) ? obstacle.vector : obstacle.vector.invert();
         const s_pos = data.way_required.start;
-        const distance_data = s_pos.distanceTo(obstacle);
-        const translate_vec = distance_data[1].vector.invert();
-        const slide_l = new Segment(distance_data[1].end, obstacle.start);
-        const slide_r = new Segment(distance_data[1].end, obstacle.end);
-        const angle_l = Math.abs(vec_angle(data.way_required.vector, slide_l.vector));
-        const angle_r = Math.abs(vec_angle(data.way_required.vector, slide_r.vector));
-        const slide = (angle_l < angle_r) ? slide_l : slide_r;
-        const d_angle = Math.abs(vec_angle(slide.vector, data.way_required.vector));
+        const pos_vertice_vec = new Vector(s_pos, point);
+        const vertice_target_vec = new Vector(point, data.way_required.end);
+        const pos_target_vec = data.way_required.vector.invert();
+        const correction_angle = Math.asin(pos_vertice_vec.length / vertice_target_vec.length) - Math.abs(vec_angle(pos_target_vec, vertice_target_vec.invert()));
+        const dir_diff_start_angle = vec_angle(data.way_required.vector, pos_vertice_vec);
+        const rotate_dir = (dir_diff_start_angle < 0) ? CW : CCW;
+        let obstacle_limit_vec = (rotate_dir) ? ostacle_vec.rotate90CW() : ostacle_vec.rotate90CCW();
+        let start_vec = pos_vertice_vec.invert();
+        let way_req_vec = data.way_required.vector;
+        let end_vec = (rotate_dir) ? way_req_vec.rotate90CW() : way_req_vec.rotate90CCW();
+        let _end_angle = end_vec.slope;
+        if (correction_angle) end_vec = (rotate_dir) ? end_vec.rotate(-correction_angle) : end_vec.rotate(correction_angle);
+        let corrected_end_angle = end_vec.slope;
+        
+        // Проверяем, что при обходе угла не столкнулись с препятствием, край которого сейчас обходим, если столкнулись ограничиваем угол обхода
+        let blocked_by_current_obstacle = false;
+        let excess_rotation_angle = (rotate_dir) ? vec_angle(end_vec, obstacle_limit_vec) : vec_angle(obstacle_limit_vec, end_vec);
+        if (excess_rotation_angle > 0) {
+            end_vec = obstacle_limit_vec;
+            blocked_by_current_obstacle = true;
+        }
 
-        // Требуемый путь, чтобы добраться до края препятствия:
-        let way_required_to_slide = slide.translate(translate_vec);
-        // Оставшееся расстояние может закончиться раньше, чем добрались до края препятствия:
-        const max_slide_distance = data.lenght_remains * Math.cos(d_angle);
-        way_required_to_slide = way_required_to_slide.splitAtLength(max_slide_distance)[0];
+        let start_angle = start_vec.slope;
+        let end_angle = end_vec.slope;
 
-        let allowed_way = way_required_to_slide;
+        // Дуга пути, чтобы обойти угол и выйти на нужную траекторию:
+        const way_arc_full = new Arc(point, pos_vertice_vec.length, start_angle, end_angle, !rotate_dir);
+        let allowed_way = undefined;
+        let way_arc = way_arc_full;
 
-        const closest = find_closest_obstacle_use_offsets(way_required_to_slide, obstacles);
-        if (closest.obstacle) {
-            const way_segments = way_required_to_slide.splitAtLength(closest.distance - collision_min_error);
+        // Если длина дуги больше оставшейся для расчётов длины пути, ограничиваем дугу этой длиной
+        if (data.lenght_remains < way_arc_full.length)
+            way_arc = way_arc_full.splitAtLength(data.lenght_remains)[0];
+        
+        // Далее ищем пересечения дуги с остальными препятствиями
+        const closest = find_closest_obstacle_use_offsets(way_arc, obstacles);
+        if (closest.obstacle && closest.obstacle != obstacle) {
+            let distance_before_collision = closest.distance;
+            if (distance_before_collision < 0) {
+                Log.error(`Intersection with an obstacle while collision checking in bypass_angle! Distance - ${distance_before_collision}`);
+                distance_before_collision = 0;
+            }
+            const way_segments = way_arc.splitAtLength(distance_before_collision);
             allowed_way = way_segments[0];
             data.obstacle_to_slide = closest.obstacle;
-            data.lenght_remains -= (allowed_way.length / Math.cos(d_angle));
             if (closest.is_vertice) {
                 data.vertice_to_bypass = closest.point;
-                data.next_do = NextMoveType.BYPASS_ANGLE;  // TODO: bypass_angle не готово, пока будем останавливаться при задевании углов препятствий
+                data.next_do = NextMoveType.BYPASS_ANGLE;
             } 
             else {
-                 // Если столкнулись с препятствием, которое обходили в предыдущее действие, останавливаемся.
+                // Если столкнулись с препятствием, которое обходили в предыдущее действие, останавливаемся.
                 if (closest.obstacle == data.prev_obstacle) {
                     data.next_do = NextMoveType.STOP; 
                 }
                 else {
                     data.next_do = NextMoveType.SLIDE_OBSTACLE;
-                    data.prev_obstacle = closest.obstacle;
                 }
             }
+            data.lenght_remains -= distance_before_collision;
+            data.prev_obstacle = obstacle;
+        }
+        else { 
+            if (data.lenght_remains < way_arc_full.length) {
+                data.next_do = NextMoveType.STOP; 
+            }
+            else if (blocked_by_current_obstacle) 
+                data.next_do = NextMoveType.SLIDE_OBSTACLE;
+            else {
+                data.next_do = NextMoveType.STRAIGHT_LINE;
+            }
+            data.lenght_remains -= way_arc.length; 
+            allowed_way = way_arc;
+        }
+        
+        if (allowed_way) {
+            data.way_required = new Segment(allowed_way.end, data.way_required.end);
+            way_intervals.push(allowed_way);
+        }
+
+        if (debug) {
+            log('point of vertice', point);
+            log('points of obstacle', obstacle.start, obstacle.end);
+            log('dir_diff_start_angle', radToDeg(dir_diff_start_angle));
+            log('way_required.vector.slope', radToDeg(data.way_required.vector.slope));
+            log('obstacle_angle', radToDeg(obstacle_limit_vec.slope));
+            log('rotation dir', (rotate_dir) ? 'CW' : 'CCW');
+            log('start_angle',  radToDeg(start_angle));
+            log('_end_angle',  radToDeg(_end_angle));
+            log('correction_angle',  radToDeg(correction_angle));
+            log('corrected_end_angle',  radToDeg(corrected_end_angle));
+            log('excess_rotation_angle',  radToDeg(excess_rotation_angle));
+            log('final_end_angle',  radToDeg(end_angle));
+            log('blocked_by_current_obstacle',  blocked_by_current_obstacle);
+        }
+    }
+
+    function slide_obstacle(data: PredictNextMoveData) {
+        const obstacle = data.obstacle_to_slide as Segment;
+        const s_pos = data.way_required.start;
+        const distance_segment = s_pos.distanceTo(obstacle)[1];
+        const translate_vec = distance_segment.vector.invert();
+        const slide_l = new Segment(distance_segment.end, obstacle.start);
+        const slide_r = new Segment(distance_segment.end, obstacle.end);
+        const angle_l = (!EQ_0(slide_l.length)) ? Math.abs(vec_angle(data.way_required.vector, slide_l.vector)) : 2 * Math.PI;
+        const angle_r = (!EQ_0(slide_r.length)) ? Math.abs(vec_angle(data.way_required.vector, slide_r.vector)) : 2 * Math.PI;
+        const slide = (angle_l < angle_r) ? slide_l : slide_r;
+        const d_angle = Math.abs(vec_angle(slide.vector, data.way_required.vector));
+
+        // Требуемый путь, чтобы добраться до края препятствия:
+        let way_required_to_slide = slide.translate(translate_vec);
+
+        // Оставшееся расстояние может закончиться раньше, чем добрались до края препятствия:
+        const max_slide_distance = data.lenght_remains * Math.cos(d_angle);
+        way_required_to_slide = way_required_to_slide.splitAtLength(max_slide_distance)[0];
+        if (EQ_0(max_slide_distance)) {
+            data.next_do = NextMoveType.STOP; 
+            return;
+        }
+        log('way_required_to_slide', way_required_to_slide, max_slide_distance, data.lenght_remains, )
+        let allowed_way = undefined;
+        const closest = find_closest_obstacle_use_offsets(way_required_to_slide, obstacles);
+        if (closest.obstacle) {
+            let distance_before_collision = closest.distance;
+            if (distance_before_collision < 0) {
+                Log.error(`Intersection with an obstacle while collision checking in slide_obstacle! Distance - ${distance_before_collision}`);
+                distance_before_collision = 0;
+            }
+            const way_segments = way_required_to_slide.splitAtLength(distance_before_collision);
+            allowed_way = way_segments[0];
+            if (closest.is_vertice) {
+                data.vertice_to_bypass = closest.point;
+                data.next_do = NextMoveType.BYPASS_ANGLE;
+            } 
+            else {
+                // Если столкнулись с препятствием, которое обходили в предыдущее действие, останавливаемся.
+                if (closest.obstacle == data.prev_obstacle) {
+                    data.next_do = NextMoveType.STOP; 
+                }
+                else {
+                    data.next_do = NextMoveType.SLIDE_OBSTACLE;
+                }
+            }
+            data.obstacle_to_slide = closest.obstacle;
+            data.lenght_remains -= distance_before_collision;
+            data.prev_obstacle = obstacle;
         }
         else { 
             if (max_slide_distance < slide.length) {
@@ -436,29 +685,35 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
             else {
                 data.lenght_remains -= (slide.length / Math.cos(d_angle));
                 data.vertice_to_bypass = slide.end;
-                data.next_do = NextMoveType.BYPASS_ANGLE;  // TODO: bypass_angle не готово, пока будем останавливаться при задевании углов препятствий
+                data.next_do = NextMoveType.BYPASS_ANGLE;
             }
+            allowed_way = way_required_to_slide;
         }
-        data.way_required = new Segment(allowed_way.end, data.way_required.end);
-        way_intervals.push(allowed_way);
+        if (allowed_way) {
+            data.way_required = new Segment(allowed_way.end, data.way_required.end);
+            way_intervals.push(allowed_way);
+        }
     }
 
     function linear_move(data: PredictNextMoveData) {
-        // TODO: С лучами не всегда правильно определяет расстояния до препятствий, с оффсетами работает лучше
-        // const {rays_L, rays_R} = build_rays(data.way_required, rays_number); 
-        // const shortest_L = find_closest_obstacle_use_rays(rays_L, obstacles, 'left');
-        let allowed_way = data.way_required;
+        data.obstacle_to_slide = undefined;
+        data.vertice_to_bypass = undefined;
         const closest = find_closest_obstacle_use_offsets(data.way_required, obstacles);
-        if (closest.obstacle) {
-            const way_segments = data.way_required.splitAtLength(closest.distance - collision_min_error);
+        let allowed_way = undefined;
+        if (closest.obstacle) { 
+            let distance_before_collision = closest.distance;
+            if (distance_before_collision < 0) {
+                Log.error(`Intersection with an obstacle while collision checking in linear_move! Distance - ${distance_before_collision}`);
+                distance_before_collision = 0;
+            }
+            const way_segments = data.way_required.splitAtLength(distance_before_collision);
             allowed_way = way_segments[0];
             data.way_required = way_segments[1];
             data.obstacle_to_slide = closest.obstacle;
-            data.lenght_remains -= allowed_way.length;
+            data.lenght_remains -= distance_before_collision;
             if (closest.is_vertice) {
                 data.vertice_to_bypass = closest.point;
-                // data.next_do = NextMoveType.BYPASS_ANGLE;  // TODO: bypass_angle не готово, пока будем останавливаться при задевании углов препятствий
-                data.next_do = NextMoveType.STOP; 
+                data.next_do = NextMoveType.BYPASS_ANGLE; 
             } 
             else {
                 data.next_do = NextMoveType.SLIDE_OBSTACLE;
@@ -467,12 +722,12 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
         else {
             data.next_do = NextMoveType.STOP;
             data.lenght_remains = 0; 
+            allowed_way = data.way_required;
         }
-        way_intervals.push(allowed_way);
+        if (allowed_way) way_intervals.push(allowed_way);
     }
 
     function build_rays(required_way: Segment, number: number) {
-        // const collide_circle = new Circle(required_way.start, collide_radius);
         const r_limits = collision_radius;
         const tangent = required_way.vector.normalize();
         const normal_L = tangent.rotate90CW();
@@ -497,16 +752,20 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
         return {rays_L, rays_R}
     }
 
-    function build_offsets(obstacle: Segment) {
+    function build_offsets(obstacle: Segment, offset: number, build_option: OffsetBuildOption = "all") {
         const result: (Segment | Arc)[] = [];
-        const padding_r = collision_radius;
         const tangent = obstacle.vector.normalize();
         const normal = tangent.rotate90CW();
-        result.push(obstacle.translate(normal.multiply(padding_r)));
-        result.push(obstacle.translate(normal.multiply(-padding_r)));
-        const slope = obstacle.slope;
-        result.push(new Arc(obstacle.start, collision_radius, slope + Math.PI / 2, slope - Math.PI / 2, true));
-        result.push(new Arc(obstacle.end, collision_radius, slope - Math.PI / 2, slope + Math.PI / 2, true));
+        if (build_option == "all" || build_option == "segment") {
+            result.push(obstacle.translate(normal.multiply(offset)));
+            result.push(obstacle.translate(normal.multiply(-offset)));
+        }
+        
+        if (build_option == "all" || build_option == "arc") {
+            const slope = obstacle.slope;
+            result.push(new Arc(obstacle.start, offset, slope + Math.PI / 2, slope - Math.PI / 2, true));
+            result.push(new Arc(obstacle.end, offset, slope - Math.PI / 2, slope + Math.PI / 2, true));
+        }
         return result;
     }
 
@@ -535,35 +794,94 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
         return {obstacle: closest_obstacle, distance: shortest_distance, distance_segment: shortest_ray_segment, side: side_name};
     }
 
-    function find_closest_obstacle_use_offsets(way_required: Segment, obstacles: Segment[]): ClosestObstacleData {
+    function make_collision_way(way: Segment | Arc) {
+        if (way.name == 'segment') {
+            const way_segment = way as Segment;
+            const base_vec = way_segment.vector.normalize();
+            const start = way.start.translate(base_vec.invert().multiply(collision_min_error));
+            const end = way.end.translate(base_vec.multiply(way.length));
+            return new Segment(start, end);
+        }
+        
+        else {
+            const way_arc = way as Arc;
+            return way_arc;
+        }
+    }
+
+    function find_closest_obstacle_use_offsets(way_required: Segment | Arc, obstacles: Segment[]): ClosestObstacleData {
         let shortest_distance = Infinity;
         let closest_point: Point | undefined = undefined;
         let closest_obstacle: Segment | undefined = undefined;
-        let shortest_way_segment: Segment | undefined = undefined;
+        let shortest_way: Segment | Arc | undefined = undefined;
         let is_vertice: boolean = false;
+        let offset_collision_line: Segment | Arc | undefined = undefined;
+        if (!checking_obstacles) return {obstacle: closest_obstacle, distance: way_required.length, point: closest_point, distance_segment: shortest_way, is_vertice};
+        const collision_way = way_required;
         for (const obstacle of obstacles) {
-            const offsets = build_offsets(obstacle);
-            for (const offset of offsets) {
-                const intersections = way_required.intersect(offset);
-                const closest = get_closest_point(way_required.start, intersections);
-                if (closest && closest.distance < shortest_distance) {
-                    shortest_distance = closest.distance;
-                    shortest_way_segment = closest.distance_segment;
-                    closest_obstacle = obstacle;
-                    is_vertice = (offset.name == "arc") ? true : false;
+            const offset_collision_lines = build_offsets(obstacle, collision_radius);
+            for (const line of offset_collision_lines) {
+                const intersections = collision_way.intersect(line);
+                if (intersections.length > 0) {
+                    let closest: { distance: number; way?: Segment | Arc; point: Point } | undefined = undefined;
+                    closest = get_closest_intersection(collision_way, intersections);
+                    if (closest && closest.distance < shortest_distance) {
+                        shortest_distance = closest.distance;
+                        shortest_way = closest.way;
+                        closest_obstacle = obstacle;
+                        offset_collision_line = line;
+                    }
                 }
             }
         }
-        if (!closest_obstacle) 
+
+        // Если встречено препятствие, нужно определить расстояние, на котором нужно остановиться от него, чтобы не было точки соприкосновения
+        if (closest_obstacle) {
+            // const move_stop_lines = build_offsets(closest_obstacle, collision_radius + collision_min_error, (is_vertice) ? "arc" : "segment");
+            // for (const line of move_stop_lines) {
+            //     const intersections = collision_way.intersect(line);
+            //     if (intersections.length > 0) {
+            //         let closest: { distance: number; way?: Segment | Arc; point: Point } | undefined = undefined;
+            //         closest = get_closest_intersection(collision_way, intersections);
+            //         if (closest && closest.distance < shortest_distance) {
+            //             shortest_distance = closest.distance;
+            //             shortest_way = closest.way;
+            //         }
+            //     }
+            //     else {
+            //         Log.error('Не удалось определить расстояние остановки до соприкосновения с препятствием!')
+            //     }
+            // }
+
+            // Возможно, достаточно просто останавливаться на заданном ненулевом расстоянии от препятствий, либо 
+            // не двигаться, если текущее расстояние меньше него; нужно больше тестов
+            shortest_distance = shortest_distance - collision_min_error;
+            shortest_distance = (shortest_distance > 0) ? shortest_distance : 0;
+        }
+
+        else
             shortest_distance = way_required.length;
-        return {obstacle: closest_obstacle, distance: shortest_distance, point: closest_point, distance_segment: shortest_way_segment, is_vertice};
+
+        if (offset_collision_line) {
+            if (offset_collision_line.name == "arc") {
+                is_vertice = true;
+                closest_point = offset_collision_line.center;
+            }
+            else {
+                is_vertice = false;
+            }
+        }
+        return {obstacle: closest_obstacle, distance: shortest_distance, point: closest_point, distance_segment: shortest_way, is_vertice};
     }
 
-    function get_closest_point(target: Point, points: Point[]) {
-        const list: {distance: number, distance_segment: Segment, point: Point}[] = [];
-        for (const point of points) {
-            const data = point.distanceTo(target);
-            list.push({distance: data[0], distance_segment: data[1], point});
+    function get_closest_intersection(way: Segment | Arc, intersections: Point[]) {
+        const list: {distance: number, way?: Segment | Arc, point: Point}[] = [];
+        for (const point of intersections) {
+            const sub_way = way.split(point)[0];
+            if (sub_way)
+                list.push({distance: sub_way.length, way: sub_way, point});
+            else
+                list.push({distance: 0, way: undefined, point});
         }
         list.sort((a, b) => a.distance - b.distance);
         return list[0];
@@ -699,10 +1017,15 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
         return {new_pos: try_pos, stop_search: false};
     }
 
+    function vec_angle_90(v1: Vector, v2: Vector) {
+        let a = v1.angleTo(v2);
+        if (a > Math.PI / 2) a = Math.PI - a;
+        return a
+    }
 
     function vec_angle(v1: Vector, v2: Vector) {
         let a = v1.angleTo(v2);
-        if (a > Math.PI) a = 2 * Math.PI - a;
+        if (a > Math.PI) a = a - 2 * Math.PI;
         return a
     }
 
@@ -725,14 +1048,16 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
             current_dir = new Vector(current_pos, current_target);
             if (check_dir_change()) {
                 last_check_dir = current_dir.clone();
-                    update_way();
-                    time_elapsed = 0;
+                update_predicted_way();
+                time_elapsed = 0;
             }
         }
     }
     
     function set_current_pos(_current_pos: Point) {
         current_pos = _current_pos;
+        if (clear_drawn_lines) player_container.clear();
+        if (debug) _add_arc(new Arc(current_pos, collision_radius, 0, 2 * Math.PI), player_container, 0x66ffff)
     }
 
     function set_direction(_dir: Vector) {
@@ -743,13 +1068,24 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
         obstacles = _obstacles;
     }
 
+    function mark_obstacles(_obstacles: Segment[]) {
+        for (const obstacle of _obstacles) {
+            _add_line(obstacle.start, obstacle.end, marked_obstacles, 0xffff00);
+        }
+    }
+
     function get_required_way(update_t_interval?: number) {
         let way_required = new Segment(current_pos, current_target);
         if (update_t_interval) {
             let lenght_remains = update_t_interval * current_speed * predicted_way_lenght_mult;
+            lenght_remains = (lenght_remains < collision_radius) ? collision_radius : lenght_remains;
             if (lenght_remains < way_required.length) {
-                way_required = way_required.splitAtLength(lenght_remains)[0]
+                way_required = way_required.splitAtLength(lenght_remains)[0];
             }
+            // if (way_required.length > 0 && way_required.length < lenght_remains) {
+            //     const new_target = new Point(way_required.start.translate(way_required.vector.normalize().multiply(lenght_remains)));
+            //     way_required = new Segment(way_required.start, new_target);
+            // }
         }
         return way_required;
     }
@@ -766,27 +1102,7 @@ function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
         return a.distance[0] - b.distance[0];
     }
 
-    return {get_next_pos, set_target, set_direction, set_current_pos, get_current_pos, set_obstacles, build_rays, find_closest_obstacle_use_rays, find_closest_obstacle_use_offsets, linear_move, bypass_angle, slide_obstacle_move, get_required_way, get_predicted_way, update_way}
-
-}
-
-export function test_pathfinder() {
-    const obstacle_A = new Segment(0, -4, 7, -1);
-    const obstacle_B = new Segment(2, -4, 12, 3);
-    const target = new Point(40, 0);
-    let current_pos = new Point(0, 0);
-    let settings: PlayerMovementSettings = {...default_settings, update_interval: 20, min_update_interval: 1, collision_radius: 3, speed: {WALK: 1}, path_finder_mode: PathFinderMode.WAY_PREDICTION}
-    const PF = PathFinder(settings);
-    PF.set_target(target);
-    PF.set_current_pos(current_pos);
-    PF.set_obstacles([obstacle_A, obstacle_B]);
-    PF.update_way();
-    const way_intervals = PF.get_predicted_way();
-    log(way_intervals)
-    for (let i = 1; i < 10; i++) {
-        const new_pos = PF.get_next_pos(current_pos, 1);
-        log('distance', current_pos.distanceTo(new_pos)[0]);
-        current_pos = new_pos;
-        log('current_pos', current_pos);
-    }
+    return {get_next_pos, set_target, set_direction, set_current_pos, get_current_pos, set_obstacles, build_rays, find_closest_obstacle_use_rays,
+        find_closest_obstacle_use_offsets, linear_move, bypass_angle, slide_obstacle: slide_obstacle, get_required_way, get_predicted_way, 
+        update_predicted_way, make_collision_way, mark_obstacles, enable_obstacles, check_obstacles_enabled }
 }
