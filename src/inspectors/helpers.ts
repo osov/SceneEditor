@@ -75,7 +75,7 @@ export function generateTextureOptions(with_atlas = false) {
 export function castTextureInfo(info: TextureInfo, with_atlas = false) {
     const data = {
         value: with_atlas ? info.atlas + '/' + info.name : info.name,
-        src: (info.data.texture as any).path ?? ''
+        src: (info.data.texture as any).path.replace(' ', '%20') ?? ''
     } as any;
 
     if (info.atlas != '') {
