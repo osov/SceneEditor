@@ -292,7 +292,6 @@ export function ResourceManagerModule() {
                     // NOTE: обновляем только те копии, которые не изменяли этот юниформ
                     const is_changed_uniform = material_info.material_hash_to_changed_uniforms[hash].includes(key);
                     if (undefined_uniform || !is_changed_uniform) {
-                        Log.log('[on_material_file_change] update uniform', key, material_info.name, hash, changed_origin.uniforms[key], material_info.material_hash_to_changed_uniforms[hash]);
                         copy.uniforms[key] = changed_origin.uniforms[key];
                     }
                 });
@@ -666,7 +665,6 @@ export function ResourceManagerModule() {
                     const atlas = get_atlas_by_texture_name(texture_name);
                     const texture_data = get_texture(texture_name, atlas || '');
                     const result = { value: texture_data.texture } as IUniform<Texture>;
-                    Log.log('[load_material] update uniform', key, material_info.name, result);
                     material.uniforms[key] = result;
                     break;
                 case MaterialUniformType.VEC2:
@@ -792,7 +790,6 @@ export function ResourceManagerModule() {
         }
         material_info.mesh_id_to_material_hash[mesh_id] = material_info.origin;
         material_info.material_hash_to_mesh_ids[material_info.origin].push(mesh_id);
-        Log.log('[set_to_origin]');
     }
 
     function set_to_existing_copy(material_info: MaterialInfo, mesh_id: number, new_hash: string, hash: string) {
@@ -800,7 +797,6 @@ export function ResourceManagerModule() {
         material_info.mesh_id_to_material_hash[mesh_id] = new_hash;
 
         const prev_changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
-        Log.log('[set_to_existing_copy] prev_changed_uniforms', prev_changed_uniforms);
         prev_changed_uniforms.forEach((uniform) => {
             if (!material_info.material_hash_to_changed_uniforms[new_hash].includes(uniform)) {
                 material_info.material_hash_to_changed_uniforms[new_hash].push(uniform);
@@ -830,7 +826,6 @@ export function ResourceManagerModule() {
         material_info.material_hash_to_mesh_ids[new_hash].push(mesh_id);
 
         const copy_prev_changed_uniforms = deepClone(material_info.material_hash_to_changed_uniforms[hash] || []);
-        Log.log('[set_to_new_copy] copy_prev_changed_uniforms', copy_prev_changed_uniforms, material_info.material_hash_to_changed_uniforms[hash]);
         material_info.material_hash_to_changed_uniforms[new_hash] = copy_prev_changed_uniforms;
 
         const mesh_id_index = material_info.material_hash_to_mesh_ids[hash].indexOf(mesh_id);
@@ -964,12 +959,9 @@ export function ResourceManagerModule() {
 
         const new_hash = get_material_hash(mesh_material_copy);
 
-        Log.log('[set_material_uniform_for_mesh]', material_name, hash, new_hash, mesh_id, uniform_name, value, deepClone(material_info));
-
         if (material_info.origin == new_hash) {
             set_to_origin(material_info, mesh_id, hash);
             mesh.set_material(material_info.name);
-            Log.log('set to origin');
             return;
         }
 
@@ -977,7 +969,6 @@ export function ResourceManagerModule() {
         if (material_info.instances[new_hash]) {
             set_to_existing_copy(material_info, mesh_id, new_hash, hash);
             mesh.set_material(material_info.name);
-            Log.log('set to existing copy');
             return;
         }
 
@@ -989,7 +980,6 @@ export function ResourceManagerModule() {
         }
 
         mesh.set_material(material_info.name);
-        Log.log('set to new copy', material_info);
     }
 
     function set_material_define_for_mesh<T>(mesh: Slice9Mesh, define_name: string, value?: T) {
