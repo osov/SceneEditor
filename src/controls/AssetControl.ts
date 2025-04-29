@@ -13,6 +13,7 @@ import { NodeAction } from "./ActionsControl";
 import { api } from "../modules_editor/ClientAPI";
 import { IBaseEntityData } from "../render_engine/types";
 import { get_file_name } from "../render_engine/helpers/utils";
+import { LOD } from "three";
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
 }
@@ -71,6 +72,7 @@ function AssetControlCreate() {
             await go_to_dir(to_dir);
         }
 
+        const textures: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         const shaders: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         const other: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         for (const key of get_keys(data.paths)) {
@@ -120,6 +122,9 @@ function AssetControlCreate() {
                         case 'vertex_programs': case 'fragment_programs':
                             shaders.push({ func, path });
                             break;
+                        case 'textures':
+                            textures.push({ func, path });
+                            break;
                         default:
                             other.push({ func, path });
                             break;
@@ -133,6 +138,12 @@ function AssetControlCreate() {
             shader_loaders.push(info.func(info.path));
         }
         await Promise.all(shader_loaders);
+
+        const texture_loaders: Promise<any>[] = [];
+        for (const info of textures) {
+            texture_loaders.push(info.func(info.path));
+        }
+        await Promise.all(texture_loaders);
 
         const other_loaders: Promise<any>[] = [];
         for (const info of other) {
