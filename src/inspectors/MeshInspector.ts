@@ -394,6 +394,7 @@ function MeshInspectorCreate() {
         });
     }
 
+    // NOTE/TODO: возможно лучше будет разбить на функции по типу меша, чтоб в каждой описывать нужные поля, хоть и придется дублировать код, но навигация будет проще 🤔
     function set_selected_meshes(mesh_ids: number[]) {
         _selected_meshes = mesh_ids;
 
@@ -1061,9 +1062,7 @@ function MeshInspectorCreate() {
         updateScale(data, info.data.event.last);
     }
 
-    function updateScale(data: MeshPropertyInfo<Vector3>[], last: boolean) {
-        if (!last) return;
-
+    function updateScale(data: MeshPropertyInfo<Vector3>[], _: boolean) {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
@@ -1117,9 +1116,7 @@ function MeshInspectorCreate() {
         updateSize(data, info.data.event.last);
     }
 
-    function updateSize(data: MeshPropertyInfo<Vector2>[], last: boolean) {
-        if (!last) return;
-
+    function updateSize(data: MeshPropertyInfo<Vector2>[], _: boolean) {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
@@ -1853,9 +1850,7 @@ function MeshInspectorCreate() {
         updateUniformVec2(data, info.data.event.last);
     }
 
-    function updateUniformVec2(data: MeshMaterialUniformInfo<Vector2>[], last: boolean) {
-        if (!last) return;
-
+    function updateUniformVec2(data: MeshMaterialUniformInfo<Vector2>[], _: boolean) {
         data.forEach((item) => {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
             if (!mesh) return;
@@ -1900,9 +1895,7 @@ function MeshInspectorCreate() {
         updateUniformVec3(data, info.data.event.last);
     }
 
-    function updateUniformVec3(data: MeshMaterialUniformInfo<Vector3>[], last: boolean) {
-        if (!last) return;
-
+    function updateUniformVec3(data: MeshMaterialUniformInfo<Vector3>[], _: boolean) {
         data.forEach((item) => {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
             if (!mesh) return;
@@ -1947,9 +1940,7 @@ function MeshInspectorCreate() {
         updateUniformVec4(data, info.data.event.last);
     }
 
-    function updateUniformVec4(data: MeshMaterialUniformInfo<Vector4>[], last: boolean) {
-        if (!last) return;
-
+    function updateUniformVec4(data: MeshMaterialUniformInfo<Vector4>[], _: boolean) {
         data.forEach((item) => {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
             if (!mesh) return;
@@ -1997,8 +1988,6 @@ function MeshInspectorCreate() {
     }
 
     function updateUniformColor(data: MeshMaterialUniformInfo<string>[], last: boolean) {
-        if (!last) return;
-
         data.forEach((item) => {
             const rgb = hexToRGB(item.value);
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
