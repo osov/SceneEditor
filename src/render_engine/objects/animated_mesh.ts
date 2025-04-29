@@ -1,7 +1,9 @@
-import { AnimationAction, AnimationMixer, MeshBasicMaterial, ShaderMaterial } from "three";
+import { AnimationAction, AnimationMixer, MeshBasicMaterial, ShaderMaterial, Texture } from "three";
 import { IObjectTypes } from "../types";
 import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils';
 import { EntityPlane } from "./entity_plane";
+import { get_file_name } from "../helpers/utils";
+import { MaterialUniformType } from "../resource_manager";
 
 const shader = {
   vertexShader: `
@@ -32,6 +34,12 @@ const shader = {
 `
 };
 
+interface SerializeData {
+  materials: {
+    [key in number]: { name: string, changed_uniforms?: string[] }
+  }
+}
+
 export class AnimatedMesh extends EntityPlane {
   public type = IObjectTypes.GO_MODEL_COMPONENT;
   private mixer = new AnimationMixer(this);
@@ -54,6 +62,9 @@ export class AnimatedMesh extends EntityPlane {
     this.materials[index].uniforms.uTexture.value = ResourceManager.get_texture(name, atlas).texture;
   }
 
+  set_material(name: string, index = 0) {
+    Log.log(name, index);
+  }
 
   set_mesh(name: string) {
     const src = ResourceManager.get_model(name);
@@ -126,5 +137,74 @@ export class AnimatedMesh extends EntityPlane {
     }
   }
 
+  serialize() {
+    const data = { ... super.serialize() };
+    data.materials = [];
 
+    this.materials.forEach((material, idx) => {
+      const info: { name: string, changed_uniforms?: { [key: string]: any } } = {
+        name: material.name
+      };
+
+      const material_info = ResourceManager.get_material_info(material.name);
+      if (!material_info) return null;
+
+      const hash = ResourceManager.get_material_hash_by_mesh_id(material.name, this.mesh_data.id);
+      if (!hash) return data;
+
+      const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
+      if (!changed_uniforms) return data;
+
+      const modifiedUniforms: { [key: string]: any } = {};
+      for (const uniformName of changed_uniforms) {
+        if (material.uniforms[uniformName]) {
+          const uniform = material.uniforms[uniformName];
+          if (uniform.value instanceof Texture) {
+            // For texture uniforms, save the texture name and atlas instead of the full Texture object
+            const texture_name = get_file_name((uniform.value as any).path || '');
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+            modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
+          } else {
+            modifiedUniforms[uniformName] = uniform.value;
+          }
+        }
+      }
+
+      if (Object.keys(modifiedUniforms).length > 0) {
+        info.changed_uniforms = modifiedUniforms;
+      }
+
+      data.materials[idx] = info;
+    });
+
+    return data;
+  }
+
+  deserialize(data: SerializeData) {
+    super.deserialize(data);
+
+    for (const [idx, info] of Object.entries(data.materials)) {
+      const index = parseInt(idx);
+
+      if (info.name != 'default') {
+        this.set_material(info.name, index);
+      }
+
+      // NOTE: применяем измененные uniforms, если они есть
+      if (info.changed_uniforms) {
+        for (const [key, value] of Object.entries(info.changed_uniforms)) {
+          const material_info = ResourceManager.get_material_info(info.name);
+          if (!material_info) continue;
+
+          const uniform_info = material_info.uniforms[key];
+          if (!uniform_info) continue;
+
+          if (uniform_info.type === MaterialUniformType.SAMPLER2D && typeof value === 'string') {
+            const [atlas, texture_name] = value.split('/');
+            this.set_texture(texture_name, atlas, index);
+          }
+        }
+      }
+    }
+  }
 }

@@ -220,6 +220,40 @@ function InspectorModule() {
         if (tp_slo) tp_slo.classList.add('my_scroll');
         const tp_to = document.querySelector('.tp-thumbv_ovl') as HTMLDivElement;
         if (tp_to) tp_to.classList.add('my_scroll');
+
+        // Find all texture preview thumbnails and add click handlers
+        const thumbnails = document.querySelectorAll('.tp-thumbv_sopt .tp-thumbv_sthmb .tp-thumbv_img');
+        thumbnails.forEach(thumb => {
+            const img = thumb as HTMLElement;
+            if (img.style.backgroundImage) {
+                img.style.cursor = 'pointer';
+                img.addEventListener('click', () => {
+                    const path = img.style.backgroundImage
+                        .replace('url("', '')
+                        .replace('")', '')
+                        .replace(/^https?:\/\/[^\/]+/, '')
+                        .replace(/assets\//, '');
+                    AssetControl.select_file(path);
+                });
+            }
+        });
+
+        // Find selected option and scroll to it when list opens
+        const thumbnail_input = document.querySelectorAll('.tp-txtv.tp-thumbv_slbl');
+        thumbnail_input.forEach(input => {
+            input.addEventListener('click', () => {
+                setTimeout(() => {
+                    const list = input.parentElement?.parentElement;
+                    const selectedOption = list?.querySelector('.tp-thumbv_opt[aria-selected="true"]') as Element;
+                    if (selectedOption) {
+                        selectedOption.scrollIntoView({
+                            behavior: 'instant',
+                            block: 'start'
+                        });
+                    }
+                }, 100);
+            });
+        });
     }
 
 

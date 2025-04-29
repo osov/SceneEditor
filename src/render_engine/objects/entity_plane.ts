@@ -55,7 +55,6 @@ export class EntityPlane extends EntityBase implements IBaseMesh {
         return new Vector2(this.parameters.slice_width, this.parameters.slice_height);
     }
 
-
     serialize() {
         const data: any = {};
         const size = this.get_size();

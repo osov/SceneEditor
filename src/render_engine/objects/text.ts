@@ -20,6 +20,7 @@ interface SerializeData {
     text?: string
     font?: string
     font_size?: number
+    alpha?: number
 }
 
 
@@ -198,6 +199,9 @@ export class TextMesh extends Text implements IBaseMesh {
         if (this.fontSize != 32) {
             data.font_size = this.fontSize;
         }
+        if (this.fillOpacity != 1) {
+            data.alpha = this.fillOpacity;
+        }
 
         return data;
     }
@@ -207,16 +211,20 @@ export class TextMesh extends Text implements IBaseMesh {
         this.fontSize = 32;
         this.set_font('', false);
         this.set_text('');
+        this.fillOpacity = 1;
 
         // NOTE: затем переопределяем значения
-        if (data.font_size !== undefined) {
+        if (data.font_size != undefined) {
             this.fontSize = data.font_size;
         }
-        if (data.font !== undefined) {
+        if (data.font != undefined) {
             this.set_font(data.font, false);
         }
-        if (data.text !== undefined) {
+        if (data.text != undefined) {
             this.set_text(data.text);
+        }
+        if (data.alpha != undefined) {
+            this.fillOpacity = data.alpha;
         }
     }
 

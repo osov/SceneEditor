@@ -25,9 +25,9 @@ export enum AssetProperty {
     ATLAS_BUTTON = 'asset_atlas_button',
     MIN_FILTER = 'asset_min_filter',
     MAG_FILTER = 'asset_mag_filter',
-    TRANSPARENT = 'asset_transparent',
-    VERTEX_PROGRAM = 'asset_vertex_program',
-    FRAGMENT_PROGRAM = 'asset_fragment_program',
+    TRANSPARENT = 'transparent',
+    VERTEX_PROGRAM = 'vertexShader',
+    FRAGMENT_PROGRAM = 'fragmentShader',
     UNIFORM_SAMPLER2D = 'asset_uniform_sampler2d',
     UNIFORM_FLOAT = 'asset_uniform_float',
     UNIFORM_RANGE = 'asset_uniform_range',
@@ -118,7 +118,7 @@ function AssetInspectorCreate() {
                     type: PropertyType.LIST_TEXTURES,
                     params: generateTextureOptions(true),
                     onBeforeChange: saveUniformSampler2D,
-                    onChange: handleUniformChange<string>
+                    onChange: handleUniformSampler2DChange
                 },
                 {
                     name: AssetProperty.UNIFORM_FLOAT,
@@ -274,8 +274,8 @@ function AssetInspectorCreate() {
             if (material_info) {
                 const origin = ResourceManager.get_material_by_hash(material_name, material_info.origin);
                 if (origin) {
-                    result.data.push({ name: AssetProperty.VERTEX_PROGRAM, data: get_file_name(material_info.vertexShader) });
-                    result.data.push({ name: AssetProperty.FRAGMENT_PROGRAM, data: get_file_name(material_info.fragmentShader) });
+                    result.data.push({ name: AssetProperty.VERTEX_PROGRAM, data: material_info.vertexShader });
+                    result.data.push({ name: AssetProperty.FRAGMENT_PROGRAM, data: material_info.fragmentShader });
                     result.data.push({ name: AssetProperty.TRANSPARENT, data: origin.transparent });
 
                     Object.entries(origin.uniforms).forEach(([key, uniform]) => {
@@ -700,26 +700,30 @@ function AssetInspectorCreate() {
         await updateUniform(data, info.data.event.last);
     }
 
+    function saveUniforms<T>(info: BeforeChangeInfo) {
+        const uniforms: AssetMaterialInfo<T>[] = [];
+        info.ids.forEach((id) => {
+            const path = _selected_materials[id];
+            const name = get_file_name(path);
+            const material_info = ResourceManager.get_material_info(name);
+            if (!material_info) return;
+            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
+            if (!origin) return;
+            const uniform = origin.uniforms[info.field.name];
+            if (uniform) {
+                uniforms.push({
+                    material_path: path,
+                    name: info.field.name,
+                    value: uniform.value
+                });
+            }
+        });
+        return uniforms;
+    }
+
     async function updateUniform<T>(data: AssetMaterialInfo<T>[], last: boolean) {
         for (const item of data) {
-            // EventBus.trigger('SYS_MATERIAL_CHANGED', {
-            //     material_name: get_file_name(item.material_path),
-            //     is_uniform: true,
-            //     property: item.name,
-            //     value: item.value
-            // }, false);
-
-            ResourceManager.set_material_uniform_for_original(get_file_name(item.material_path), item.name, item.value, last);
-
-            // if (last) {
-            //     const get_response = await AssetControl.get_file_data(item.material_path);
-            //     if (get_response.result != 1) continue;
-
-            //     const material_data = JSON.parse(get_response.data!);
-            //     material_data.data[item.name] = item.value;
-
-            //     await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
-            // }
+            await ResourceManager.set_material_uniform_for_original(get_file_name(item.material_path), item.name, item.value, last);
         }
     }
 
@@ -734,7 +738,7 @@ function AssetInspectorCreate() {
             if (!origin) return;
             const uniform = origin.uniforms[info.field.name];
             if (uniform) {
-                const texture_name = get_file_name(uniform.value.path);
+                const texture_name = get_file_name(uniform.value.path || '');
                 const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
                 sampler2Ds.push({
                     material_path: path,
@@ -746,108 +750,42 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_SAMPLER2D', sampler2Ds, HistoryOwner.ASSET_INSPECTOR);
     }
 
+    async function handleUniformSampler2DChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMaterialData<string>(info);
+        await updateUniformSampler2D(data, info.data.event.last);
+    }
+
+    async function updateUniformSampler2D(data: AssetMaterialInfo<string>[], last: boolean) {
+        for (const item of data) {
+            const texture_name = get_file_name(item.value || '');
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+            const texture = ResourceManager.get_texture(texture_name, atlas).texture;
+            await ResourceManager.set_material_uniform_for_original(get_file_name(item.material_path), item.name, texture, last);
+        }
+    }
+
     function saveUniformFloat(info: BeforeChangeInfo) {
-        const floats: AssetMaterialInfo<number>[] = [];
-        info.ids.forEach((id) => {
-            const path = _selected_materials[id];
-            const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
-            if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
-            if (!origin) return;
-            const uniform = origin.uniforms[info.field.name];
-            if (uniform) {
-                floats.push({
-                    material_path: path,
-                    name: info.field.name,
-                    value: uniform.value
-                });
-            }
-        });
+        const floats = saveUniforms<number>(info);
         HistoryControl.add('MATERIAL_FLOAT', floats, HistoryOwner.ASSET_INSPECTOR);
     }
 
     function saveUniformRange(info: BeforeChangeInfo) {
-        const ranges: AssetMaterialInfo<number>[] = [];
-        info.ids.forEach((id) => {
-            const path = _selected_materials[id];
-            const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
-            if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
-            if (!origin) return;
-            const uniform = origin.uniforms[info.field.name];
-            if (uniform) {
-                ranges.push({
-                    material_path: path,
-                    name: info.field.name,
-                    value: uniform.value
-                });
-            }
-        });
+        const ranges = saveUniforms<number>(info);
         HistoryControl.add('MATERIAL_RANGE', ranges, HistoryOwner.ASSET_INSPECTOR);
     }
 
     function saveUniformVec2(info: BeforeChangeInfo) {
-        const vec2s: AssetMaterialInfo<Vector2>[] = [];
-        info.ids.forEach((id) => {
-            const path = _selected_materials[id];
-            const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
-            if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
-            if (!origin) return;
-            const uniform = origin.uniforms[info.field.name];
-            if (uniform) {
-                vec2s.push({
-                    material_path: path,
-                    name: info.field.name,
-                    value: uniform.value
-                });
-            }
-        });
+        const vec2s = saveUniforms<Vector2>(info);
         HistoryControl.add('MATERIAL_VEC2', vec2s, HistoryOwner.ASSET_INSPECTOR);
     }
 
     function saveUniformVec3(info: BeforeChangeInfo) {
-        const vec3s: AssetMaterialInfo<Vector3>[] = [];
-        info.ids.forEach((id) => {
-            const path = _selected_materials[id];
-            const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
-            if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
-            if (!origin) return;
-            const uniform = origin.uniforms[info.field.name];
-            if (uniform) {
-                vec3s.push({
-                    material_path: path,
-                    name: info.field.name,
-                    value: uniform.value
-                });
-            }
-        });
+        const vec3s = saveUniforms<Vector3>(info);
         HistoryControl.add('MATERIAL_VEC3', vec3s, HistoryOwner.ASSET_INSPECTOR);
     }
 
     function saveUniformVec4(info: BeforeChangeInfo) {
-        const vec4s: AssetMaterialInfo<Vector4>[] = [];
-        info.ids.forEach((id) => {
-            const path = _selected_materials[id];
-            const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
-            if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
-            if (!origin) return;
-            const uniform = origin.uniforms[info.field.name];
-            if (uniform) {
-                vec4s.push({
-                    material_path: path,
-                    name: info.field.name,
-                    value: uniform.value
-                });
-            }
-        });
+        const vec4s = saveUniforms<Vector4>(info);
         HistoryControl.add('MATERIAL_VEC4', vec4s, HistoryOwner.ASSET_INSPECTOR);
     }
 
@@ -939,7 +877,7 @@ function AssetInspectorCreate() {
 
             case 'MATERIAL_SAMPLER2D':
                 const sampler2Ds = event.data as AssetMaterialInfo<string>[];
-                await updateUniform(sampler2Ds, true);
+                await updateUniformSampler2D(sampler2Ds, true);
                 set_selected_materials(_selected_materials);
                 break;
 

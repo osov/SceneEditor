@@ -1,11 +1,10 @@
-import { NearestFilter, RepeatWrapping, ShaderMaterial, Texture, Vector2, Vector4 } from "three";
-import { BeforeChangeInfo, ChangeInfo, InspectorGroup, PropertyType } from "../modules_editor/Inspector";
+import { NearestFilter, RepeatWrapping, ShaderMaterial, Texture, Vector4 } from "three";
+import { ChangeInfo, InspectorGroup, PropertyType } from "../modules_editor/Inspector";
 import { generateTextureOptions, update_option } from "./helpers";
 import { IBaseMeshAndThree } from "../render_engine/types";
 import { CreateDrawCanvas, get_hash_by_mesh, get_mesh_by_hash, get_name_atlas_by_texture, get_raycast_point_uv, get_selected_one_mesh, IDrawCanvas, set_raycast_last_pos } from "./ui_utils";
 import { hexToRGB } from "../modules/utils";
-import { shader } from "../render_engine/objects/slice9";
-
+import { shader, Slice9Mesh } from "../render_engine/objects/slice9";
 export function register_paint_inspector() {
     (window as any).PaintInspector = PaintInspectorCreate();
 }
@@ -62,13 +61,13 @@ function PaintInspectorCreate() {
                     title: 'Размер',
                     type: PropertyType.SLIDER,
                     params: { min: 0, max: 100, step: 1 },
-                    onUpdate: updateParams
+                    onChange: updateParams
                 },
                 {
                     name: InspectorProperty.VAL_COLOR,
                     title: 'Цвет',
                     type: PropertyType.COLOR,
-                    onUpdate: updateParams
+                    onChange: updateParams
                 },
             ]
         },
@@ -81,42 +80,42 @@ function PaintInspectorCreate() {
                     title: 'Красный(размер)',
                     type: PropertyType.SLIDER,
                     params: { min: 0, max: 100, step: 1 },
-                    onUpdate: updateParams
+                    onChange: updateParams
                 },
                 {
                     name: InspectorProperty.TEX_RED,
                     title: 'Красный',
                     type: PropertyType.LIST_TEXTURES,
                     params: () => generateTextureOptions(true),
-                    onUpdate: updateParams
+                    onChange: updateParams
                 },
                 {
                     name: InspectorProperty.SIZE_GREEN,
                     title: 'Зеленый(размер)',
                     type: PropertyType.SLIDER,
                     params: { min: 0, max: 100, step: 1 },
-                    onUpdate: updateParams
+                    onChange: updateParams
                 },
                 {
                     name: InspectorProperty.TEX_GREEN,
                     title: 'Зеленый',
                     type: PropertyType.LIST_TEXTURES,
                     params: () => generateTextureOptions(true),
-                    onUpdate: updateParams
+                    onChange: updateParams
                 },
                 {
                     name: InspectorProperty.SIZE_BLUE,
                     title: 'Синий(размер)',
                     type: PropertyType.SLIDER,
                     params: { min: 0, max: 100, step: 1 },
-                    onUpdate: updateParams
+                    onChange: updateParams
                 },
                 {
                     name: InspectorProperty.TEX_BLUE,
                     title: 'Синий',
                     type: PropertyType.LIST_TEXTURES,
                     params: () => generateTextureOptions(true),
-                    onUpdate: updateParams
+                    onChange: updateParams
                 },
 
             ]
@@ -130,7 +129,7 @@ function PaintInspectorCreate() {
                     title: 'Увеличить размер',
                     type: PropertyType.SLIDER,
                     params: { min: 1, max: 10, step: 1 },
-                    onUpdate: updateParams
+                    onChange: updateParams
                 },
                 {
                     name: InspectorProperty.CREATE_BTN,
@@ -219,7 +218,7 @@ function PaintInspectorCreate() {
         if (!selected_mesh)
             return;
         const material = (selected_mesh as any).material as ShaderMaterial;
-        if (info.data.field.name == InspectorProperty.TEX_RED){
+        if (info.data.field.name == InspectorProperty.TEX_RED) {
             const tex_data = set_texture_slot(0, info.data.event.value as string, material);
             material.uniforms.tex_size_repeat.value.x = tex_data.size.x;
         }
@@ -341,7 +340,7 @@ function PaintInspectorCreate() {
                 if (!mesh_list[key])
                     return;
                 const { draw_canvas, material } = mesh_list[key];
-                const uv = get_raycast_point_uv(e.x, e.y, selected_mesh);
+                const uv = get_raycast_point_uv(e.x, e.y, selected_mesh as Slice9Mesh);
                 if (uv) {
                     draw_canvas.set_size(config_data[InspectorProperty.VAL_SIZE]);
                     draw_canvas.draw(uv.x, 1 - uv.y, get_color());
@@ -363,7 +362,7 @@ function PaintInspectorCreate() {
                 if (!mesh_list[key])
                     return;
                 const { draw_canvas, material } = mesh_list[key];
-                const uv = get_raycast_point_uv(e.x, e.y, selected_mesh);
+                const uv = get_raycast_point_uv(e.x, e.y, selected_mesh as Slice9Mesh);
                 if (uv) {
                     draw_canvas.set_size(config_data[InspectorProperty.VAL_SIZE]);
                     draw_canvas.draw(uv.x, 1 - uv.y, get_color());

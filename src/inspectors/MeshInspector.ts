@@ -38,7 +38,7 @@ export enum MeshProperty {
     ANCHOR = 'mesh_anchor',
     ANCHOR_PRESET = 'mesh_anchor_preset',
     COLOR = 'mesh_color',
-    ALPHA = 'mesh_alpha',
+    TEXT_ALPHA = 'mesh_text_alpha',
     TEXTURE = 'mesh_texture',
     SLICE9 = 'mesh_slice9',
     TEXT = 'mesh_text',
@@ -248,6 +248,18 @@ function MeshInspectorCreate() {
                 },
 
                 { name: MeshProperty.COLOR, title: 'Цвет', type: PropertyType.COLOR, onBeforeChange: saveColor, onChange: handleColorChange },
+                {
+                    name: MeshProperty.TEXT_ALPHA,
+                    title: 'Прозрачность',
+                    type: PropertyType.SLIDER,
+                    params: {
+                        min: 0,
+                        max: 1,
+                        step: 0.01
+                    },
+                    onBeforeChange: saveTextAlpha,
+                    onChange: handleTextAlphaChange
+                },
                 {
                     name: MeshProperty.MATERIAL_UNIFORM_SAMPLER2D,
                     title: 'Sampler2D',
@@ -656,10 +668,10 @@ function MeshInspectorCreate() {
 
                     if (selected_meshes_material != '') {
                         fields.push({
-                            name: MeshProperty.MATERIAL_BUTTON, data: () => {
+                            name: MeshProperty.MATERIAL_BUTTON, data: async () => {
                                 const material_info = ResourceManager.get_material_info(selected_meshes_material);
                                 if (material_info) {
-                                    AssetInspector.set_selected_materials([material_info.path]);
+                                    await AssetControl.select_file(material_info.path);
                                 }
                             }
                         });
@@ -674,7 +686,7 @@ function MeshInspectorCreate() {
                     fields.push({ name: MeshProperty.TEXT, data: (value as TextMesh).text });
                     fields.push({ name: MeshProperty.FONT, data: (value as TextMesh).font || '' });
                     fields.push({ name: MeshProperty.COLOR, data: value.get_color() });
-                    fields.push({ name: MeshProperty.ALPHA, data: (value as TextMesh).fillOpacity });
+                    fields.push({ name: MeshProperty.TEXT_ALPHA, data: (value as TextMesh).fillOpacity });
 
                     const delta = new Vector3(1 * value.scale.x, 1 * value.scale.y);
                     const max_delta = Math.max(delta.x, delta.y);
@@ -1265,6 +1277,35 @@ function MeshInspectorCreate() {
             }
             const color = item.value;
             mesh.set_color(color);
+        }
+    }
+
+    function saveTextAlpha(info: BeforeChangeInfo) {
+        const alphas: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[saveTextAlpha] Mesh not found for id:', id);
+                return;
+            }
+            alphas.push({ mesh_id: id, value: (mesh as TextMesh).fillOpacity });
+        });
+        HistoryControl.add('MESH_TEXT_ALPHA', alphas, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleTextAlphaChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateTextAlpha(data, info.data.event.last);
+    }
+
+    function updateTextAlpha(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
+            if (mesh == undefined) {
+                Log.error('[updateTextAlpha] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.fillOpacity = item.value;
         }
     }
 
@@ -2014,6 +2055,10 @@ function MeshInspectorCreate() {
             case 'MESH_COLOR':
                 const colors = event.data as MeshPropertyInfo<string>[];
                 updateColor(colors, true);
+                break;
+            case 'MESH_TEXT_ALPHA':
+                const alphas = event.data as MeshPropertyInfo<number>[];
+                updateTextAlpha(alphas, true);
                 break;
             case 'MESH_UV':
                 const uvs = event.data as MeshPropertyInfo<Float32Array>[];

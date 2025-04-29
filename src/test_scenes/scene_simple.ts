@@ -1,7 +1,7 @@
-import { BufferGeometry, Line, LineDashedMaterial, NearestFilter, Vector3 } from 'three'
+import { NearestFilter } from 'three'
 import { IObjectTypes } from '../render_engine/types';
 import { run_debug_filemanager } from '../controls/AssetControl';
-import { PROJECT_NAME, SERVER_URL } from '../config';
+import { PROJECT_NAME, SERVER_URL, WORLD_SCALAR } from '../config';
 import { URL_PATHS } from '../modules_editor/modules_editor_const';
 import { make_ramk } from '../render_engine/helpers/utils';
 
@@ -49,7 +49,6 @@ export async function run_scene_simple() {
   go2.add(spr2);
 
 
-
   const gui1 = SceneManager.create(IObjectTypes.GUI_CONTAINER);
   SceneManager.add(gui1);
 
@@ -73,6 +72,7 @@ export async function run_scene_simple() {
   box1.set_color('#0f0')
   gui1.add(box1);
 
+
   const spl = SceneManager.create(IObjectTypes.COMPONENT);
   spl.set_position(320, -245, 5000);
   spl.cmp.add_point(335, -240);
@@ -86,6 +86,17 @@ export async function run_scene_simple() {
     for (const m of materials)
       ResourceManager.set_material_uniform_for_original(m, 'u_time', t);
   });
+
+
+  const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
+  am.set_mesh('Unarmed Idle');
+  am.children[0].scale.setScalar(1 / 150 * WORLD_SCALAR);
+  am.add_animation('Unarmed Idle', 'idle');
+  am.add_animation('Unarmed Run Forward', 'walk');
+  am.set_texture('PolygonExplorers_Texture_01_A')
+  am.rotateX(30 / 180 * Math.PI)
+  am.position.set(313, -245, 6000)
+  SceneManager.add(am);
 
   ControlManager.update_graph(true, 'test');
 }

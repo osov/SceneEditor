@@ -1,6 +1,7 @@
-import { BufferGeometry, Line, LineDashedMaterial, Object3D, ShaderMaterial, Vector2, Vector3, Vector4, Texture, Color } from "three";
+import { BufferGeometry, Line, LineDashedMaterial, Object3D, ShaderMaterial, Vector2, Vector3, Vector4, Texture, IUniform } from "three";
 import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
 import { deepClone, getObjectHash } from "../../modules/utils";
+
 
 export function get_basename(path: string) {
     return path.split('/').reverse()[0];
@@ -179,16 +180,28 @@ export function copy_material(material: ShaderMaterial) {
             copy.uniforms[key] = { value: deepClone(uniform.value) };
         }
     }
-
-    copy.userData.is_copy = true;
-    copy.userData.changed_uniforms = [];
     return copy;
 }
 
 export function get_material_hash(material: ShaderMaterial) {
+    const material_info = ResourceManager.get_material_info(material.name);
+    if (!material_info) {
+        Log.error('Material info not found', material.name);
+        return 'error';
+    }
+
+    const not_readonly_uniforms: { [uniform: string]: IUniform<any> } = {};
+    Object.entries(material.uniforms).forEach(([key, uniform]) => {
+        if (material_info.uniforms[key].readonly) {
+            return;
+        }
+        not_readonly_uniforms[key] = uniform;
+    });
+
     const hash = getObjectHash({
-        uniforms: material.uniforms,
+        uniforms: not_readonly_uniforms,
         defines: material.defines
     });
+
     return hash;
 }

@@ -375,8 +375,13 @@ export class Slice9Mesh extends EntityPlane {
     }
 
     set_material(material_name: string) {
+        if (!ResourceManager.has_material_by_mesh_id(material_name, this.mesh_data.id)) {
+            ResourceManager.unlink_material_for_mesh(this.material.name, this.mesh_data.id);
+        }
+
         const material = ResourceManager.get_material_by_mesh_id(material_name, this.mesh_data.id);
         if (!material) return;
+
         this.template.set_material(material);
         this.material = material;
     }

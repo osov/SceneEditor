@@ -1,3 +1,28 @@
+// TODO: использовать set_material_uniform_for_original в on_material_file_change
+// TODO: сделать две основных функции merge_with_instance (с проверкой на то что предыдущая не оригинал чтоб не удалить, и на то что текущая не оригинал чтоб не записать измения в оригинал, изменения обновляются у текущей по предыдущей + текущее изменение) и new_copy (для cоздания копии)
+// TODO: перепроверить все использования мап c обработкой ошибок
+
+/*
+NOTE: API для материалов:
+    гетеры c обработкой ошибки существования:
+        get_material_info
+        get_material_by_mesh_id
+        get_material_by_hash
+        get_material_hash_by_mesh_id
+        get_mesh_id_by_material_hash
+    основные:
+        preload_material + load_material
+        on_material_file_change
+        link_material_to_mesh
+        unlink_material_for_mesh
+        set_material_uniform_for_original
+        set_material_uniform_for_mesh
+        set_material_define_for_mesh
+    вспомогательные:
+        get_all_materials
+        get_info_about_unique_materials
+*/
+
 import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4 } from 'three';
 import { copy_material, get_file_name, get_material_hash } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
@@ -8,7 +33,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
 import { FSEvent, TRecursiveDict } from '../modules_editor/modules_editor_const';
 import { shader } from './objects/entity_base';
-import { deepClone, hexToRGB } from '../modules/utils';
+import { deepClone, getObjectHash, hexToRGB } from '../modules/utils';
 import { Slice9Mesh } from './objects/slice9';
 
 
@@ -120,8 +145,8 @@ export function ResourceManagerModule() {
     const texture_loader = new TextureLoader();
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
-    const vertex_programs: { [name: string]: string } = {};
-    const fragment_programs: { [name: string]: string } = {};
+    const vertex_programs: { [path: string]: string } = {};
+    const fragment_programs: { [path: string]: string } = {};
     const materials: { [name: string]: MaterialInfo } = {};
     const models: { [name: string]: Object3D } = {};
     const animations: AnimationInfo[] = [];
@@ -164,6 +189,8 @@ export function ResourceManagerModule() {
         const vertexShader = await get_file_data(path);
         if (!vertexShader) return;
 
+        vertex_programs[path] = vertexShader;
+
         // NOTE: изменяем оригинальные материалы и копии
         for (const material_info of Object.values(materials)) {
             if (material_info.vertexShader == '/' + path) {
@@ -188,6 +215,8 @@ export function ResourceManagerModule() {
         const fragmentShader = await get_file_data(path);
         if (!fragmentShader) return;
 
+        fragment_programs[path] = fragmentShader;
+
         // NOTE: изменяем оригинальные материалы и копии
         for (const material_info of Object.values(materials)) {
             if (material_info.fragmentShader == '/' + path) {
@@ -207,6 +236,7 @@ export function ResourceManagerModule() {
             }
         }
     }
+
 
     async function on_material_file_change(path: string) {
         const changed_material_info = await load_material(path);
@@ -262,6 +292,7 @@ export function ResourceManagerModule() {
                     // NOTE: обновляем только те копии, которые не изменяли этот юниформ
                     const is_changed_uniform = material_info.material_hash_to_changed_uniforms[hash].includes(key);
                     if (undefined_uniform || !is_changed_uniform) {
+                        Log.log('[on_material_file_change] update uniform', key, material_info.name, hash, changed_origin.uniforms[key], material_info.material_hash_to_changed_uniforms[hash]);
                         copy.uniforms[key] = changed_origin.uniforms[key];
                     }
                 });
@@ -529,30 +560,65 @@ export function ResourceManagerModule() {
         })
     }
 
-    function has_vertex_program(name: string) {
-        return vertex_programs[name] != undefined;
+    function has_vertex_program(path: string) {
+        return vertex_programs[path] != undefined;
+    }
+
+    function get_vertex_program(path: string) {
+        const vertex_program = vertex_programs[path];
+        if (!vertex_program) {
+            Log.error('vertex program not found', path);
+            return;
+        }
+        return vertex_program;
     }
 
     async function preload_vertex_program(path: string) {
-        const name = get_file_name(path);
-        if (has_vertex_program(name)) {
-            Log.warn('vertex program exists', name, path);
+        if (has_vertex_program(path)) {
+            Log.warn('vertex program exists', path);
             return;
         }
-        vertex_programs[name] = path;
+        const shader_program = await load_shader_program(path);
+        if (!shader_program) {
+            return;
+        }
+        vertex_programs[path] = shader_program;
+        return shader_program;
     }
 
-    function has_fragment_program(name: string) {
-        return fragment_programs[name] != undefined;
+    function has_fragment_program(path: string) {
+        return fragment_programs[path] != undefined;
+    }
+
+    function get_fragment_program(path: string) {
+        const fragment_program = fragment_programs[path];
+        if (!fragment_program) {
+            Log.error('fragment program not found', path);
+            return;
+        }
+        return fragment_program;
     }
 
     async function preload_fragment_program(path: string) {
-        const name = get_file_name(path);
-        if (has_fragment_program(name)) {
-            Log.warn('fragment program exists', name, path);
+        if (has_fragment_program(path)) {
+            Log.warn('fragment program exists', path);
             return;
         }
-        fragment_programs[name] = path;
+        const shader_program = await load_shader_program(path);
+        if (!shader_program) {
+            return;
+        }
+        fragment_programs[path] = shader_program;
+        return shader_program;
+    }
+
+    async function load_shader_program(path: string) {
+        const response = await AssetControl.get_file_data(path);
+        if (response.result != 1) {
+            Log.error('[load_shader_program]:')
+            return;
+        }
+        return response.data;
     }
 
     async function load_material(path: string) {
@@ -579,11 +645,11 @@ export function ResourceManagerModule() {
         const material = new ShaderMaterial();
         material.name = material_info.name;
 
-        const vertexShader = await AssetControl.get_file_data(data.vertexShader);
-        material.vertexShader = (vertexShader.result && vertexShader.data) ? await vertexShader.data : shader.vertexShader;
+        const vertexShader = get_vertex_program(data.vertexShader);
+        material.vertexShader = (vertexShader) ? vertexShader : shader.vertexShader;
 
-        const fragmentShader = await AssetControl.get_file_data(data.fragmentShader);
-        material.fragmentShader = (fragmentShader.result && fragmentShader.data) ? await fragmentShader.data : shader.fragmentShader;
+        const fragmentShader = get_fragment_program(data.fragmentShader)
+        material.fragmentShader = (fragmentShader) ? fragmentShader : shader.fragmentShader;
 
         material.transparent = data.transparent;
 
@@ -599,7 +665,9 @@ export function ResourceManagerModule() {
                     const texture_name = get_file_name(data.data[key] || '');
                     const atlas = get_atlas_by_texture_name(texture_name);
                     const texture_data = get_texture(texture_name, atlas || '');
-                    material.uniforms[key] = { value: texture_data.texture } as IUniform<Texture>;
+                    const result = { value: texture_data.texture } as IUniform<Texture>;
+                    Log.log('[load_material] update uniform', key, material_info.name, result);
+                    material.uniforms[key] = result;
                     break;
                 case MaterialUniformType.VEC2:
                     material.uniforms[key] = { value: new Vector2(...data.data[key]) } as IUniform<Vector2>;
@@ -619,7 +687,19 @@ export function ResourceManagerModule() {
             }
         });
 
-        material_info.origin = get_material_hash(material);
+        // NOTE: без вызова get_material_hash потому что еще пока не создан material_info
+        const not_readonly_uniforms: { [uniform: string]: IUniform<any> } = {};
+        Object.entries(material.uniforms).forEach(([key, uniform]) => {
+            if (material_info.uniforms[key].readonly) {
+                return;
+            }
+            not_readonly_uniforms[key] = uniform;
+        });
+
+        material_info.origin = getObjectHash({
+            uniforms: not_readonly_uniforms,
+            defines: material.defines
+        });
 
         material_info.instances[material_info.origin] = material;
         material_info.material_hash_to_mesh_ids[material_info.origin] = [];
@@ -678,6 +758,12 @@ export function ResourceManagerModule() {
         return hash;
     }
 
+    function has_material_by_mesh_id(material_name: string, mesh_id: number) {
+        const material_info = get_material_info(material_name);
+        if (!material_info) return false;
+        return material_info.mesh_id_to_material_hash[mesh_id] != undefined;
+    }
+
     function get_material_by_mesh_id(material_name: string, mesh_id: number) {
         const material_info = get_material_info(material_name);
         if (!material_info) return null;
@@ -697,6 +783,7 @@ export function ResourceManagerModule() {
             material_info.material_hash_to_mesh_ids[hash].splice(mesh_id_index, 1);
             if (material_info.material_hash_to_mesh_ids[hash].length == 0 && hash != material_info.origin) {
                 // NOTE: если нет мешей которые используют этот материал, то удаляем материал
+                delete material_info.material_hash_to_changed_uniforms[hash];
                 delete material_info.material_hash_to_mesh_ids[hash];
                 delete material_info.instances[hash];
             }
@@ -705,45 +792,36 @@ export function ResourceManagerModule() {
         }
         material_info.mesh_id_to_material_hash[mesh_id] = material_info.origin;
         material_info.material_hash_to_mesh_ids[material_info.origin].push(mesh_id);
+        Log.log('[set_to_origin]');
     }
 
     function set_to_existing_copy(material_info: MaterialInfo, mesh_id: number, new_hash: string, hash: string) {
-        const mesh_id_index = material_info.material_hash_to_mesh_ids[hash].indexOf(mesh_id);
-        if (mesh_id_index != -1) {
-            material_info.material_hash_to_mesh_ids[hash].splice(mesh_id_index, 1);
-            if (material_info.material_hash_to_mesh_ids[hash].length == 0 && hash != material_info.origin && new_hash != hash) {
-                // NOTE: если нет мешей которые используют этот материал, то удаляем материал
-                delete material_info.material_hash_to_mesh_ids[hash];
-                delete material_info.instances[hash];
-            }
-        } else {
-            Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
-        }
-
         material_info.material_hash_to_mesh_ids[new_hash].push(mesh_id);
         material_info.mesh_id_to_material_hash[mesh_id] = new_hash;
 
         const prev_changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
+        Log.log('[set_to_existing_copy] prev_changed_uniforms', prev_changed_uniforms);
         prev_changed_uniforms.forEach((uniform) => {
             if (!material_info.material_hash_to_changed_uniforms[new_hash].includes(uniform)) {
                 material_info.material_hash_to_changed_uniforms[new_hash].push(uniform);
             }
         });
-    }
 
-    function set_to_new_copy(material_info: MaterialInfo, mesh_id: number, hash: string, new_hash: string, copy: ShaderMaterial) {
         const mesh_id_index = material_info.material_hash_to_mesh_ids[hash].indexOf(mesh_id);
         if (mesh_id_index != -1) {
             material_info.material_hash_to_mesh_ids[hash].splice(mesh_id_index, 1);
-            if (material_info.material_hash_to_mesh_ids[hash].length == 0 && hash != material_info.origin) {
+            if (material_info.material_hash_to_mesh_ids[hash].length == 0 && hash != material_info.origin && new_hash != hash) {
                 // NOTE: если нет мешей которые используют этот материал, то удаляем материал
+                delete material_info.material_hash_to_changed_uniforms[hash];
                 delete material_info.material_hash_to_mesh_ids[hash];
                 delete material_info.instances[hash];
             }
         } else {
             Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
         }
+    }
 
+    function set_to_new_copy(material_info: MaterialInfo, mesh_id: number, hash: string, new_hash: string, copy: ShaderMaterial) {
         material_info.instances[new_hash] = copy;
 
         material_info.mesh_id_to_material_hash[mesh_id] = new_hash;
@@ -752,7 +830,21 @@ export function ResourceManagerModule() {
         material_info.material_hash_to_mesh_ids[new_hash].push(mesh_id);
 
         const copy_prev_changed_uniforms = deepClone(material_info.material_hash_to_changed_uniforms[hash] || []);
+        Log.log('[set_to_new_copy] copy_prev_changed_uniforms', copy_prev_changed_uniforms, material_info.material_hash_to_changed_uniforms[hash]);
         material_info.material_hash_to_changed_uniforms[new_hash] = copy_prev_changed_uniforms;
+
+        const mesh_id_index = material_info.material_hash_to_mesh_ids[hash].indexOf(mesh_id);
+        if (mesh_id_index != -1) {
+            material_info.material_hash_to_mesh_ids[hash].splice(mesh_id_index, 1);
+            if (material_info.material_hash_to_mesh_ids[hash].length == 0 && hash != material_info.origin) {
+                // NOTE: если нет мешей которые используют этот материал, то удаляем материал
+                delete material_info.material_hash_to_changed_uniforms[hash];
+                delete material_info.material_hash_to_mesh_ids[hash];
+                delete material_info.instances[hash];
+            }
+        } else {
+            Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
+        }
     }
 
     async function set_material_uniform_for_original<T>(material_name: string, uniform_name: string, value: T, is_save = true) {
@@ -766,23 +858,27 @@ export function ResourceManagerModule() {
 
         material.uniforms[uniform_name].value = value;
 
-        // // NOTE: обновляем hash оригинального материала
-        // const new_origin_hash = get_material_hash(material);
-        // if (new_origin_hash != material_info.origin) {
-        //     material_info.instances[new_origin_hash] = deepClone(material);
-        //     delete material_info.instances[material_info.origin];
+        const is_readonly = material_info.uniforms[uniform_name].readonly;
 
-        //     material_info.material_hash_to_mesh_ids[material_info.origin].forEach((mesh_id) => {
-        //         material_info.mesh_id_to_material_hash[mesh_id] = new_origin_hash;
-        //     });
+        if (!is_readonly) {
+            // NOTE: обновляем hash оригинального материала
+            const new_origin_hash = get_material_hash(material);
+            if (new_origin_hash != material_info.origin) {
+                material_info.instances[new_origin_hash] = material;
+                delete material_info.instances[material_info.origin];
 
-        //     const mesh_ids = material_info.material_hash_to_mesh_ids[material_info.origin];
-        //     material_info.material_hash_to_mesh_ids[new_origin_hash] = deepClone(mesh_ids);
+                material_info.material_hash_to_mesh_ids[material_info.origin].forEach((mesh_id) => {
+                    material_info.mesh_id_to_material_hash[mesh_id] = new_origin_hash;
+                });
 
-        //     delete material_info.material_hash_to_mesh_ids[material_info.origin];
+                const mesh_ids = material_info.material_hash_to_mesh_ids[material_info.origin];
+                material_info.material_hash_to_mesh_ids[new_origin_hash] = deepClone(mesh_ids);
 
-        //     material_info.origin = new_origin_hash;
-        // }
+                delete material_info.material_hash_to_mesh_ids[material_info.origin];
+
+                material_info.origin = new_origin_hash;
+            }
+        }
 
         // NOTE: проходимся по всем копиям материала
         Object.keys(material_info.instances).filter((hash) => hash != material_info.origin).forEach((hash) => {
@@ -794,28 +890,31 @@ export function ResourceManagerModule() {
             if (!is_changed_uniform) {
                 copy.uniforms[uniform_name] = material.uniforms[uniform_name];
 
-                // // NOTE: обновляем hash в копии материала
-                // const new_hash = get_material_hash(copy);
-                // material_info.instances[new_hash] = copy;
-                // delete material_info.instances[hash];
+                if (!is_readonly) {
+                    // NOTE: обновляем hash в копии материала
+                    const new_hash = get_material_hash(copy);
+                    if (new_hash != hash) {
+                        material_info.instances[new_hash] = copy;
+                        delete material_info.instances[hash];
 
-                // material_info.material_hash_to_mesh_ids[hash].forEach((mesh_id) => {
-                //     material_info.mesh_id_to_material_hash[mesh_id] = new_hash;
-                // });
+                        material_info.material_hash_to_mesh_ids[hash].forEach((mesh_id) => {
+                            material_info.mesh_id_to_material_hash[mesh_id] = new_hash;
+                        });
 
-                // const mesh_ids = material_info.material_hash_to_mesh_ids[hash];
-                // material_info.material_hash_to_mesh_ids[new_hash] = deepClone(mesh_ids);
+                        const mesh_ids = material_info.material_hash_to_mesh_ids[hash];
+                        material_info.material_hash_to_mesh_ids[new_hash] = deepClone(mesh_ids);
 
-                // delete material_info.material_hash_to_mesh_ids[hash];
+                        delete material_info.material_hash_to_mesh_ids[hash];
 
-                // const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
-                // material_info.material_hash_to_changed_uniforms[new_hash] = deepClone(changed_uniforms);
+                        const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
+                        material_info.material_hash_to_changed_uniforms[new_hash] = deepClone(changed_uniforms);
 
-                // delete material_info.material_hash_to_changed_uniforms[hash];
+                        delete material_info.material_hash_to_changed_uniforms[hash];
+                    }
+                }
             }
         });
 
-        const is_readonly = material_info.uniforms[uniform_name].readonly;
         if (is_save && !is_readonly) {
             // NOTE: обновляем значение в файле
             const get_response = await AssetControl.get_file_data(material_info.path);
@@ -833,6 +932,7 @@ export function ResourceManagerModule() {
             }
 
             await AssetControl.save_file_data(material_info.path, JSON.stringify(material_data, null, 2));
+            // TODO: нужно сделать так чтобы не обновляли повторно, после того как файл запишеться
         }
     }
 
@@ -849,6 +949,11 @@ export function ResourceManagerModule() {
             return;
         }
 
+        if (uniform.readonly) {
+            Log.error('Uniform is readonly', uniform_name, material_name);
+            return;
+        }
+
         const mesh_material = get_material_by_mesh_id(material_name, mesh_id);
         if (!mesh_material) return;
 
@@ -859,9 +964,12 @@ export function ResourceManagerModule() {
 
         const new_hash = get_material_hash(mesh_material_copy);
 
+        Log.log('[set_material_uniform_for_mesh]', material_name, hash, new_hash, mesh_id, uniform_name, value, deepClone(material_info));
+
         if (material_info.origin == new_hash) {
             set_to_origin(material_info, mesh_id, hash);
             mesh.set_material(material_info.name);
+            Log.log('set to origin');
             return;
         }
 
@@ -869,6 +977,7 @@ export function ResourceManagerModule() {
         if (material_info.instances[new_hash]) {
             set_to_existing_copy(material_info, mesh_id, new_hash, hash);
             mesh.set_material(material_info.name);
+            Log.log('set to existing copy');
             return;
         }
 
@@ -880,6 +989,7 @@ export function ResourceManagerModule() {
         }
 
         mesh.set_material(material_info.name);
+        Log.log('set to new copy', material_info);
     }
 
     function set_material_define_for_mesh<T>(mesh: Slice9Mesh, define_name: string, value?: T) {
@@ -888,12 +998,12 @@ export function ResourceManagerModule() {
         const material_info = get_material_info(material_name);
         if (!material_info) return;
 
-        const material = get_material_by_mesh_id(material_name, mesh_id);
-        if (!material) return;
+        const mesh_material = get_material_by_mesh_id(material_name, mesh_id);
+        if (!mesh_material) return;
 
         const hash = material_info.mesh_id_to_material_hash[mesh_id];
 
-        const material_copy = copy_material(material);
+        const material_copy = copy_material(mesh_material);
 
         if (value != undefined) {
             if (material_copy.defines == undefined) {
@@ -937,6 +1047,7 @@ export function ResourceManagerModule() {
         if (mesh_id_index != -1) {
             material_info.material_hash_to_mesh_ids[hash].splice(mesh_id_index, 1);
             if (material_info.material_hash_to_mesh_ids[hash].length == 0 && hash != material_info.origin) {
+                delete material_info.material_hash_to_changed_uniforms[hash];
                 delete material_info.material_hash_to_mesh_ids[hash];
                 delete material_info.instances[hash];
             }
@@ -967,14 +1078,6 @@ export function ResourceManagerModule() {
 
     function get_all_fonts() {
         return fonts;
-    }
-
-    function get_vertex_program_path(name: string) {
-        return vertex_programs[name];
-    }
-
-    function get_fragment_program_path(name: string) {
-        return fragment_programs[name];
     }
 
     function get_all_vertex_programs() {
@@ -1304,8 +1407,6 @@ export function ResourceManagerModule() {
         preload_material,
         preload_vertex_program,
         preload_fragment_program,
-        get_vertex_program_path,
-        get_fragment_program_path,
         get_material_info,
         is_material_origin_hash,
         get_material_by_hash,
@@ -1314,6 +1415,7 @@ export function ResourceManagerModule() {
         set_material_uniform_for_original,
         set_material_uniform_for_mesh,
         set_material_define_for_mesh,
+        has_material_by_mesh_id,
         unlink_material_for_mesh,
         get_info_about_unique_materials,
         get_font,

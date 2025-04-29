@@ -71,7 +71,8 @@ function AssetControlCreate() {
             await go_to_dir(to_dir);
         }
 
-        const list: Promise<any>[] = [];
+        const shaders: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
+        const other: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         for (const key of get_keys(data.paths)) {
             const paths = data.paths[key];
             let func: (...args: any[]) => Promise<any>;
@@ -79,6 +80,16 @@ function AssetControlCreate() {
             if (key == "textures") {
                 func = (path: string) => {
                     return ResourceManager.preload_texture("/" + path);
+                }
+            }
+            else if (key == "vertex_programs") {
+                func = (path: string) => {
+                    return ResourceManager.preload_vertex_program("/" + path);
+                }
+            }
+            else if (key == "fragment_programs") {
+                func = (path: string) => {
+                    return ResourceManager.preload_fragment_program("/" + path);
                 }
             }
             else if (key == "materials") {
@@ -101,24 +112,34 @@ function AssetControlCreate() {
                     return ResourceManager.preload_atlas("/" + paths.atlas, "/" + paths.texture);
                 }
             }
-            else if (key == "vertex_programs") {
-                func = (path: string) => {
-                    return ResourceManager.preload_vertex_program("/" + path);
-                }
-            }
-            else if (key == "fragment_programs") {
-                func = (path: string) => {
-                    return ResourceManager.preload_fragment_program("/" + path);
-                }
-            }
             else func = async () => { };
+
             if (func != undefined) {
                 for (const path of paths) {
-                    list.push(func(path))
+                    switch (key) {
+                        case 'vertex_programs': case 'fragment_programs':
+                            shaders.push({ func, path });
+                            break;
+                        default:
+                            other.push({ func, path });
+                            break;
+                    }
                 }
             }
         }
-        await Promise.all(list);
+
+        const shader_loaders: Promise<any>[] = [];
+        for (const info of shaders) {
+            shader_loaders.push(info.func(info.path));
+        }
+        await Promise.all(shader_loaders);
+
+        const other_loaders: Promise<any>[] = [];
+        for (const info of other) {
+            other_loaders.push(info.func(info.path));
+        }
+        await Promise.all(other_loaders);
+
         await ResourceManager.update_from_metadata();
         await ResourceManager.write_metadata();
     }
@@ -142,6 +163,30 @@ function AssetControlCreate() {
         }
         else
             Log.warn('failed to load root dir!');
+    }
+
+    async function select_file(file_path: string) {
+        if (!file_path) return;
+
+        // Get directory path by removing filename
+        const dir_path = file_path.substring(0, file_path.lastIndexOf('/'));
+        const file_name = file_path.substring(file_path.lastIndexOf('/') + 1);
+
+        // First navigate to containing directory
+        await go_to_dir(dir_path, true);
+
+        // Find and select the file in the assets list
+        const assets = Array.from(assets_list.querySelectorAll('.asset'));
+        for (const asset of assets) {
+            if (asset.getAttribute('data-name') == file_name) {
+                add_to_selected(asset as HTMLElement);
+                asset.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                })
+                break;
+            }
+        }
     }
 
     async function renew_current_dir() {
@@ -1132,7 +1177,7 @@ function AssetControlCreate() {
 
     init();
     return {
-        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene
+        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene, select_file
     };
 }
 
