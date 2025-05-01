@@ -258,6 +258,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
     let target = new Point(0, 0);
     let last_check_dir = new Vector(0, 0);
     let stick_start: Point | undefined = undefined;
+    let stick_end: Point | undefined = undefined;
     let current_dir = new Vector(0, 0);
     const obstacles: Segment[] = [];
     const target_error = settings.target_stop_distance;
@@ -284,11 +285,11 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
     let blocked_move_time = 0;
     let time_elapsed = 0;
     let has_target = false;
-    if (debug) {
-        const stick_line = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
-        stick_line.name = 'stick line';
-        SceneManager.add(stick_line);
-    }
+
+    const joystick = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    joystick.name = 'joystick';
+    SceneManager.add(joystick);
+    
 
     function init(init_data: {model: AnimatedMesh, obstacles: Segment[]}) {
         const model = init_data.model;
@@ -353,12 +354,24 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
             EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
                 if (!stick_start)
                     return;
-                update_stick_direction(stick_start);
                 stick_start = undefined;
                 current_dir = new Vector(0, 0);
+                joystick.clear();
             });
+            
+            EventBus.on('SYS_ON_UPDATE', (e) => {
+                if (stick_start && stick_end) {
+                    const start = Camera.screen_to_world(stick_start.x, stick_start.y);
+                    const end = Camera.screen_to_world(stick_end.x, stick_end.y);
+                    joystick.clear();
+                    if (debug) {
+                        _add_arc(new Arc(new Point(start.x, start.y), 3, 0, Math.PI * 2), joystick, 0xffffff);
+                        _add_arc(new Arc(new Point(end.x, end.y), 3, 0, Math.PI * 2), joystick, 0xff0000);
+                    }
 
-            EventBus.on('SYS_ON_UPDATE', (e) => handle_update_follow_direction(e.dt));
+                }
+                handle_update_follow_direction(e.dt);
+            });
         }
     
         function update_predicted_way() {
@@ -385,6 +398,8 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
                     const end_pos = current_pos.translate(current_dir.normalize().multiply(lenght_remains));
                     way_required = new Segment(current_pos, end_pos);
                 }
+                else 
+                    way_required = new Segment(current_pos, current_pos);
             }
             return way_required;
         }
@@ -479,7 +494,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
     function update_stick_direction(e: PointLike) {
         if (!stick_start)
             return;
-        const stick_end = new Point(e.x, e.y);
+        stick_end = new Point(e.x, e.y);
         if (stick_end.distanceTo(stick_start)[0] < min_stick_dist)
         current_dir = new Vector(stick_start, stick_end);
     }
