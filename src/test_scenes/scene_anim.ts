@@ -4,8 +4,7 @@ import { URL_PATHS } from "../modules_editor/modules_editor_const";
 import { get_all_tiled_textures, get_depth, MapData, preload_tiled_textures } from "../render_engine/parsers/tile_parser";
 import { IObjectTypes } from "../render_engine/types";
 import { TileLoader } from "../render_engine/tile_loader";
-import { default_settings, load_obstacles, MovementLogic, PathFinderMode, PlayerMovementSettings } from "../modules/PlayerMovement";
-import { Segment } from "2d-geometry";
+import { default_settings, load_obstacles, MovementLogic, PathFinderMode, PlayerMovementSettings, PointerControl } from "../modules/PlayerMovement";
 
 const SORT_LAYER = 7;
 const SUB_SCALAR = WORLD_SCALAR;
@@ -83,10 +82,14 @@ export async function run_scene_anim() {
         const movement_settings: PlayerMovementSettings = {
             ...default_settings,
             path_finder_mode: PathFinderMode.WAY_PREDICTION,
+            pointer_control: PointerControl.JS,
             collision_radius: 2,
+            block_move_min_angle: 25 * Math.PI / 180,
             max_try_dist: 0.5,
+            speed: {WALK: 26},
             target_stop_distance: 0.2,
             blocked_move_min_dist: 0.01,
+            min_update_interval: 0.3,
             debug: true,
         }
         const obstacles = load_obstacles(map_data);
