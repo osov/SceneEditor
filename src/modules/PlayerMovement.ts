@@ -614,9 +614,8 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
         const way_arc_full = new Arc(vertice, pos_to_vertice_vec.length, start_angle, end_angle, !rotate_dir);
         let way_arc = way_arc_full;
         if (!check_collision_angle_ok(data.way_required.vector, way_arc)) {
-            data.next_do = NextMoveType.STOP;
-            data.lenght_remains = 0; 
-            allowed_way = data.way_required;                
+            data.next_do = NextMoveType.STOP;    
+            return;          
         }
 
         // Если длина дуги больше оставшейся для расчётов длины пути, ограничиваем дугу этой длиной
@@ -709,9 +708,8 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
         let way_required_to_slide = slide.translate(translate_vec);
 
         if (!check_collision_angle_ok(data.way_required.vector, way_required_to_slide)) {
-            data.next_do = NextMoveType.STOP;
-            data.lenght_remains = 0; 
-            allowed_way = data.way_required;                
+            data.next_do = NextMoveType.STOP;    
+            return;                  
         }
         // Оставшееся расстояние может закончиться раньше, чем добрались до края препятствия:
         const max_slide_distance = (data.pointer_control == PointerControl.FP) ?data.lenght_remains * Math.cos(d_angle) : data.lenght_remains;
@@ -812,7 +810,6 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
         if (way.name == "segment") {
             const way_segment = way as Segment;
             collision_angle = Math.PI / 2 - Math.abs(vec_angle(direction_required, way_segment.vector)); 
-            log('collision_angle', collision_angle, move_min_angle, (collision_angle) > move_min_angle)
         }
         if (way.name == "arc") {
             const way_arc = way as Arc;
