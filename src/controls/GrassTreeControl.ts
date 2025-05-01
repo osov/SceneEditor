@@ -1,6 +1,8 @@
 import { IBaseMeshAndThree } from "../render_engine/types";
 import { get_selected_one_mesh, get_hash_by_mesh, get_mesh_by_hash } from "../inspectors/ui_utils";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
+import { Vector2 } from "three";
+import { filter_intersect_list } from "../render_engine/helpers/utils";
 
 declare global {
     const GrassTreeControl: ReturnType<typeof GrassTreeControlCreate>;
@@ -20,7 +22,7 @@ type FileData = { [id: string]: GrassTreeInfo };
 
 
 function GrassTreeControlCreate() {
-
+    const gm = GrassManager();
     const mesh_list: { [k: string]: boolean } = {};
     const dir_path = '/tree/';
     let selected_mesh: Slice9Mesh | undefined;
@@ -73,6 +75,14 @@ function GrassTreeControlCreate() {
         });
 
         EventBus.on('SYS_INPUT_POINTER_MOVE', (e) => {
+            if (Input.is_shift()) {
+                const tmp = filter_intersect_list(RenderEngine.raycast_scene(new Vector2(e.x, e.y)));
+                const list = tmp.filter((m) => (['Flowers_1', 'Flowers_2', 'Flowers_3', 'Flowers_4'].includes(m.get_texture()[0])));
+                for (const mesh of list) {
+                    gm.activate(mesh as any);
+                }
+            }
+
             if (Input.is_shift() && is_pointer_down) {
                 if (!selected_mesh)
                     return;
@@ -81,6 +91,8 @@ function GrassTreeControlCreate() {
                     return;
             }
         });
+        EventBus.on('SYS_ON_UPDATE', (e) => gm.update(e.dt));
+
     }
 
     async function load_saved() {
@@ -141,4 +153,88 @@ function GrassTreeControlCreate() {
 
 
     return { init, load_saved }
+}
+
+
+interface GrassItem {
+    added: number;
+    amlitude: number;
+    mesh: Slice9Mesh;
+}
+
+function GrassManager() {
+    let active_list: GrassItem[] = [];
+    const effect_time = 0.7;
+    const speed = 5;
+    const max_amplitude = 1;
+
+    function update(dt: number) {
+        const now = System.now_with_ms();
+        for (let i = active_list.length - 1; i >= 0; i--) {
+            const it = active_list[i];
+            if (it.added + effect_time < now) {
+                let val = it.amlitude - dt * speed;
+                if (val < 0)
+                    val = 0;
+                it.amlitude = val;
+                ResourceManager.set_material_uniform_for_mesh(it.mesh, 'u_amplitude', val);
+                if (val == 0) {
+                    deactivate(it.mesh, false);
+                    active_list.splice(i, 1);
+                }
+            }
+            else {
+                let val =  it.amlitude + dt * speed;
+                if (val > max_amplitude)
+                    val = max_amplitude;
+                if (val < max_amplitude) {
+                    it.amlitude = val;
+                    ResourceManager.set_material_uniform_for_mesh(it.mesh, 'u_amplitude', val);
+                }
+            }
+        }
+    }
+
+    function is_actived(mesh: Slice9Mesh) {
+        for (const it of active_list) {
+            if (it.mesh == mesh) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function activate(mesh: Slice9Mesh) {
+        if (is_actived(mesh))
+            return;
+        const tex_atlas = mesh.get_texture();
+        mesh.set_material('grass');
+        mesh.set_texture(tex_atlas[0], tex_atlas[1]);
+        ResourceManager.set_material_uniform_for_mesh(mesh, 'u_frequency', 3);
+        ResourceManager.set_material_uniform_for_mesh(mesh, 'u_amplitude', 0);
+        active_list.push({ mesh, added: System.now_with_ms(), amlitude: 0 });
+    }
+
+    function deactivate(mesh: Slice9Mesh, with_del = true) {
+        if (!is_actived(mesh))
+            return;
+        const tex_atlas = mesh.get_texture();
+        mesh.set_material('default');
+        mesh.set_texture(tex_atlas[0], tex_atlas[1]);
+        if (with_del) {
+            for (let i = active_list.length - 1; i >= 0; i--) {
+                const it = active_list[i];
+                if (it.mesh == mesh) {
+                    active_list.splice(i, 1);
+                    break;
+                }
+            }
+        }
+    }
+
+
+
+
+
+    return { update, activate,deactivate };
 }

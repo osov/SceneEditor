@@ -1,4 +1,4 @@
-import { BufferGeometry, Line, LineDashedMaterial, Object3D, ShaderMaterial, Vector2, Vector3, Vector4, Texture, IUniform } from "three";
+import { BufferGeometry, Line, LineDashedMaterial, Object3D, ShaderMaterial, Vector2, Vector3, Vector4, Texture, IUniform, Intersection, Object3DEventMap } from "three";
 import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
 import { deepClone, getObjectHash } from "../../modules/utils";
 
@@ -46,6 +46,14 @@ export function filter_list_base_mesh(tmp: Object3D[]) {
     }
     return list;
 }
+
+export function filter_intersect_list(tmp: Intersection<Object3D<Object3DEventMap>>[]) {
+    let tmp_list = [];
+    for (let i = 0; i < tmp.length; i++)
+        tmp_list.push(tmp[i].object);
+    return filter_list_base_mesh(tmp_list);
+}
+
 
 export function convert_width_height_to_pivot_bb(w: number, h: number, ax = 0.5, ay = 0.5) {
     // left_bottom, left_top, right_top, right_bottom 
