@@ -200,18 +200,37 @@ function MeshInspectorCreate() {
             onRefresh: refreshRotation
         });
 
-        transform_fields.push({
-            name: MeshProperty.SCALE,
-            value: mesh.get_scale(),
-            type: PropertyType.VECTOR_3,
-            params: {
-                x: { format: (v: number) => v.toFixed(2) },
-                y: { format: (v: number) => v.toFixed(2) },
-            },
-            onBeforeChange: saveScale,
-            onChange: handleScaleChange,
-            onRefresh: refreshScale
-        });
+        if (mesh instanceof AnimatedMesh) {
+            const scale_factor = Math.max(...mesh.children[0].scale.toArray());
+            transform_fields.push({
+                name: MeshProperty.SCALE,
+                value: scale_factor,
+                type: PropertyType.SLIDER,
+                params: {
+                    min: 0.0001,
+                    max: 1,
+                    step: 0.001,
+                    format: (v: number) => v.toFixed(4)
+                },
+                onBeforeChange: saveModelScale,
+                onChange: handleModelScaleChange,
+                onRefresh: refreshModelScale
+            });
+
+        } else {
+            transform_fields.push({
+                name: MeshProperty.SCALE,
+                value: mesh.get_scale(),
+                type: PropertyType.VECTOR_2,
+                params: {
+                    x: { format: (v: number) => v.toFixed(2) },
+                    y: { format: (v: number) => v.toFixed(2) },
+                },
+                onBeforeChange: saveScale,
+                onChange: handleScaleChange,
+                onRefresh: refreshScale
+            });
+        }
 
         fields.push({
             name: 'Трансформ',
@@ -888,6 +907,15 @@ function MeshInspectorCreate() {
         return mesh.get_scale();
     }
 
+    function refreshModelScale(ids: number[]) {
+        const mesh = SceneManager.get_mesh_by_id(ids[0]);
+        if (mesh == undefined) {
+            Log.error('[refreshModelScale] Mesh not found for id:', ids);
+            return;
+        }
+        return Math.max(...mesh.children[0].scale.toArray());
+    }
+
     function refreshSize(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
@@ -1294,13 +1322,19 @@ function MeshInspectorCreate() {
                 Log.error('[updateScale] Mesh not found for id:', item.mesh_id);
                 continue;
             }
-            mesh.scale.copy(item.value);
-            mesh.transform_changed();
 
-            if ((mesh as TextMesh).fontSize) {
+            if (mesh instanceof Slice9Mesh) {
+                mesh.scale.copy(item.value);
+                mesh.transform_changed();
+            }
+            else if (mesh instanceof TextMesh) {
                 const delta = new Vector3(1 * item.value.x, 1 * item.value.y, item.value.z);
                 const max_delta = Math.max(delta.x, delta.y);
-                (mesh as TextMesh).fontSize * max_delta;
+                mesh.fontSize * max_delta;
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                mesh.children[0].scale.setScalar(Math.max(item.value.x, item.value.y));
+                mesh.transform_changed();
             }
         }
 
@@ -1308,6 +1342,41 @@ function MeshInspectorCreate() {
         TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
         Inspector.refresh([MeshProperty.FONT_SIZE]);
+    }
+
+    function saveModelScale(info: BeforeChangeInfo) {
+        const oldScales: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[saveModelScale] Mesh not found for id:', id);
+                return;
+            }
+            if (mesh instanceof AnimatedMesh) {
+                const scale_factor = Math.max(...mesh.children[0].scale.toArray());
+                oldScales.push({ mesh_id: id, value: scale_factor });
+            }
+        });
+        HistoryControl.add('MESH_MODEL_SCALE', oldScales, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleModelScaleChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateModelScale(data, info.data.event.last);
+    }
+
+    function updateModelScale(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updateModelScale] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            if (mesh instanceof AnimatedMesh) {
+                mesh.children[0].scale.setScalar(item.value);
+                mesh.transform_changed();
+            }
+        }
     }
 
     function saveSize(info: BeforeChangeInfo) {
@@ -2476,6 +2545,10 @@ function MeshInspectorCreate() {
             case 'MESH_SCALE':
                 const scales = event.data as MeshPropertyInfo<Vector3>[];
                 updateScale(scales, true);
+                break;
+            case 'MESH_MODEL_SCALE':
+                const modelScales = event.data as MeshPropertyInfo<number>[];
+                updateModelScale(modelScales, true);
                 break;
             case 'MESH_SIZE':
                 const sizes = event.data as MeshPropertyInfo<{ size: Vector2, pos: Vector3 }>[];

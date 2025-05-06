@@ -16,6 +16,7 @@ export type HistoryData = {
     MESH_TRANSLATE: MeshPropertyInfo<Vector3>
     MESH_ROTATE: MeshPropertyInfo<Euler>
     MESH_SCALE: MeshPropertyInfo<Vector3>
+    MESH_MODEL_SCALE: MeshPropertyInfo<number>
     MESH_SIZE: MeshPropertyInfo<{ size: Vector2, pos: Vector3 }>
     MESH_SLICE: MeshPropertyInfo<Vector2>
     MESH_DELETE: { id_mesh: number }
