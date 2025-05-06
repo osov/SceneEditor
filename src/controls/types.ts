@@ -11,6 +11,7 @@ export interface MeshPropertyInfo<T> {
 
 export interface MeshMaterialUniformInfo<T> {
     mesh_id: number;
+    material_index: number;
     uniform_name: string;
     value: T;
 }

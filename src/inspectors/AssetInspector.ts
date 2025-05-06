@@ -5,10 +5,10 @@ import { Vector2, Vector3, Vector4, Color, IUniform, Texture, MagnificationTextu
 import { get_file_name } from "../render_engine/helpers/utils";
 import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
 import { IObjectTypes, IBaseMesh } from "../render_engine/types";
-import { InspectorGroup, PropertyData, PropertyType, ChangeInfo, BeforeChangeInfo, PropertyParams } from "../modules_editor/Inspector";
+import { PropertyData, PropertyType, ChangeInfo, BeforeChangeInfo } from "../modules_editor/Inspector";
 import { AssetTextureInfo, AssetMaterialInfo } from "../controls/types";
 import { rgbToHex } from "../modules/utils";
-import { convertFilterModeToThreeJS, convertThreeJSFilterToFilterMode, generateAtlasOptions, generateFragmentProgramOptions, generateTextureOptions, generateVertexProgramOptions, update_option } from "./helpers";
+import { convertFilterModeToThreeJS, convertThreeJSFilterToFilterMode, generateAtlasOptions, generateFragmentProgramOptions, generateTextureOptions, generateVertexProgramOptions } from "./helpers";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 
 
@@ -21,20 +21,13 @@ export function register_asset_inspector() {
 }
 
 export enum AssetProperty {
-    ASSET_ATLAS = 'asset_atlas',
-    ATLAS_BUTTON = 'asset_atlas_button',
-    MIN_FILTER = 'asset_min_filter',
-    MAG_FILTER = 'asset_mag_filter',
-    TRANSPARENT = 'transparent',
-    VERTEX_PROGRAM = 'vertexShader',
-    FRAGMENT_PROGRAM = 'fragmentShader',
-    UNIFORM_SAMPLER2D = 'asset_uniform_sampler2d',
-    UNIFORM_FLOAT = 'asset_uniform_float',
-    UNIFORM_RANGE = 'asset_uniform_range',
-    UNIFORM_VEC2 = 'asset_uniform_vec2',
-    UNIFORM_VEC3 = 'asset_uniform_vec3',
-    UNIFORM_VEC4 = 'asset_uniform_vec4',
-    UNIFORM_COLOR = 'asset_uniform_color',
+    ASSET_ATLAS = 'Aтлас',
+    ATLAS_BUTTON = 'Атлас менеджер',
+    MIN_FILTER = 'Минимальный фильтр',
+    MAG_FILTER = 'Максимальный фильтр',
+    TRANSPARENT = 'Прозрачность',
+    VERTEX_PROGRAM = 'Вершинный шейдер',
+    FRAGMENT_PROGRAM = 'Фрагментный шейдер',
 }
 
 export enum FilterMode {
@@ -43,148 +36,6 @@ export enum FilterMode {
 }
 
 function AssetInspectorCreate() {
-    const _config: InspectorGroup[] = [
-        {
-            name: 'base',
-            title: '',
-            property_list: [
-                {
-                    name: AssetProperty.ASSET_ATLAS,
-                    title: 'Атлас',
-                    type: PropertyType.LIST_TEXT,
-                    params: generateAtlasOptions(),
-                    onBeforeChange: saveAssetAtlas,
-                    onChange: handleAssetAtlasChange
-                },
-                {
-                    name: AssetProperty.ATLAS_BUTTON,
-                    title: 'Атлас менеджер',
-                    type: PropertyType.BUTTON
-                },
-                {
-                    name: AssetProperty.MIN_FILTER,
-                    title: 'Фильтр уменьшения',
-                    type: PropertyType.LIST_TEXT,
-                    params: {
-                        'nearest': FilterMode.NEAREST,
-                        'linear': FilterMode.LINEAR
-                    },
-                    onBeforeChange: saveMinFilter,
-                    onChange: handleMinFilterChange
-                },
-                {
-                    name: AssetProperty.MAG_FILTER,
-                    title: 'Фильтр увеличения',
-                    type: PropertyType.LIST_TEXT,
-                    params: {
-                        'nearest': FilterMode.NEAREST,
-                        'linear': FilterMode.LINEAR
-                    },
-                    onBeforeChange: saveMagFilter,
-                    onChange: handleMagFilterChange
-                },
-                {
-                    name: AssetProperty.VERTEX_PROGRAM,
-                    title: 'Vertex Program',
-                    type: PropertyType.LIST_TEXT,
-                    params: generateVertexProgramOptions(),
-                    onBeforeChange: saveMaterialVertexProgram,
-                    onChange: handleMaterialVertexProgramChange
-                },
-                {
-                    name: AssetProperty.FRAGMENT_PROGRAM,
-                    title: 'Fragment Program',
-                    type: PropertyType.LIST_TEXT,
-                    params: generateFragmentProgramOptions(),
-                    onBeforeChange: saveMaterialFragmentProgram,
-                    onChange: handleMaterialFragmentProgramChange
-                },
-                {
-                    name: AssetProperty.TRANSPARENT,
-                    title: 'Transparent',
-                    type: PropertyType.BOOLEAN,
-                    onBeforeChange: saveMaterialTransparent,
-                    onChange: handleMaterialTransparentChange
-                }
-            ]
-        },
-        {
-            name: 'uniforms',
-            title: 'Uniforms',
-            property_list: [
-                {
-                    name: AssetProperty.UNIFORM_SAMPLER2D,
-                    title: 'Sampler2D',
-                    type: PropertyType.LIST_TEXTURES,
-                    params: generateTextureOptions(true),
-                    onBeforeChange: saveUniformSampler2D,
-                    onChange: handleUniformSampler2DChange
-                },
-                {
-                    name: AssetProperty.UNIFORM_FLOAT,
-                    title: 'Float',
-                    type: PropertyType.NUMBER,
-                    onBeforeChange: saveUniformFloat,
-                    onChange: handleUniformChange<number>
-                },
-                {
-                    name: AssetProperty.UNIFORM_RANGE,
-                    title: 'Range',
-                    type: PropertyType.SLIDER,
-                    params: {
-                        min: 0,
-                        max: 1,
-                        step: 0.01
-                    },
-                    onBeforeChange: saveUniformRange,
-                    onChange: handleUniformChange<number>
-                },
-                {
-                    name: AssetProperty.UNIFORM_VEC2,
-                    title: 'Vec2',
-                    type: PropertyType.VECTOR_2,
-                    params: {
-                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
-                    },
-                    onBeforeChange: saveUniformVec2,
-                    onChange: handleUniformChange<Vector2>
-                },
-                {
-                    name: AssetProperty.UNIFORM_VEC3,
-                    title: 'Vec3',
-                    type: PropertyType.VECTOR_3,
-                    params: {
-                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
-                    },
-                    onBeforeChange: saveUniformVec3,
-                    onChange: handleUniformChange<Vector3>
-                },
-                {
-                    name: AssetProperty.UNIFORM_VEC4,
-                    title: 'Vec4',
-                    type: PropertyType.VECTOR_4,
-                    params: {
-                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        w: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
-                    },
-                    onBeforeChange: saveUniformVec4,
-                    onChange: handleUniformChange<Vector4>
-                },
-                {
-                    name: AssetProperty.UNIFORM_COLOR,
-                    title: 'Color',
-                    type: PropertyType.COLOR,
-                    onBeforeChange: saveUniformColor,
-                    onChange: handleUniformChange<string>
-                }
-            ]
-        }
-    ];
     let _selected_textures: string[] = [];
     let _selected_materials: string[] = [];
 
@@ -222,23 +73,30 @@ function AssetInspectorCreate() {
     function set_selected_textures(textures_paths: string[]) {
         _selected_textures = textures_paths;
 
-        // NOTE: обновляем конфиг атласов
-        update_option(_config, AssetProperty.ASSET_ATLAS, generateAtlasOptions);
-
         const data = _selected_textures.map((path, id) => {
-            const result = { id, data: [] as PropertyData<PropertyType>[] };
+            const result = { id, fields: [] as PropertyData<PropertyType>[] };
 
             const texture_name = get_file_name(path);
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
 
             if (atlas == null) {
                 Log.error(`[set_selected_textures] Atlas for texture ${texture_name} not found`);
-                return { id, data: [] };
+                return { id, fields: [] };
             }
 
-            result.data.push({ name: AssetProperty.ASSET_ATLAS, data: atlas });
-            result.data.push({
-                name: AssetProperty.ATLAS_BUTTON, data: () => {
+            result.fields.push({
+                name: AssetProperty.ASSET_ATLAS,
+                value: atlas,
+                type: PropertyType.LIST_TEXT,
+                params: generateAtlasOptions(),
+                onBeforeChange: saveAssetAtlas,
+                onChange: handleAssetAtlasChange
+            });
+
+            result.fields.push({
+                name: AssetProperty.ATLAS_BUTTON,
+                type: PropertyType.BUTTON,
+                value: () => {
                     ControlManager.open_atlas_manager();
                 }
             });
@@ -246,37 +104,73 @@ function AssetInspectorCreate() {
             const min_filter = convertThreeJSFilterToFilterMode(ResourceManager.get_texture(texture_name, atlas).texture.minFilter);
             const mag_filter = convertThreeJSFilterToFilterMode(ResourceManager.get_texture(texture_name, atlas).texture.magFilter);
 
-            result.data.push({ name: AssetProperty.MIN_FILTER, data: min_filter });
-            result.data.push({ name: AssetProperty.MAG_FILTER, data: mag_filter });
+            result.fields.push({
+                name: AssetProperty.MIN_FILTER,
+                value: min_filter,
+                type: PropertyType.LIST_TEXT,
+                params: {
+                    'nearest': FilterMode.NEAREST,
+                    'linear': FilterMode.LINEAR
+                },
+                onBeforeChange: saveMinFilter,
+                onChange: handleMinFilterChange
+            });
+
+            result.fields.push({
+                name: AssetProperty.MAG_FILTER,
+                value: mag_filter,
+                type: PropertyType.LIST_TEXT,
+                params: {
+                    'nearest': FilterMode.NEAREST,
+                    'linear': FilterMode.LINEAR
+                },
+                onBeforeChange: saveMagFilter,
+                onChange: handleMagFilterChange
+            });
 
             return result;
         });
 
         Inspector.clear();
-        Inspector.setData(data, _config);
+        Inspector.setData(data);
     }
 
     function set_selected_materials(materials_paths: string[]) {
         _selected_materials = materials_paths;
 
-        // NOTE: обновляем конфиг шейдеров
-        update_option(_config, AssetProperty.VERTEX_PROGRAM, generateVertexProgramOptions);
-        update_option(_config, AssetProperty.FRAGMENT_PROGRAM, generateFragmentProgramOptions);
-
-        // NOTE: обновляем конфиг текстур для sampler2d полeй
-        update_option(_config, AssetProperty.UNIFORM_SAMPLER2D, () => generateTextureOptions(true));
-
         const data = _selected_materials.map((path, id) => {
-            const result = { id, data: [] as PropertyData<PropertyType>[] };
+            const result = { id, fields: [] as PropertyData<PropertyType>[] };
 
             const material_name = get_file_name(path);
             const material_info = ResourceManager.get_material_info(material_name)
             if (material_info) {
                 const origin = ResourceManager.get_material_by_hash(material_name, material_info.origin);
                 if (origin) {
-                    result.data.push({ name: AssetProperty.VERTEX_PROGRAM, data: material_info.vertexShader });
-                    result.data.push({ name: AssetProperty.FRAGMENT_PROGRAM, data: material_info.fragmentShader });
-                    result.data.push({ name: AssetProperty.TRANSPARENT, data: origin.transparent });
+                    result.fields.push({
+                        name: AssetProperty.VERTEX_PROGRAM,
+                        value: material_info.vertexShader,
+                        type: PropertyType.LIST_TEXT,
+                        params: generateVertexProgramOptions(),
+                        onBeforeChange: saveMaterialVertexProgram,
+                        onChange: handleMaterialVertexProgramChange
+                    });
+
+                    result.fields.push({
+                        name: AssetProperty.FRAGMENT_PROGRAM,
+                        value: material_info.fragmentShader,
+                        type: PropertyType.LIST_TEXT,
+                        params: generateFragmentProgramOptions(),
+                        onBeforeChange: saveMaterialFragmentProgram,
+                        onChange: handleMaterialFragmentProgramChange
+                    });
+
+                    result.fields.push({
+                        name: AssetProperty.TRANSPARENT,
+                        value: origin.transparent,
+                        type: PropertyType.BOOLEAN,
+                        onBeforeChange: saveMaterialTransparent,
+                        onChange: handleMaterialTransparentChange
+                    });
 
                     Object.entries(origin.uniforms).forEach(([key, uniform]) => {
                         const uniformInfo = material_info.uniforms[key];
@@ -284,167 +178,146 @@ function AssetInspectorCreate() {
                         if (uniformInfo.hide) return;
                         switch (uniformInfo.type) {
                             case MaterialUniformType.SAMPLER2D:
-                                _config.forEach((group) => {
-                                    const property = group.property_list.find((property) => property.name == AssetProperty.UNIFORM_SAMPLER2D);
-                                    if (!property) return;
-                                    const newProperty = { ...property };
-                                    newProperty.name = key;
-                                    newProperty.title = key;
-                                    newProperty.readonly = uniformInfo.readonly;
-                                    group.property_list.push(newProperty);
-                                });
                                 const texture = uniform as IUniform<Texture>;
                                 const texture_name = get_file_name((texture.value as any).path || '');
                                 const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
-                                result.data.push({ name: key, data: `${atlas}/${texture_name}` });
+                                result.fields.push({
+                                    name: key,
+                                    value: `${atlas}/${texture_name}`,
+                                    type: PropertyType.LIST_TEXTURES,
+                                    params: generateTextureOptions(true),
+                                    onBeforeChange: saveUniformSampler2D,
+                                    onChange: handleUniformSampler2DChange
+                                });
                                 break;
                             case MaterialUniformType.FLOAT:
-                                _config.forEach((group) => {
-                                    const property = group.property_list.find((property) => property.name == AssetProperty.UNIFORM_FLOAT);
-                                    if (!property) return;
-                                    // NOTE: создаем новую проперти с теми же параметрами, но с другим именем
-                                    const newProperty = { ...property };
-                                    newProperty.name = key;
-                                    newProperty.title = key;
-                                    newProperty.readonly = uniformInfo.readonly;
-                                    group.property_list.push(newProperty);
-                                });
                                 const data = uniform as IUniform<number>;
-                                result.data.push({ name: key, data: data.value });
+                                result.fields.push({
+                                    name: key,
+                                    value: data.value,
+                                    type: PropertyType.NUMBER,
+                                    onBeforeChange: saveUniformFloat,
+                                    onChange: handleUniformChange<number>
+                                });
                                 break;
                             case MaterialUniformType.RANGE:
-                                _config.forEach((group) => {
-                                    const property = group.property_list.find((property) => property.name == AssetProperty.UNIFORM_RANGE);
-                                    if (!property) return;
-                                    // NOTE: создаем новую проперти с теми же параметрами, но с другим именем
-                                    const newProperty = { ...property };
-                                    newProperty.name = key;
-                                    newProperty.title = key;
-                                    newProperty.readonly = uniformInfo.readonly;
-                                    const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.RANGE];
-                                    const defaultParams = property.params as PropertyParams[PropertyType.SLIDER];
-                                    newProperty.params = {
-                                        min: params.min ?? defaultParams.min,
-                                        max: params.max ?? defaultParams.max,
-                                        step: params.step ?? defaultParams.step
-                                    };
-                                    group.property_list.push(newProperty);
-                                });
                                 const range = uniform as IUniform<number>;
-                                result.data.push({ name: key, data: range.value });
+                                const range_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.RANGE];
+                                result.fields.push({
+                                    name: key,
+                                    value: range.value,
+                                    type: PropertyType.SLIDER,
+                                    params: {
+                                        min: range_params.min ?? 0,
+                                        max: range_params.max ?? 1,
+                                        step: range_params.step ?? 0.01
+                                    },
+                                    onBeforeChange: saveUniformRange,
+                                    onChange: handleUniformChange<number>
+                                });
                                 break;
                             case MaterialUniformType.VEC2:
-                                _config.forEach((group) => {
-                                    const property = group.property_list.find((property) => property.name == AssetProperty.UNIFORM_VEC2);
-                                    if (!property) return;
-                                    // NOTE: создаем новую проперти с теми же параметрами, но с другим именем
-                                    const newProperty = { ...property };
-                                    newProperty.name = key;
-                                    newProperty.title = key;
-                                    newProperty.readonly = uniformInfo.readonly;
-                                    const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC2];
-                                    const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_2];
-                                    newProperty.params = {
+                                const vec2 = uniform as IUniform<Vector2>;
+                                const vec2_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC2];
+                                result.fields.push({
+                                    name: key,
+                                    value: vec2.value,
+                                    type: PropertyType.VECTOR_2,
+                                    params: {
                                         x: {
-                                            min: params?.x?.min ?? defaultParams?.x?.min,
-                                            max: params?.x?.max ?? defaultParams?.x?.max,
-                                            step: params?.x?.step ?? defaultParams?.x?.step
+                                            min: vec2_params.x.min ?? -1000,
+                                            max: vec2_params.x.max ?? 1000,
+                                            step: vec2_params.x.step ?? 0.1,
+                                            format: (v: number) => v.toFixed(2)
                                         },
                                         y: {
-                                            min: params?.y?.min ?? defaultParams?.y?.min,
-                                            max: params?.y?.max ?? defaultParams?.y?.max,
-                                            step: params?.y?.step ?? defaultParams?.y?.step
+                                            min: vec2_params.y.min ?? -1000,
+                                            max: vec2_params.y.max ?? 1000,
+                                            step: vec2_params.y.step ?? 0.1,
+                                            format: (v: number) => v.toFixed(2)
                                         }
-                                    };
-                                    group.property_list.push(newProperty);
+                                    },
+                                    onBeforeChange: saveUniformVec2,
+                                    onChange: handleUniformChange<Vector2>
                                 });
-                                const vec2 = uniform as IUniform<Vector2>;
-                                result.data.push({ name: key, data: vec2.value });
                                 break;
                             case MaterialUniformType.VEC3:
-                                _config.forEach((group) => {
-                                    const property = group.property_list.find((property) => property.name == AssetProperty.UNIFORM_VEC3);
-                                    if (!property) return;
-                                    // NOTE: создаем новую проперти с теми же параметрами, но с другим именем
-                                    const newProperty = { ...property };
-                                    newProperty.name = key;
-                                    newProperty.title = key;
-                                    newProperty.readonly = uniformInfo.readonly;
-                                    const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC3];
-                                    const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_3];
-                                    newProperty.params = {
+                                const vec3 = uniform as IUniform<Vector3>;
+                                const vec3_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC3];
+                                result.fields.push({
+                                    name: key,
+                                    value: vec3.value,
+                                    type: PropertyType.VECTOR_3,
+                                    params: {
                                         x: {
-                                            min: params?.x?.min ?? defaultParams?.x?.min,
-                                            max: params?.x?.max ?? defaultParams?.x?.max,
-                                            step: params?.x?.step ?? defaultParams?.x?.step
+                                            min: vec3_params.x.min ?? -1000,
+                                            max: vec3_params.x.max ?? 1000,
+                                            step: vec3_params.x.step ?? 0.1,
+                                            format: (v: number) => v.toFixed(2)
                                         },
                                         y: {
-                                            min: params?.y?.min ?? defaultParams?.y?.min,
-                                            max: params?.y?.max ?? defaultParams?.y?.max,
-                                            step: params?.y?.step ?? defaultParams?.y?.step
+                                            min: vec3_params.y.min ?? -1000,
+                                            max: vec3_params.y.max ?? 1000,
+                                            step: vec3_params.y.step ?? 0.1,
+                                            format: (v: number) => v.toFixed(2)
                                         },
                                         z: {
-                                            min: params?.z?.min ?? defaultParams?.z?.min,
-                                            max: params?.z?.max ?? defaultParams?.z?.max,
-                                            step: params?.z?.step ?? defaultParams?.z?.step
+                                            min: vec3_params.z.min ?? -1000,
+                                            max: vec3_params.z.max ?? 1000,
+                                            step: vec3_params.z.step ?? 0.1,
+                                            format: (v: number) => v.toFixed(2)
                                         }
-                                    };
-                                    group.property_list.push(newProperty);
+                                    },
+                                    onBeforeChange: saveUniformVec3,
+                                    onChange: handleUniformChange<Vector3>
                                 });
-                                const vec3 = uniform as IUniform<Vector3>;
-                                result.data.push({ name: key, data: vec3.value });
                                 break;
                             case MaterialUniformType.VEC4:
-                                _config.forEach((group) => {
-                                    const property = group.property_list.find((property) => property.name == AssetProperty.UNIFORM_VEC4);
-                                    if (!property) return;
-                                    // NOTE: создаем новую проперти с теми же параметрами, но с другим именем
-                                    const newProperty = { ...property };
-                                    newProperty.name = key;
-                                    newProperty.title = key;
-                                    newProperty.readonly = uniformInfo.readonly;
-                                    const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC4];
-                                    const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_4];
-                                    newProperty.params = {
+                                const vec4 = uniform as IUniform<Vector4>;
+                                const vec4_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC4];
+                                result.fields.push({
+                                    name: key,
+                                    value: vec4.value,
+                                    type: PropertyType.VECTOR_4,
+                                    params: {
                                         x: {
-                                            min: params?.x?.min ?? defaultParams?.x?.min,
-                                            max: params?.x?.max ?? defaultParams?.x?.max,
-                                            step: params?.x?.step ?? defaultParams?.x?.step
+                                            min: vec4_params.x.min ?? -1000,
+                                            max: vec4_params.x.max ?? 1000,
+                                            step: vec4_params.x.step ?? 0.1,
+                                            format: (v: number) => v.toFixed(2)
                                         },
                                         y: {
-                                            min: params?.y?.min ?? defaultParams?.y?.min,
-                                            max: params?.y?.max ?? defaultParams?.y?.max,
-                                            step: params?.y?.step ?? defaultParams?.y?.step
+                                            min: vec4_params.y.min ?? -1000,
+                                            max: vec4_params.y.max ?? 1000,
+                                            step: vec4_params.y.step ?? 0.1,
+                                            format: (v: number) => v.toFixed(2)
                                         },
                                         z: {
-                                            min: params?.z?.min ?? defaultParams?.z?.min,
-                                            max: params?.z?.max ?? defaultParams?.z?.max,
-                                            step: params?.z?.step ?? defaultParams?.z?.step
+                                            min: vec4_params.z.min ?? -1000,
+                                            max: vec4_params.z.max ?? 1000,
+                                            step: vec4_params.z.step ?? 0.1,
+                                            format: (v: number) => v.toFixed(2)
                                         },
                                         w: {
-                                            min: params?.w?.min ?? defaultParams?.w?.min,
-                                            max: params?.w?.max ?? defaultParams?.w?.max,
-                                            step: params?.w?.step ?? defaultParams?.w?.step
+                                            min: vec4_params.w.min ?? -1000,
+                                            max: vec4_params.w.max ?? 1000,
+                                            step: vec4_params.w.step ?? 0.1,
+                                            format: (v: number) => v.toFixed(2)
                                         }
-                                    };
-                                    group.property_list.push(newProperty);
+                                    },
+                                    onBeforeChange: saveUniformVec4,
+                                    onChange: handleUniformChange<Vector4>
                                 });
-                                const vec4 = uniform as IUniform<Vector4>;
-                                result.data.push({ name: key, data: vec4.value });
                                 break;
                             case MaterialUniformType.COLOR:
-                                _config.forEach((group) => {
-                                    const property = group.property_list.find((property) => property.name == AssetProperty.UNIFORM_COLOR);
-                                    if (!property) return;
-                                    // NOTE: создаем новую проперти с теми же параметрами, но с другим именем
-                                    const newProperty = { ...property };
-                                    newProperty.name = key;
-                                    newProperty.title = key;
-                                    newProperty.readonly = uniformInfo.readonly;
-                                    group.property_list.push(newProperty);
-                                });
                                 const color = uniform as IUniform<Vector3>;
-                                result.data.push({ name: key, data: rgbToHex(color.value) });
+                                result.fields.push({
+                                    name: key,
+                                    value: rgbToHex(color.value),
+                                    type: PropertyType.COLOR,
+                                    onBeforeChange: saveUniformColor,
+                                    onChange: handleUniformChange<string>
+                                });
                                 break;
                         }
                     });
@@ -455,7 +328,7 @@ function AssetInspectorCreate() {
         });
 
         Inspector.clear();
-        Inspector.setData(data, _config);
+        Inspector.setData(data);
     }
 
     function saveAssetAtlas(info: BeforeChangeInfo) {

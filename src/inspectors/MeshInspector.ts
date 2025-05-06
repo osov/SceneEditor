@@ -1,19 +1,21 @@
-import { Euler, Vector2, Vector3, Vector4 } from "three";
+import { Euler, ShaderMaterial, Vector2, Vector3, Vector4 } from "three";
 import { degToRad, radToDeg } from "three/src/math/MathUtils";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { GoSprite, FlipMode } from "../render_engine/objects/sub_types";
 import { TextMesh } from "../render_engine/objects/text";
-import { IObjectTypes } from "../render_engine/types";
-import { ChangeInfo, InspectorGroup, PropertyType, BeforeChangeInfo, PropertyData, PropertyParams } from "../modules_editor/Inspector";
+import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
+import { ChangeInfo, PropertyType, BeforeChangeInfo, PropertyData } from "../modules_editor/Inspector";
 import { deepClone, hexToRGB } from "../modules/utils";
 import { MeshMaterialUniformInfo, MeshPropertyInfo } from "../controls/types";
-import { anchorToScreenPreset, convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode, generateMaterialOptions, generateTextureOptions, getChangedInfo, getDraggedInfo, pivotToScreenPreset, screenPresetToAnchorValue, screenPresetToPivotValue, update_option } from "./helpers";
+import { anchorToScreenPreset, convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode, generateMaterialOptions, generateModelOptions, generateTextureOptions, getChangedInfo, getDraggedInfo, pivotToScreenPreset, screenPresetToAnchorValue, screenPresetToPivotValue } from "./helpers";
 import { IUniform, Texture } from "three";
 import { Color } from "three";
 import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
 import { rgbToHex } from "../modules/utils";
 import { get_file_name, is_base_mesh } from "../render_engine/helpers/utils";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
+import { AnimatedMesh } from "../render_engine/objects/animated_mesh";
+import { WORLD_SCALAR } from "../config";
 
 
 declare global {
@@ -25,41 +27,34 @@ export function register_mesh_inspector() {
 }
 
 export enum MeshProperty {
-    ID = 'mesh_id',
-    TYPE = 'mesh_type',
-    NAME = 'mesh_name',
-    VISIBLE = 'mesh_visible',
-    ACTIVE = 'mesh_active',
-    POSITION = 'mesh_position',
-    ROTATION = 'mesh_rotation',
-    SCALE = 'mesh_scale',
-    SIZE = 'mesh_size',
-    PIVOT = 'mesh_pivot',
-    ANCHOR = 'mesh_anchor',
-    ANCHOR_PRESET = 'mesh_anchor_preset',
-    COLOR = 'mesh_color',
-    TEXT_ALPHA = 'mesh_text_alpha',
-    TEXTURE = 'mesh_texture',
-    SLICE9 = 'mesh_slice9',
-    TEXT = 'mesh_text',
-    FONT = 'mesh_font',
-    FONT_SIZE = 'mesh_font_size',
-    TEXT_ALIGN = 'mesh_text_align',
-    ATLAS = 'mesh_atlas',
-    LINE_HEIGHT = 'mesh_line_height',
-    BLEND_MODE = 'mesh_blend_mode',
-    FLIP_VERTICAL = 'mesh_flip_vertical',
-    FLIP_HORIZONTAL = 'mesh_flip_horizontal',
-    FLIP_DIAGONAL = 'mesh_flip_diagonal',
-    MATERIAL = 'mesh_material',
-    MATERIAL_BUTTON = 'mesh_material_button',
-    MATERIAL_UNIFORM_SAMPLER2D = 'mesh_material_uniform_sampler2d',
-    MATERIAL_UNIFORM_FLOAT = 'mesh_material_uniform_float',
-    MATERIAL_UNIFORM_RANGE = 'mesh_material_uniform_range',
-    MATERIAL_UNIFORM_VEC2 = 'mesh_material_uniform_vec2',
-    MATERIAL_UNIFORM_VEC3 = 'mesh_material_uniform_vec3',
-    MATERIAL_UNIFORM_VEC4 = 'mesh_material_uniform_vec4',
-    MATERIAL_UNIFORM_COLOR = 'mesh_material_uniform_color'
+    ID = 'ID',
+    TYPE = 'Тип',
+    NAME = 'Название',
+    VISIBLE = 'Видимый',
+    ACTIVE = 'Aктивный',
+    POSITION = 'Позиция',
+    ROTATION = 'Вращение',
+    SCALE = 'Маштаб',
+    SIZE = 'Размер',
+    PIVOT = 'Точка опоры',
+    ANCHOR = 'Значение',
+    ANCHOR_PRESET = 'Anchor Preset',
+    COLOR = 'Цвет',
+    TEXT_ALPHA = 'Прозрачность',
+    SLICE9 = 'Slice9',
+    TEXT = 'Текст',
+    FONT = 'Шрифт',
+    FONT_SIZE = 'Размер шрифта',
+    TEXT_ALIGN = 'Выравнивание',
+    LINE_HEIGHT = 'Высота строки',
+    MODEL = 'Меш',
+    ACTIVE_MODEL_ANIMATION = 'Aктивная анимация',
+    ANIMATION_LIST = 'Анимация',
+    BLEND_MODE = 'Режим смешивания',
+    MATERIAL = 'Шаблон',
+    FLIP_VERTICAL = 'Вертикальное отражение',
+    FLIP_HORIZONTAL = 'Горизонтальное отражение',
+    FLIP_DIAGONAL = 'Диагональное отражение',
 }
 
 export enum ScreenPointPreset {
@@ -94,285 +89,6 @@ export enum BlendMode {
 
 
 function MeshInspectorCreate() {
-    const _config: InspectorGroup[] = [
-        {
-            name: 'base',
-            title: '',
-            property_list: [
-                // { name: MeshProperty.ID, title: 'ID', type: PropertyType.NUMBER, readonly: true },
-                { name: MeshProperty.TYPE, title: 'Тип', type: PropertyType.STRING, readonly: true },
-                { name: MeshProperty.NAME, title: 'Название', type: PropertyType.STRING, onBeforeChange: saveName, onChange: handleNameChange },
-                // { name: ObjectProperty.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN, onSave: saveVisible, onUpdate: updateVisible },
-                { name: MeshProperty.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN, onBeforeChange: saveActive, onChange: handleActiveChange }
-            ]
-        },
-        {
-            name: 'transform',
-            title: 'Трансформ',
-            property_list: [
-                {
-                    name: MeshProperty.POSITION, title: 'Позиция', type: PropertyType.VECTOR_3, params: {
-                        x: { format: (v: number) => v.toFixed(2), step: 0.1 },
-                        y: { format: (v: number) => v.toFixed(2), step: 0.1 },
-                        z: { format: (v: number) => v.toFixed(2), step: 0.1 },
-                    },
-                    onBeforeChange: savePosition,
-                    onChange: handlePositionChange,
-                    onRefresh: refreshPosition
-                },
-                {
-                    name: MeshProperty.ROTATION, title: 'Вращение', type: PropertyType.VECTOR_3, params: {
-                        x: { format: (v: number) => v.toFixed(2) },
-                        y: { format: (v: number) => v.toFixed(2) },
-                        z: { format: (v: number) => v.toFixed(2) }
-                    },
-                    onBeforeChange: saveRotation,
-                    onChange: handleRotationChange,
-                    onRefresh: refreshRotation
-                },
-                {
-                    name: MeshProperty.SCALE, title: 'Маштаб', type: PropertyType.VECTOR_2, params: {
-                        x: { format: (v: number) => v.toFixed(2) },
-                        y: { format: (v: number) => v.toFixed(2) },
-                    },
-                    onBeforeChange: saveScale,
-                    onChange: handleScaleChange,
-                    onRefresh: refreshScale
-                },
-                {
-                    name: MeshProperty.PIVOT, title: 'Точка опоры', type: PropertyType.LIST_TEXT, params: {
-                        'Центр': ScreenPointPreset.CENTER,
-                        'Левый Верхний': ScreenPointPreset.TOP_LEFT,
-                        'Центр Сверху': ScreenPointPreset.TOP_CENTER,
-                        'Правый Верхний': ScreenPointPreset.TOP_RIGHT,
-                        'Центр Слева': ScreenPointPreset.LEFT_CENTER,
-                        'Центр Справа': ScreenPointPreset.RIGHT_CENTER,
-                        'Левый Нижний': ScreenPointPreset.BOTTOM_LEFT,
-                        'Центр Снизу': ScreenPointPreset.BOTTOM_CENTER,
-                        'Правый Нижний': ScreenPointPreset.BOTTOM_RIGHT
-                    },
-                    onBeforeChange: savePivot,
-                    onChange: handlePivotChange,
-                    onRefresh: refreshPivot
-                },
-                {
-                    name: MeshProperty.SIZE, title: 'Размер', type: PropertyType.VECTOR_2, params: {
-                        x: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
-                        y: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
-                    },
-                    onBeforeChange: saveSize,
-                    onChange: handleSizeChange,
-                    onRefresh: refreshSize
-                }
-            ]
-        },
-        {
-            name: 'anchor',
-            title: 'Якорь',
-            property_list: [
-                {
-                    name: MeshProperty.ANCHOR, title: 'Значение', type: PropertyType.POINT_2D, params: {
-                        x: { min: -1, max: 1, format: (v: number) => v.toFixed(2) },
-                        y: { min: -1, max: 1, format: (v: number) => v.toFixed(2) }
-                    },
-                    onBeforeChange: saveAnchor,
-                    onChange: handleAnchorChange,
-                    onRefresh: refreshAnchor
-                },
-                {
-                    name: MeshProperty.ANCHOR_PRESET,
-                    title: 'Anchor Preset',
-                    type: PropertyType.LIST_TEXT,
-                    params: {
-                        'Top Left': 'Top Left',
-                        'Top Center': 'Top Center',
-                        'Top Right': 'Top Right',
-                        'Middle Left': 'Middle Left',
-                        'Middle Center': 'Middle Center',
-                        'Middle Right': 'Middle Right',
-                        'Bottom Left': 'Bottom Left',
-                        'Bottom Center': 'Bottom Center',
-                        'Bottom Right': 'Bottom Right'
-                    },
-                    onBeforeChange: saveAnchorPreset,
-                    onChange: handleAnchorPresetChange,
-                    onRefresh: refreshAnchorPreset
-                }
-            ]
-        },
-        {
-            name: 'text',
-            title: 'Текст',
-            property_list: [
-                { name: MeshProperty.TEXT, title: 'Текст', type: PropertyType.STRING, onBeforeChange: saveText, onChange: handleTextChange },
-                {
-                    name: MeshProperty.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: ResourceManager.get_all_fonts(),
-                    onBeforeChange: saveFont,
-                    onChange: handleFontChange
-                },
-                {
-                    name: MeshProperty.FONT_SIZE, title: 'Размер шрифта', type: PropertyType.NUMBER, params: {
-                        min: 8, step: 1, format: (v: number) => v.toFixed(0)
-                    },
-                    onBeforeChange: saveFontSize,
-                    onChange: handleFontSizeChange,
-                    onRefresh: refreshFontSize
-                },
-                {
-                    name: MeshProperty.TEXT_ALIGN, title: 'Выравнивание', type: PropertyType.LIST_TEXT, params: {
-                        'Центр': TextAlign.CENTER,
-                        'Слева': TextAlign.LEFT,
-                        'Справа': TextAlign.RIGHT,
-                        'По ширине': TextAlign.JUSTIFY
-                    },
-                    onBeforeChange: saveTextAlign,
-                    onChange: handleTextAlignChange
-                },
-                {
-                    name: MeshProperty.LINE_HEIGHT, title: 'Высота строки', type: PropertyType.NUMBER, params: {
-                        min: 0.5, max: 3, step: 0.1, format: (v: number) => v.toFixed(2)
-                    },
-                    onBeforeChange: saveLineHeight,
-                    onChange: handleLineHeightChange
-                }
-            ]
-        },
-        {
-            name: 'material',
-            title: 'Материал',
-            property_list: [
-                {
-                    name: MeshProperty.MATERIAL, title: 'Шаблон', type: PropertyType.LIST_TEXT, params: generateMaterialOptions(),
-                    onBeforeChange: saveMaterial,
-                    onChange: handleMaterialChange
-                },
-
-                { name: MeshProperty.COLOR, title: 'Цвет', type: PropertyType.COLOR, onBeforeChange: saveColor, onChange: handleColorChange },
-                {
-                    name: MeshProperty.TEXT_ALPHA,
-                    title: 'Прозрачность',
-                    type: PropertyType.SLIDER,
-                    params: {
-                        min: 0,
-                        max: 1,
-                        step: 0.01
-                    },
-                    onBeforeChange: saveTextAlpha,
-                    onChange: handleTextAlphaChange
-                },
-                {
-                    name: MeshProperty.MATERIAL_UNIFORM_SAMPLER2D,
-                    title: 'Sampler2D',
-                    type: PropertyType.LIST_TEXTURES,
-                    params: () => generateTextureOptions(true),
-                    onBeforeChange: saveUniformSampler2D,
-                    onChange: handleUniformSampler2DChange
-                },
-                {
-                    name: MeshProperty.MATERIAL_UNIFORM_FLOAT,
-                    title: 'Float',
-                    type: PropertyType.NUMBER,
-                    params: {
-                        min: 0,
-                        max: 1,
-                        step: 0.01
-                    },
-                    onBeforeChange: saveUniformFloat,
-                    onChange: handleUniformFloatChange
-                },
-                {
-                    name: MeshProperty.MATERIAL_UNIFORM_RANGE,
-                    title: 'Range',
-                    type: PropertyType.SLIDER,
-                    params: {
-                        min: 0,
-                        max: 1,
-                        step: 0.01
-                    },
-                    onBeforeChange: saveUniformRange,
-                    onChange: handleUniformRangeChange
-                },
-                {
-                    name: MeshProperty.MATERIAL_UNIFORM_VEC2,
-                    title: 'Vec2',
-                    type: PropertyType.VECTOR_2,
-                    params: {
-                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
-                    },
-                    onBeforeChange: saveUniformVec2,
-                    onChange: handleUniformVec2Change
-                },
-                {
-                    name: MeshProperty.MATERIAL_UNIFORM_VEC3,
-                    title: 'Vec3',
-                    type: PropertyType.VECTOR_3,
-                    params: {
-                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
-                    },
-                    onBeforeChange: saveUniformVec3,
-                    onChange: handleUniformVec3Change
-                },
-                {
-                    name: MeshProperty.MATERIAL_UNIFORM_VEC4,
-                    title: 'Vec4',
-                    type: PropertyType.VECTOR_4,
-                    params: {
-                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        w: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
-                    },
-                    onBeforeChange: saveUniformVec4,
-                    onChange: handleUniformVec4Change
-                },
-                {
-                    name: MeshProperty.MATERIAL_UNIFORM_COLOR,
-                    title: 'Color',
-                    type: PropertyType.COLOR,
-                    onBeforeChange: saveUniformColor,
-                    onChange: handleUniformColorChange
-                },
-                {
-                    name: MeshProperty.SLICE9, title: 'Slice9', type: PropertyType.POINT_2D, params: {
-                        x: { min: 0, max: 100, format: (v: number) => v.toFixed(2) },
-                        y: { min: 0, max: 100, format: (v: number) => v.toFixed(2) }
-                    },
-                    onBeforeChange: saveSlice,
-                    onChange: handleSliceChange,
-                    onRefresh: refreshSlice9
-                },
-                {
-                    name: MeshProperty.BLEND_MODE, title: 'Режим смешивания', type: PropertyType.LIST_TEXT, params: {
-                        'Нормальный': BlendMode.NORMAL,
-                        'Сложение': BlendMode.ADD,
-                        'Умножение': BlendMode.MULTIPLY,
-                        'Вычитание': BlendMode.SUBTRACT,
-                        // 'Пользовательский': BlendMode.CUSTOM
-                    },
-                    onBeforeChange: saveBlendMode,
-                    onChange: handleBlendModeChange
-                },
-                {
-                    name: MeshProperty.MATERIAL_BUTTON,
-                    title: 'Открыть оригинальный материал',
-                    type: PropertyType.BUTTON
-                },
-            ]
-        },
-        {
-            name: 'Flip',
-            title: 'Отражение',
-            property_list: [
-                { name: MeshProperty.FLIP_VERTICAL, title: 'По вертикали', type: PropertyType.BOOLEAN, onBeforeChange: saveUV, onChange: handleFlipVerticalChange, onRefresh: refreshFlipVertical },
-                { name: MeshProperty.FLIP_HORIZONTAL, title: 'По горизонтали', type: PropertyType.BOOLEAN, onBeforeChange: saveUV, onChange: handleFlipHorizontalChange, onRefresh: refreshFlipHorizontal },
-                { name: MeshProperty.FLIP_DIAGONAL, title: 'По диагонали', type: PropertyType.BOOLEAN, onBeforeChange: saveUV, onChange: handleFlipDiagonalChange, onRefresh: refreshFlipDiagonal },
-            ]
-        }
-    ];
-
     let _selected_meshes: number[] = [];
 
     function init() {
@@ -394,319 +110,754 @@ function MeshInspectorCreate() {
         });
     }
 
-    // NOTE/TODO: возможно лучше будет разбить на функции по типу меша, чтоб в каждой описывать нужные поля, хоть и придется дублировать код, но навигация будет проще 🤔
     function set_selected_meshes(mesh_ids: number[]) {
         _selected_meshes = mesh_ids;
 
         const list = SceneManager.get_scene_list().filter((item) => _selected_meshes.includes(item.mesh_data.id));
-        const data = list.map((value) => {
+        const data = list.map((mesh) => {
             const fields: PropertyData<PropertyType>[] = [];
+            generateBaseFields(fields, mesh);
 
-            // fields.push({ name: MeshProperty.ID, data: value.mesh_data.id });
-
-            fields.push({ name: MeshProperty.TYPE, data: value.type });
-            fields.push({ name: MeshProperty.NAME, data: value.name });
-            // fields.push({ name: ObjectProperty.VISIBLE, data: value.get_visible() });
-            fields.push({ name: MeshProperty.ACTIVE, data: value.get_active() });
-
-            // NOTE: исключаем gui контейнер
-            if (value.type != IObjectTypes.GUI_CONTAINER) {
-
-                // NOTE: трансформация
-                {
-                    fields.push({ name: MeshProperty.POSITION, data: value.get_position() });
-
-                    const raw = value.rotation;
-                    const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
-                    fields.push({ name: MeshProperty.ROTATION, data: rotation });
-
-                    fields.push({ name: MeshProperty.SCALE, data: value.get_scale() });
-                }
-
-                // NOTE: gui поля
-                if ([IObjectTypes.GUI_BOX, IObjectTypes.GUI_TEXT].includes(value.type)) {
-                    fields.push({ name: MeshProperty.SIZE, data: value.get_size() });
-
-                    const pivot_preset = pivotToScreenPreset(value.get_pivot());
-                    fields.push({ name: MeshProperty.PIVOT, data: pivot_preset });
-
-                    const anchor_preset = anchorToScreenPreset(value.get_anchor());
-                    fields.push({ name: MeshProperty.ANCHOR_PRESET, data: anchor_preset });
-                    fields.push({ name: MeshProperty.ANCHOR, data: value.get_anchor() });
-                } else if (IObjectTypes.GO_SPRITE_COMPONENT == value.type || IObjectTypes.GO_LABEL_COMPONENT == value.type) {
-                    fields.push({ name: MeshProperty.SIZE, data: value.get_size() });
-                }
-
-                // NOTE: визуальные поля
-                if ([IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT].includes(value.type)) {
-                    // NOTE: обновляем конфиг материалов
-                    update_option(_config, MeshProperty.MATERIAL, generateMaterialOptions);
-
-                    fields.push({ name: MeshProperty.MATERIAL, data: (value as Slice9Mesh).material.name || '' });
-
-                    fields.push({ name: MeshProperty.COLOR, data: value.get_color() });
-
-                    fields.push({ name: MeshProperty.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
-
-                    fields.push({ name: MeshProperty.SLICE9, data: (value as Slice9Mesh).get_slice() });
-
-                    // NOTE: обновляем конфиг текстур для sampler2d полeй
-                    update_option(_config, MeshProperty.MATERIAL_UNIFORM_SAMPLER2D, () => generateTextureOptions(true));
-
-                    // Add material properties
-                    const material = (value as Slice9Mesh).material;
-                    if (material) {
-                        const material_info = ResourceManager.get_material_info(material.name);
-                        if (material_info) {
-                            Object.entries(material.uniforms).forEach(([key, uniform]) => {
-                                const uniformInfo = material_info.uniforms[key];
-                                if (!uniformInfo) return;
-                                if (uniformInfo.hide) return;
-                                switch (uniformInfo.type) {
-                                    case MaterialUniformType.SAMPLER2D:
-                                        _config.forEach((group) => {
-                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_SAMPLER2D);
-                                            if (!property) return;
-                                            const newProperty = { ...property };
-                                            newProperty.name = key;
-                                            newProperty.title = key;
-                                            newProperty.readonly = uniformInfo.readonly;
-                                            group.property_list.push(newProperty);
-                                        });
-                                        const texture = uniform as IUniform<Texture>;
-                                        const texture_name = texture.value ? get_file_name((texture.value as any).path || '') : '';
-                                        const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
-                                        fields.push({ name: key, data: `${atlas}/${texture_name}` });
-                                        break;
-                                    case MaterialUniformType.FLOAT:
-                                        _config.forEach((group) => {
-                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_FLOAT);
-                                            if (!property) return;
-                                            const newProperty = { ...property };
-                                            newProperty.name = key;
-                                            newProperty.title = key;
-                                            newProperty.readonly = uniformInfo.readonly;
-                                            group.property_list.push(newProperty);
-                                        });
-                                        const float = uniform as IUniform<number>;
-                                        fields.push({ name: key, data: float.value });
-                                        break;
-                                    case MaterialUniformType.RANGE:
-                                        _config.forEach((group) => {
-                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_RANGE);
-                                            if (!property) return;
-                                            const newProperty = { ...property };
-                                            newProperty.name = key;
-                                            newProperty.title = key;
-                                            newProperty.readonly = uniformInfo.readonly;
-                                            const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.RANGE];
-                                            newProperty.params = {
-                                                min: params.min,
-                                                max: params.max,
-                                                step: params.step
-                                            };
-                                            group.property_list.push(newProperty);
-                                        });
-                                        const range = uniform as IUniform<number>;
-                                        fields.push({ name: key, data: range.value });
-                                        break;
-                                    case MaterialUniformType.VEC2:
-                                        _config.forEach((group) => {
-                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_VEC2);
-                                            if (!property) return;
-                                            const newProperty = { ...property };
-                                            newProperty.name = key;
-                                            newProperty.title = key;
-                                            newProperty.readonly = uniformInfo.readonly;
-                                            const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC2];
-                                            const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_2];
-                                            newProperty.params = {
-                                                x: {
-                                                    min: params?.x?.min ?? defaultParams?.x?.min,
-                                                    max: params?.x?.max ?? defaultParams?.x?.max,
-                                                    step: params?.x?.step ?? defaultParams?.x?.step
-                                                },
-                                                y: {
-                                                    min: params?.y?.min ?? defaultParams?.y?.min,
-                                                    max: params?.y?.max ?? defaultParams?.y?.max,
-                                                    step: params?.y?.step ?? defaultParams?.y?.step
-                                                }
-                                            };
-                                            group.property_list.push(newProperty);
-                                        });
-                                        const vec2 = uniform as IUniform<Vector2>;
-                                        fields.push({ name: key, data: vec2.value });
-                                        break;
-                                    case MaterialUniformType.VEC3:
-                                        _config.forEach((group) => {
-                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_VEC3);
-                                            if (!property) return;
-                                            const newProperty = { ...property };
-                                            newProperty.name = key;
-                                            newProperty.title = key;
-                                            newProperty.readonly = uniformInfo.readonly;
-                                            const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC3];
-                                            const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_3];
-                                            newProperty.params = {
-                                                x: {
-                                                    min: params?.x?.min ?? defaultParams?.x?.min,
-                                                    max: params?.x?.max ?? defaultParams?.x?.max,
-                                                    step: params?.x?.step ?? defaultParams?.x?.step
-                                                },
-                                                y: {
-                                                    min: params?.y?.min ?? defaultParams?.y?.min,
-                                                    max: params?.y?.max ?? defaultParams?.y?.max,
-                                                    step: params?.y?.step ?? defaultParams?.y?.step
-                                                },
-                                                z: {
-                                                    min: params?.z?.min ?? defaultParams?.z?.min,
-                                                    max: params?.z?.max ?? defaultParams?.z?.max,
-                                                    step: params?.z?.step ?? defaultParams?.z?.step
-                                                }
-                                            };
-                                            group.property_list.push(newProperty);
-                                        });
-                                        const vec3 = uniform as IUniform<Vector3>;
-                                        fields.push({ name: key, data: vec3.value });
-                                        break;
-                                    case MaterialUniformType.VEC4:
-                                        _config.forEach((group) => {
-                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_VEC4);
-                                            if (!property) return;
-                                            const newProperty = { ...property };
-                                            newProperty.name = key;
-                                            newProperty.title = key;
-                                            newProperty.readonly = uniformInfo.readonly;
-                                            const params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC4];
-                                            const defaultParams = property.params as PropertyParams[PropertyType.VECTOR_4];
-                                            newProperty.params = {
-                                                x: {
-                                                    min: params?.x?.min ?? defaultParams?.x?.min,
-                                                    max: params?.x?.max ?? defaultParams?.x?.max,
-                                                    step: params?.x?.step ?? defaultParams?.x?.step
-                                                },
-                                                y: {
-                                                    min: params?.y?.min ?? defaultParams?.y?.min,
-                                                    max: params?.y?.max ?? defaultParams?.y?.max,
-                                                    step: params?.y?.step ?? defaultParams?.y?.step
-                                                },
-                                                z: {
-                                                    min: params?.z?.min ?? defaultParams?.z?.min,
-                                                    max: params?.z?.max ?? defaultParams?.z?.max,
-                                                    step: params?.z?.step ?? defaultParams?.z?.step
-                                                },
-                                                w: {
-                                                    min: params?.w?.min ?? defaultParams?.w?.min,
-                                                    max: params?.w?.max ?? defaultParams?.w?.max,
-                                                    step: params?.w?.step ?? defaultParams?.w?.step
-                                                }
-                                            };
-                                            group.property_list.push(newProperty);
-                                        });
-                                        const vec4 = uniform as IUniform<Vector4>;
-                                        fields.push({ name: key, data: vec4.value });
-                                        break;
-                                    case MaterialUniformType.COLOR:
-                                        _config.forEach((group) => {
-                                            const property = group.property_list.find((property) => property.name == MeshProperty.MATERIAL_UNIFORM_COLOR);
-                                            if (!property) return;
-                                            const newProperty = { ...property };
-                                            newProperty.name = key;
-                                            newProperty.title = key;
-                                            newProperty.readonly = uniformInfo.readonly;
-                                            group.property_list.push(newProperty);
-                                        });
-                                        const color = uniform as IUniform<Vector3>;
-                                        fields.push({ name: key, data: rgbToHex(color.value) });
-                                        break;
-                                }
-                            });
-                        }
-                    }
-
-                    // NOTE: отражение только для спрайта
-                    if (value.type === IObjectTypes.GO_SPRITE_COMPONENT) {
-                        const sprite = value as GoSprite;
-                        const currentFlip = sprite.get_flip();
-
-                        switch (currentFlip) {
-                            case FlipMode.NONE:
-                                fields.push({ name: MeshProperty.FLIP_DIAGONAL, data: false });
-                                fields.push({ name: MeshProperty.FLIP_VERTICAL, data: false });
-                                fields.push({ name: MeshProperty.FLIP_HORIZONTAL, data: false });
-                                break;
-                            case FlipMode.VERTICAL:
-                                fields.push({ name: MeshProperty.FLIP_DIAGONAL, data: false });
-                                fields.push({ name: MeshProperty.FLIP_VERTICAL, data: true });
-                                fields.push({ name: MeshProperty.FLIP_HORIZONTAL, data: false });
-                                break;
-                            case FlipMode.HORIZONTAL:
-                                fields.push({ name: MeshProperty.FLIP_DIAGONAL, data: false });
-                                fields.push({ name: MeshProperty.FLIP_VERTICAL, data: false });
-                                fields.push({ name: MeshProperty.FLIP_HORIZONTAL, data: true });
-                                break;
-                            case FlipMode.DIAGONAL:
-                                fields.push({ name: MeshProperty.FLIP_DIAGONAL, data: true });
-                                fields.push({ name: MeshProperty.FLIP_VERTICAL, data: false });
-                                fields.push({ name: MeshProperty.FLIP_HORIZONTAL, data: false });
-                                break;
-                        }
-                    }
-
-                    let selected_meshes_material = '';
-                    for (const id of list.map((value) => value.mesh_data.id)) {
-                        const mesh = SceneManager.get_mesh_by_id(id);
-                        if (mesh == undefined || !(mesh instanceof Slice9Mesh)) break;
-                        const material = (mesh as Slice9Mesh).material;
-                        if (material == undefined) break;
-                        if (selected_meshes_material == '') {
-                            selected_meshes_material = material.name;
-                        } else if (selected_meshes_material !== material.name) {
-                            selected_meshes_material = '';
-                            break;
-                        }
-                    }
-
-                    if (selected_meshes_material != '') {
-                        fields.push({
-                            name: MeshProperty.MATERIAL_BUTTON, data: async () => {
-                                const material_info = ResourceManager.get_material_info(selected_meshes_material);
-                                if (material_info) {
-                                    await AssetControl.select_file(material_info.path);
-                                }
-                            }
-                        });
-                    }
-                }
-
-                // NOTE: обновляем конфиг шрифтов
-                update_option(_config, MeshProperty.FONT, ResourceManager.get_all_fonts);
-
-                // NOTE: текстовые поля
-                if ([IObjectTypes.TEXT, IObjectTypes.GUI_TEXT, IObjectTypes.GO_LABEL_COMPONENT].includes(value.type)) {
-                    fields.push({ name: MeshProperty.TEXT, data: (value as TextMesh).text });
-                    fields.push({ name: MeshProperty.FONT, data: (value as TextMesh).font || '' });
-                    fields.push({ name: MeshProperty.COLOR, data: value.get_color() });
-                    fields.push({ name: MeshProperty.TEXT_ALPHA, data: (value as TextMesh).fillOpacity });
-
-                    const delta = new Vector3(1 * value.scale.x, 1 * value.scale.y);
-                    const max_delta = Math.max(delta.x, delta.y);
-                    const font_size = (value as TextMesh).fontSize * max_delta;
-
-                    fields.push({ name: MeshProperty.FONT_SIZE, data: font_size });
-                    fields.push({ name: MeshProperty.TEXT_ALIGN, data: (value as TextMesh).textAlign });
-
-                    const line_height = (value as TextMesh).lineHeight;
-                    if (line_height == 'normal') fields.push({ name: MeshProperty.LINE_HEIGHT, data: 1 });
-                    else fields.push({ name: MeshProperty.LINE_HEIGHT, data: line_height });
-                }
+            switch (mesh.type) {
+                case IObjectTypes.GUI_BOX:
+                    generateGuiBoxFields(list, fields, mesh);
+                    break;
+                case IObjectTypes.GUI_TEXT:
+                    generateGuiTextFields(fields, mesh);
+                    break;
+                case IObjectTypes.GO_SPRITE_COMPONENT:
+                    generateSpriteFields(list, fields, mesh);
+                    break;
+                case IObjectTypes.GO_LABEL_COMPONENT:
+                    generateLabelFields(fields, mesh);
+                    break;
+                case IObjectTypes.GO_MODEL_COMPONENT:
+                    generateModelFields(list, fields, mesh as AnimatedMesh);
+                    break;
             }
 
-            return { id: value.mesh_data.id, data: fields };
+            return { id: mesh.mesh_data.id, fields };
         });
 
         Inspector.clear();
-        Inspector.setData(data, _config);
+        Inspector.setData(data);
+    }
+
+    function generateBaseFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        fields.push({
+            name: MeshProperty.TYPE,
+            value: mesh.type,
+            type: PropertyType.STRING,
+            readonly: true
+        });
+
+        fields.push({
+            name: MeshProperty.NAME,
+            value: mesh.name,
+            type: PropertyType.STRING,
+            onBeforeChange: saveName,
+            onChange: handleNameChange
+        });
+
+        fields.push({
+            name: MeshProperty.ACTIVE,
+            value: mesh.get_active(),
+            type: PropertyType.BOOLEAN,
+            onBeforeChange: saveActive,
+            onChange: handleActiveChange
+        });
+    }
+
+    function generateTransformFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        const transform_fields: PropertyData<PropertyType>[] = [];
+        transform_fields.push({
+            name: MeshProperty.POSITION,
+            value: mesh.get_position(),
+            type: PropertyType.VECTOR_3,
+            params: {
+                x: { format: (v: number) => v.toFixed(2), step: 0.1 },
+                y: { format: (v: number) => v.toFixed(2), step: 0.1 },
+                z: { format: (v: number) => v.toFixed(2), step: 0.1 },
+            },
+            onBeforeChange: savePosition,
+            onChange: handlePositionChange,
+            onRefresh: refreshPosition
+        });
+
+        const raw = mesh.rotation;
+        const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
+        transform_fields.push({
+            name: MeshProperty.ROTATION,
+            value: rotation,
+            type: PropertyType.VECTOR_3,
+            params: {
+                x: { format: (v: number) => v.toFixed(2) },
+                y: { format: (v: number) => v.toFixed(2) },
+                z: { format: (v: number) => v.toFixed(2) }
+            },
+            onBeforeChange: saveRotation,
+            onChange: handleRotationChange,
+            onRefresh: refreshRotation
+        });
+
+        transform_fields.push({
+            name: MeshProperty.SCALE,
+            value: mesh.get_scale(),
+            type: PropertyType.VECTOR_3,
+            params: {
+                x: { format: (v: number) => v.toFixed(2) },
+                y: { format: (v: number) => v.toFixed(2) },
+            },
+            onBeforeChange: saveScale,
+            onChange: handleScaleChange,
+            onRefresh: refreshScale
+        });
+
+        fields.push({
+            name: 'Трансформ',
+            value: transform_fields,
+            type: PropertyType.FOLDER,
+            params: { expanded: true }
+        });
+    }
+
+    function generateGuiTransformFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        generateSizeField(fields, mesh);
+
+        const pivot_preset = pivotToScreenPreset(mesh.get_pivot());
+        fields.push({
+            name: MeshProperty.PIVOT,
+            value: pivot_preset,
+            type: PropertyType.LIST_TEXT,
+            params: {
+                'Центр': ScreenPointPreset.CENTER,
+                'Левый Верхний': ScreenPointPreset.TOP_LEFT,
+                'Центр Сверху': ScreenPointPreset.TOP_CENTER,
+                'Правый Верхний': ScreenPointPreset.TOP_RIGHT,
+                'Центр Слева': ScreenPointPreset.LEFT_CENTER,
+                'Центр Справа': ScreenPointPreset.RIGHT_CENTER,
+                'Левый Нижний': ScreenPointPreset.BOTTOM_LEFT,
+                'Центр Снизу': ScreenPointPreset.BOTTOM_CENTER,
+                'Правый Нижний': ScreenPointPreset.BOTTOM_RIGHT
+            },
+            onBeforeChange: savePivot,
+            onChange: handlePivotChange,
+            onRefresh: refreshPivot
+        });
+
+        const anchor_preset = anchorToScreenPreset(mesh.get_anchor());
+        fields.push({
+            name: MeshProperty.ANCHOR_PRESET,
+            value: anchor_preset,
+            type: PropertyType.LIST_TEXT,
+            params: {
+                'Левый Верхний': ScreenPointPreset.TOP_LEFT,
+                'Центр Сверху': ScreenPointPreset.TOP_CENTER,
+                'Правый Верхний': ScreenPointPreset.TOP_RIGHT,
+                'Центр Слева': ScreenPointPreset.LEFT_CENTER,
+                'Центр': ScreenPointPreset.CENTER,
+                'Центр Справа': ScreenPointPreset.RIGHT_CENTER,
+                'Левый Нижний': ScreenPointPreset.BOTTOM_LEFT,
+                'Центр Снизу': ScreenPointPreset.BOTTOM_CENTER,
+                'Правый Нижний': ScreenPointPreset.BOTTOM_RIGHT
+            },
+            onBeforeChange: saveAnchorPreset,
+            onChange: handleAnchorPresetChange,
+            onRefresh: refreshAnchorPreset
+        });
+
+        fields.push({
+            name: MeshProperty.ANCHOR,
+            value: mesh.get_anchor(),
+            type: PropertyType.POINT_2D, params: {
+                x: { min: -1, max: 1, format: (v: number) => v.toFixed(2) },
+                y: { min: -1, max: 1, format: (v: number) => v.toFixed(2) }
+            },
+            onBeforeChange: saveAnchor,
+            onChange: handleAnchorChange,
+            onRefresh: refreshAnchor
+        });
+    }
+
+    function generateSizeField(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        fields.push({
+            name: MeshProperty.SIZE,
+            value: mesh.get_size(),
+            type: PropertyType.VECTOR_2,
+            params: {
+                x: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
+                y: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
+            },
+            onBeforeChange: saveSize,
+            onChange: handleSizeChange,
+            onRefresh: refreshSize
+        });
+    }
+
+    function generateTextFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        const text_fields: PropertyData<PropertyType>[] = [];
+        text_fields.push({
+            name: MeshProperty.TEXT,
+            value: (mesh as TextMesh).text,
+            type: PropertyType.STRING,
+            onBeforeChange: saveText,
+            onChange: handleTextChange
+        });
+
+        text_fields.push({
+            name: MeshProperty.FONT,
+            value: (mesh as TextMesh).font || '',
+            type: PropertyType.LIST_TEXT,
+            params: ResourceManager.get_all_fonts(),
+            onBeforeChange: saveFont,
+            onChange: handleFontChange
+        });
+
+        text_fields.push({
+            name: MeshProperty.COLOR,
+            value: mesh.get_color(),
+            type: PropertyType.COLOR,
+            onBeforeChange: saveColor,
+            onChange: handleColorChange
+        });
+
+        text_fields.push({
+            name: MeshProperty.TEXT_ALPHA,
+            value: (mesh as TextMesh).fillOpacity,
+            type: PropertyType.NUMBER,
+            onBeforeChange: saveTextAlpha,
+            onChange: handleTextAlphaChange
+        });
+
+        const delta = new Vector3(1 * mesh.scale.x, 1 * mesh.scale.y);
+        const max_delta = Math.max(delta.x, delta.y);
+        const font_size = (mesh as TextMesh).fontSize * max_delta;
+
+        text_fields.push({
+            name: MeshProperty.FONT_SIZE,
+            value: font_size,
+            type: PropertyType.NUMBER,
+            params: {
+                min: 8,
+                step: 1,
+                format: (v: number) => v.toFixed(0)
+            },
+            onBeforeChange: saveFontSize,
+            onChange: handleFontSizeChange,
+            onRefresh: refreshFontSize
+        });
+
+        text_fields.push({
+            name: MeshProperty.TEXT_ALIGN,
+            value: (mesh as TextMesh).textAlign,
+            type: PropertyType.LIST_TEXT,
+            params: {
+                'Центр': TextAlign.CENTER,
+                'Слева': TextAlign.LEFT,
+                'Справа': TextAlign.RIGHT,
+                'По ширине': TextAlign.JUSTIFY
+            },
+            onBeforeChange: saveTextAlign,
+            onChange: handleTextAlignChange
+        });
+
+        const line_height = (mesh as TextMesh).lineHeight;
+        if (line_height == 'normal') {
+            text_fields.push({
+                name: MeshProperty.LINE_HEIGHT,
+                value: 1,
+                type: PropertyType.NUMBER,
+                params: {
+                    min: 0.5,
+                    max: 3,
+                    step: 0.1,
+                    format: (v: number) => v.toFixed(2)
+                },
+                onBeforeChange: saveLineHeight,
+                onChange: handleLineHeightChange
+            });
+        } else {
+            text_fields.push({
+                name: MeshProperty.LINE_HEIGHT,
+                value: line_height,
+                type: PropertyType.NUMBER,
+                params: {
+                    min: 0.5,
+                    max: 3,
+                    step: 0.1,
+                    format: (v: number) => v.toFixed(2)
+                },
+                onBeforeChange: saveLineHeight,
+                onChange: handleLineHeightChange
+            });
+        }
+        fields.push({
+            name: 'Текст',
+            value: text_fields,
+            type: PropertyType.FOLDER,
+            params: { expanded: true }
+        });
+    }
+
+    function generateMaterialFields(title: string, list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree, material: ShaderMaterial, expanded = false, with_slice9 = false, with_flip = false, index?: number) {
+        const material_fields: PropertyData<PropertyType>[] = [];
+        material_fields.push({
+            name: MeshProperty.MATERIAL,
+            value: material.name || '',
+            type: PropertyType.LIST_TEXT,
+            params: generateMaterialOptions(),
+            data: { material_index: index },
+            onBeforeChange: saveMaterial,
+            onChange: handleMaterialChange
+        });
+
+        material_fields.push({
+            name: MeshProperty.COLOR,
+            value: mesh.get_color(),
+            type: PropertyType.COLOR,
+            data: { material_index: index },
+            onBeforeChange: saveColor,
+            onChange: handleColorChange,
+        });
+
+        material_fields.push({
+            name: MeshProperty.BLEND_MODE,
+            value: convertThreeJSBlendingToBlendMode(material.blending),
+            type: PropertyType.LIST_TEXT, params: {
+                'Нормальный': BlendMode.NORMAL,
+                'Сложение': BlendMode.ADD,
+                'Умножение': BlendMode.MULTIPLY,
+                'Вычитание': BlendMode.SUBTRACT,
+                // 'Пользовательский': BlendMode.CUSTOM
+            },
+            data: { material_index: index },
+            onBeforeChange: saveBlendMode,
+            onChange: handleBlendModeChange
+        });
+
+        if (with_slice9) {
+            material_fields.push({
+                name: MeshProperty.SLICE9,
+                value: (mesh as Slice9Mesh).get_slice(),
+                type: PropertyType.POINT_2D, params: {
+                    x: { min: 0, max: 100, format: (v: number) => v.toFixed(2) },
+                    y: { min: 0, max: 100, format: (v: number) => v.toFixed(2) }
+                },
+                data: { material_index: index },
+                onBeforeChange: saveSlice,
+                onChange: handleSliceChange,
+                onRefresh: refreshSlice9
+            });
+        }
+
+        if (material) {
+            const material_info = ResourceManager.get_material_info(material.name);
+            if (material_info) {
+                Object.entries(material.uniforms).forEach(([key, uniform]) => {
+                    const uniformInfo = material_info.uniforms[key];
+                    if (!uniformInfo) return;
+                    if (uniformInfo.hide) return;
+                    switch (uniformInfo.type) {
+                        case MaterialUniformType.SAMPLER2D:
+                            const texture = uniform as IUniform<Texture>;
+                            const texture_name = texture.value ? get_file_name((texture.value as any).path || '') : '';
+                            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+                            material_fields.push({
+                                name: key,
+                                value: `${atlas}/${texture_name}`,
+                                type: PropertyType.LIST_TEXTURES,
+                                readonly: uniformInfo.readonly,
+                                params: generateTextureOptions(true),
+                                data: { material_index: index },
+                                onBeforeChange: saveUniformSampler2D,
+                                onChange: handleUniformSampler2DChange
+                            });
+                            break;
+                        case MaterialUniformType.FLOAT:
+                            const float = uniform as IUniform<number>;
+                            material_fields.push({
+                                name: key,
+                                value: float.value,
+                                type: PropertyType.NUMBER,
+                                readonly: uniformInfo.readonly,
+                                params: {
+                                    min: 0,
+                                    max: 1,
+                                    step: 0.01
+                                },
+                                data: { material_index: index },
+                                onBeforeChange: saveUniformFloat,
+                                onChange: handleUniformFloatChange
+                            });
+                            break;
+                        case MaterialUniformType.RANGE:
+                            const range = uniform as IUniform<number>;
+                            const range_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.RANGE];
+                            material_fields.push({
+                                name: key,
+                                value: range.value,
+                                type: PropertyType.SLIDER,
+                                readonly: uniformInfo.readonly,
+                                params: {
+                                    min: range_params.min ?? 0,
+                                    max: range_params.max ?? 1,
+                                    step: range_params.step ?? 0.01
+                                },
+                                data: { material_index: index },
+                                onBeforeChange: saveUniformRange,
+                                onChange: handleUniformRangeChange
+                            });
+                            break;
+                        case MaterialUniformType.VEC2:
+                            const vec2 = uniform as IUniform<Vector2>;
+                            const vec2_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC2];
+                            material_fields.push({
+                                name: key,
+                                value: vec2.value,
+                                type: PropertyType.VECTOR_2,
+                                readonly: uniformInfo.readonly,
+                                params: {
+                                    x: {
+                                        min: vec2_params.x.min ?? -1000,
+                                        max: vec2_params.x.min ?? 1000,
+                                        step: vec2_params.x.step ?? 0.1,
+                                        format: (v: number) => v.toFixed(2)
+                                    },
+                                    y: {
+                                        min: vec2_params.y.min ?? -1000,
+                                        max: vec2_params.y.max ?? 1000,
+                                        step: vec2_params.y.step ?? 0.1,
+                                        format: (v: number) => v.toFixed(2)
+                                    }
+                                },
+                                data: { material_index: index },
+                                onBeforeChange: saveUniformVec2,
+                                onChange: handleUniformVec2Change
+                            });
+                            break;
+                        case MaterialUniformType.VEC3:
+                            const vec3 = uniform as IUniform<Vector3>;
+                            const vec3_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC3];
+                            material_fields.push({
+                                name: key,
+                                value: vec3.value,
+                                type: PropertyType.VECTOR_3,
+                                readonly: uniformInfo.readonly,
+                                params: {
+                                    x: {
+                                        min: vec3_params.x.min ?? -1000,
+                                        max: vec3_params.x.max ?? 1000,
+                                        step: vec3_params.x.step ?? 0.1,
+                                        format: (v: number) => v.toFixed(2)
+                                    },
+                                    y: {
+                                        min: vec3_params.y.min ?? -1000,
+                                        max: vec3_params.y.max ?? 1000,
+                                        step: vec3_params.y.step ?? 0.1,
+                                        format: (v: number) => v.toFixed(2)
+                                    },
+                                    z: {
+                                        min: vec3_params.z.min ?? -1000,
+                                        max: vec3_params.z.max ?? 1000,
+                                        step: vec3_params.z.step ?? 0.1,
+                                        format: (v: number) => v.toFixed(2)
+                                    }
+                                },
+                                data: { material_index: index },
+                                onBeforeChange: saveUniformVec3,
+                                onChange: handleUniformVec3Change
+                            });
+                            break;
+                        case MaterialUniformType.VEC4:
+                            const vec4 = uniform as IUniform<Vector4>;
+                            const vec4_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC4];
+                            material_fields.push({
+                                name: key,
+                                value: vec4.value,
+                                type: PropertyType.VECTOR_4,
+                                readonly: uniformInfo.readonly,
+                                params: {
+                                    x: {
+                                        min: vec4_params.x.min ?? -1000,
+                                        max: vec4_params.x.max ?? 1000,
+                                        step: vec4_params.x.step ?? 0.1,
+                                        format: (v: number) => v.toFixed(2)
+                                    },
+                                    y: {
+                                        min: vec4_params.y.min ?? -1000,
+                                        max: vec4_params.y.max ?? 1000,
+                                        step: vec4_params.y.step ?? 0.1,
+                                        format: (v: number) => v.toFixed(2)
+                                    },
+                                    z: {
+                                        min: vec4_params.z.min ?? -1000,
+                                        max: vec4_params.z.max ?? 1000,
+                                        step: vec4_params.z.step ?? 0.1,
+                                        format: (v: number) => v.toFixed(2)
+                                    },
+                                    w: {
+                                        min: vec4_params.w.min ?? -1000,
+                                        max: vec4_params.w.max ?? 1000,
+                                        step: vec4_params.w.step ?? 0.1,
+                                        format: (v: number) => v.toFixed(2)
+                                    }
+                                },
+                                data: { material_index: index },
+                                onBeforeChange: saveUniformVec4,
+                                onChange: handleUniformVec4Change
+                            });
+                            break;
+                        case MaterialUniformType.COLOR:
+                            const color = uniform as IUniform<Vector3>;
+                            material_fields.push({
+                                name: key,
+                                value: rgbToHex(color.value),
+                                type: PropertyType.COLOR,
+                                readonly: uniformInfo.readonly,
+                                data: { material_index: index },
+                                onBeforeChange: saveUniformColor,
+                                onChange: handleUniformColorChange
+                            });
+                            break;
+                    }
+                });
+            }
+        }
+
+        // // NOTE: отражение только для спрайта
+        if (with_flip && mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+            const sprite = mesh as GoSprite;
+            const currentFlip = sprite.get_flip();
+
+            switch (currentFlip) {
+                case FlipMode.NONE:
+                    material_fields.push({
+                        name: MeshProperty.FLIP_DIAGONAL,
+                        value: false,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipDiagonalChange,
+                        onRefresh: refreshFlipDiagonal
+                    });
+                    material_fields.push({
+                        name: MeshProperty.FLIP_VERTICAL,
+                        value: false,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipVerticalChange,
+                        onRefresh: refreshFlipVertical
+                    });
+                    material_fields.push({
+                        name: MeshProperty.FLIP_HORIZONTAL,
+                        value: false,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipHorizontalChange,
+                        onRefresh: refreshFlipHorizontal
+                    });
+                    break;
+                case FlipMode.VERTICAL:
+                    material_fields.push({
+                        name: MeshProperty.FLIP_DIAGONAL,
+                        value: false,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipDiagonalChange,
+                        onRefresh: refreshFlipDiagonal
+                    });
+                    material_fields.push({
+                        name: MeshProperty.FLIP_VERTICAL,
+                        value: true,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipVerticalChange,
+                        onRefresh: refreshFlipVertical
+                    });
+                    material_fields.push({
+                        name: MeshProperty.FLIP_HORIZONTAL,
+                        value: false,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipHorizontalChange,
+                        onRefresh: refreshFlipHorizontal
+                    });
+                    break;
+                case FlipMode.HORIZONTAL:
+                    material_fields.push({
+                        name: MeshProperty.FLIP_DIAGONAL,
+                        value: false,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipDiagonalChange,
+                        onRefresh: refreshFlipDiagonal
+                    });
+                    material_fields.push({
+                        name: MeshProperty.FLIP_VERTICAL,
+                        value: false,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipVerticalChange,
+                        onRefresh: refreshFlipVertical
+                    });
+                    material_fields.push({
+                        name: MeshProperty.FLIP_HORIZONTAL,
+                        value: true,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipHorizontalChange,
+                        onRefresh: refreshFlipHorizontal
+                    });
+                    break;
+                case FlipMode.DIAGONAL:
+                    material_fields.push({
+                        name: MeshProperty.FLIP_DIAGONAL,
+                        value: true,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipDiagonalChange,
+                        onRefresh: refreshFlipDiagonal
+                    });
+                    material_fields.push({
+                        name: MeshProperty.FLIP_VERTICAL,
+                        value: false,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipVerticalChange,
+                        onRefresh: refreshFlipVertical
+                    });
+                    material_fields.push({
+                        name: MeshProperty.FLIP_HORIZONTAL,
+                        value: false,
+                        type: PropertyType.BOOLEAN,
+                        data: { material_index: index },
+                        onBeforeChange: saveUV,
+                        onChange: handleFlipHorizontalChange,
+                        onRefresh: refreshFlipHorizontal
+                    });
+                    break;
+            }
+        }
+
+        generateGoToOriginalMaterialButton(list, material_fields, index);
+
+        fields.push({
+            name: title,
+            value: material_fields,
+            type: PropertyType.FOLDER,
+            params: { expanded }
+        });
+    }
+
+    function generateGoToOriginalMaterialButton(list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], index?: number) {
+        let selected_meshes_material = '';
+        for (const id of list.map((value) => value.mesh_data.id)) {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) break;
+            let material;
+            if (mesh instanceof Slice9Mesh) material = (mesh as Slice9Mesh).material;
+            else if (mesh instanceof AnimatedMesh) material = (mesh as AnimatedMesh).get_materials()[index ?? 0];
+            if (material == undefined) break;
+            if (selected_meshes_material == '') {
+                selected_meshes_material = material.name;
+            } else if (selected_meshes_material != material.name) {
+                selected_meshes_material = '';
+                break;
+            }
+        }
+
+        if (selected_meshes_material != '') {
+            fields.push({
+                name: 'Перейти к оригиналу', type: PropertyType.BUTTON, value: async () => {
+                    const material_info = ResourceManager.get_material_info(selected_meshes_material);
+                    if (material_info) {
+                        await AssetControl.select_file(material_info.path);
+                    }
+                }
+            });
+        }
+    }
+
+    function generateModelFields(list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        generateTransformFields(fields, mesh);
+
+        const model_fields: PropertyData<PropertyType>[] = [];
+
+        model_fields.push({
+            name: MeshProperty.MODEL,
+            value: (mesh as AnimatedMesh).get_mesh_name(),
+            type: PropertyType.LIST_TEXT,
+            params: generateModelOptions(),
+            onBeforeChange: saveModel,
+            onChange: handleModelChange
+        });
+
+        const animationOptions: { [key: string]: string } = {};
+        Object.keys((mesh as AnimatedMesh).get_animation_list()).forEach(animation => {
+            animationOptions[animation] = animation;
+        });
+
+        model_fields.push({
+            name: MeshProperty.ACTIVE_MODEL_ANIMATION,
+            value: (mesh as AnimatedMesh).get_animation(),
+            type: PropertyType.LIST_TEXT,
+            params: animationOptions,
+            onBeforeChange: saveActiveModelAnimation,
+            onChange: handleActiveModelAnimationChange
+        });
+
+        fields.push({
+            name: MeshProperty.MODEL,
+            value: model_fields,
+            type: PropertyType.FOLDER,
+            params: { expanded: true }
+        });
+
+        const material_folders: PropertyData<PropertyType>[] = [];
+        (mesh as AnimatedMesh).get_materials().forEach((material: ShaderMaterial, idx: number) => {
+            const is_first = (idx == 0);
+            generateMaterialFields(`Материал ${idx}`, list, material_folders, mesh, material, is_first, false, false, idx);
+        });
+
+        fields.push({
+            name: 'Материалы',
+            value: material_folders,
+            type: PropertyType.FOLDER,
+            params: { expanded: true }
+        });
+    }
+
+    function generateGuiBoxFields(list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        generateTransformFields(fields, mesh);
+        generateGuiTransformFields(fields, mesh);
+        generateMaterialFields('Материал', list, fields, mesh, (mesh as Slice9Mesh).material, true, true, false);
+    }
+
+    function generateGuiTextFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        generateTransformFields(fields, mesh);
+        generateGuiTransformFields(fields, mesh);
+        generateTextFields(fields, mesh);
+    }
+
+    function generateSpriteFields(list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        generateTransformFields(fields, mesh);
+        generateSizeField(fields, mesh);
+        generateMaterialFields('Материал', list, fields, mesh, (mesh as Slice9Mesh).material, true, true, true);
+    }
+
+    function generateLabelFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        generateTransformFields(fields, mesh);
+        generateTextFields(fields, mesh);
     }
 
     function refreshPosition(ids: number[]) {
@@ -916,6 +1067,80 @@ function MeshInspectorCreate() {
             }
         });
         return result;
+    }
+
+    function saveModel(info: BeforeChangeInfo) {
+        const oldModels: MeshPropertyInfo<string>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[saveModel] Mesh not found for id:', id);
+                return;
+            }
+            if (mesh.type != IObjectTypes.GO_MODEL_COMPONENT) return;
+            oldModels.push({ mesh_id: mesh.mesh_data.id, value: (mesh as AnimatedMesh).get_mesh_name() });
+        });
+        HistoryControl.add("MESH_MODEL", oldModels, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleModelChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        updateModel(data, info.data.event.last);
+    }
+
+    function updateModel(data: MeshPropertyInfo<string>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updateModel] Mesh not found for id:', item.mesh_id);
+                return;
+            }
+            const model = item.value;
+            if (model) {
+                const [texture, atlas] = (mesh as AnimatedMesh).get_texture();
+                (mesh as AnimatedMesh).set_mesh(model);
+                (mesh as AnimatedMesh).children[0].scale.setScalar(1 / 50 * WORLD_SCALAR);
+                // NOTE: пока вручную добавляем анимации, но когда будет поле добавления/удаления, то при установке меша все анимации должны будут скинуться, и можно будет добавлять через инспектор
+                (mesh as AnimatedMesh).add_animation('Unarmed Idle', 'idle');
+                (mesh as AnimatedMesh).add_animation('Unarmed Run Forward', 'walk');
+                (mesh as AnimatedMesh).set_texture(texture, atlas);
+            }
+        }
+        Inspector.refresh([MeshProperty.ACTIVE_MODEL_ANIMATION]);
+    }
+
+    function saveActiveModelAnimation(info: BeforeChangeInfo) {
+        const oldAnimations: MeshPropertyInfo<string>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[saveActiveModelAnimation] Mesh not found for id:', id);
+                return;
+            }
+            if (mesh.type != IObjectTypes.GO_MODEL_COMPONENT) return;
+            oldAnimations.push({ mesh_id: mesh.mesh_data.id, value: (mesh as AnimatedMesh).get_animation() });
+        });
+        HistoryControl.add("MESH_ACTIVE_MODEL_ANIMATION", oldAnimations, HistoryOwner.MESH_INSPECTOR);
+
+    }
+
+    function handleActiveModelAnimationChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        updateActiveModelAnimation(data, info.data.event.last);
+    }
+
+    function updateActiveModelAnimation(data: MeshPropertyInfo<string>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updateActiveModelAnimation] Mesh not found for id:', item.mesh_id);
+                return;
+            }
+            const animation = item.value;
+            if (animation) {
+                (mesh as AnimatedMesh).set_animation(animation);
+            }
+        }
     }
 
     function savePosition(info: BeforeChangeInfo) {
@@ -1681,19 +1906,36 @@ function MeshInspectorCreate() {
     function saveUniformSampler2D(info: BeforeChangeInfo) {
         const sampler2Ds: MeshMaterialUniformInfo<string>[] = [];
         info.ids.forEach((id) => {
-            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            const uniform = material.uniforms[info.field.name];
-            if (uniform) {
-                sampler2Ds.push({
-                    mesh_id: id,
-                    uniform_name: info.field.name,
-                    value: uniform.value?.path || ''
-                });
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    sampler2Ds.push({
+                        mesh_id: id,
+                        material_index: 0,
+                        uniform_name: info.field.name,
+                        value: uniform.value?.path || ''
+                    });
+                }
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[info.field.data.material_index];
+                if (!material) return;
+
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    sampler2Ds.push({
+                        mesh_id: id,
+                        material_index: info.field.data.material_index,
+                        uniform_name: info.field.name,
+                        value: uniform.value?.path || ''
+                    });
+                }
             }
         });
         HistoryControl.add('MESH_MATERIAL_SAMPLER2D', sampler2Ds, HistoryOwner.MESH_INSPECTOR);
@@ -1706,27 +1948,42 @@ function MeshInspectorCreate() {
 
     function updateUniformSampler2D(data: MeshMaterialUniformInfo<string>[], _: boolean) {
         data.forEach((item) => {
-            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (!mesh) return;
-
-            const material = ResourceManager.get_material_by_mesh_id(mesh.material.name, item.mesh_id);
-            if (!material) return;
 
             const texture_name = get_file_name(item.value as string || '');
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
             const texture = ResourceManager.get_texture(texture_name, atlas).texture;
             if (!texture) return;
 
-            if (item.uniform_name == 'u_texture') {
-                mesh.set_texture(texture_name, atlas);
+            if (mesh instanceof Slice9Mesh) {
+                const material = ResourceManager.get_material_by_mesh_id(mesh.material.name, item.mesh_id, 0);
+                if (!material) return;
+
+                if (item.uniform_name == 'u_texture') {
+                    mesh.set_texture(texture_name, atlas);
+                }
+                else {
+                    ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, texture);
+                    ResourceManager.set_material_define_for_mesh(mesh, 'USE_TEXTURE', '');
+                }
             }
-            else {
-                ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, texture);
-                ResourceManager.set_material_define_for_mesh(mesh, 'USE_TEXTURE', '');
+            else if (mesh instanceof AnimatedMesh) {
+                const material = ResourceManager.get_material_by_mesh_id(mesh.get_materials()[item.material_index].name, item.mesh_id, item.material_index);
+                if (!material) return;
+
+                if (item.uniform_name == 'u_texture') {
+                    mesh.set_texture(texture_name, atlas);
+                }
+                else {
+                    ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, texture);
+                    ResourceManager.set_material_define_for_animated_mesh(mesh, item.material_index, 'USE_TEXTURE', '');
+                }
             }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
+                material_index: item.material_index,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: texture
@@ -1737,19 +1994,36 @@ function MeshInspectorCreate() {
     function saveUniformFloat(info: BeforeChangeInfo) {
         const floats: MeshMaterialUniformInfo<number>[] = [];
         info.ids.forEach((id) => {
-            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            const uniform = material.uniforms[info.field.name];
-            if (uniform) {
-                floats.push({
-                    mesh_id: id,
-                    uniform_name: info.field.name,
-                    value: uniform.value
-                });
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    floats.push({
+                        mesh_id: id,
+                        material_index: 0,
+                        uniform_name: info.field.name,
+                        value: uniform.value
+                    });
+                }
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[info.field.data.material_index];
+                if (!material) return;
+
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    floats.push({
+                        mesh_id: id,
+                        material_index: info.field.data.material_index,
+                        uniform_name: info.field.name,
+                        value: uniform.value
+                    });
+                }
             }
         });
         HistoryControl.add('MESH_MATERIAL_FLOAT', floats, HistoryOwner.MESH_INSPECTOR);
@@ -1762,16 +2036,25 @@ function MeshInspectorCreate() {
 
     function updateUniformFloat(data: MeshMaterialUniformInfo<number>[], _: boolean) {
         data.forEach((item) => {
-            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value as number);
+                ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[item.material_index];
+                if (!material) return;
+
+                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, item.value);
+            }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
+                material_index: item.material_index,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: item.value
@@ -1782,19 +2065,36 @@ function MeshInspectorCreate() {
     function saveUniformRange(info: BeforeChangeInfo) {
         const ranges: MeshMaterialUniformInfo<number>[] = [];
         info.ids.forEach((id) => {
-            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            const uniform = material.uniforms[info.field.name];
-            if (uniform) {
-                ranges.push({
-                    mesh_id: id,
-                    uniform_name: info.field.name,
-                    value: uniform.value
-                });
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    ranges.push({
+                        mesh_id: id,
+                        material_index: 0,
+                        uniform_name: info.field.name,
+                        value: uniform.value
+                    });
+                }
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[info.field.data.material_index];
+                if (!material) return;
+
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    ranges.push({
+                        mesh_id: id,
+                        material_index: info.field.data.material_index,
+                        uniform_name: info.field.name,
+                        value: uniform.value
+                    });
+                }
             }
         });
         HistoryControl.add('MESH_MATERIAL_RANGE', ranges, HistoryOwner.MESH_INSPECTOR);
@@ -1807,16 +2107,25 @@ function MeshInspectorCreate() {
 
     function updateUniformRange(data: MeshMaterialUniformInfo<number>[], _: boolean) {
         data.forEach((item) => {
-            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
+                ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[item.material_index];
+                if (!material) return;
+
+                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, item.value);
+            }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
+                material_index: item.material_index,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: item.value
@@ -1827,19 +2136,36 @@ function MeshInspectorCreate() {
     function saveUniformVec2(info: BeforeChangeInfo) {
         const vec2s: MeshMaterialUniformInfo<Vector2>[] = [];
         info.ids.forEach((id) => {
-            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            const uniform = material.uniforms[info.field.name];
-            if (uniform) {
-                vec2s.push({
-                    mesh_id: id,
-                    uniform_name: info.field.name,
-                    value: uniform.value
-                });
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    vec2s.push({
+                        mesh_id: id,
+                        material_index: 0,
+                        uniform_name: info.field.name,
+                        value: uniform.value
+                    });
+                }
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[info.field.data.material_index];
+                if (!material) return;
+
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    vec2s.push({
+                        mesh_id: id,
+                        material_index: info.field.data.material_index,
+                        uniform_name: info.field.name,
+                        value: uniform.value
+                    });
+                }
             }
         });
         HistoryControl.add('MESH_MATERIAL_VEC2', vec2s, HistoryOwner.MESH_INSPECTOR);
@@ -1852,16 +2178,25 @@ function MeshInspectorCreate() {
 
     function updateUniformVec2(data: MeshMaterialUniformInfo<Vector2>[], _: boolean) {
         data.forEach((item) => {
-            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
+                ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[item.material_index];
+                if (!material) return;
+
+                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, item.value);
+            }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
+                material_index: item.material_index,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: item.value
@@ -1872,19 +2207,36 @@ function MeshInspectorCreate() {
     function saveUniformVec3(info: BeforeChangeInfo) {
         const vec3s: MeshMaterialUniformInfo<Vector3>[] = [];
         info.ids.forEach((id) => {
-            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            const uniform = material.uniforms[info.field.name];
-            if (uniform) {
-                vec3s.push({
-                    mesh_id: id,
-                    uniform_name: info.field.name,
-                    value: uniform.value
-                });
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    vec3s.push({
+                        mesh_id: id,
+                        material_index: 0,
+                        uniform_name: info.field.name,
+                        value: uniform.value
+                    });
+                }
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[info.field.data.material_index];
+                if (!material) return;
+
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    vec3s.push({
+                        mesh_id: id,
+                        material_index: info.field.data.material_index,
+                        uniform_name: info.field.name,
+                        value: uniform.value
+                    });
+                }
             }
         });
         HistoryControl.add('MESH_MATERIAL_VEC3', vec3s, HistoryOwner.MESH_INSPECTOR);
@@ -1897,16 +2249,26 @@ function MeshInspectorCreate() {
 
     function updateUniformVec3(data: MeshMaterialUniformInfo<Vector3>[], _: boolean) {
         data.forEach((item) => {
-            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
+                const material = mesh.material;
+                if (!material) return;
+
+                ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[item.material_index];
+                if (!material) return;
+
+                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, item.value);
+            }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
+                material_index: item.material_index,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: item.value
@@ -1917,19 +2279,36 @@ function MeshInspectorCreate() {
     function saveUniformVec4(info: BeforeChangeInfo) {
         const vec4s: MeshMaterialUniformInfo<Vector4>[] = [];
         info.ids.forEach((id) => {
-            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            const uniform = material.uniforms[info.field.name];
-            if (uniform) {
-                vec4s.push({
-                    mesh_id: id,
-                    uniform_name: info.field.name,
-                    value: uniform.value
-                });
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    vec4s.push({
+                        mesh_id: id,
+                        material_index: 0,
+                        uniform_name: info.field.name,
+                        value: uniform.value
+                    });
+                }
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[info.field.data.material_index];
+                if (!material) return;
+
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    vec4s.push({
+                        mesh_id: id,
+                        material_index: info.field.data.material_index,
+                        uniform_name: info.field.name,
+                        value: uniform.value
+                    });
+                }
             }
         });
         HistoryControl.add('MESH_MATERIAL_VEC4', vec4s, HistoryOwner.MESH_INSPECTOR);
@@ -1942,16 +2321,25 @@ function MeshInspectorCreate() {
 
     function updateUniformVec4(data: MeshMaterialUniformInfo<Vector4>[], _: boolean) {
         data.forEach((item) => {
-            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
+                ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[item.material_index];
+                if (!material) return;
+
+                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, item.value);
+            }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
+                material_index: item.material_index,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: item.value
@@ -1962,21 +2350,40 @@ function MeshInspectorCreate() {
     function saveUniformColor(info: BeforeChangeInfo) {
         const colors: MeshMaterialUniformInfo<string>[] = [];
         info.ids.forEach((id) => {
-            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            const uniform = material.uniforms[info.field.name];
-            if (uniform) {
-                const color = new Color();
-                color.setRGB(uniform.value.x, uniform.value.y, uniform.value.z);
-                colors.push({
-                    mesh_id: id,
-                    uniform_name: info.field.name,
-                    value: color.getHexString()
-                });
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    const color = new Color();
+                    color.setRGB(uniform.value.x, uniform.value.y, uniform.value.z);
+                    colors.push({
+                        mesh_id: id,
+                        material_index: 0,
+                        uniform_name: info.field.name,
+                        value: color.getHexString()
+                    });
+                }
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[info.field.data.material_index];
+                if (!material) return;
+
+                const uniform = material.uniforms[info.field.name];
+                if (uniform) {
+                    const color = new Color();
+                    color.setRGB(uniform.value.x, uniform.value.y, uniform.value.z);
+                    colors.push({
+                        mesh_id: id,
+                        material_index: info.field.data.material_index,
+                        uniform_name: info.field.name,
+                        value: color.getHexString()
+                    });
+                }
             }
         });
         HistoryControl.add('MESH_MATERIAL_COLOR', colors, HistoryOwner.MESH_INSPECTOR);
@@ -1987,19 +2394,28 @@ function MeshInspectorCreate() {
         updateUniformColor(data, info.data.event.last);
     }
 
-    function updateUniformColor(data: MeshMaterialUniformInfo<string>[], last: boolean) {
+    function updateUniformColor(data: MeshMaterialUniformInfo<string>[], _: boolean) {
         data.forEach((item) => {
             const rgb = hexToRGB(item.value);
-            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (!mesh) return;
 
-            const material = mesh.material;
-            if (!material) return;
+            if (mesh instanceof Slice9Mesh) {
+                const material = mesh.material;
+                if (!material) return;
 
-            ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, rgb);
+                ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, rgb);
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material = mesh.get_materials()[item.material_index];
+                if (!material) return;
+
+                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, rgb);
+            }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
+                material_index: item.material_index,
                 is_uniform: true,
                 property: item.uniform_name,
                 value: rgb
@@ -2085,6 +2501,14 @@ function MeshInspectorCreate() {
                 const lineHeights = event.data as MeshPropertyInfo<number>[];
                 updateLineHeight(lineHeights, true);
                 break;
+            case 'MESH_MODEL':
+                const models = event.data as MeshPropertyInfo<string>[];
+                updateModel(models, true);
+                break;
+            case 'MESH_ACTIVE_MODEL_ANIMATION':
+                const activeModelAnimations = event.data as MeshPropertyInfo<string>[];
+                updateActiveModelAnimation(activeModelAnimations, true);
+                break;
             case 'MESH_BLEND_MODE':
                 const blendModes = event.data as MeshPropertyInfo<BlendMode>[];
                 updateBlendMode(blendModes, true);
@@ -2138,7 +2562,7 @@ function MeshInspectorCreate() {
         }).filter(item => item != null) as { mesh_id: number, value: T }[];
     }
 
-    function convertChangeInfoToMeshMaterialData<T>(info: ChangeInfo): { mesh_id: number, uniform_name: string, value: T }[] {
+    function convertChangeInfoToMeshMaterialData<T>(info: ChangeInfo): MeshMaterialUniformInfo<T>[] {
         const value = info.data.event.value as T;
         return info.ids.map(id => {
             const mesh = SceneManager.get_mesh_by_id(id);
@@ -2146,8 +2570,8 @@ function MeshInspectorCreate() {
                 Log.error('[convertChangeInfoToMeshData] Mesh not found for id:', id);
                 return null;
             }
-            return { mesh_id: id, uniform_name: info.data.field.name, value };
-        }).filter(item => item != null) as { mesh_id: number, uniform_name: string, value: T }[];
+            return { mesh_id: id, material_index: info.data.field.data.material_index, uniform_name: info.data.field.name, value };
+        }).filter(item => item != null) as MeshMaterialUniformInfo<T>[];
     }
 
     init();

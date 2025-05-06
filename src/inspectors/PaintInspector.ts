@@ -1,6 +1,6 @@
 import { NearestFilter, RepeatWrapping, ShaderMaterial, Texture, Vector4 } from "three";
-import { ChangeInfo, InspectorGroup, PropertyType } from "../modules_editor/Inspector";
-import { generateTextureOptions, update_option } from "./helpers";
+import { ChangeInfo, ObjectData, PropertyData, PropertyType } from "../modules_editor/Inspector";
+import { generateTextureOptions } from "./helpers";
 import { IBaseMeshAndThree } from "../render_engine/types";
 import { CreateDrawCanvas, get_hash_by_mesh, get_mesh_by_hash, get_name_atlas_by_texture, get_raycast_point_uv, get_selected_one_mesh, IDrawCanvas, set_raycast_last_pos } from "./ui_utils";
 import { hexToRGB } from "../modules/utils";
@@ -14,20 +14,20 @@ declare global {
 }
 
 enum InspectorProperty {
-    CREATE_SIZE = 'create_size',
-    CREATE_BTN = 'create_btn',
-    SAVE_BTN = 'save_btn',
-    DEL_BTN = 'del_btn',
+    CREATE_SIZE = 'Увеличить размер',
+    CREATE_BTN = 'Создать',
+    SAVE_BTN = 'Сохранить',
+    DEL_BTN = 'Удалить',
 
-    VAL_SIZE = 'val_size',
-    VAL_COLOR = 'val_color',
+    VAL_SIZE = 'Размер',
+    VAL_COLOR = 'Цвет',
 
-    TEX_RED = 'tex_red',
-    TEX_GREEN = 'tex_green',
-    TEX_BLUE = 'tex_blue',
-    SIZE_RED = 'size_red',
-    SIZE_GREEN = 'size_green',
-    SIZE_BLUE = 'size_blue',
+    TEX_RED = 'Красный',
+    TEX_GREEN = 'Зеленый',
+    TEX_BLUE = 'Синий',
+    SIZE_RED = 'Красный(размер)',
+    SIZE_GREEN = 'Зеленый(размер)',
+    SIZE_BLUE = 'Синий(размер)',
 }
 
 interface SavedInfo {
@@ -51,105 +51,6 @@ function PaintInspectorCreate() {
     let shader_fp = '';
     let shader_vp = '';
 
-    const _config: InspectorGroup[] = [
-        {
-            name: 'basic',
-            title: 'Рисование',
-            property_list: [
-                {
-                    name: InspectorProperty.VAL_SIZE,
-                    title: 'Размер',
-                    type: PropertyType.SLIDER,
-                    params: { min: 0, max: 100, step: 1 },
-                    onChange: updateParams
-                },
-                {
-                    name: InspectorProperty.VAL_COLOR,
-                    title: 'Цвет',
-                    type: PropertyType.COLOR,
-                    onChange: updateParams
-                },
-            ]
-        },
-        {
-            name: 'textures',
-            title: 'Текстуры',
-            property_list: [
-                {
-                    name: InspectorProperty.SIZE_RED,
-                    title: 'Красный(размер)',
-                    type: PropertyType.SLIDER,
-                    params: { min: 0, max: 100, step: 1 },
-                    onChange: updateParams
-                },
-                {
-                    name: InspectorProperty.TEX_RED,
-                    title: 'Красный',
-                    type: PropertyType.LIST_TEXTURES,
-                    params: () => generateTextureOptions(true),
-                    onChange: updateParams
-                },
-                {
-                    name: InspectorProperty.SIZE_GREEN,
-                    title: 'Зеленый(размер)',
-                    type: PropertyType.SLIDER,
-                    params: { min: 0, max: 100, step: 1 },
-                    onChange: updateParams
-                },
-                {
-                    name: InspectorProperty.TEX_GREEN,
-                    title: 'Зеленый',
-                    type: PropertyType.LIST_TEXTURES,
-                    params: () => generateTextureOptions(true),
-                    onChange: updateParams
-                },
-                {
-                    name: InspectorProperty.SIZE_BLUE,
-                    title: 'Синий(размер)',
-                    type: PropertyType.SLIDER,
-                    params: { min: 0, max: 100, step: 1 },
-                    onChange: updateParams
-                },
-                {
-                    name: InspectorProperty.TEX_BLUE,
-                    title: 'Синий',
-                    type: PropertyType.LIST_TEXTURES,
-                    params: () => generateTextureOptions(true),
-                    onChange: updateParams
-                },
-
-            ]
-        },
-        {
-            name: 'buttons',
-            title: 'Действия',
-            property_list: [
-                {
-                    name: InspectorProperty.CREATE_SIZE,
-                    title: 'Увеличить размер',
-                    type: PropertyType.SLIDER,
-                    params: { min: 1, max: 10, step: 1 },
-                    onChange: updateParams
-                },
-                {
-                    name: InspectorProperty.CREATE_BTN,
-                    title: 'Создать',
-                    type: PropertyType.BUTTON,
-                },
-                {
-                    name: InspectorProperty.SAVE_BTN,
-                    title: 'Сохранить',
-                    type: PropertyType.BUTTON,
-                },
-                {
-                    name: InspectorProperty.DEL_BTN,
-                    title: 'Удалить',
-                    type: PropertyType.BUTTON,
-                },
-            ]
-        },
-    ];
-
     const config_data = {
         [InspectorProperty.CREATE_SIZE]: 1,
         [InspectorProperty.VAL_SIZE]: 50,
@@ -164,7 +65,7 @@ function PaintInspectorCreate() {
 
 
     function show() {
-        const data: any = [{ id: 0, data: [] }];
+        const data: ObjectData[] = [{ id: 0, fields: [] as PropertyData<PropertyType>[] }];
         let tex1 = config_data[InspectorProperty.TEX_RED];
         let tex2 = config_data[InspectorProperty.TEX_GREEN];
         let tex3 = config_data[InspectorProperty.TEX_BLUE];
@@ -175,41 +76,100 @@ function PaintInspectorCreate() {
             tex2 = get_name_atlas_by_texture((selected_mesh as any).material.uniforms.tex2.value as Texture);
             tex3 = get_name_atlas_by_texture((selected_mesh as any).material.uniforms.tex3.value as Texture);
 
-            data[0].data = [
-                { name: InspectorProperty.VAL_SIZE, data: config_data[InspectorProperty.VAL_SIZE] },
-                { name: InspectorProperty.VAL_COLOR, data: config_data[InspectorProperty.VAL_COLOR] },
+            const texture_options = generateTextureOptions(true);
 
-                { name: InspectorProperty.TEX_RED, data: tex1 },
-                { name: InspectorProperty.TEX_GREEN, data: tex2 },
-                { name: InspectorProperty.TEX_BLUE, data: tex3 },
-                { name: InspectorProperty.SIZE_RED, data: config_data[InspectorProperty.SIZE_RED] },
-                { name: InspectorProperty.SIZE_GREEN, data: config_data[InspectorProperty.SIZE_GREEN] },
-                { name: InspectorProperty.SIZE_BLUE, data: config_data[InspectorProperty.SIZE_BLUE] },
+            data[0].fields = [
+                {
+                    name: InspectorProperty.VAL_SIZE,
+                    value: config_data[InspectorProperty.VAL_SIZE],
+                    type: PropertyType.SLIDER,
+                    params: { min: 0, max: 100, step: 1 },
+                    onChange: updateParams
+                },
+                {
+                    name: InspectorProperty.VAL_COLOR,
+                    value: config_data[InspectorProperty.VAL_COLOR],
+                    type: PropertyType.COLOR,
+                    onChange: updateParams
+                },
+                {
+                    name: InspectorProperty.TEX_RED,
+                    value: tex1,
+                    type: PropertyType.LIST_TEXTURES,
+                    params: texture_options,
+                    onChange: updateParams
+                },
+                {
+                    name: InspectorProperty.TEX_GREEN,
+                    value: tex2,
+                    type: PropertyType.LIST_TEXTURES,
+                    params: texture_options,
+                    onChange: updateParams
+                },
+                {
+                    name: InspectorProperty.TEX_BLUE,
+                    value: tex3,
+                    type: PropertyType.LIST_TEXTURES,
+                    params: texture_options,
+                    onChange: updateParams
+                },
+                {
+                    name: InspectorProperty.SIZE_RED,
+                    value: config_data[InspectorProperty.SIZE_RED],
+                    type: PropertyType.SLIDER,
+                    params: { min: 0, max: 100, step: 1 },
+                    onChange: updateParams
+                },
+                {
+                    name: InspectorProperty.SIZE_GREEN,
+                    value: config_data[InspectorProperty.SIZE_GREEN],
+                    type: PropertyType.SLIDER,
+                    params: { min: 0, max: 100, step: 1 },
+                    onChange: updateParams
+                },
+                {
+                    name: InspectorProperty.SIZE_BLUE,
+                    value: config_data[InspectorProperty.SIZE_BLUE],
+                    type: PropertyType.SLIDER,
+                    params: { min: 0, max: 100, step: 1 },
+                    onChange: updateParams
+                },
             ];
 
             if (mesh) {
-                data[0].data.push({ name: InspectorProperty.SAVE_BTN, data: () => save(mesh) },)
-                data[0].data.push({
-                    name: InspectorProperty.DEL_BTN, data: () => {
+                data[0].fields.push({
+                    name: InspectorProperty.SAVE_BTN,
+                    value: () => save(mesh),
+                    type: PropertyType.BUTTON,
+                });
+                data[0].fields.push({
+                    name: InspectorProperty.DEL_BTN,
+                    value: () => {
                         if (confirm('Удалить?'))
                             deactivate(mesh);
-                    }
-                },)
+                    },
+                    type: PropertyType.BUTTON,
+                });
             }
         }
 
         else if (mesh) {
-            data[0].data = [
-                { name: InspectorProperty.CREATE_SIZE, data: 1 },
-                { name: InspectorProperty.CREATE_BTN, data: () => activate(mesh) },
-            ];
+            data[0].fields.push({
+                name: InspectorProperty.CREATE_SIZE,
+                value: 1,
+                type: PropertyType.SLIDER,
+                params: { min: 1, max: 10, step: 1 },
+                onChange: updateParams
+            });
+            data[0].fields.push({
+                name: InspectorProperty.CREATE_BTN,
+                value: () => activate(mesh),
+                type: PropertyType.BUTTON,
+            });
         }
 
-        update_option(_config, InspectorProperty.TEX_RED, () => generateTextureOptions(true));
-        update_option(_config, InspectorProperty.TEX_GREEN, () => generateTextureOptions(true));
-        update_option(_config, InspectorProperty.TEX_BLUE, () => generateTextureOptions(true));
         Inspector.clear();
-        Inspector.setData(data, _config);
+        Inspector.setData(data);
     }
 
     function updateParams(info: ChangeInfo) {

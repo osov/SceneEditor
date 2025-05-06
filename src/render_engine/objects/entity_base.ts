@@ -1,6 +1,6 @@
 import { BufferGeometry, Mesh, Object3DEventMap, PlaneGeometry, ShaderMaterial, Vector2, Vector3 } from "three";
 import { IBaseEntity, IBaseParameters, IObjectTypes, OnTransformChanged } from "../types";
-import { convert_width_height_to_pivot_bb, is_base_mesh, set_pivot_with_sync_pos } from "../helpers/utils";
+import { convert_width_height_to_pivot_bb, is_base_mesh } from "../helpers/utils";
 import { WORLD_SCALAR } from "../../config";
 import { HistoryDataKeys } from "../../controls/HistoryControl";
 
@@ -18,7 +18,7 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
     public on_transform_changed?: OnTransformChanged;
     public no_saving = false;
     public no_removing = false;
-    public ignore_history:HistoryDataKeys[] = [];
+    public ignore_history: HistoryDataKeys[] = [];
 
     protected parameters: IBaseParameters = {
         width: tmp_size,

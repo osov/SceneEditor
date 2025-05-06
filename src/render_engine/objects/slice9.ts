@@ -324,7 +324,7 @@ export class Slice9Mesh extends EntityPlane {
         super(id);
         this.matrixAutoUpdate = true;
         // NOTE: по хорошему бы наверное default материал переместить из проекта в ресурсы редактора, чтобы он всегда был доступен, или может зашить его в ResourceManager при создании materials - чтобы стандарнтый был сразу в памяти
-        const default_material = ResourceManager.get_material_by_mesh_id('default', id)!;
+        const default_material = ResourceManager.get_material_by_mesh_id('slice9', id)!;
         const material = custom_material ? custom_material : default_material;
         this.template = CreateSlice9(this, material, width, height, slice_width, slice_height);
         this.material = material;

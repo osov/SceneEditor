@@ -1,17 +1,8 @@
 import { TextureInfo } from "../render_engine/resource_manager";
-import { ChangeInfo, InspectorGroup, PropertyParams, PropertyType } from "../modules_editor/Inspector";
+import { ChangeInfo } from "../modules_editor/Inspector";
 import { BlendMode, ScreenPointPreset } from "./MeshInspector";
 import { AdditiveBlending, LinearFilter, MultiplyBlending, NearestFilter, NormalBlending, SubtractiveBlending, Vector2 } from "three";
 import { FilterMode } from "./AssetInspector";
-
-
-export function update_option<T extends PropertyType>(config: InspectorGroup[], property_name: string, method: () => PropertyParams[T]) {
-    config.forEach((group) => {
-        const property = group.property_list.find((property) => property.name == property_name);
-        if (!property) return;
-        (property.params as PropertyParams[T]) = method();
-    });
-}
 
 export function getChangedInfo(info: ChangeInfo) {
     let isChangedX = false;
@@ -135,6 +126,22 @@ export function generateMaterialOptions() {
         materialOptions[material] = material;
     });
     return materialOptions;
+}
+
+export function generateModelOptions() {
+    const modelOptions: { [key: string]: string } = {};
+    ResourceManager.get_all_models().forEach(model => {
+        modelOptions[model] = model;
+    });
+    return modelOptions;
+}
+
+export function generateModelAnimationOptions(model_name: string) {
+    const animationOptions: { [key: string]: string } = {};
+    ResourceManager.get_all_model_animations(model_name).forEach(animation => {
+        animationOptions[animation] = animation;
+    });
+    return animationOptions;
 }
 
 export function pivotToScreenPreset(pivot: Vector2) {

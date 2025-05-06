@@ -205,7 +205,7 @@ export type TDictionary<T> = { [key: number | string]: T };
 
 export type TRecursiveDict = { [Key: number | string]: TRecursiveDict | number | string };
 export type TMaterialChanged = { material_name: string, is_uniform: boolean, property: string, value: any };
-export type TMeshMaterialChanged = { mesh_id: number, is_uniform: boolean, property: string, value: any };
+export type TMeshMaterialChanged = { mesh_id: number, material_index: number, is_uniform: boolean, property: string, value: any };
 
 export type THistoryUndo = { type: string, data: any[], owner: number };
 
