@@ -89,11 +89,6 @@ export class AnimatedMesh extends EntityPlane {
 				const new_material = ResourceManager.get_material_by_mesh_id('anim', this.mesh_data.id)!;
 				this.materials.push(new_material);
 				(child as any).material = new_material;
-
-				// NOTE: для теста
-				this.materials.push(new_material);
-				this.materials.push(new_material);
-				this.materials.push(new_material);
 			}
 		});
 		m.scale.setScalar(0.2);
