@@ -6,6 +6,7 @@ export type MeshMoveEventData = {
 
 export interface MeshPropertyInfo<T> {
     mesh_id: number;
+    index?: number;
     value: T;
 }
 

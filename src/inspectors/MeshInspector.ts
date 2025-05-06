@@ -1770,13 +1770,19 @@ function MeshInspectorCreate() {
     function saveMaterial(info: BeforeChangeInfo) {
         const materials: MeshPropertyInfo<string>[] = [];
         info.ids.forEach((id) => {
-            const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveMaterial] Mesh not found for id:', id);
                 return;
             }
-            const material_name = mesh.material.name;
-            materials.push({ mesh_id: id, value: material_name });
+            if (mesh instanceof Slice9Mesh) {
+                const material_name = mesh.material.name;
+                materials.push({ mesh_id: id, value: material_name });
+            }
+            else if (mesh instanceof AnimatedMesh) {
+                const material_name = mesh.get_materials()[info.field.data.material_index].name;
+                materials.push({ mesh_id: id, value: material_name });
+            }
         });
         HistoryControl.add('MESH_MATERIAL', materials, HistoryOwner.MESH_INSPECTOR);
     }
@@ -1788,29 +1794,55 @@ function MeshInspectorCreate() {
 
     function updateMaterial(data: MeshPropertyInfo<string>[], _: boolean) {
         for (const item of data) {
-            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
                 Log.error('[updateMaterial] Mesh not found for id:', item.mesh_id);
                 return;
             }
-            const texture_info = mesh.get_texture();
-            const texture_name = texture_info[0];
-            const atlas = texture_info[1];
-            const has_texture = texture_name != '';
 
-            const material_name = item.value as string;
-            mesh.set_material(material_name);
+            if (mesh instanceof Slice9Mesh) {
+                const texture_info = mesh.get_texture();
+                const texture_name = texture_info[0];
+                const atlas = texture_info[1];
+                const has_texture = texture_name != '';
 
-            if (has_texture) {
-                mesh.set_texture(texture_name, atlas);
+                const material_name = item.value as string;
+                mesh.set_material(material_name);
+
+                if (has_texture) {
+                    mesh.set_texture(texture_name, atlas);
+                }
+                else {
+                    const material = ResourceManager.get_material_by_mesh_id(material_name, item.mesh_id);
+                    if (material) {
+                        if (material.uniforms['u_texture'].value != null) {
+                            const texture_name = material.uniforms['u_texture'].value.name;
+                            const atlas = material.uniforms['u_texture'].value.atlas;
+                            mesh.set_texture(texture_name, atlas);
+                        }
+                    }
+                }
             }
-            else {
-                const material = ResourceManager.get_material_by_mesh_id(material_name, item.mesh_id);
-                if (material) {
-                    if (material.uniforms['u_texture'].value != null) {
-                        const texture_name = material.uniforms['u_texture'].value.name;
-                        const atlas = material.uniforms['u_texture'].value.atlas;
-                        mesh.set_texture(texture_name, atlas);
+            else if (mesh instanceof AnimatedMesh) {
+                const texture_info = mesh.get_texture();
+                const texture_name = texture_info[0];
+                const atlas = texture_info[1];
+                const has_texture = texture_name != '';
+
+                const material_name = item.value as string;
+                mesh.set_material(material_name, item.index);
+
+                if (has_texture) {
+                    mesh.set_texture(texture_name, atlas);
+                }
+                else {
+                    const material = ResourceManager.get_material_by_mesh_id(material_name, item.mesh_id, item.index);
+                    if (material) {
+                        if (material.uniforms['u_texture'].value != null) {
+                            const texture_name = material.uniforms['u_texture'].value.name;
+                            const atlas = material.uniforms['u_texture'].value.atlas;
+                            mesh.set_texture(texture_name, atlas);
+                        }
                     }
                 }
             }
