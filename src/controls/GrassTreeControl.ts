@@ -127,7 +127,7 @@ function GrassTreeControlCreate() {
         if (!mesh_list[key])
             return;
         const tex_atlas = mesh.get_texture();
-        mesh.set_material('default');
+        mesh.set_material('slice9');
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         selected_mesh = undefined;
         delete mesh_list[key];
@@ -219,7 +219,7 @@ function GrassManager() {
         if (!is_actived(mesh))
             return;
         const tex_atlas = mesh.get_texture();
-        mesh.set_material('default');
+        mesh.set_material('slice9');
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         if (with_del) {
             for (let i = active_list.length - 1; i >= 0; i--) {
