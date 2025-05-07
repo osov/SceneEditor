@@ -15,6 +15,8 @@ export function register_grass_tree_control() {
 interface GrassTreeInfo {
     u_amplitude: number;
     u_frequency: number;
+    u_add_strength: number;
+    u_inv_strength: number;
 }
 
 type FileData = { [id: string]: GrassTreeInfo };
@@ -98,11 +100,15 @@ function GrassTreeControlCreate() {
     async function load_saved() {
         const data = await load_data();
         for (const id in data) {
+            const info = data[id];
             const mesh = get_mesh_by_hash(id);
             if (mesh) {
                 await activate(mesh);
-                ResourceManager.set_material_uniform_for_mesh(mesh, 'u_amplitude', data[id].u_amplitude);
-                ResourceManager.set_material_uniform_for_mesh(mesh, 'u_frequency', data[id].u_frequency);
+                const material = mesh.material;
+                for (const k in info) {
+                    if (material.uniforms[k] && !['u_time'].includes(k))
+                        ResourceManager.set_material_uniform_for_mesh(mesh, k, info[k as keyof GrassTreeInfo]);
+                }
             }
             else {
                 //Log.error('[Карта дерева] меш не найден:' + id);
@@ -145,9 +151,13 @@ function GrassTreeControlCreate() {
         const mat = mesh.material;
         if (mat.name != 'tree')
             return;
-        const flow_data = await load_data();
-        flow_data[key] = { u_amplitude: mat.uniforms.u_amplitude.value, u_frequency: mat.uniforms.u_frequency.value };
-        await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(flow_data));
+        const data = await load_data();
+        (data as any)[key] = {  };
+        for (const k in mesh.material.uniforms) {
+            if (typeof mesh.material.uniforms[k as keyof GrassTreeInfo].value == 'number' && !['u_time'].includes(k))
+                (data[key] as any)[k] = mesh.material.uniforms[k].value as number;
+        }
+        await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(data));
         Popups.toast.success('Карта дерева сохранена:' + key);
     }
 
@@ -184,7 +194,7 @@ function GrassManager() {
                 }
             }
             else {
-                let val =  it.amlitude + dt * speed;
+                let val = it.amlitude + dt * speed;
                 if (val > max_amplitude)
                     val = max_amplitude;
                 if (val < max_amplitude) {
@@ -236,5 +246,5 @@ function GrassManager() {
 
 
 
-    return { update, activate,deactivate };
+    return { update, activate, deactivate };
 }

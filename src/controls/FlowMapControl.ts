@@ -209,13 +209,13 @@ function FlowMapControlCreate() {
             if (answer.result != 1)
                 Popups.toast.error('Ошибка сохранения карты потока:' + key);
         }
-        const flow_data = await load_data();
-        (flow_data as any)[key] = { material_name: mesh.material.name };
+        const data = await load_data();
+        (data as any)[key] = { material_name: mesh.material.name };
         for (const k in mesh.material.uniforms) {
             if (typeof mesh.material.uniforms[k as keyof FlowInfo].value == 'number' && !['u_time'].includes(k))
-                (flow_data[key] as any)[k] = mesh.material.uniforms[k].value as number;
+                (data[key] as any)[k] = mesh.material.uniforms[k].value as number;
         }
-        await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(flow_data));
+        await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(data));
         Popups.toast.success('Карта потока сохранена:' + key);
 
     }
