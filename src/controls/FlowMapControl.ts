@@ -18,10 +18,10 @@ interface FlowInfo {
     u_normal_scale_2: number
     // water simple
     u_angle: number
-    u_fade_edge_x: number
-    u_fade_edge_y: number
-    u_fade_offset_x: number
-    u_fade_offset_y: number
+    u_padding_left: number
+    u_padding_right: number
+    u_padding_top: number
+    u_padding_bottom: number
 }
 
 type FileData = { [id: string]: FlowInfo };
@@ -185,7 +185,7 @@ function FlowMapControlCreate() {
         if (!mesh_list[key])
             return;
         const tex_atlas = mesh.get_texture();
-        mesh.set_material('default');
+        mesh.set_material('slice9');
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         selected_mesh = undefined;
         delete mesh_list[key];
