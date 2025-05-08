@@ -125,7 +125,7 @@ function GrassTreeControlCreate() {
         mesh.set_material('tree');
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         mesh_list[key] = true;
-        log('activated', key)
+        //log('activated', key)
     }
 
     async function deactivate(mesh: Slice9Mesh) {
@@ -141,7 +141,7 @@ function GrassTreeControlCreate() {
         const flow_data = await load_data();
         delete flow_data[key];
         await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(flow_data));
-        log('deactivated', key)
+        //log('deactivated', key)
     }
 
     async function save_map(mesh: Slice9Mesh) {
@@ -174,7 +174,7 @@ interface GrassItem {
 
 function GrassManager() {
     let active_list: GrassItem[] = [];
-    const effect_time = 0.7;
+    const effect_time = 1.5;
     const speed = 5;
     const max_amplitude = 1;
 

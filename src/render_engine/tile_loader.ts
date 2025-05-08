@@ -1,9 +1,12 @@
 import { Vector3, Vector2, Line, BufferGeometry, LineBasicMaterial } from "three";
 import { CAMERA_Z, WORLD_SCALAR } from "../config";
-import { rotate_point } from "./helpers/utils";
+import { make_ramk, rotate_point } from "./helpers/utils";
 import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData } from "./parsers/tile_parser";
 import { IObjectTypes } from "./types";
 import { GoContainer } from "./objects/sub_types";
+import { createSpatialHash } from "../test_scenes/spatial_hash";
+import { get_hash_by_mesh } from "../inspectors/ui_utils";
+import { createRegionManager } from "../test_scenes/region_manager";
 
 export function TileLoader(world: GoContainer, tileSize = 256) {
 
@@ -48,6 +51,9 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
             }
         }
 
+        const cell_size = 150 * WORLD_SCALAR;
+        const rm = createRegionManager(cell_size, 3);
+        (window as any).rm = rm;
         // OBJECTS
         for (let object_layer of render_data.objects_layers) {
             id_layer++;
@@ -97,10 +103,28 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                         container.add(plane);
                         plane.name = tile_info.name + '' + plane.mesh_data.id;
                         plane.userData = { tile };
+
+                        if (['Flowers_1', 'Flowers_2', 'Flowers_3', 'Flowers_4'].includes(tile_info.name)) {
+                            rm.add_region(x, y, tile_w, tile_h);
+                        }
                     }
                 }
             }
         }
+
+        const cells = rm.get_debug_cells();
+        for (let i = 0; i < cells.length; i++) {
+            const it = cells[i];
+            const l = make_ramk(cell_size, cell_size);
+            l.position.set(it.x + cell_size / 2, it.y + cell_size / 2, 9000);
+            RenderEngine.scene.add(l);
+            const m = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, { text: it.x + '\n' + it.y });
+            m.scale.setScalar(0.04);
+            SceneManager.add(m);
+            m.position.set(it.x + cell_size / 2, it.y + cell_size / 2, 9000);
+        }
+        //log(cells)
+        setInterval(() => rm.update(), 200);
     }
 
     return { load };

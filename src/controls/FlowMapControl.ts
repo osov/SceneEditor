@@ -177,7 +177,7 @@ function FlowMapControlCreate() {
         if (!draw_canvas)
             return;
         mesh_list[key] = draw_canvas;
-        log('activated water', key)
+        //log('activated water', key)
     }
 
     async function deactivate(mesh: Slice9Mesh) {
@@ -194,7 +194,7 @@ function FlowMapControlCreate() {
         delete flow_data[key];
         await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(flow_data));
         await ClientAPI.remove(dir_path + key + '.png');
-        log('deactivated water', key)
+        //log('deactivated water', key)
     }
 
     async function save_map(mesh: Slice9Mesh) {

@@ -120,25 +120,27 @@ export function flip_geometry_xy(geometry: BufferGeometry) {
 }
 
 export function rotate_point(point: Vector3, size: Vector2, angle_deg: number,) {
-    const pivot = { x: point.x - size.x / 2, y: point.y - size.y / 2 };
+    const pivot = new Vector2(point.x - size.x / 2, point.y - size.y / 2);
+    return rotate_point_pivot(point, pivot, angle_deg);
+}
+
+export function rotate_point_pivot(point: Vector3, pivot: Vector2, angle_deg: number,) {
     const angle = angle_deg * Math.PI / 180;
     const cosA = Math.cos(angle);
     const sinA = Math.sin(angle);
 
-    // Перемещение точки в начало координат относительно pivot
     const xTranslated = point.x - pivot.x;
     const yTranslated = point.y - pivot.y;
 
-    // Поворот
     const xRotated = xTranslated * cosA - yTranslated * sinA;
     const yRotated = xTranslated * sinA + yTranslated * cosA;
 
-    // Обратное перемещение
     const xNew = xRotated + pivot.x;
     const yNew = yRotated + pivot.y;
 
     return { x: xNew, y: yNew };
 }
+
 
 
 

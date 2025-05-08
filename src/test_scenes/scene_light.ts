@@ -6,10 +6,11 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { MapData, preload_tiled_textures, get_all_tiled_textures } from '../render_engine/parsers/tile_parser';
-import { IObjectTypes } from '../render_engine/types';
+import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import { TileLoader } from '../render_engine/tile_loader';
 import { calculate_borders, default_settings, MovementLogic, PathFinderMode, PlayerMovementSettings } from '../modules/PlayerMovement';
 import { Segment } from '2d-geometry';
+import { rotate_point, rotate_point_pivot } from '../render_engine/helpers/utils';
 
 
 
@@ -219,4 +220,26 @@ export async function run_scene_light() {
         for (const m of materials)
             ResourceManager.set_material_uniform_for_original(m, 'u_time', t);
     });
+
+    rotate_obj(2322);
+    rotate_obj(2323);
+    rotate_obj(2324);
+    rotate_obj(2325);
+
+  
+    
 }
+
+function rotate_obj(id:number ){
+    const m = SceneManager.get_mesh_by_id(id)!;
+    let angle = m.rotation.z / Math.PI * 180;
+    EventBus.on('SYS_ON_UPDATE', (e) => {
+        const p = m.position;
+        const offset = -1;
+        angle += offset;
+        const new_p = rotate_point_pivot(new Vector3(p.x, p.y, 0), new Vector2(-7.9, -182), offset);
+        m.set_position(new_p.x, new_p.y);
+        m.rotation.z =  angle * Math.PI / 180;
+    });
+}
+
