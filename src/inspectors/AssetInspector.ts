@@ -191,11 +191,15 @@ function AssetInspectorCreate() {
                                 });
                                 break;
                             case MaterialUniformType.FLOAT:
-                                const data = uniform as IUniform<number>;
+                                const float = uniform as IUniform<number>;
                                 result.fields.push({
                                     name: key,
-                                    value: data.value,
+                                    value: float.value,
                                     type: PropertyType.NUMBER,
+                                    params: {
+                                        step: 0.01,
+                                        format: (v: number) => v.toFixed(2)
+                                    },
                                     onBeforeChange: saveUniformFloat,
                                     onChange: handleUniformChange<number>
                                 });

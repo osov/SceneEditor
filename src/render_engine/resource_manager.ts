@@ -1040,7 +1040,7 @@ export function ResourceManagerModule() {
 
     function set_material_define_for_mesh<T>(mesh: Slice9Mesh, define_name: string, value?: T) {
         const mesh_id = mesh.mesh_data.id;
-        const material_name = (mesh instanceof Slice9Mesh) ? mesh.material.name : (mesh as AnimatedMesh).get_materials()[0].name;
+        const material_name = mesh.material.name;
         const material_info = get_material_info(material_name);
         if (!material_info) return;
 

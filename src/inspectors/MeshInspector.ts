@@ -498,12 +498,11 @@ function MeshInspectorCreate() {
                                 name: key,
                                 value: float.value,
                                 type: PropertyType.NUMBER,
-                                readonly: uniformInfo.readonly,
                                 params: {
-                                    min: 0,
-                                    max: 1,
-                                    step: 0.01
+                                    step: 0.01,
+                                    format: (v: number) => v.toFixed(2)
                                 },
+                                readonly: uniformInfo.readonly,
                                 data: { material_index: index },
                                 onBeforeChange: saveUniformFloat,
                                 onChange: handleUniformFloatChange

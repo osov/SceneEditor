@@ -1,5 +1,5 @@
 import { Pane, TpChangeEvent } from 'tweakpane';
-import { BindingApi, BindingParams, ButtonParams, FolderApi, FolderParams } from '@tweakpane/core';
+import { BindingApi, BindingParams, ButtonParams, FolderApi } from '@tweakpane/core';
 import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
@@ -158,9 +158,7 @@ function InspectorModule() {
         _inspector.registerPlugin(TweakpaneExtendedBooleanPlugin);
     }
 
-    // function setData(list_data: ObjectData[], config: InspectorGroup[]) {
-    function setData(list_data: ObjectData[]) { //, config: InspectorConfig) {
-        // _config = config;
+    function setData(list_data: ObjectData[]) {
         _data = list_data;
         _unique_fields = [];
 
@@ -171,11 +169,11 @@ function InspectorModule() {
             }
 
             // NOTE: удаляем предыдущие поля если их нету в текущем обьекте
-            filterUniqueFields(fields);
+            filterUniqueFields(_unique_fields, fields);
 
             fields.forEach((field) => {
                 // NOTE: запоминаем поле с проверкой на то что все поля между объектами одинаковые
-                tryAddToUniqueField(index, obj, field);
+                tryAddToUniqueField(index, obj, _unique_fields, field);
             });
         });
 
@@ -236,57 +234,46 @@ function InspectorModule() {
     }
 
 
-
+    // TODO: рефакторинг - проблема в случае одинаковых имен полей, будут обновляться все, нужно как то идентифицировать поле не по имени, по крайней мере не только по имени, а по принадлежанию к папке или по уникальному идентификатору, но по идентификатору не сработает, так так мы не будем знать его при вызове refresh, получается нужно как то изначально индетифицировать поля уникально, но при этом нужно учитывать что поля могут быть и сгенерироваными, возможно нужно принимать путь обновления, папка/поле и по нему уже тогда искать 
     function refresh(fields: string[]) {
         fields.forEach((property) => {
-            const unique_field = _unique_fields.find(unique_field => unique_field.data.name == property);
-            if (!unique_field) return;
+            const matchingFields: { ids: number[], data: PropertyData<PropertyType> }[] = [];
 
-            if (unique_field.data.onRefresh) {
-                const data = unique_field.data.onRefresh(unique_field.ids);
-                if (data) {
-                    unique_field.data.value = data;
+            function findFieldsRecursively(uniqueFields: { ids: number[], data: PropertyData<PropertyType> }[]) {
+                for (const uniqueField of uniqueFields) {
+                    if (uniqueField.data.name == property) {
+                        matchingFields.push(uniqueField);
+                    }
+
+                    if (uniqueField.data.type == PropertyType.FOLDER) {
+                        const folderFields = (uniqueField.data.value as PropertyData<PropertyType>[]).map(field => ({
+                            ids: uniqueField.ids,
+                            data: field
+                        }));
+                        findFieldsRecursively(folderFields);
+                    }
                 }
             }
 
-            const pane = _field_name_to_pane[unique_field.data.name];
-            if (pane) {
-                _is_refresh = true;
-                pane.refresh();
-                _is_refresh = false;
-            }
+            findFieldsRecursively(_unique_fields);
+
+            matchingFields.forEach(uniqueField => {
+                if (uniqueField.data.onRefresh) {
+                    const data = uniqueField.data.onRefresh(uniqueField.ids);
+                    if (data) {
+                        uniqueField.data.value = data;
+                    }
+                }
+
+                const pane = _field_name_to_pane[uniqueField.data.name];
+                if (pane) {
+                    _is_refresh = true;
+                    pane.refresh();
+                    _is_refresh = false;
+                }
+            });
         });
     }
-
-    // function searchPaneInFolderByProperty(folder: FolderApi, property: Property): Pane | undefined {
-    //     if (folder.children == undefined) {
-    //         Log.error("Not folder: ", folder);
-    //         return undefined;
-    //     }
-
-    //     for (const child of folder.children) {
-    //         if ((child as FolderApi).children != undefined) {
-    //             const folder = child as FolderApi;
-    //             const result = searchPaneInFolderByProperty(folder, property);
-    //             if (result != undefined) return result;
-    //         }
-
-    //         let title = '';
-    //         for (const group of _config) {
-    //             const item = group.property_list.find((item) => item.name == property);
-    //             if (item) {
-    //                 title = item.title;
-    //                 break;
-    //             }
-    //         }
-
-    //         if (child.element.querySelector('.tp-lblv_l')?.textContent == title) {
-    //             return child as Pane;
-    //         }
-    //     }
-
-    //     return undefined;
-    // }
 
     function clear() {
         _inspector.children.forEach((value) => {
@@ -294,25 +281,45 @@ function InspectorModule() {
         });
     }
 
-    function filterUniqueFields(fields: PropertyData<PropertyType>[]) {
-        const buffer: number[] = [];
-        _unique_fields.forEach((unique_field, index) => {
+    function filterUniqueFields(unique_fields: { ids: number[], data: PropertyData<PropertyType> }[], fields: PropertyData<PropertyType>[]) {
+        const tmp: number[] = [];
+        unique_fields.forEach((unique_field, index) => {
             const result = fields.findIndex((field) => {
                 return field.name == unique_field.data.name;
             });
+
+            // NOTE: запоминаем поля которые не найдены
             if (result == -1) {
-                buffer.push(index);
+                tmp.push(index);
+                return;
+            }
+
+            if (unique_field.data.type == PropertyType.FOLDER) {
+                const r = filterUniqueFields((unique_field.data.value as PropertyData<PropertyType>[]).map((field) => {
+                    return {
+                        ids: unique_field.ids,
+                        data: field
+                    };
+                }), fields[result].value as PropertyData<PropertyType>[]);
+                for (let i = r.length - 1; i >= 0; i--) {
+                    const index = r[i];
+                    (unique_field.data.value as PropertyData<PropertyType>[]).splice(index, 1);
+                }
             }
         });
 
-        for (let i = buffer.length - 1; i >= 0; i--) {
-            const index = buffer[i];
-            _unique_fields.splice(index, 1);
+        // NOTE: удаляем поля которые не найдены
+        for (let i = tmp.length - 1; i >= 0; i--) {
+            const index = tmp[i];
+            unique_fields.splice(index, 1);
         }
+
+        return tmp;
     }
 
-    function tryAddToUniqueField(obj_index: number, obj: ObjectData, field: PropertyData<PropertyType>): boolean {
-        const index = _unique_fields.findIndex((value) => {
+    // TODO: рефакторинг - сложная логика
+    function tryAddToUniqueField(obj_index: number, obj: ObjectData, unique_fields: { ids: number[], data: PropertyData<PropertyType> }[], field: PropertyData<PropertyType>): boolean {
+        const index = unique_fields.findIndex((value) => {
             return value.data.name == field.name;
         });
 
@@ -322,7 +329,7 @@ function InspectorModule() {
             }
 
             // добавляем если это первый обьект
-            _unique_fields.push({
+            unique_fields.push({
                 ids: [obj.id],
                 data: field
             });
@@ -333,32 +340,59 @@ function InspectorModule() {
             }
 
             return true;
+        }
+        else {
+            unique_fields[index].ids.push(obj.id);
+        }
 
-        } else _unique_fields[index].ids.push(obj.id);
+        // NOTE: проверяем поля на уникальность значений
+        if (field.type == PropertyType.FOLDER) {
+            let anyone_was_added = false;
+            const folderFields = field.value as PropertyData<PropertyType>[];
+            const uniqueFolderFields = unique_fields[index].data.value as PropertyData<PropertyType>[];
+
+            for (const folderField of folderFields) {
+                if (tryAddToUniqueField(obj_index, obj, uniqueFolderFields.map(f => ({
+                    ids: unique_fields[index].ids,
+                    data: f
+                })), folderField)) {
+                    anyone_was_added = true;
+                }
+            }
+
+            if (anyone_was_added) {
+                return true;
+            }
+        }
+
+        // NOTE: для кнопок всегда показываем
+        if (field.type == PropertyType.BUTTON) {
+            return true;
+        }
 
         if ([PropertyType.VECTOR_2, PropertyType.POINT_2D, PropertyType.VECTOR_3, PropertyType.VECTOR_4].includes(field.type)) {
             type T = PropertyValues[PropertyType.VECTOR_2];
             const field_data = field.value as T;
-            const unique_field_data = _unique_fields[index].data.value as T;
+            const unique_field_data = unique_fields[index].data.value as T;
 
             if ([PropertyType.VECTOR_2, PropertyType.POINT_2D, PropertyType.VECTOR_3, PropertyType.VECTOR_4].includes(field.type)) {
                 if (field_data.x != unique_field_data.x) {
-                    const params = _unique_fields[index].data.params;
+                    const params = unique_fields[index].data.params;
                     if (params) {
                         const v2p = (params as PropertyParams[PropertyType.VECTOR_2]);
                         if (v2p.x) v2p.x.disabled = true;
                         else v2p.x = { disabled: true };
-                    } else _unique_fields[index].data.params = { x: { disabled: true } };
+                    } else unique_fields[index].data.params = { x: { disabled: true } };
                     unique_field_data.x = (unique_field_data.x + field_data.x) / 2;
                 }
 
                 if (field_data.y != unique_field_data.y) {
-                    const params = _unique_fields[index].data.params;
+                    const params = unique_fields[index].data.params;
                     if (params) {
                         const v2p = (params as PropertyParams[PropertyType.VECTOR_2]);
                         if (v2p.y) v2p.y.disabled = true;
                         else v2p.y = { disabled: true };
-                    } else _unique_fields[index].data.params = { y: { disabled: true } };
+                    } else unique_fields[index].data.params = { y: { disabled: true } };
                     unique_field_data.y = (unique_field_data.y + field_data.y) / 2;
                 }
             }
@@ -366,15 +400,15 @@ function InspectorModule() {
             if ([PropertyType.VECTOR_3, PropertyType.VECTOR_4].includes(field.type)) {
                 type T = PropertyValues[PropertyType.VECTOR_3];
                 const field_data = field.value as T;
-                const unique_field_data = _unique_fields[index].data.value as T;
+                const unique_field_data = unique_fields[index].data.value as T;
 
                 if (field_data.z != unique_field_data.z) {
-                    const params = _unique_fields[index].data.params;
+                    const params = unique_fields[index].data.params;
                     if (params) {
                         const v3p = (params as PropertyParams[PropertyType.VECTOR_3]);
                         if (v3p.z) v3p.z.disabled = true;
                         else v3p.z = { disabled: true };
-                    } else _unique_fields[index].data.params = { z: { disabled: true } };
+                    } else unique_fields[index].data.params = { z: { disabled: true } };
                     unique_field_data.z = (unique_field_data.z + field_data.z) / 2;
                 }
             }
@@ -382,37 +416,34 @@ function InspectorModule() {
             if (field.type == PropertyType.VECTOR_4) {
                 type T = PropertyValues[PropertyType.VECTOR_4];
                 const field_data = field.value as T;
-                const unique_field_data = _unique_fields[index].data.value as T;
+                const unique_field_data = unique_fields[index].data.value as T;
 
                 if (field_data.w != unique_field_data.w) {
-                    const params = _unique_fields[index].data.params;
+                    const params = unique_fields[index].data.params;
                     if (params) {
                         const v4p = (params as PropertyParams[PropertyType.VECTOR_4]);
                         if (v4p.w) v4p.w.disabled = true;
                         else v4p.w = { disabled: true };
-                    } else _unique_fields[index].data.params = { w: { disabled: true } };
+                    } else unique_fields[index].data.params = { w: { disabled: true } };
                 }
                 unique_field_data.w = (unique_field_data.w + field_data.w) / 2;
             }
-        } else {
-            if (field.value != _unique_fields[index].data.value) {
-                // для кнопок всегда показываем
-                if (field.type == PropertyType.BUTTON) {
-                    return true;
-                }
+        }
+        else {
+            if (field.value != unique_fields[index].data.value) {
                 if ([PropertyType.LIST_TEXT, PropertyType.LIST_TEXTURES, PropertyType.LOG_DATA].includes(field.type)) {
                     // для выпадающего списка и текстовых полей если между обьектами разные значения
-                    _unique_fields[index].data.value = '';
+                    unique_fields[index].data.value = '';
                 } else if (field.type == PropertyType.COLOR) {
                     // для цвета если между обьектами разные значения
-                    _unique_fields[index].data.value = "#000000";
+                    unique_fields[index].data.value = "#000000";
                 } else if (field.type == PropertyType.BOOLEAN) {
                     // для чекбокса если между обьектами разные значения
-                    _unique_fields[index].data.value = false;
-                    _unique_fields[index].data.params = { disabled: true };
+                    unique_fields[index].data.value = false;
+                    unique_fields[index].data.params = { disabled: true };
                 } else {
                     // в ином случае просто убираем поле
-                    _unique_fields.splice(index, 1);
+                    unique_fields.splice(index, 1);
                     return false;
                 }
             }
@@ -446,8 +477,6 @@ function InspectorModule() {
                 const num_field = field as PropertyData<PropertyType.NUMBER>;
                 return createEntity(ids, field, {
                     format: num_field?.params?.format,
-                    min: num_field?.params?.min,
-                    max: num_field?.params?.max,
                     step: num_field?.params?.step
                 });
             case PropertyType.VECTOR_2:
@@ -525,31 +554,6 @@ function InspectorModule() {
         const has_onClick = (obj as Button).onClick != undefined;
         return (has_title && has_onClick);
     }
-
-    // function addToFolder<T extends PropertyType>(field: PropertyData<T>, entity: Entity, entities: Entity[]) {
-    //     const group = getInspectorGroupByName(field.name);
-    //     if (group && group.title != '') {
-    //         let folder = entities.find((value) => {
-    //             return (isFolder(value)) && (value.title == group.title);
-    //         }) as Folder | undefined;
-    //         if (!folder) {
-    //             folder = createFolder(group.title, []);
-    //             entities.push(folder);
-    //         }
-    //         folder.childrens.push(entity);
-    //     } else entities.push(entity);
-    // }
-
-    // function getInspectorGroupByName(name: string): InspectorGroup | undefined {
-    //     for (const group of _config) {
-    //         const result = group.property_list.find((property) => {
-    //             return property.name == name;
-    //         });
-    //         if (result)
-    //             return group;
-    //     }
-    //     return undefined;
-    // }
 
     function createFolder(title: string, childrens: Entity[], expanded: boolean) {
         return {
@@ -678,6 +682,7 @@ function InspectorModule() {
         return undefined;
     }
 
+    // FIXME: не находит вложенных полей
     function tryDisabledVectorValueByAxis(info: ChangeInfo) {
         const isVectorField = [PropertyType.VECTOR_2, PropertyType.VECTOR_3, PropertyType.VECTOR_4].includes(info.data.field.type);
 
@@ -705,30 +710,30 @@ function InspectorModule() {
         const referenceValue = firstField.value as { x: number, y: number, z?: number, w?: number };
 
         for (let i = 1; i < info.ids.length; i++) {
-            const currentObj = _data.find(obj => obj.id === info.ids[i]);
+            const currentObj = _data.find(obj => obj.id == info.ids[i]);
             if (!currentObj) {
                 Log.warn('[tryDisabledVectorValueByAxis] Object not found for id:', info.ids[i]);
                 continue;
             }
 
-            const currentField = currentObj.fields.find(field => field.name === info.data.field.name);
+            const currentField = currentObj.fields.find(field => field.name == info.data.field.name);
             if (!currentField) {
-                Log.warn('[tryDisabledVectorValueByAxis] Field not found in object:', info.data.field.name);
+                Log.warn('[tryDisabledVectorValueByAxis] Field not found in object:', info.data.field.name, currentObj);
                 continue;
             }
 
             const currentValue = currentField.value as { x: number, y: number, z?: number, w?: number };
 
-            if (axisCount >= 1 && !differentAxes[0] && currentValue.x !== referenceValue.x) {
+            if (axisCount >= 1 && !differentAxes[0] && currentValue.x != referenceValue.x) {
                 differentAxes[0] = true;
             }
-            if (axisCount >= 2 && !differentAxes[1] && currentValue.y !== referenceValue.y) {
+            if (axisCount >= 2 && !differentAxes[1] && currentValue.y != referenceValue.y) {
                 differentAxes[1] = true;
             }
-            if (axisCount >= 3 && !differentAxes[2] && currentValue.z !== referenceValue.z) {
+            if (axisCount >= 3 && !differentAxes[2] && currentValue.z != referenceValue.z) {
                 differentAxes[2] = true;
             }
-            if (axisCount >= 4 && !differentAxes[3] && currentValue.w !== referenceValue.w) {
+            if (axisCount >= 4 && !differentAxes[3] && currentValue.w != referenceValue.w) {
                 differentAxes[3] = true;
             }
 

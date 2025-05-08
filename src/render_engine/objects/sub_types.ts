@@ -3,6 +3,7 @@ import { Slice9Mesh } from "./slice9";
 import { TextMesh } from "./text";
 import { EntityBase } from "./entity_base";
 import { flip_geometry_x, flip_geometry_y, flip_geometry_xy } from "../helpers/utils";
+import { deepClone } from "../../modules/utils";
 
 
 export class GuiContainer extends EntityBase {
@@ -106,7 +107,7 @@ export class GoSprite extends Slice9Mesh {
         const uv = geometry.attributes.uv;
 
         // NOTE: сохраняем оригинальные координаты UV
-        if (!this.original_uv) {
+        if (this.original_uv == null) {
             this.original_uv = new Float32Array(uv.array);
         }
 

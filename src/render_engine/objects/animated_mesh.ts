@@ -279,6 +279,8 @@ export class AnimatedMesh extends EntityPlane {
 					if (uniform_info.type === MaterialUniformType.SAMPLER2D && typeof value === 'string') {
 						const [atlas, texture_name] = value.split('/');
 						this.set_texture(texture_name, atlas, index);
+					} else {
+						ResourceManager.set_material_uniform_for_animated_mesh(this, index, key, value);
 					}
 				}
 			}

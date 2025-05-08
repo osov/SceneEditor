@@ -1,6 +1,8 @@
 import { Vector2, Vector3 } from "three";
 import { flip_geometry_x, flip_geometry_xy, flip_geometry_y, get_file_name, rotate_point } from "../helpers/utils";
 import { IBaseEntityAndThree } from "../types";
+import { Slice9Mesh } from "../objects/slice9";
+import { FlipMode, GoSprite } from "../objects/sub_types";
 
 
 // Флаги Tiled для отражения и вращения
@@ -42,7 +44,7 @@ export interface TileObject {
     w: number;
     h: number
     tid: number
-    id:number
+    id: number
     r?: number
     polygon?: number[]
     polyline?: number[]
@@ -77,7 +79,7 @@ export interface RenderTileObject {
     width: number;
     height: number
     tile_id: number
-    id_object:number;
+    id_object: number;
     rotation?: number
     polygon?: Vector2[]
     polyline?: Vector2[]
@@ -147,8 +149,8 @@ export function parse_tiled(data: MapData) {
     return render_data;
 }
 
-function make_polygon(points:number[]) {
-    const polygon:Vector2[] = [];
+function make_polygon(points: number[]) {
+    const polygon: Vector2[] = [];
     for (let i = 0; i < points.length; i += 2) {
         polygon.push(new Vector2(points[i], points[i + 1]));
     }
@@ -160,13 +162,13 @@ function create_objects(obj_layer: ObjectLayer) {
     for (const obj of obj_layer.objects) {
         if (obj.polygon || obj.polyline) {
             const new_pos = rotate_point(new Vector3(obj.x, -obj.y, 0), new Vector2(1, 1), obj.r != undefined ? -obj.r : 0);
-            const data:RenderTileObject = {
+            const data: RenderTileObject = {
                 x: new_pos.x,
                 y: new_pos.y,
                 width: 0,
                 height: 0,
                 tile_id: -1,
-                id_object:obj.id,
+                id_object: obj.id,
                 rotation: obj.r,
             };
             if (obj.polygon)
@@ -177,13 +179,13 @@ function create_objects(obj_layer: ObjectLayer) {
         }
         else {
             const new_pos = rotate_point(new Vector3(obj.x, -obj.y, 0), new Vector2(obj.w, obj.h), obj.r != undefined ? -obj.r : 0);
-            const data:RenderTileObject = {
+            const data: RenderTileObject = {
                 x: new_pos.x + obj.w / 2,
                 y: new_pos.y + obj.h / 2,
                 width: obj.w,
                 height: obj.h,
                 tile_id: obj.tid,
-                id_object:obj.id,
+                id_object: obj.id,
                 rotation: obj.r
             };
             objects.push(data);
@@ -221,17 +223,14 @@ function create_chunk(chunk: Chunk) {
 }
 
 export function apply_tile_transform(mesh: IBaseEntityAndThree, tile_id: number): void {
-    const geometry = (mesh as any).geometry;
-
     const flipHorizontally = (tile_id & FLIP_HORIZONTALLY_FLAG) !== 0;
     const flipVertically = (tile_id & FLIP_VERTICALLY_FLAG) !== 0;
     const flipDiagonally = (tile_id & FLIP_DIAGONALLY_FLAG) !== 0;
 
     if (flipHorizontally)
-        flip_geometry_x(geometry);
+        (mesh as GoSprite).set_flip(FlipMode.HORIZONTAL);
     if (flipVertically)
-        flip_geometry_y(geometry);
+        (mesh as GoSprite).set_flip(FlipMode.VERTICAL);
     if (flipDiagonally)
-        flip_geometry_xy(geometry);
-
+        (mesh as GoSprite).set_flip(FlipMode.DIAGONAL);
 }

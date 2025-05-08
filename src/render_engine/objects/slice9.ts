@@ -302,9 +302,11 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
                 const uniform_info = material_info.uniforms[key];
                 if (!uniform_info) continue;
 
-                if (uniform_info.type === MaterialUniformType.SAMPLER2D && typeof value === 'string') {
+                if (uniform_info.type == MaterialUniformType.SAMPLER2D && typeof value === 'string') {
                     const [atlas, texture_name] = value.split('/');
                     set_texture(texture_name, atlas);
+                } else {
+                    ResourceManager.set_material_uniform_for_mesh(mesh, key, value);
                 }
             }
         }
