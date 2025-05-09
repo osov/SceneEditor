@@ -57,12 +57,14 @@ export function createRegionManager(cell_size: number, object_size: number) {
         on_enter_region(id_region, item.id);
     }
 
-    function on_enter_region(id_region: string,  id_mesh: string) {
-        log('Enter:', id_mesh, 'in region:', id_region);
+    function on_enter_region(id_region: string, id_mesh: string) {
+        EventBus.trigger('REGION_ENTER', {id_mesh, id_region}, false);
+        //log('Enter:', id_mesh, 'in region:', id_region);
     }
 
     function on_leave_region(id_region: string, id_mesh: string) {
-        log('Leave:', id_mesh, 'in region:', id_region);
+        EventBus.trigger('REGION_LEAVE', {id_mesh, id_region}, false);
+        //log('Leave:', id_mesh, 'in region:', id_region);
     }
 
     function update() {

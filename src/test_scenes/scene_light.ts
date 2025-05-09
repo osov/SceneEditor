@@ -10,7 +10,8 @@ import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import { TileLoader } from '../render_engine/tile_loader';
 import { calculate_borders, default_settings, MovementLogic, PathFinderMode, PlayerMovementSettings } from '../modules/PlayerMovement';
 import { Segment } from '2d-geometry';
-import { rotate_point, rotate_point_pivot } from '../render_engine/helpers/utils';
+import { make_ramk, rotate_point, rotate_point_pivot } from '../render_engine/helpers/utils';
+import { createRegionManager } from '../utils/region_manager';
 
 
 
@@ -44,7 +45,33 @@ export async function run_scene_light() {
     world.no_saving = true; //  чтобы не сохранять в файл
     world.no_removing = true; //  чтобы не удалять из сцены
     const tl = TileLoader(world, 256);
-    tl.load(map_data);
+    const tiles = tl.load(map_data);
+
+    const cell_size = 150 * WORLD_SCALAR;
+    const rm = createRegionManager(cell_size, 3);
+    (window as any).rm = rm;
+    for(const id in tiles){
+        const info = tiles[id];
+        if (['Flowers_1', 'Flowers_2', 'Flowers_3', 'Flowers_4'].includes(info.tile_info.name)) {
+            const size = info._hash.get_size();
+            rm.add_region(info._hash.position.x, info._hash.position.y, size.x, size.y);
+        }
+    }
+    const cells = rm.get_debug_cells();
+    for (let i = 0; i < cells.length; i++) {
+        const it = cells[i];
+        const l = make_ramk(cell_size, cell_size);
+        l.position.set(it.x + cell_size / 2, it.y + cell_size / 2, 9000);
+        RenderEngine.scene.add(l);
+        const m = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, { text: it.x + '\n' + it.y });
+        m.maxWidth = 100;
+        m.scale.setScalar(0.04);
+        SceneManager.add(m);
+        m.position.set(it.x + cell_size / 2, it.y + cell_size / 2, 9000);
+    }
+    //log(cells)
+    setInterval(() => rm.update(), 200);
+
 
     FlowMapControl.init();
     await FlowMapControl.load_saved();

@@ -17,6 +17,6 @@ export const WS_RECONNECT_INTERVAL = 10;
 export const FLOAT_PRECISION = 4;
 
 export type _UserMessages = {
-
-
+    REGION_ENTER: {id_mesh:string, id_region:string}
+    REGION_LEAVE: {id_mesh:string, id_region:string}
 };

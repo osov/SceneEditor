@@ -1,16 +1,29 @@
 import { Vector3, Vector2, Line, BufferGeometry, LineBasicMaterial } from "three";
 import { CAMERA_Z, WORLD_SCALAR } from "../config";
-import { make_ramk, rotate_point } from "./helpers/utils";
-import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData } from "./parsers/tile_parser";
-import { IObjectTypes } from "./types";
-import { GoContainer } from "./objects/sub_types";
-import { createSpatialHash } from "../test_scenes/spatial_hash";
-import { get_hash_by_mesh } from "../inspectors/ui_utils";
-import { createRegionManager } from "../test_scenes/region_manager";
+import {  rotate_point } from "./helpers/utils";
+import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo } from "./parsers/tile_parser";
+import {  IObjectTypes } from "./types";
+import { GoContainer, GoSprite } from "./objects/sub_types";
+
+export interface SpriteTileInfo {
+    tile: RenderTileData | RenderTileObject;
+    tile_info: LoadedTileInfo;
+    _hash: GoSprite;
+}
+
+export type SpriteTileInfoDict = { [k: string]: SpriteTileInfo };
+
+export function get_id_by_tile(tile: RenderTileData | RenderTileObject) {
+    if ('id' in tile)
+        return tile.id + '_' + tile.x + '.' + tile.y;
+    else
+        return tile.id_object + '';
+}
 
 export function TileLoader(world: GoContainer, tileSize = 256) {
 
     function load(map_data: MapData) {
+        const tiles: SpriteTileInfoDict = {};
         const render_data = parse_tiled(map_data);
         // TILES
         let id_layer = -1;
@@ -48,12 +61,11 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                 container.add(plane);
                 plane.name = tile_info.name + '' + plane.mesh_data.id;
                 plane.userData = { tile };
+                tiles[get_id_by_tile(tile)] = {tile_info, tile, _hash:plane};
             }
         }
 
-        const cell_size = 150 * WORLD_SCALAR;
-        const rm = createRegionManager(cell_size, 3);
-        (window as any).rm = rm;
+
         // OBJECTS
         for (let object_layer of render_data.objects_layers) {
             id_layer++;
@@ -103,28 +115,15 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                         container.add(plane);
                         plane.name = tile_info.name + '' + plane.mesh_data.id;
                         plane.userData = { tile };
-
-                        if (['Flowers_1', 'Flowers_2', 'Flowers_3', 'Flowers_4'].includes(tile_info.name)) {
-                            rm.add_region(x, y, tile_w, tile_h);
-                        }
+                        tiles[get_id_by_tile(tile)] = {tile_info, tile, _hash:plane};
                     }
+
                 }
             }
         }
 
-        const cells = rm.get_debug_cells();
-        for (let i = 0; i < cells.length; i++) {
-            const it = cells[i];
-            const l = make_ramk(cell_size, cell_size);
-            l.position.set(it.x + cell_size / 2, it.y + cell_size / 2, 9000);
-            RenderEngine.scene.add(l);
-            const m = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, { text: it.x + '\n' + it.y });
-            m.scale.setScalar(0.04);
-            SceneManager.add(m);
-            m.position.set(it.x + cell_size / 2, it.y + cell_size / 2, 9000);
-        }
-        //log(cells)
-        setInterval(() => rm.update(), 200);
+
+        return tiles;
     }
 
     return { load };

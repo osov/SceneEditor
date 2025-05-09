@@ -31,7 +31,7 @@ interface TileData {
     h: number;
 }
 
-interface LoadedTileInfo {
+export interface LoadedTileInfo {
     name: string;
     atlas: string;
     w: number;
