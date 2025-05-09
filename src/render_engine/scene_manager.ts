@@ -98,7 +98,7 @@ export function SceneManagerModule() {
             mesh = new AnimatedMesh(check_id_is_available_or_generate_new(id), params.width || default_size, params.height || default_size);
         }
         else if (type == IObjectTypes.COMPONENT)
-            mesh = new Component(check_id_is_available_or_generate_new(id));
+            mesh = new Component(check_id_is_available_or_generate_new(id), params.type || 0);
         else {
             Log.error('Unknown mesh type', type);
             mesh = new Slice9Mesh(check_id_is_available_or_generate_new(id), 32, 32);
@@ -324,7 +324,7 @@ export function SceneManagerModule() {
         const old_parent = mesh.parent ? mesh.parent : scene;
         const old_index = old_parent.children.indexOf(mesh);
         const new_parent = (pid == -1) ? scene : get_mesh_by_id(pid);
-        if (!new_parent) return Log.error('new_parent is null');
+        if (!new_parent) return Log.error('new_parent is null, mesh:', mesh.mesh_data.id, 'pid:' + pid);
         const old_pos = new Vector3();
         mesh.getWorldPosition(old_pos);
         const old_scale = new Vector3();

@@ -8,9 +8,6 @@ import { make_ramk } from '../render_engine/helpers/utils';
 export async function run_scene_simple() {
   (window as any).scene = RenderEngine.scene;
 
-  const tex = await ResourceManager.preload_texture('./img/2.png');
-  tex.texture.magFilter = NearestFilter;
-
   ResourceManager.set_project_path(`${SERVER_URL}${URL_PATHS.ASSETS}`);
   await run_debug_filemanager(PROJECT_NAME);
 
@@ -56,7 +53,7 @@ export async function run_scene_simple() {
   btn1.scale.setScalar(2);
   btn1.position.set(200, -200, 0);
   btn1.set_color('#0f0')
-  btn1.set_texture('2');
+  btn1.set_texture('2', 'atlas');
   btn1.set_slice(8, 8);
   gui1.add(btn1);
 

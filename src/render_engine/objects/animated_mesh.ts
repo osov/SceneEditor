@@ -256,7 +256,8 @@ export class AnimatedMesh extends EntityPlane {
 		// Set scale if it exists
 		if (data.scales) {
 			data.scales.forEach((scale, idx) => {
-				this.children[idx].scale.copy(scale);
+				if (this.children[idx])
+					this.children[idx].scale.copy(scale);
 			});
 		}
 

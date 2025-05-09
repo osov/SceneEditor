@@ -1,10 +1,11 @@
 import { deepClone } from "../modules/utils";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui, componentsGo, paramsTexture } from "./ActionsControl";
-import { IObjectTypes } from '../render_engine/types';
+import { IBaseEntityData, IObjectTypes } from '../render_engine/types';
 import { Vector2 } from "three";
-import { ASSET_SCENE_GRAPH } from "../modules_editor/modules_editor_const";
+import { ASSET_SCENE_GRAPH, TDictionary } from "../modules_editor/modules_editor_const";
 import { DEFOLD_LIMITS } from "../config";
+import { ComponentType } from "../render_engine/components/container_component";
 
 declare global {
     const TreeControl: ReturnType<typeof TreeControlCreate>;
@@ -987,6 +988,15 @@ function TreeControlCreate() {
             }
             else { if (itemDrag?.no_drop || canPaste) not_active = true; }
         }
+
+        // внутри component ничего нельзя создавать
+        // if (NodeAction.add_component_spline == action) not_active = true;
+        // запрещено все кроме удаления и дублирования
+        if (itemDrag?.icon.indexOf('component') > -1 && ![NodeAction.remove, NodeAction.CTRL_D].includes(action)) not_active = true;
+
+        // можно только удалить для базовой сущности
+        if (itemDrag?.icon == "base_entity" && action != NodeAction.remove) not_active = true;
+
         if (DEFOLD_LIMITS) {
             // внутри Go нельзя создавать gui
             if (NodeActionGui.includes(action) && worldGo.includes(itemDrag?.icon)) not_active = true;
@@ -1050,6 +1060,14 @@ function TreeControlCreate() {
                 getItemCM('Добавить спрайт', NodeAction.add_go_sprite_component),
                 getItemCM('Добавить надпись', NodeAction.add_go_label_component),
                 getItemCM('Добавить модель', NodeAction.add_go_model_component),
+            ]
+        });
+
+
+        cm_list.push({ text: 'line' });
+        cm_list.push({
+            text: 'Компонент', children: [
+                getItemCM('Сплайн', NodeAction.add_component_spline),
             ]
         });
 
@@ -1130,16 +1148,19 @@ function TreeControlCreate() {
             ActionsControl.add_go_sprite_component({ pid: copyItemDrag?.id, texture: 'arrow1', atlas: 'example_atlas', pos: get_position_view(), size: { w: 64, h: 64 } });
         }
         if (action == NodeAction.add_go_label_component) {
-            ActionsControl.add_go_label_component({pid:copyItemDrag?.id, pos:get_position_view()});
+            ActionsControl.add_go_label_component({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_go_model_component) {
-            ActionsControl.add_go_model_component({pid:copyItemDrag?.id, pos:get_position_view()});
+            ActionsControl.add_go_model_component({ pid: copyItemDrag?.id, pos: get_position_view() });
+        }
+        if (action == NodeAction.add_component_spline) {
+            ActionsControl.add_component({ pid: copyItemDrag?.id, pos: get_position_view() }, ComponentType.SPLINE);
         }
 
         copyItemDrag = null;
     }
 
-    function get_position_view(){
+    function get_position_view() {
         return new Vector2();
     }
 
@@ -1214,14 +1235,19 @@ function TreeControlCreate() {
         // Перетаскиваемый ассет может быть не текстурой, а сохранённым в файл .scn графом сцены
         const asset_type = event.dataTransfer.getData("asset_type");
         if (asset_type == ASSET_SCENE_GRAPH) {
-            // const path = event.dataTransfer.getData("path");
-            // ClientAPI.get_data(path).then((resp) => {
-            //     if (resp.result) {
-            //         const data = resp.data as TDictionary<IBaseEntityData[]>;
-            //         const obj_data = data.scene_data[0];
-            //         const obj = SceneManager.deserialize_mesh(obj_data, false);
-            //     }
-            // })
+            const mouseUpPos = getMousePos(event);
+            const path = event.dataTransfer.getData("path");
+            ClientAPI.get_data(path).then((resp) => {
+                if (resp.result) {
+                    const data = JSON.parse(resp.data!) as unknown as TDictionary<IBaseEntityData[]>;
+                    for (let i = 0; i < data.scene_data.length; i++) {
+                        const obj_data = data.scene_data[i];
+                        const obj = SceneManager.deserialize_mesh(obj_data, false);
+                        obj.set_position(mouseUpPos.x, mouseUpPos.y);
+                        SceneManager.add(obj);
+                    }
+                }
+            })
             return;
         }
 
@@ -1238,7 +1264,7 @@ function TreeControlCreate() {
 
         const nType = isPos && list.length ? list[0]?.type : icon;
         const mouseUpPos = getMousePos(event);
-        const nPos = isPos && mouseUpPos ? new Vector2( mouseUpPos?.x, mouseUpPos?.y ) : new Vector2(0, 0);
+        const nPos = isPos && mouseUpPos ? new Vector2(mouseUpPos?.x, mouseUpPos?.y) : new Vector2(0, 0);
         const nId = isPos ? list[0]?.mesh_data.id : id;
 
         const arrSize = event.dataTransfer.getData("textureSize").split("x");
@@ -1293,8 +1319,8 @@ function TreeControlCreate() {
             const parentIncludesLS = checkParentsVisible(item.id, [], listSelected); // есть ли у выделенных скрытые родители
 
             if (parentIsVisible) {
-                if(!parentIncludes || item.visible == false) isVisible = 'false';
-                if(parentIncludes) isVisible = parentIncludesLS ? 'false' : 'true'; 
+                if (!parentIncludes || item.visible == false) isVisible = 'false';
+                if (parentIncludes) isVisible = parentIncludesLS ? 'false' : 'true';
             }
             else isVisible = 'true';
 
@@ -1329,7 +1355,7 @@ function TreeControlCreate() {
         if (parent.visible == false) return true;
         return checkParentsVisible(parent.id);
     }
-    
+
     function updateVisible(e: any) {
         const { list, state } = e;
         list.forEach((id: number) => {

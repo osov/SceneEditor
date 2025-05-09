@@ -60,6 +60,7 @@ export type HistoryData = {
     TEXTURE_MIN_FILTER: AssetTextureInfo<MinificationTextureFilter>
     TEXTURE_MAG_FILTER: AssetTextureInfo<MagnificationTextureFilter>
     TEXTURE_ATLAS: AssetTextureInfo<string>
+    SPLINE_STATE: MeshPropertyInfo<Vector3>[]
 }
 
 export type HistoryDataKeys = keyof HistoryData;

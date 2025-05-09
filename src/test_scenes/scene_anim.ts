@@ -92,7 +92,7 @@ export async function run_scene_anim() {
             target_stop_distance: 0.2,
             blocked_move_min_dist: 0.01,
             min_update_interval: 0.3,
-            debug: true,
+            debug: !true,
         }
         const obstacles = load_obstacles(map_data);
         const move_logic = MovementLogic(movement_settings);

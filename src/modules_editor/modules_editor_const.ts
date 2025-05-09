@@ -220,4 +220,5 @@ export enum HistoryOwner {
     TEXT_CONTROL,
     SCENE_CONTROL,
     ACTIONS_CONTROL,
+    COMPONENT
 };

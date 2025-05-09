@@ -5,6 +5,7 @@ import { TreeItem } from "./TreeControl";
 import { DEFOLD_LIMITS, WORLD_SCALAR } from "../config";
 import { Vector2 } from "three";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
+import { ComponentType } from "../render_engine/components/container_component";
 
 declare global {
     const ActionsControl: ReturnType<typeof ActionsControlCreate>;
@@ -29,6 +30,7 @@ export enum NodeAction {
     add_go_sprite_component,
     add_go_label_component,
     add_go_model_component,
+    add_component_spline,
     refresh,
     open_in_explorer,
     download,
@@ -240,6 +242,12 @@ function ActionsControlCreate() {
         sceneAddItem(model, data.pid);
     }
 
+    function add_component(data: ParamsPidPos, type: ComponentType) {
+        const cmp = SceneManager.create(IObjectTypes.COMPONENT, { type });
+        cmp.set_position(data.pos.x, data.pos.y);
+        sceneAddItem(cmp, data.pid);
+    }
+
     function sceneAddItem(item: any, pid: number = -1) {
         if (!item) return;
         const parent = SceneManager.get_mesh_by_id(pid);
@@ -285,6 +293,7 @@ function ActionsControlCreate() {
         if (['scene', 'Scene'].includes(type)) return 'scene';
         if (worldGo.includes(type)) return 'go';
         if (worldGui.includes(type)) return 'gui';
+        if (type.indexOf('component') > -1) return 'component';
         return '';
     }
 
@@ -351,6 +360,8 @@ function ActionsControlCreate() {
             if (msg) showToast('Не выбрано место для вставки!');
             return false;
         }
+
+
 
         if (!DEFOLD_LIMITS) return true;
 
@@ -436,5 +447,6 @@ function ActionsControlCreate() {
         add_go_label_component,
         add_go_model_component,
         add_go_with_sprite_component,
+        add_component,
     };
 }
