@@ -2028,7 +2028,7 @@ function MeshInspectorCreate() {
                         mesh_id: id,
                         material_index: 0,
                         uniform_name: info.field.name,
-                        value: uniform.value?.path || ''
+                        value: `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}` || uniform.value?.path || ''
                     });
                 }
             }
@@ -2042,7 +2042,7 @@ function MeshInspectorCreate() {
                         mesh_id: id,
                         material_index: info.field.data.material_index,
                         uniform_name: info.field.name,
-                        value: uniform.value?.path || ''
+                        value: `${mesh.get_texture(info.field.data.material_index)[1]}/${mesh.get_texture(info.field.data.material_index)[0]}` || uniform.value?.path || ''
                     });
                 }
             }
@@ -2052,6 +2052,14 @@ function MeshInspectorCreate() {
 
     function handleUniformSampler2DChange(info: ChangeInfo) {
         const data = convertChangeInfoToMeshMaterialData<string>(info);
+        data.forEach(item => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (!mesh) return;
+
+            const texture_name = get_file_name(item.value as string || '');
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+            item.value = `${atlas}/${texture_name}`;
+        });
         updateUniformSampler2D(data, info.data.event.last);
     }
 
@@ -2060,8 +2068,8 @@ function MeshInspectorCreate() {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (!mesh) return;
 
-            const texture_name = get_file_name(item.value as string || '');
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+            const r = item.value.split('/');
+            const [atlas, texture_name] = r;
             const texture = ResourceManager.get_texture(texture_name, atlas).texture;
             if (!texture) return;
 
