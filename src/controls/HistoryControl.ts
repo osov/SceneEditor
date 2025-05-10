@@ -82,7 +82,6 @@ function HistoryControlCreate() {
         const _ctx_name: string | undefined = (ctx_name) ? ctx_name : (current_scene_path) ? current_scene_path : undefined;
         if (_ctx_name && context_data[_ctx_name]) {
             context_data[_ctx_name].splice(0);
-            console.log('HISTORY CLEARED: ', _ctx_name);
         }
     }
 
@@ -108,7 +107,6 @@ function HistoryControlCreate() {
         if (ctx == undefined)
             context_data[ctx_name] = [];
         context_data[ctx_name].push({ type, data: data_list, owner });
-        Log.log('WRITE: ', type, data_list, owner);
     }
 
     async function undo() {
@@ -121,7 +119,6 @@ function HistoryControlCreate() {
         const type = last.type;
         const owner = last.owner;
         const data = last.data;
-        Log.log("UNDO: ", type, last);
         EventBus.trigger('SYS_HISTORY_UNDO', { type, data, owner });
     }
 

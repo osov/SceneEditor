@@ -318,7 +318,7 @@ function MeshInspectorCreate() {
         text_fields.push({
             name: MeshProperty.TEXT,
             value: (mesh as TextMesh).text,
-            type: PropertyType.STRING,
+            type: PropertyType.LOG_DATA,
             onBeforeChange: saveText,
             onChange: handleTextChange
         });
@@ -479,8 +479,12 @@ function MeshInspectorCreate() {
                     switch (uniformInfo.type) {
                         case MaterialUniformType.SAMPLER2D:
                             const texture = uniform as IUniform<Texture>;
-                            const texture_name = texture.value ? get_file_name((texture.value as any).path || '') : '';
-                            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+
+                            // NOTE: берем данные из меша a не из юниформы для u_texture, так как в ней хранится просто Texture и даже если хранить в userData информацию об атласе и имени, то в случаях когда текстура это атлас который по uv режиться на текстуры, она будет перезаписываться по мере загрузки других частей из этой текстуры-атласа, так как все они ссылаются на один и тот же объект Texture
+                            // FIXME: остается косяк с с другими текстурными юниформами так как о них нет информации какие части текстуры-атласа они используют
+                            const texture_name = key == 'u_texture' ? mesh instanceof AnimatedMesh ? mesh.get_texture(index)[0] : mesh.get_texture()[0] : get_file_name((texture.value as any).path || '');
+                            const atlas = key == 'u_texture' ? mesh instanceof AnimatedMesh ? mesh.get_texture(index)[1] : mesh.get_texture()[1] : ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+
                             material_fields.push({
                                 name: key,
                                 value: `${atlas}/${texture_name}`,
@@ -875,6 +879,7 @@ function MeshInspectorCreate() {
 
     function generateLabelFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
         generateTransformFields(fields, mesh);
+        generateSizeField(fields, mesh);
         generateTextFields(fields, mesh);
     }
 
@@ -1327,7 +1332,8 @@ function MeshInspectorCreate() {
                 mesh.transform_changed();
             }
             else if (mesh instanceof TextMesh) {
-                const delta = new Vector3(1 * item.value.x, 1 * item.value.y, item.value.z);
+                mesh.set_scale(item.value.x, item.value.y);
+                const delta = new Vector3(1 * item.value.x, 1 * item.value.y, 1);
                 const max_delta = Math.max(delta.x, delta.y);
                 mesh.fontSize * max_delta;
             }
@@ -1766,7 +1772,7 @@ function MeshInspectorCreate() {
                 Log.error('[updateTextAlign] Mesh not found for id:', item.mesh_id);
                 continue;
             }
-            const text_align = item.value as any;
+            const text_align = item.value;
             mesh.textAlign = text_align;
         }
     }

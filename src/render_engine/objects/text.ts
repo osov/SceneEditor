@@ -20,6 +20,7 @@ interface SerializeData {
     text?: string
     font?: string
     font_size?: number
+    text_align?: 'left' | 'right' | 'center' | 'justify'
     alpha?: number
     color?: string
 }
@@ -63,6 +64,7 @@ export class TextMesh extends Text implements IBaseMesh {
 
     set_scale(x: number, y: number): void {
         this.scale.set(x, y, this.scale.z);
+        this.transform_changed();
     }
 
     get_scale(): Vector2 {
@@ -200,6 +202,9 @@ export class TextMesh extends Text implements IBaseMesh {
         if (this.fontSize != 32) {
             data.font_size = this.fontSize;
         }
+        if (this.textAlign != 'center') {
+            data.text_align = this.textAlign;
+        }
         if (this.fillOpacity != 1) {
             data.alpha = this.fillOpacity;
         }
@@ -221,6 +226,9 @@ export class TextMesh extends Text implements IBaseMesh {
         // NOTE: затем переопределяем значения
         if (data.font_size != undefined) {
             this.fontSize = data.font_size;
+        }
+        if (data.text_align != undefined) {
+            this.textAlign = data.text_align;
         }
         if (data.font != undefined) {
             this.set_font(data.font, false);

@@ -462,6 +462,7 @@ export function ResourceManagerModule() {
             texture = await ktx2Loader.loadAsync(path);
         else
             texture = await texture_loader.loadAsync(path);
+        // TODO: лучше добавить в Texture.userData
         (texture as any).path = path;
         return texture;
     }

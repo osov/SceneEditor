@@ -2,8 +2,8 @@ import { AnimationAction, AnimationMixer, MeshBasicMaterial, ShaderMaterial, Tex
 import { IObjectTypes } from "../types";
 import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils';
 import { EntityPlane } from "./entity_plane";
-import { get_file_name } from "../helpers/utils";
 import { MaterialUniformType } from "../resource_manager";
+import { get_file_name } from "../helpers/utils";
 
 interface SerializeData {
 	materials: {
@@ -12,10 +12,6 @@ interface SerializeData {
 	mesh_name: string,
 	animations: { name: string, alias: string }[],
 	current_animation: string,
-	texture: {
-		name: string,
-		atlas: string
-	},
 	scales: {
 		x: number,
 		y: number,
@@ -33,6 +29,8 @@ export class AnimatedMesh extends EntityPlane {
 	private mesh_name = '';
 	private materials: ShaderMaterial[] = [];
 
+	protected textures: string[][] = [];
+
 	constructor(id: number, width = 0, height = 0) {
 		super(id);
 		this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
@@ -42,9 +40,14 @@ export class AnimatedMesh extends EntityPlane {
 	}
 
 	set_texture(name: string, atlas = '', index = 0) {
-		super.set_texture(name, atlas);
+		// NOTE: записываем информацию о текстура для каждого метериала
+		this.textures[index] = [name, atlas];
 		const texture_data = ResourceManager.get_texture(name, atlas);
 		ResourceManager.set_material_uniform_for_animated_mesh(this, index, 'u_texture', texture_data.texture);
+	}
+
+	get_texture(index = 0) {
+		return this.textures[index];
 	}
 
 	set_material(name: string, index = 0) {
@@ -82,7 +85,6 @@ export class AnimatedMesh extends EntityPlane {
 				const old_material = ((child as any).material as MeshBasicMaterial);
 				if (old_material.map && old_material.map.image) {
 					ResourceManager.add_texture(old_material.name, 'mesh_' + name, old_material.map);
-					log('Texture added', old_material.name, 'mesh_' + name);
 					old_maps.push(old_material.map);
 				}
 
@@ -168,21 +170,8 @@ export class AnimatedMesh extends EntityPlane {
 
 		data.scales = this.children.map(child => child.scale.clone());
 
-		// Get texture info from current texture if it exists
-		if (this.materials.length > 0 && this.materials[0].uniforms.u_texture.value) {
-			const texture = this.materials[0].uniforms.u_texture.value as Texture;
-			const texture_name = get_file_name((texture as any).path || '');
-			const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
-			data.texture = {
-				name: texture_name,
-				atlas: atlas
-			};
-		}
-
-		// Serialize animations using their original names
 		for (const [alias, action] of Object.entries(this.animations_list)) {
 			const clip = action.getClip();
-			// If this animation has an alias, use the original name from animation_aliases
 			const animName = this.animation_aliases[alias] || clip.name;
 			data.animations.push({ name: animName, alias });
 		}
@@ -206,9 +195,8 @@ export class AnimatedMesh extends EntityPlane {
 				if (material.uniforms[uniformName]) {
 					const uniform = material.uniforms[uniformName];
 					if (uniform.value instanceof Texture) {
-						// For texture uniforms, save the texture name and atlas instead of the full Texture object
-						const texture_name = get_file_name((uniform.value as any).path || '');
-						const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+						const texture_name = uniformName == 'u_texture' ? this.get_texture(idx)[0] : get_file_name((uniform.value as any).path || '');
+						const atlas = uniformName == 'u_texture' ? this.get_texture(idx)[1] : ResourceManager.get_atlas_by_texture_name(texture_name) || '';
 						modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
 					} else {
 						modifiedUniforms[uniformName] = uniform.value;
@@ -229,12 +217,10 @@ export class AnimatedMesh extends EntityPlane {
 	deserialize(data: SerializeData) {
 		super.deserialize(data);
 
-		// Set mesh if it exists
 		if (data.mesh_name) {
 			this.set_mesh(data.mesh_name);
 		}
 
-		// Add animations
 		if (data.animations) {
 			for (const animation of data.animations) {
 				this.add_animation(animation.name, animation.alias);
@@ -243,17 +229,14 @@ export class AnimatedMesh extends EntityPlane {
 
 		// Set current animation if it exists
 		if (data.current_animation) {
-			// Find the alias for the current animation if it exists
 			const alias = Object.entries(this.animation_aliases).find(([_, name]) => name === data.current_animation)?.[0] || data.current_animation;
 			this.set_animation(alias);
 		}
 
-		// Set texture if it exists
-		if (data.texture) {
-			this.set_texture(data.texture.name, data.texture.atlas);
-		}
+		// if (data.texture) {
+		// 	this.set_texture(data.texture.name, data.texture.atlas);
+		// }
 
-		// Set scale if it exists
 		if (data.scales) {
 			data.scales.forEach((scale, idx) => {
 				if (this.children[idx])

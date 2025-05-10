@@ -263,9 +263,8 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
             if (material.uniforms[uniformName]) {
                 const uniform = material.uniforms[uniformName];
                 if (uniform.value instanceof Texture) {
-                    // For texture uniforms, save the texture name and atlas instead of the full Texture object
-                    const texture_name = get_file_name((uniform.value as any).path || '');
-                    const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+                    const texture_name = uniformName == 'u_texture' ? parameters.texture : get_file_name((uniform.value as any).path || '');
+                    const atlas = uniformName == 'u_texture' ? parameters.atlas : ResourceManager.get_atlas_by_texture_name(texture_name) || '';
                     modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
                 } else {
                     modifiedUniforms[uniformName] = uniform.value;
