@@ -119,6 +119,9 @@ function MeshInspectorCreate() {
             generateBaseFields(fields, mesh);
 
             switch (mesh.type) {
+                case IObjectTypes.GO_CONTAINER:
+                    generateTransformFields(fields, mesh);
+                    break;
                 case IObjectTypes.GUI_BOX:
                     generateGuiBoxFields(list, fields, mesh);
                     break;
