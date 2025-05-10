@@ -1,4 +1,3 @@
-import { NearestFilter } from 'three'
 import { IObjectTypes } from '../render_engine/types';
 import { run_debug_filemanager } from '../controls/AssetControl';
 import { PROJECT_NAME, SERVER_URL, WORLD_SCALAR } from '../config';
@@ -87,7 +86,7 @@ export async function run_scene_simple() {
 
   const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
   am.set_mesh('Unarmed Idle');
-  am.children[0].scale.setScalar(1 / 50 * WORLD_SCALAR);
+  am.children[0].scale.setScalar(1 / 20 * WORLD_SCALAR);
   am.add_animation('Unarmed Idle', 'idle');
   am.add_animation('Unarmed Run Forward', 'walk');
   am.set_texture('PolygonExplorers_Texture_01_A')

@@ -69,7 +69,6 @@ export async function run_scene_light() {
         SceneManager.add(m);
         m.position.set(it.x + cell_size / 2, it.y + cell_size / 2, 9000);
     }
-    //log(cells)
     setInterval(() => rm.update(), 200);
 
 
@@ -80,7 +79,6 @@ export async function run_scene_light() {
     await GrassTreeControl.load_saved();
 
     await PaintInspector.load_shader();
-
 
     // await AssetControl.open_scene('/LIGHT.scn');
     await PaintInspector.load_saved();

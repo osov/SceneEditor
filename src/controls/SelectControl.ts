@@ -1,7 +1,7 @@
 // todo select https://threejs.org/examples/?q=box#misc_boxselection
-import { Intersection, Object3D, Object3DEventMap, Vector2 } from "three";
+import { Intersection, Object3D, Object3DEventMap, Texture, Vector2 } from "three";
 import { IBaseEntityAndThree, IBaseMeshAndThree } from "../render_engine/types";
-import { filter_list_base_mesh } from "../render_engine/helpers/utils";
+import { filter_list_base_mesh, is_base_mesh } from "../render_engine/helpers/utils";
 import { WORLD_SCALAR } from "../config";
 
 
@@ -88,11 +88,44 @@ function SelectControlCreate() {
     }
 
     function set_selected_intersect(tmp: Intersection<Object3D<Object3DEventMap>>[]) {
-        let tmp_list = [];
-        for (let i = 0; i < tmp.length; i++)
-            tmp_list.push(tmp[i].object);
-        const list = filter_list_base_mesh(tmp_list);
+        let tmp_list: Object3D[] = [];
+        for (let i = 0; i < tmp.length; i++) {
+            const it = tmp[i];
+            if (is_base_mesh(it.object)) {
+                const bm = it.object as IBaseMeshAndThree;
+                const tex_data = bm.get_texture();
+                const texture = ResourceManager.get_texture(tex_data[0], tex_data[1]);
+                // bad texture
+                if ((texture as any).system)
+                    tmp_list.push(it.object);
+                else if (it.uv) {
+                    if (check_transparent(it.uv, texture.texture, it.object.name))
+                        tmp_list.push(it.object);
+                }
+                else
+                    tmp_list.push(it.object);
+            }
+        }
+        const list = tmp_list as IBaseMeshAndThree[];
         set_selected_list(list, false);
+    }
+
+
+    function check_transparent(uv: Vector2, texture: Texture, name:string) {
+        return true;
+        const image = texture.image;
+        const x = Math.floor(uv.x * image.width);
+        const y = Math.floor((1-uv.y) * image.height);
+        // Один раз при загрузке текстуры:
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(image, 0, 0);
+        const pixel = ctx.getImageData(x, y, 1, 1).data;
+        const alpha = pixel[3]; 
+        //log(name, alpha)
+        return alpha > 255 / 2;
     }
 
     function set_selected_list(list: IBaseMeshAndThree[], clear_old = true) {

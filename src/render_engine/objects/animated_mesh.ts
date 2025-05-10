@@ -4,6 +4,7 @@ import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils'
 import { EntityPlane } from "./entity_plane";
 import { MaterialUniformType } from "../resource_manager";
 import { get_file_name } from "../helpers/utils";
+import { WORLD_SCALAR } from "../../config";
 
 interface SerializeData {
 	materials: {
@@ -93,7 +94,7 @@ export class AnimatedMesh extends EntityPlane {
 				(child as any).material = new_material;
 			}
 		});
-		m.scale.setScalar(0.2);
+		m.scale.setScalar(WORLD_SCALAR);
 		if (this.children.length > 0)
 			this.remove(this.children[0]);
 		this.add(m);

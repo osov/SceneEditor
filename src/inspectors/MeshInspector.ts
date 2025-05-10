@@ -201,7 +201,7 @@ function MeshInspectorCreate() {
         });
 
         if (mesh instanceof AnimatedMesh) {
-            const scale_factor = Math.max(...mesh.children[0].scale.toArray());
+            const scale_factor = Math.max(...mesh.children[0].scale.toArray()) / WORLD_SCALAR;
             transform_fields.push({
                 name: MeshProperty.SCALE,
                 value: scale_factor,
@@ -1358,7 +1358,7 @@ function MeshInspectorCreate() {
                 return;
             }
             if (mesh instanceof AnimatedMesh) {
-                const scale_factor = Math.max(...mesh.children[0].scale.toArray());
+                const scale_factor = Math.max(...mesh.children[0].scale.toArray()) / WORLD_SCALAR;
                 oldScales.push({ mesh_id: id, value: scale_factor });
             }
         });
@@ -1378,7 +1378,7 @@ function MeshInspectorCreate() {
                 continue;
             }
             if (mesh instanceof AnimatedMesh) {
-                mesh.children[0].scale.setScalar(item.value);
+                mesh.children[0].scale.setScalar(item.value * WORLD_SCALAR);
                 mesh.transform_changed();
             }
         }
