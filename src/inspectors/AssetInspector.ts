@@ -521,9 +521,28 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_VERTEX_PROGRAM', vertexPrograms, HistoryOwner.ASSET_INSPECTOR);
     }
 
-    function handleMaterialVertexProgramChange(info: ChangeInfo) {
+    async function handleMaterialVertexProgramChange(info: ChangeInfo) {
         const data = convertChangeInfoToMaterialData<string>(info);
-        updateMaterialProperty(data, info.data.event.last);
+        await updateMaterialVertexProgram(data, info.data.event.last);
+    }
+
+    async function updateMaterialVertexProgram(data: AssetMaterialInfo<string>[], last: boolean) {
+        for (const item of data) {
+            EventBus.trigger('SYS_MATERIAL_CHANGED', {
+                material_name: get_file_name(item.material_path),
+                is_uniform: false,
+                property: 'vertexShader',
+                value: item.value
+            }, false);
+
+            if (last) {
+                const get_response = await AssetControl.get_file_data(item.material_path);
+                if (get_response.result != 1) continue;
+                const material_data = JSON.parse(get_response.data!);
+                material_data['vertexShader'] = item.value;
+                await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
+            }
+        }
     }
 
     function saveMaterialFragmentProgram(info: BeforeChangeInfo) {
@@ -546,7 +565,26 @@ function AssetInspectorCreate() {
 
     async function handleMaterialFragmentProgramChange(info: ChangeInfo) {
         const data = convertChangeInfoToMaterialData<string>(info);
-        await updateMaterialProperty(data, info.data.event.last);
+        await updateMaterialFragmentProgram(data, info.data.event.last);
+    }
+
+    async function updateMaterialFragmentProgram(data: AssetMaterialInfo<string>[], last: boolean) {
+        for (const item of data) {
+            EventBus.trigger('SYS_MATERIAL_CHANGED', {
+                material_name: get_file_name(item.material_path),
+                is_uniform: false,
+                property: 'fragmentShader',
+                value: item.value
+            }, false);
+
+            if (last) {
+                const get_response = await AssetControl.get_file_data(item.material_path);
+                if (get_response.result != 1) continue;
+                const material_data = JSON.parse(get_response.data!);
+                material_data['fragmentShader'] = item.value;
+                await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
+            }
+        }
     }
 
     function saveMaterialTransparent(info: BeforeChangeInfo) {
@@ -569,7 +607,26 @@ function AssetInspectorCreate() {
 
     async function handleMaterialTransparentChange(info: ChangeInfo) {
         const data = convertChangeInfoToMaterialData<boolean>(info);
-        await updateMaterialProperty(data, info.data.event.last);
+        await updateMaterialTransparent(data, info.data.event.last);
+    }
+
+    async function updateMaterialTransparent(data: AssetMaterialInfo<boolean>[], last: boolean) {
+        for (const item of data) {
+            EventBus.trigger('SYS_MATERIAL_CHANGED', {
+                material_name: get_file_name(item.material_path),
+                is_uniform: false,
+                property: 'transparent',
+                value: item.value
+            }, false);
+
+            if (last) {
+                const get_response = await AssetControl.get_file_data(item.material_path);
+                if (get_response.result != 1) continue;
+                const material_data = JSON.parse(get_response.data!);
+                material_data['transparent'] = item.value;
+                await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
+            }
+        }
     }
 
     async function handleUniformChange<T>(info: ChangeInfo) {
@@ -689,7 +746,7 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_COLOR', colors, HistoryOwner.ASSET_INSPECTOR);
     }
 
-    function convertChangeInfoToMaterialData<T>(info: ChangeInfo): { material_path: string, name: string, value: T }[] {
+    function convertChangeInfoToMaterialData<T>(info: ChangeInfo): AssetMaterialInfo<T>[] {
         const value = info.data.event.value as T;
         return info.ids.map(id => {
             const path = _selected_materials[id];
@@ -699,7 +756,7 @@ function AssetInspectorCreate() {
                 name: info.data.field?.name,
                 value
             };
-        }).filter(item => item != null) as { material_path: string, name: string, value: T }[];
+        }).filter(item => item != null) as AssetMaterialInfo<T>[];
     }
 
     function convertChangeInfoToTextureData<T>(info: ChangeInfo): { texture_path: string, value: T }[] {
@@ -736,19 +793,19 @@ function AssetInspectorCreate() {
 
             case 'MATERIAL_VERTEX_PROGRAM':
                 const vertexPrograms = event.data as AssetMaterialInfo<string>[];
-                await updateMaterialProperty(vertexPrograms, true);
+                await updateMaterialVertexProgram(vertexPrograms, true);
                 set_selected_materials(_selected_materials);
                 break;
 
             case 'MATERIAL_FRAGMENT_PROGRAM':
                 const fragmentPrograms = event.data as AssetMaterialInfo<string>[];
-                await updateMaterialProperty(fragmentPrograms, true);
+                await updateMaterialFragmentProgram(fragmentPrograms, true);
                 set_selected_materials(_selected_materials);
                 break;
 
             case 'MATERIAL_TRANSPARENT':
                 const transparents = event.data as AssetMaterialInfo<boolean>[];
-                await updateMaterialProperty(transparents, true);
+                await updateMaterialTransparent(transparents, true);
                 set_selected_materials(_selected_materials);
                 break;
 
