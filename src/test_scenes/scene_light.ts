@@ -8,7 +8,7 @@ import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { MapData, preload_tiled_textures, get_all_tiled_textures } from '../render_engine/parsers/tile_parser';
 import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import { TileLoader } from '../render_engine/tile_loader';
-import { calculate_borders, default_settings, MovementLogic, PathFinderMode, PlayerMovementSettings } from '../modules/PlayerMovement';
+import { default_settings, load_obstacles, MovementLogic, PathFinderMode, PlayerMovementSettings, PointerControl } from '../modules/PlayerMovement';
 import { Segment } from '2d-geometry';
 import { make_ramk, rotate_point, rotate_point_pivot } from '../render_engine/helpers/utils';
 import { createRegionManager } from '../utils/region_manager';
@@ -99,6 +99,7 @@ export async function run_scene_light() {
         const movement_settings: PlayerMovementSettings = {
             ...default_settings,
             path_finder_mode: PathFinderMode.WAY_PREDICTION,
+            pointer_control: PointerControl.JS,
             collision_radius: 2,
             max_try_dist: 0.5,
             target_stop_distance: 0.2,
@@ -106,14 +107,7 @@ export async function run_scene_light() {
             blocked_move_min_dist: 0.01,
             debug: true,
         }
-        const obstacles: Segment[] = [];
-        const all_objects = SceneManager.get_scene_list();
-        for (const id in all_objects) {
-            const obj = all_objects[id];
-            if (obj.name.includes("Fence")) {
-                obstacles.push(...calculate_borders(obj))
-            }
-        }
+        const obstacles = load_obstacles(map_data);
         const move_logic = MovementLogic(movement_settings);
         move_logic.init({ model: am, obstacles });
         EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {

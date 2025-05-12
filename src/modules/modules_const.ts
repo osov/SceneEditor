@@ -24,3 +24,7 @@ export type _SystemMessages = {
     TRY_WS_CONNECT: VoidMessage,
     TRY_WS_DISCONNECT: VoidMessage,
 };
+
+export type NetMessages = {
+    
+}

@@ -60,6 +60,7 @@ export function WsServer<T>(port: number,
         client.send(data);
     }
 
+    log("Запущен вебсокет сервер на порту " + port);
 
     return { send, broadcast, server }
 }

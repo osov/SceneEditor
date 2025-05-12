@@ -2,7 +2,7 @@ import { _GAME_CONFIG, _UserMessages } from "../config";
 import { register_system } from "./System";
 import { register_log } from "./Log";
 import { register_event_bus } from "./EventBus";
-import { _SystemMessages } from "./modules_const";
+import { _SystemMessages, NetMessages } from "./modules_const";
 import { register_camera } from "./Camera";
 import { register_input } from "./InputManager";
 import { register_ws_client } from "./WsClient";
@@ -17,7 +17,7 @@ declare global {
     const Manager: ReturnType<typeof ManagerModule>;
     const GAME_CONFIG: typeof _GAME_CONFIG;
     type UserMessages = _UserMessages;
-    type SystemMessages = _SystemMessages  & SystemMessagesEditor;
+    type SystemMessages = _SystemMessages & NetMessages & SystemMessagesEditor;
 }
 
 

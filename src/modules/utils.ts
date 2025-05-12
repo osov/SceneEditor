@@ -1,7 +1,8 @@
-import { Circle, Segment } from "2d-geometry";
+import { Vector, Circle, Segment } from "2d-geometry";
 import { Vector3, Vector4 } from "three";
 
-let DP_TOL: number = 0.000001
+export const DP_TOL = 0.000001;
+export const TAU = 2 * Math.PI;
 
 
 export function get_hms() {
@@ -158,8 +159,40 @@ export function circle_line_intersect(circle: Circle, line: Segment) {
     return ret;
 }
 
+export function GT(x: number, y: number) {
+    return x - y > DP_TOL
+}
+  
+export function GE(x: number, y: number) {
+    return x - y > -DP_TOL
+}
+
+export function LT(x: number, y: number) {
+    return x - y < -DP_TOL;
+  }
+
+export function LE(x: number, y: number) {
+    return x - y < DP_TOL;
+}
+
 export function EQ_0(x: number) {
-  return x < DP_TOL && x > -DP_TOL
+  return x < DP_TOL && x > -DP_TOL;
+}
+
+export function EQ(x: number, y: number) {
+    return x - y < DP_TOL && x - y > -DP_TOL;
+}
+
+export function vec_angle(v1: Vector, v2: Vector) {
+    let a = v1.angleTo(v2);
+    if (a > Math.PI) a = a - 2 * Math.PI;
+    return a
+}
+
+export function vector_slope(x: number, y: number) {
+    let angle = Math.atan2(y, x);
+    if (angle < 0) angle = TAU + angle;
+    return angle;
 }
 
 export function getObjectHash<T>(obj: T): string {
