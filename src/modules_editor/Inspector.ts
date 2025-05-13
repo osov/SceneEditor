@@ -470,7 +470,7 @@ function InspectorModule() {
                 });
                 return createFolder(field.key, childrens, (field.params as PropertyParams[PropertyType.FOLDER])?.expanded);
             case PropertyType.BUTTON:
-                return createButton(field as PropertyData<PropertyType.BUTTON>, { title: field.key });
+                return createButton(field as PropertyData<PropertyType.BUTTON>);
 
             case PropertyType.STRING:
                 return createEntity(ids, field);
@@ -522,7 +522,9 @@ function InspectorModule() {
             case PropertyType.ITEM_LIST:
                 return createEntity(ids, field, {
                     view: 'item-list',
-                    options: field?.params
+                    options: field?.params,
+                    pickText: 'Выберите анимацию',
+                    emptyText: 'Нет добавленных анимаций'
                 });
             case PropertyType.LIST_TEXTURES:
                 return createEntity(ids, field, {
@@ -574,11 +576,11 @@ function InspectorModule() {
         };
     }
 
-    function createButton(field: PropertyData<PropertyType.BUTTON>, params: ButtonParams): Button {
+    function createButton(field: PropertyData<PropertyType.BUTTON>, params?: ButtonParams): Button {
         return {
             title: field.title ?? field.key,
             onClick: field.value,
-            params
+            params: params ?? { title: field.title ?? field.key }
         }
     }
 

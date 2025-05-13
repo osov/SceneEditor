@@ -891,10 +891,12 @@ function MeshInspectorCreate() {
 
         const model_fields: PropertyData<PropertyType>[] = [];
 
+        const model = (mesh as AnimatedMesh).get_mesh_name();
+
         model_fields.push({
             key: MeshProperty.MODEL,
             title: MeshPropertyTitle.MODEL,
-            value: (mesh as AnimatedMesh).get_mesh_name(),
+            value: model,
             type: PropertyType.LIST_TEXT,
             params: generateModelOptions(),
             onBeforeChange: saveModel,
@@ -902,11 +904,11 @@ function MeshInspectorCreate() {
         });
 
         const animations: string[] = [];
-        ResourceManager.get_all_models().forEach((model) => {
-            ResourceManager.get_all_model_animations(model).forEach((animation) => {
-                animations.push((mesh as AnimatedMesh).get_animation_name_by_alias(animation) ?? animation);
-            });
+        ResourceManager.get_all_model_animations(model).forEach((animation) => {
+            animations.push((mesh as AnimatedMesh).get_animation_name_by_alias(animation) ?? animation);
         });
+
+        log('MODEL ANIMATIONS:', animations);
 
         model_fields.push({
             key: MeshProperty.ANIMATION_LIST,
@@ -1229,13 +1231,13 @@ function MeshInspectorCreate() {
                 const [texture, atlas] = (mesh as AnimatedMesh).get_texture();
                 (mesh as AnimatedMesh).set_mesh(model);
                 (mesh as AnimatedMesh).children[0].scale.setScalar(1 / 50 * WORLD_SCALAR);
-                // NOTE: пока вручную добавляем анимации, но когда будет поле добавления/удаления, то при установке меша все анимации должны будут скинуться, и можно будет добавлять через инспектор
-                (mesh as AnimatedMesh).add_animation('Unarmed Idle', 'idle');
-                (mesh as AnimatedMesh).add_animation('Unarmed Run Forward', 'walk');
                 (mesh as AnimatedMesh).set_texture(texture, atlas);
             }
         }
-        Inspector.refresh(['active_model_animation']);
+
+        setTimeout(() => {
+            set_selected_meshes(_selected_meshes);
+        });
     }
 
     function saveAnimationList(info: BeforeChangeInfo) {
