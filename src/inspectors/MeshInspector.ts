@@ -145,6 +145,8 @@ function MeshInspectorCreate() {
         _selected_meshes = mesh_ids;
 
         const list = SceneManager.get_scene_list().filter((item) => _selected_meshes.includes(item.mesh_data.id));
+        if (list.length == 1 && list[0].type == IObjectTypes.COMPONENT)
+            return;
         const data = list.map((mesh) => {
             const fields: PropertyData<PropertyType>[] = [];
             generateBaseFields(fields, mesh);

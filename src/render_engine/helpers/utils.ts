@@ -215,3 +215,7 @@ export function get_material_hash(material: ShaderMaterial) {
 
     return hash;
 }
+
+export function lerp(a: number, b: number, t: number) {
+    return a + (b - a) * t;
+}

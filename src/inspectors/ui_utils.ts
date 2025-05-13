@@ -2,6 +2,7 @@ import { Texture, Vector2 } from "three";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { RenderTileData, RenderTileObject } from "../render_engine/parsers/tile_parser";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
+import { Component } from "../render_engine/components/container_component";
 
 
 export function get_selected_one_mesh() {
@@ -12,6 +13,16 @@ export function get_selected_one_mesh() {
     if (mesh.type != IObjectTypes.GO_SPRITE_COMPONENT)
         return;
     return mesh as Slice9Mesh;
+}
+
+export function get_selected_one_component() {
+    const selected_list = SelectControl.get_selected_list();
+    if (selected_list.length != 1)
+        return;
+    const mesh = selected_list[0];
+    if (mesh.type != IObjectTypes.COMPONENT)
+        return;
+    return mesh as Component;
 }
 
 

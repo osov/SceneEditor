@@ -31,6 +31,7 @@ export enum NodeAction {
     add_go_label_component,
     add_go_model_component,
     add_component_spline,
+    add_component_mover,
     refresh,
     open_in_explorer,
     download,

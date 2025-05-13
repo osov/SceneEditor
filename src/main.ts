@@ -27,6 +27,9 @@ import { register_mesh_inspector } from './inspectors/MeshInspector';
 import { register_asset_inspector } from './inspectors/AssetInspector';
 import { register_paint_inspector } from './inspectors/PaintInspector';
 import { run_scene_empty } from './test_scenes/scene_empty';
+import { run_scene_digg } from './test_scenes/scene_digg';
+import { register_cmp_mover_inspector } from './inspectors/ComponentMoverInspector';
+import { register_components_control } from './controls/ComponentsControl';
 
 function register_managers() {
     register_manager();
@@ -51,12 +54,14 @@ function register_controls() {
     register_history_control();
     register_flow_map_control();
     register_grass_tree_control();
+    register_components_control();
 }
 
 function register_inspectors() {
     register_mesh_inspector();
     register_asset_inspector();
     register_paint_inspector();
+    register_cmp_mover_inspector();
 }
 
 function run_selected_scene() {
@@ -68,6 +73,7 @@ function run_selected_scene() {
         run_scene_stereo,
         run_scene_inventory,
         run_scene_empty,
+        run_scene_digg,
     ];
     const id = new URLSearchParams(document.location.search).get('scene');
     if (id && !isNaN(Number(id)) && scenes[parseInt(id)])

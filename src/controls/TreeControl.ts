@@ -1068,6 +1068,7 @@ function TreeControlCreate() {
         cm_list.push({
             text: 'Компонент', children: [
                 getItemCM('Сплайн', NodeAction.add_component_spline),
+                getItemCM('Движение', NodeAction.add_component_mover),
             ]
         });
 
@@ -1155,6 +1156,9 @@ function TreeControlCreate() {
         }
         if (action == NodeAction.add_component_spline) {
             ActionsControl.add_component({ pid: copyItemDrag?.id, pos: get_position_view() }, ComponentType.SPLINE);
+        }
+        if (action == NodeAction.add_component_mover) {
+            ActionsControl.add_component({ pid: copyItemDrag?.id, pos: get_position_view() }, ComponentType.MOVER);
         }
 
         copyItemDrag = null;

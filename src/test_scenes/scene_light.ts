@@ -62,11 +62,13 @@ export async function run_scene_light() {
         const it = cells[i];
         const l = make_ramk(cell_size, cell_size);
         l.position.set(it.x + cell_size / 2, it.y + cell_size / 2, 9000);
-        RenderEngine.scene.add(l);
+        //RenderEngine.scene.add(l);
         const m = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, { text: it.x + '\n' + it.y });
+        (m as any).no_saving = true; //  чтобы не сохранять в файл
+        (m as any).no_removing = true; 
         m.maxWidth = 100;
         m.scale.setScalar(0.04);
-        SceneManager.add(m);
+        //SceneManager.add(m);
         m.position.set(it.x + cell_size / 2, it.y + cell_size / 2, 9000);
     }
     setInterval(() => rm.update(), 200);

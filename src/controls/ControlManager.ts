@@ -192,7 +192,8 @@ function ControlManagerCreate() {
         list.forEach((item) => {
             if ((!item.get_active() || ids.includes(item.mesh_data.id)) && item.children.length > 0) {
                 item.children.forEach((child: any) => {
-                    ids.push(child.mesh_data.id);
+                    if (is_base_mesh(child))
+                        ids.push(child.mesh_data.id);
                 })
             }
         });
