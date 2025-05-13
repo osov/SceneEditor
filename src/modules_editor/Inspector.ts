@@ -1,5 +1,6 @@
 import { Pane, TpChangeEvent } from 'tweakpane';
 import { BindingApi, BindingParams, ButtonParams, FolderApi } from '@tweakpane/core';
+import * as TweakpaneItemListPlugin from 'tweakpane4-item-list-plugin';
 import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
@@ -29,6 +30,7 @@ export enum PropertyType {
     SLIDER,
     LIST_TEXT,
     LIST_TEXTURES,
+    ITEM_LIST,
     BUTTON,
     POINT_2D,
     LOG_DATA,
@@ -46,6 +48,7 @@ export type PropertyParams = {
     [PropertyType.SLIDER]: { min: number, max: number, step: number };
     [PropertyType.LIST_TEXT]: { [key in string]: string };
     [PropertyType.LIST_TEXTURES]: { value: string, src: string }[];
+    [PropertyType.ITEM_LIST]: string[];
     [PropertyType.BUTTON]: {};
     [PropertyType.POINT_2D]: { x: { min: number, max: number, step?: number, format?: (value: number) => string, disabled?: boolean }, y: { min: number, max: number, step?: number, format?: (value: number) => string, disabled?: boolean } };
     [PropertyType.LOG_DATA]: {};
@@ -61,8 +64,9 @@ export type PropertyValues = {
     [PropertyType.COLOR]: { hex: string };
     [PropertyType.STRING]: string;
     [PropertyType.SLIDER]: number;
-    [PropertyType.LIST_TEXT]: string; //  selected key
-    [PropertyType.LIST_TEXTURES]: string; // selected key;
+    [PropertyType.LIST_TEXT]: string;
+    [PropertyType.LIST_TEXTURES]: string;
+    [PropertyType.ITEM_LIST]: string[];
     [PropertyType.BUTTON]: (...args: any[]) => void;
     [PropertyType.POINT_2D]: { x: number, y: number };
     [PropertyType.LOG_DATA]: string;
@@ -71,7 +75,8 @@ export type PropertyValues = {
 
 export interface PropertyData<T extends PropertyType> {
     // NOTE/TODO: uid/pid - для нахождения к какой папке относится поле
-    name: string;
+    key: string;
+    title?: string;
     value: PropertyValues[T];
     type: T;
 
@@ -151,6 +156,7 @@ function InspectorModule() {
     }
 
     function registerPlugins() {
+        _inspector.registerPlugin(TweakpaneItemListPlugin);
         _inspector.registerPlugin(TweakpaneImagePlugin);
         _inspector.registerPlugin(TweakpaneSearchListPlugin);
         _inspector.registerPlugin(TextareaPlugin);
@@ -241,7 +247,7 @@ function InspectorModule() {
 
             function findFieldsRecursively(uniqueFields: { ids: number[], data: PropertyData<PropertyType> }[]) {
                 for (const uniqueField of uniqueFields) {
-                    if (uniqueField.data.name == property) {
+                    if (uniqueField.data.key == property) {
                         matchingFields.push(uniqueField);
                     }
 
@@ -265,7 +271,7 @@ function InspectorModule() {
                     }
                 }
 
-                const pane = _field_name_to_pane[uniqueField.data.name];
+                const pane = _field_name_to_pane[uniqueField.data.key];
                 if (pane) {
                     _is_refresh = true;
                     pane.refresh();
@@ -285,7 +291,7 @@ function InspectorModule() {
         const tmp: number[] = [];
         unique_fields.forEach((unique_field, index) => {
             const result = fields.findIndex((field) => {
-                return field.name == unique_field.data.name;
+                return field.key == unique_field.data.key;
             });
 
             // NOTE: запоминаем поля которые не найдены
@@ -320,7 +326,7 @@ function InspectorModule() {
     // TODO: рефакторинг - сложная логика
     function tryAddToUniqueField(obj_index: number, obj: ObjectData, unique_fields: { ids: number[], data: PropertyData<PropertyType> }[], field: PropertyData<PropertyType>): boolean {
         const index = unique_fields.findIndex((value) => {
-            return value.data.name == field.name;
+            return value.data.key == field.key;
         });
 
         if (index == -1) {
@@ -462,9 +468,9 @@ function InspectorModule() {
                     if (!child) return;
                     childrens.push(child);
                 });
-                return createFolder(field.name, childrens, (field.params as PropertyParams[PropertyType.FOLDER])?.expanded);
+                return createFolder(field.key, childrens, (field.params as PropertyParams[PropertyType.FOLDER])?.expanded);
             case PropertyType.BUTTON:
-                return createButton(field as PropertyData<PropertyType.BUTTON>, { title: field.name });
+                return createButton(field as PropertyData<PropertyType.BUTTON>, { title: field.key });
 
             case PropertyType.STRING:
                 return createEntity(ids, field);
@@ -513,6 +519,11 @@ function InspectorModule() {
                     picker: 'popup',
                     expanded: false
                 });
+            case PropertyType.ITEM_LIST:
+                return createEntity(ids, field, {
+                    view: 'item-list',
+                    options: field?.params
+                });
             case PropertyType.LIST_TEXTURES:
                 return createEntity(ids, field, {
                     view: 'thumbnail-list',
@@ -532,13 +543,13 @@ function InspectorModule() {
             case PropertyType.SLIDER:
                 const slider_field = field as PropertyData<PropertyType.SLIDER>;
                 return createEntity(ids, field, {
-                    label: slider_field.name,
+                    label: slider_field.title ?? slider_field.key,
                     step: slider_field.params?.step,
                     min: slider_field.params?.min,
                     max: slider_field.params?.max
                 });
             default:
-                Log.error(`Unable to cast ${field.name}`);
+                Log.error(`Unable to cast ${field.key}`);
                 return undefined;
         }
     }
@@ -565,7 +576,7 @@ function InspectorModule() {
 
     function createButton(field: PropertyData<PropertyType.BUTTON>, params: ButtonParams): Button {
         return {
-            title: field.name,
+            title: field.title ?? field.key,
             onClick: field.value,
             params
         }
@@ -576,7 +587,7 @@ function InspectorModule() {
             obj: field,
             key: 'value',
             params: {
-                label: field.name,
+                label: field.title ?? field.key,
                 readonly: field.readonly,
                 ...params
             }
@@ -671,7 +682,7 @@ function InspectorModule() {
 
     function findFieldRecursive(fields: PropertyData<PropertyType>[], name: string): PropertyData<PropertyType> | undefined {
         for (const field of fields) {
-            if (field.name == name) {
+            if (field.key == name) {
                 return field;
             }
             if (field.type == PropertyType.FOLDER) {
@@ -701,9 +712,9 @@ function InspectorModule() {
             return;
         }
 
-        const firstField = findFieldRecursive(firstObj.fields, info.data.field.name);
+        const firstField = findFieldRecursive(firstObj.fields, info.data.field.key);
         if (!firstField) {
-            Log.warn('[tryDisabledVectorValueByAxis] Field not found in first object:', info.data.field.name);
+            Log.warn('[tryDisabledVectorValueByAxis] Field not found in first object:', info.data.field.key);
             return;
         }
 
@@ -716,9 +727,9 @@ function InspectorModule() {
                 continue;
             }
 
-            const currentField = currentObj.fields.find(field => field.name == info.data.field.name);
+            const currentField = currentObj.fields.find(field => field.key == info.data.field.key);
             if (!currentField) {
-                Log.warn('[tryDisabledVectorValueByAxis] Field not found in object:', info.data.field.name, currentObj);
+                Log.warn('[tryDisabledVectorValueByAxis] Field not found in object:', info.data.field.key, currentObj);
                 continue;
             }
 

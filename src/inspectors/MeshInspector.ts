@@ -27,34 +27,65 @@ export function register_mesh_inspector() {
 }
 
 export enum MeshProperty {
-    ID = 'ID',
+    TYPE = 'type',
+    NAME = 'name',
+    ACTIVE = 'active',
+    POSITION = 'position',
+    ROTATION = 'rotation',
+    SCALE = 'scale',
+    SIZE = 'size',
+    PIVOT = 'pivot',
+    ANCHOR = 'anchor',
+    ANCHOR_PRESET = 'anchor_preset',
+    COLOR = 'color',
+    TEXT_ALPHA = 'text_alpha',
+    SLICE9 = 'slice9',
+    TEXT = 'text',
+    FONT = 'font',
+    FONT_SIZE = 'font_size',
+    TEXT_ALIGN = 'text_align',
+    LINE_HEIGHT = 'line_height',
+    BLEND_MODE = 'blend_mode',
+    MATERIAL = 'material',
+    MODEL = 'model',
+    ANIMATION_LIST = 'animation_list',
+    ACTIVE_MODEL_ANIMATION = 'active_model_animation',
+    TRANSFORM = 'transform',
+    GO_TO_ORIGINAL_MATERIAL = 'go_to_original_material',
+    FLIP_DIAGONAL = 'flip_diagonal',
+    FLIP_VERTICAL = 'flip_vertical',
+    FLIP_HORIZONTAL = 'flip_horizontal'
+}
+
+export enum MeshPropertyTitle {
     TYPE = 'Тип',
     NAME = 'Название',
-    VISIBLE = 'Видимый',
     ACTIVE = 'Aктивный',
     POSITION = 'Позиция',
     ROTATION = 'Вращение',
     SCALE = 'Маштаб',
     SIZE = 'Размер',
     PIVOT = 'Точка опоры',
-    ANCHOR = 'Значение',
+    ANCHOR = 'Anchor',
     ANCHOR_PRESET = 'Anchor Preset',
     COLOR = 'Цвет',
-    TEXT_ALPHA = 'Прозрачность',
+    TEXT_ALPHA = 'Текст Альфа',
     SLICE9 = 'Slice9',
     TEXT = 'Текст',
     FONT = 'Шрифт',
     FONT_SIZE = 'Размер шрифта',
-    TEXT_ALIGN = 'Выравнивание',
+    TEXT_ALIGN = 'Выравнивание текста',
     LINE_HEIGHT = 'Высота строки',
-    MODEL = 'Меш',
-    ACTIVE_MODEL_ANIMATION = 'Aктивная анимация',
-    ANIMATION_LIST = 'Анимация',
     BLEND_MODE = 'Режим смешивания',
-    MATERIAL = 'Шаблон',
-    FLIP_VERTICAL = 'Вертикальное отражение',
-    FLIP_HORIZONTAL = 'Горизонтальное отражение',
+    MATERIAL = 'Материал',
+    MODEL = 'Модель',
+    ANIMATION_LIST = 'Список анимаций',
+    ACTIVE_MODEL_ANIMATION = 'Активная анимация',
+    TRANSFORM = 'Трансформ',
+    GO_TO_ORIGINAL_MATERIAL = 'Перейти к оригиналу',
     FLIP_DIAGONAL = 'Диагональное отражение',
+    FLIP_VERTICAL = 'Вертикальное отражение',
+    FLIP_HORIZONTAL = 'Горизонтальное отражение'
 }
 
 export enum ScreenPointPreset {
@@ -148,14 +179,16 @@ function MeshInspectorCreate() {
 
     function generateBaseFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
         fields.push({
-            name: MeshProperty.TYPE,
+            key: MeshProperty.TYPE,
+            title: MeshPropertyTitle.TYPE,
             value: mesh.type,
             type: PropertyType.STRING,
             readonly: true
         });
 
         fields.push({
-            name: MeshProperty.NAME,
+            key: MeshProperty.NAME,
+            title: MeshPropertyTitle.NAME,
             value: mesh.name,
             type: PropertyType.STRING,
             onBeforeChange: saveName,
@@ -163,7 +196,8 @@ function MeshInspectorCreate() {
         });
 
         fields.push({
-            name: MeshProperty.ACTIVE,
+            key: MeshProperty.ACTIVE,
+            title: MeshPropertyTitle.ACTIVE,
             value: mesh.get_active(),
             type: PropertyType.BOOLEAN,
             onBeforeChange: saveActive,
@@ -174,7 +208,8 @@ function MeshInspectorCreate() {
     function generateTransformFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
         const transform_fields: PropertyData<PropertyType>[] = [];
         transform_fields.push({
-            name: MeshProperty.POSITION,
+            key: MeshProperty.POSITION,
+            title: MeshPropertyTitle.POSITION,
             value: mesh.get_position(),
             type: PropertyType.VECTOR_3,
             params: {
@@ -190,7 +225,8 @@ function MeshInspectorCreate() {
         const raw = mesh.rotation;
         const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
         transform_fields.push({
-            name: MeshProperty.ROTATION,
+            key: MeshProperty.ROTATION,
+            title: MeshPropertyTitle.ROTATION,
             value: rotation,
             type: PropertyType.VECTOR_3,
             params: {
@@ -206,7 +242,8 @@ function MeshInspectorCreate() {
         if (mesh instanceof AnimatedMesh) {
             const scale_factor = Math.max(...mesh.children[0].scale.toArray()) / WORLD_SCALAR;
             transform_fields.push({
-                name: MeshProperty.SCALE,
+                key: MeshProperty.SCALE,
+                title: MeshPropertyTitle.SCALE,
                 value: scale_factor,
                 type: PropertyType.SLIDER,
                 params: {
@@ -222,7 +259,8 @@ function MeshInspectorCreate() {
 
         } else {
             transform_fields.push({
-                name: MeshProperty.SCALE,
+                key: MeshProperty.SCALE,
+                title: MeshPropertyTitle.SCALE,
                 value: mesh.get_scale(),
                 type: PropertyType.VECTOR_2,
                 params: {
@@ -236,7 +274,8 @@ function MeshInspectorCreate() {
         }
 
         fields.push({
-            name: 'Трансформ',
+            key: MeshProperty.TRANSFORM,
+            title: MeshPropertyTitle.TRANSFORM,
             value: transform_fields,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -248,7 +287,8 @@ function MeshInspectorCreate() {
 
         const pivot_preset = pivotToScreenPreset(mesh.get_pivot());
         fields.push({
-            name: MeshProperty.PIVOT,
+            key: MeshProperty.PIVOT,
+            title: MeshPropertyTitle.PIVOT,
             value: pivot_preset,
             type: PropertyType.LIST_TEXT,
             params: {
@@ -269,7 +309,8 @@ function MeshInspectorCreate() {
 
         const anchor_preset = anchorToScreenPreset(mesh.get_anchor());
         fields.push({
-            name: MeshProperty.ANCHOR_PRESET,
+            key: MeshProperty.ANCHOR_PRESET,
+            title: MeshPropertyTitle.ANCHOR_PRESET,
             value: anchor_preset,
             type: PropertyType.LIST_TEXT,
             params: {
@@ -289,7 +330,8 @@ function MeshInspectorCreate() {
         });
 
         fields.push({
-            name: MeshProperty.ANCHOR,
+            key: MeshProperty.ANCHOR,
+            title: MeshPropertyTitle.ANCHOR,
             value: mesh.get_anchor(),
             type: PropertyType.POINT_2D, params: {
                 x: { min: -1, max: 1, format: (v: number) => v.toFixed(2) },
@@ -303,7 +345,8 @@ function MeshInspectorCreate() {
 
     function generateSizeField(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
         fields.push({
-            name: MeshProperty.SIZE,
+            key: MeshProperty.SIZE,
+            title: MeshPropertyTitle.SIZE,
             value: mesh.get_size(),
             type: PropertyType.VECTOR_2,
             params: {
@@ -319,7 +362,8 @@ function MeshInspectorCreate() {
     function generateTextFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
         const text_fields: PropertyData<PropertyType>[] = [];
         text_fields.push({
-            name: MeshProperty.TEXT,
+            key: MeshProperty.TEXT,
+            title: MeshPropertyTitle.TEXT,
             value: (mesh as TextMesh).text,
             type: PropertyType.LOG_DATA,
             onBeforeChange: saveText,
@@ -327,7 +371,8 @@ function MeshInspectorCreate() {
         });
 
         text_fields.push({
-            name: MeshProperty.FONT,
+            key: MeshProperty.FONT,
+            title: MeshPropertyTitle.FONT,
             value: (mesh as TextMesh).font || '',
             type: PropertyType.LIST_TEXT,
             params: ResourceManager.get_all_fonts(),
@@ -336,7 +381,8 @@ function MeshInspectorCreate() {
         });
 
         text_fields.push({
-            name: MeshProperty.COLOR,
+            key: MeshProperty.COLOR,
+            title: MeshPropertyTitle.COLOR,
             value: mesh.get_color(),
             type: PropertyType.COLOR,
             onBeforeChange: saveColor,
@@ -344,7 +390,8 @@ function MeshInspectorCreate() {
         });
 
         text_fields.push({
-            name: MeshProperty.TEXT_ALPHA,
+            key: MeshProperty.TEXT_ALPHA,
+            title: MeshPropertyTitle.TEXT_ALPHA,
             value: (mesh as TextMesh).fillOpacity,
             type: PropertyType.NUMBER,
             onBeforeChange: saveTextAlpha,
@@ -356,7 +403,8 @@ function MeshInspectorCreate() {
         const font_size = (mesh as TextMesh).fontSize * max_delta;
 
         text_fields.push({
-            name: MeshProperty.FONT_SIZE,
+            key: MeshProperty.FONT_SIZE,
+            title: MeshPropertyTitle.FONT_SIZE,
             value: font_size,
             type: PropertyType.NUMBER,
             params: {
@@ -370,7 +418,8 @@ function MeshInspectorCreate() {
         });
 
         text_fields.push({
-            name: MeshProperty.TEXT_ALIGN,
+            key: MeshProperty.TEXT_ALIGN,
+            title: MeshPropertyTitle.TEXT_ALIGN,
             value: (mesh as TextMesh).textAlign,
             type: PropertyType.LIST_TEXT,
             params: {
@@ -386,7 +435,8 @@ function MeshInspectorCreate() {
         const line_height = (mesh as TextMesh).lineHeight;
         if (line_height == 'normal') {
             text_fields.push({
-                name: MeshProperty.LINE_HEIGHT,
+                key: MeshProperty.LINE_HEIGHT,
+                title: MeshPropertyTitle.LINE_HEIGHT,
                 value: 1,
                 type: PropertyType.NUMBER,
                 params: {
@@ -400,7 +450,8 @@ function MeshInspectorCreate() {
             });
         } else {
             text_fields.push({
-                name: MeshProperty.LINE_HEIGHT,
+                key: MeshProperty.LINE_HEIGHT,
+                title: MeshPropertyTitle.LINE_HEIGHT,
                 value: line_height,
                 type: PropertyType.NUMBER,
                 params: {
@@ -414,7 +465,8 @@ function MeshInspectorCreate() {
             });
         }
         fields.push({
-            name: 'Текст',
+            key: MeshProperty.TEXT,
+            title: MeshPropertyTitle.TEXT,
             value: text_fields,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -424,7 +476,8 @@ function MeshInspectorCreate() {
     function generateMaterialFields(title: string, list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree, material: ShaderMaterial, expanded = false, with_slice9 = false, with_flip = false, index?: number) {
         const material_fields: PropertyData<PropertyType>[] = [];
         material_fields.push({
-            name: MeshProperty.MATERIAL,
+            key: MeshProperty.MATERIAL,
+            title: MeshPropertyTitle.MATERIAL,
             value: material.name || '',
             type: PropertyType.LIST_TEXT,
             params: generateMaterialOptions(),
@@ -434,7 +487,8 @@ function MeshInspectorCreate() {
         });
 
         material_fields.push({
-            name: MeshProperty.COLOR,
+            key: MeshProperty.COLOR,
+            title: MeshPropertyTitle.COLOR,
             value: mesh.get_color(),
             type: PropertyType.COLOR,
             data: { material_index: index },
@@ -443,7 +497,8 @@ function MeshInspectorCreate() {
         });
 
         material_fields.push({
-            name: MeshProperty.BLEND_MODE,
+            key: MeshProperty.BLEND_MODE,
+            title: MeshPropertyTitle.BLEND_MODE,
             value: convertThreeJSBlendingToBlendMode(material.blending),
             type: PropertyType.LIST_TEXT, params: {
                 'Нормальный': BlendMode.NORMAL,
@@ -459,7 +514,8 @@ function MeshInspectorCreate() {
 
         if (with_slice9) {
             material_fields.push({
-                name: MeshProperty.SLICE9,
+                key: MeshProperty.SLICE9,
+                title: MeshPropertyTitle.SLICE9,
                 value: (mesh as Slice9Mesh).get_slice(),
                 type: PropertyType.POINT_2D, params: {
                     x: { min: 0, max: 100, format: (v: number) => v.toFixed(2) },
@@ -489,7 +545,7 @@ function MeshInspectorCreate() {
                             const atlas = key == 'u_texture' ? mesh instanceof AnimatedMesh ? mesh.get_texture(index)[1] : mesh.get_texture()[1] : ResourceManager.get_atlas_by_texture_name(texture_name) || '';
 
                             material_fields.push({
-                                name: key,
+                                key,
                                 value: `${atlas}/${texture_name}`,
                                 type: PropertyType.LIST_TEXTURES,
                                 readonly: uniformInfo.readonly,
@@ -502,7 +558,7 @@ function MeshInspectorCreate() {
                         case MaterialUniformType.FLOAT:
                             const float = uniform as IUniform<number>;
                             material_fields.push({
-                                name: key,
+                                key,
                                 value: float.value,
                                 type: PropertyType.NUMBER,
                                 params: {
@@ -519,7 +575,7 @@ function MeshInspectorCreate() {
                             const range = uniform as IUniform<number>;
                             const range_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.RANGE];
                             material_fields.push({
-                                name: key,
+                                key,
                                 value: range.value,
                                 type: PropertyType.SLIDER,
                                 readonly: uniformInfo.readonly,
@@ -537,7 +593,7 @@ function MeshInspectorCreate() {
                             const vec2 = uniform as IUniform<Vector2>;
                             const vec2_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC2];
                             material_fields.push({
-                                name: key,
+                                key,
                                 value: vec2.value,
                                 type: PropertyType.VECTOR_2,
                                 readonly: uniformInfo.readonly,
@@ -564,7 +620,7 @@ function MeshInspectorCreate() {
                             const vec3 = uniform as IUniform<Vector3>;
                             const vec3_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC3];
                             material_fields.push({
-                                name: key,
+                                key,
                                 value: vec3.value,
                                 type: PropertyType.VECTOR_3,
                                 readonly: uniformInfo.readonly,
@@ -597,7 +653,7 @@ function MeshInspectorCreate() {
                             const vec4 = uniform as IUniform<Vector4>;
                             const vec4_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC4];
                             material_fields.push({
-                                name: key,
+                                key,
                                 value: vec4.value,
                                 type: PropertyType.VECTOR_4,
                                 readonly: uniformInfo.readonly,
@@ -635,7 +691,7 @@ function MeshInspectorCreate() {
                         case MaterialUniformType.COLOR:
                             const color = uniform as IUniform<Vector3>;
                             material_fields.push({
-                                name: key,
+                                key,
                                 value: rgbToHex(color.value),
                                 type: PropertyType.COLOR,
                                 readonly: uniformInfo.readonly,
@@ -657,7 +713,8 @@ function MeshInspectorCreate() {
             switch (currentFlip) {
                 case FlipMode.NONE:
                     material_fields.push({
-                        name: MeshProperty.FLIP_DIAGONAL,
+                        key: MeshProperty.FLIP_DIAGONAL,
+                        title: MeshPropertyTitle.FLIP_DIAGONAL,
                         value: false,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -666,7 +723,8 @@ function MeshInspectorCreate() {
                         onRefresh: refreshFlipDiagonal
                     });
                     material_fields.push({
-                        name: MeshProperty.FLIP_VERTICAL,
+                        key: MeshProperty.FLIP_VERTICAL,
+                        title: MeshPropertyTitle.FLIP_VERTICAL,
                         value: false,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -675,7 +733,8 @@ function MeshInspectorCreate() {
                         onRefresh: refreshFlipVertical
                     });
                     material_fields.push({
-                        name: MeshProperty.FLIP_HORIZONTAL,
+                        key: MeshProperty.FLIP_HORIZONTAL,
+                        title: MeshPropertyTitle.FLIP_HORIZONTAL,
                         value: false,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -686,7 +745,8 @@ function MeshInspectorCreate() {
                     break;
                 case FlipMode.VERTICAL:
                     material_fields.push({
-                        name: MeshProperty.FLIP_DIAGONAL,
+                        key: MeshProperty.FLIP_DIAGONAL,
+                        title: MeshPropertyTitle.FLIP_DIAGONAL,
                         value: false,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -695,7 +755,8 @@ function MeshInspectorCreate() {
                         onRefresh: refreshFlipDiagonal
                     });
                     material_fields.push({
-                        name: MeshProperty.FLIP_VERTICAL,
+                        key: MeshProperty.FLIP_VERTICAL,
+                        title: MeshPropertyTitle.FLIP_VERTICAL,
                         value: true,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -704,7 +765,8 @@ function MeshInspectorCreate() {
                         onRefresh: refreshFlipVertical
                     });
                     material_fields.push({
-                        name: MeshProperty.FLIP_HORIZONTAL,
+                        key: MeshProperty.FLIP_HORIZONTAL,
+                        title: MeshPropertyTitle.FLIP_HORIZONTAL,
                         value: false,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -715,7 +777,8 @@ function MeshInspectorCreate() {
                     break;
                 case FlipMode.HORIZONTAL:
                     material_fields.push({
-                        name: MeshProperty.FLIP_DIAGONAL,
+                        key: MeshProperty.FLIP_DIAGONAL,
+                        title: MeshPropertyTitle.FLIP_DIAGONAL,
                         value: false,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -724,7 +787,8 @@ function MeshInspectorCreate() {
                         onRefresh: refreshFlipDiagonal
                     });
                     material_fields.push({
-                        name: MeshProperty.FLIP_VERTICAL,
+                        key: MeshProperty.FLIP_VERTICAL,
+                        title: MeshPropertyTitle.FLIP_VERTICAL,
                         value: false,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -733,7 +797,8 @@ function MeshInspectorCreate() {
                         onRefresh: refreshFlipVertical
                     });
                     material_fields.push({
-                        name: MeshProperty.FLIP_HORIZONTAL,
+                        key: MeshProperty.FLIP_HORIZONTAL,
+                        title: MeshPropertyTitle.FLIP_HORIZONTAL,
                         value: true,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -744,7 +809,8 @@ function MeshInspectorCreate() {
                     break;
                 case FlipMode.DIAGONAL:
                     material_fields.push({
-                        name: MeshProperty.FLIP_DIAGONAL,
+                        key: MeshProperty.FLIP_DIAGONAL,
+                        title: MeshPropertyTitle.FLIP_DIAGONAL,
                         value: true,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -753,7 +819,8 @@ function MeshInspectorCreate() {
                         onRefresh: refreshFlipDiagonal
                     });
                     material_fields.push({
-                        name: MeshProperty.FLIP_VERTICAL,
+                        key: MeshProperty.FLIP_VERTICAL,
+                        title: MeshPropertyTitle.FLIP_VERTICAL,
                         value: false,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -762,7 +829,8 @@ function MeshInspectorCreate() {
                         onRefresh: refreshFlipVertical
                     });
                     material_fields.push({
-                        name: MeshProperty.FLIP_HORIZONTAL,
+                        key: MeshProperty.FLIP_HORIZONTAL,
+                        title: MeshPropertyTitle.FLIP_HORIZONTAL,
                         value: false,
                         type: PropertyType.BOOLEAN,
                         data: { material_index: index },
@@ -777,7 +845,7 @@ function MeshInspectorCreate() {
         generateGoToOriginalMaterialButton(list, material_fields, index);
 
         fields.push({
-            name: title,
+            key: title,
             value: material_fields,
             type: PropertyType.FOLDER,
             params: { expanded }
@@ -803,7 +871,10 @@ function MeshInspectorCreate() {
 
         if (selected_meshes_material != '') {
             fields.push({
-                name: 'Перейти к оригиналу', type: PropertyType.BUTTON, value: async () => {
+                key: MeshProperty.GO_TO_ORIGINAL_MATERIAL,
+                title: MeshPropertyTitle.GO_TO_ORIGINAL_MATERIAL,
+                type: PropertyType.BUTTON,
+                value: async () => {
                     const material_info = ResourceManager.get_material_info(selected_meshes_material);
                     if (material_info) {
                         await AssetControl.select_file(material_info.path);
@@ -819,12 +890,30 @@ function MeshInspectorCreate() {
         const model_fields: PropertyData<PropertyType>[] = [];
 
         model_fields.push({
-            name: MeshProperty.MODEL,
+            key: MeshProperty.MODEL,
+            title: MeshPropertyTitle.MODEL,
             value: (mesh as AnimatedMesh).get_mesh_name(),
             type: PropertyType.LIST_TEXT,
             params: generateModelOptions(),
             onBeforeChange: saveModel,
             onChange: handleModelChange
+        });
+
+        const animations: string[] = [];
+        ResourceManager.get_all_models().forEach((model) => {
+            ResourceManager.get_all_model_animations(model).forEach((animation) => {
+                animations.push((mesh as AnimatedMesh).get_animation_name_by_alias(animation) ?? animation);
+            });
+        });
+
+        model_fields.push({
+            key: MeshProperty.ANIMATION_LIST,
+            title: MeshPropertyTitle.ANIMATION_LIST,
+            value: Object.keys((mesh as AnimatedMesh).get_animation_list()).map(animation => (mesh as AnimatedMesh).get_animation_name_by_alias(animation) ?? animation),
+            type: PropertyType.ITEM_LIST,
+            params: animations,
+            onBeforeChange: saveAnimationList,
+            onChange: handleAnimationListChange
         });
 
         const animationOptions: { [key: string]: string } = {};
@@ -833,7 +922,8 @@ function MeshInspectorCreate() {
         });
 
         model_fields.push({
-            name: MeshProperty.ACTIVE_MODEL_ANIMATION,
+            key: MeshProperty.ACTIVE_MODEL_ANIMATION,
+            title: MeshPropertyTitle.ACTIVE_MODEL_ANIMATION,
             value: (mesh as AnimatedMesh).get_animation(),
             type: PropertyType.LIST_TEXT,
             params: animationOptions,
@@ -842,7 +932,8 @@ function MeshInspectorCreate() {
         });
 
         fields.push({
-            name: MeshProperty.MODEL,
+            key: MeshProperty.MODEL,
+            title: MeshPropertyTitle.MODEL,
             value: model_fields,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -855,7 +946,8 @@ function MeshInspectorCreate() {
         });
 
         fields.push({
-            name: 'Материалы',
+            key: MeshProperty.MATERIAL,
+            title: MeshPropertyTitle.MATERIAL,
             value: material_folders,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -1141,7 +1233,57 @@ function MeshInspectorCreate() {
                 (mesh as AnimatedMesh).set_texture(texture, atlas);
             }
         }
-        Inspector.refresh([MeshProperty.ACTIVE_MODEL_ANIMATION]);
+        Inspector.refresh(['active_model_animation']);
+    }
+
+    function saveAnimationList(info: BeforeChangeInfo) {
+        const oldAnimations: MeshPropertyInfo<string[]>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[saveAnimationList] Mesh not found for id:', id);
+                return;
+            }
+            oldAnimations.push({ mesh_id: mesh.mesh_data.id, value: Object.keys((mesh as AnimatedMesh).get_animation_list()).map(animation => (mesh as AnimatedMesh).get_animation_name_by_alias(animation) ?? animation) });
+        });
+        HistoryControl.add("MESH_ANIMATION_LIST", oldAnimations, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleAnimationListChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string[]>(info);
+        updateAnimationList(data, info.data.event.last);
+    }
+
+    function updateAnimationList(data: MeshPropertyInfo<string[]>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updateAnimationList] Mesh not found for id:', item.mesh_id);
+                return;
+            }
+
+            const animatedMesh = mesh as AnimatedMesh;
+            const currentAnimations = Object.keys(animatedMesh.get_animation_list());
+            const newAnimations = item.value;
+
+            // Add animations that are in new list but not in current
+            newAnimations.forEach(animation => {
+                if (!currentAnimations.includes(animation)) {
+                    animatedMesh.add_animation(animation);
+                }
+            });
+
+            // Remove animations that are in current but not in new list
+            currentAnimations.forEach(animation => {
+                if (!newAnimations.includes(animation)) {
+                    animatedMesh.remove_animation(animation);
+                }
+            });
+        }
+
+        setTimeout(() => {
+            set_selected_meshes(_selected_meshes);
+        });
     }
 
     function saveActiveModelAnimation(info: BeforeChangeInfo) {
@@ -1186,7 +1328,7 @@ function MeshInspectorCreate() {
                 Log.error('[savePosition] Mesh not found for id:', id);
                 return;
             }
-            oldPositions.push({ mesh_id: mesh.mesh_data.id, value: mesh.position.clone() });
+            oldPositions.push({ mesh_id: id, value: mesh.position.clone() });
         });
         HistoryControl.add("MESH_TRANSLATE", oldPositions, HistoryOwner.MESH_INSPECTOR);
     }
@@ -1349,7 +1491,7 @@ function MeshInspectorCreate() {
         const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
         TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
-        Inspector.refresh([MeshProperty.FONT_SIZE]);
+        Inspector.refresh(['font_size']);
     }
 
     function saveModelScale(info: BeforeChangeInfo) {
@@ -1510,9 +1652,9 @@ function MeshInspectorCreate() {
         SizeControl.draw();
 
         if (last) {
-            Inspector.refresh([MeshProperty.ANCHOR_PRESET]);
+            Inspector.refresh(['anchor_preset']);
         }
-        Inspector.refresh([MeshProperty.ANCHOR]);
+        Inspector.refresh(['anchor']);
     }
 
     function saveAnchorPreset(info: BeforeChangeInfo) {
@@ -1546,7 +1688,7 @@ function MeshInspectorCreate() {
             }
         }
         SizeControl.draw();
-        Inspector.refresh([MeshProperty.ANCHOR]);
+        Inspector.refresh(['anchor']);
     }
 
     function saveColor(info: BeforeChangeInfo) {
@@ -1747,7 +1889,7 @@ function MeshInspectorCreate() {
         const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
         TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
-        Inspector.refresh([MeshProperty.SCALE]);
+        Inspector.refresh(['scale']);
     }
 
     function saveTextAlign(info: BeforeChangeInfo) {
@@ -1966,7 +2108,7 @@ function MeshInspectorCreate() {
         });
 
         if (last) {
-            Inspector.refresh([MeshProperty.FLIP_DIAGONAL, MeshProperty.FLIP_HORIZONTAL]);
+            Inspector.refresh(['flip_diagonal', 'flip_horizontal']);
         }
     }
 
@@ -1987,7 +2129,7 @@ function MeshInspectorCreate() {
         });
 
         if (last) {
-            Inspector.refresh([MeshProperty.FLIP_DIAGONAL, MeshProperty.FLIP_VERTICAL]);
+            Inspector.refresh(['flip_diagonal', 'flip_vertical']);
         }
     }
 
@@ -2008,7 +2150,7 @@ function MeshInspectorCreate() {
         });
 
         if (last) {
-            Inspector.refresh([MeshProperty.FLIP_VERTICAL, MeshProperty.FLIP_HORIZONTAL]);
+            Inspector.refresh(['flip_vertical', 'flip_horizontal']);
         }
     }
 
@@ -2022,12 +2164,12 @@ function MeshInspectorCreate() {
                 const material = mesh.material;
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     sampler2Ds.push({
                         mesh_id: id,
                         material_index: 0,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}` || uniform.value?.path || ''
                     });
                 }
@@ -2036,12 +2178,12 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     sampler2Ds.push({
                         mesh_id: id,
                         material_index: info.field.data.material_index,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: `${mesh.get_texture(info.field.data.material_index)[1]}/${mesh.get_texture(info.field.data.material_index)[0]}` || uniform.value?.path || ''
                     });
                 }
@@ -2118,12 +2260,12 @@ function MeshInspectorCreate() {
                 const material = mesh.material;
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     floats.push({
                         mesh_id: id,
                         material_index: 0,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: uniform.value
                     });
                 }
@@ -2132,12 +2274,12 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     floats.push({
                         mesh_id: id,
                         material_index: info.field.data.material_index,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: uniform.value
                     });
                 }
@@ -2189,12 +2331,12 @@ function MeshInspectorCreate() {
                 const material = mesh.material;
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     ranges.push({
                         mesh_id: id,
                         material_index: 0,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: uniform.value
                     });
                 }
@@ -2203,12 +2345,12 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     ranges.push({
                         mesh_id: id,
                         material_index: info.field.data.material_index,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: uniform.value
                     });
                 }
@@ -2260,12 +2402,12 @@ function MeshInspectorCreate() {
                 const material = mesh.material;
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     vec2s.push({
                         mesh_id: id,
                         material_index: 0,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: uniform.value
                     });
                 }
@@ -2274,12 +2416,12 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     vec2s.push({
                         mesh_id: id,
                         material_index: info.field.data.material_index,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: uniform.value
                     });
                 }
@@ -2331,12 +2473,12 @@ function MeshInspectorCreate() {
                 const material = mesh.material;
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     vec3s.push({
                         mesh_id: id,
                         material_index: 0,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: uniform.value
                     });
                 }
@@ -2345,12 +2487,12 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     vec3s.push({
                         mesh_id: id,
                         material_index: info.field.data.material_index,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: uniform.value
                     });
                 }
@@ -2403,12 +2545,12 @@ function MeshInspectorCreate() {
                 const material = mesh.material;
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     vec4s.push({
                         mesh_id: id,
                         material_index: 0,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: uniform.value
                     });
                 }
@@ -2417,12 +2559,12 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     vec4s.push({
                         mesh_id: id,
                         material_index: info.field.data.material_index,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: uniform.value
                     });
                 }
@@ -2474,14 +2616,14 @@ function MeshInspectorCreate() {
                 const material = mesh.material;
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     const color = new Color();
                     color.setRGB(uniform.value.x, uniform.value.y, uniform.value.z);
                     colors.push({
                         mesh_id: id,
                         material_index: 0,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: color.getHexString()
                     });
                 }
@@ -2490,14 +2632,14 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
-                const uniform = material.uniforms[info.field.name];
+                const uniform = material.uniforms[info.field.key];
                 if (uniform) {
                     const color = new Color();
                     color.setRGB(uniform.value.x, uniform.value.y, uniform.value.z);
                     colors.push({
                         mesh_id: id,
                         material_index: info.field.data.material_index,
-                        uniform_name: info.field.name,
+                        uniform_name: info.field.key,
                         value: color.getHexString()
                     });
                 }
@@ -2626,6 +2768,10 @@ function MeshInspectorCreate() {
                 const models = event.data as MeshPropertyInfo<string>[];
                 updateModel(models, true);
                 break;
+            case 'MESH_ANIMATION_LIST':
+                const animationLists = event.data as MeshPropertyInfo<string[]>[];
+                updateAnimationList(animationLists, true);
+                break;
             case 'MESH_ACTIVE_MODEL_ANIMATION':
                 const activeModelAnimations = event.data as MeshPropertyInfo<string>[];
                 updateActiveModelAnimation(activeModelAnimations, true);
@@ -2691,7 +2837,7 @@ function MeshInspectorCreate() {
                 Log.error('[convertChangeInfoToMeshData] Mesh not found for id:', id);
                 return null;
             }
-            return { mesh_id: id, material_index: info.data.field.data.material_index, uniform_name: info.data.field.name, value };
+            return { mesh_id: id, material_index: info.data.field.data.material_index, uniform_name: info.data.field.key, value };
         }).filter(item => item != null) as MeshMaterialUniformInfo<T>[];
     }
 

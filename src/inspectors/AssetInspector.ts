@@ -21,13 +21,23 @@ export function register_asset_inspector() {
 }
 
 export enum AssetProperty {
-    ASSET_ATLAS = 'Aтлас',
+    ATLAS = 'atlas',
+    ATLAS_BUTTON = 'atlas_button',
+    MIN_FILTER = 'min_filter',
+    MAG_FILTER = 'mag_filter',
+    VERTEX_PROGRAM = 'vertex_program',
+    FRAGMENT_PROGRAM = 'fragment_program',
+    TRANSPARENT = 'transparent'
+}
+
+export enum AssetPropertyTitle {
+    ATLAS = 'Атлас',
     ATLAS_BUTTON = 'Атлас менеджер',
     MIN_FILTER = 'Минимальный фильтр',
     MAG_FILTER = 'Максимальный фильтр',
-    TRANSPARENT = 'Прозрачность',
     VERTEX_PROGRAM = 'Вершинный шейдер',
     FRAGMENT_PROGRAM = 'Фрагментный шейдер',
+    TRANSPARENT = 'Прозрачность'
 }
 
 export enum FilterMode {
@@ -85,7 +95,8 @@ function AssetInspectorCreate() {
             }
 
             result.fields.push({
-                name: AssetProperty.ASSET_ATLAS,
+                key: AssetProperty.ATLAS,
+                title: AssetPropertyTitle.ATLAS,
                 value: atlas,
                 type: PropertyType.LIST_TEXT,
                 params: generateAtlasOptions(),
@@ -94,7 +105,8 @@ function AssetInspectorCreate() {
             });
 
             result.fields.push({
-                name: AssetProperty.ATLAS_BUTTON,
+                key: AssetProperty.ATLAS_BUTTON,
+                title: AssetPropertyTitle.ATLAS_BUTTON,
                 type: PropertyType.BUTTON,
                 value: () => {
                     ControlManager.open_atlas_manager();
@@ -105,7 +117,8 @@ function AssetInspectorCreate() {
             const mag_filter = convertThreeJSFilterToFilterMode(ResourceManager.get_texture(texture_name, atlas).texture.magFilter);
 
             result.fields.push({
-                name: AssetProperty.MIN_FILTER,
+                key: AssetProperty.MIN_FILTER,
+                title: AssetPropertyTitle.MIN_FILTER,
                 value: min_filter,
                 type: PropertyType.LIST_TEXT,
                 params: {
@@ -117,7 +130,8 @@ function AssetInspectorCreate() {
             });
 
             result.fields.push({
-                name: AssetProperty.MAG_FILTER,
+                key: AssetProperty.MAG_FILTER,
+                title: AssetPropertyTitle.MAG_FILTER,
                 value: mag_filter,
                 type: PropertyType.LIST_TEXT,
                 params: {
@@ -147,7 +161,8 @@ function AssetInspectorCreate() {
                 const origin = ResourceManager.get_material_by_hash(material_name, material_info.origin);
                 if (origin) {
                     result.fields.push({
-                        name: AssetProperty.VERTEX_PROGRAM,
+                        key: AssetProperty.VERTEX_PROGRAM,
+                        title: AssetPropertyTitle.VERTEX_PROGRAM,
                         value: material_info.vertexShader,
                         type: PropertyType.LIST_TEXT,
                         params: generateVertexProgramOptions(),
@@ -156,7 +171,8 @@ function AssetInspectorCreate() {
                     });
 
                     result.fields.push({
-                        name: AssetProperty.FRAGMENT_PROGRAM,
+                        key: AssetProperty.FRAGMENT_PROGRAM,
+                        title: AssetPropertyTitle.FRAGMENT_PROGRAM,
                         value: material_info.fragmentShader,
                         type: PropertyType.LIST_TEXT,
                         params: generateFragmentProgramOptions(),
@@ -165,7 +181,8 @@ function AssetInspectorCreate() {
                     });
 
                     result.fields.push({
-                        name: AssetProperty.TRANSPARENT,
+                        key: AssetProperty.TRANSPARENT,
+                        title: AssetPropertyTitle.TRANSPARENT,
                         value: origin.transparent,
                         type: PropertyType.BOOLEAN,
                         onBeforeChange: saveMaterialTransparent,
@@ -182,7 +199,7 @@ function AssetInspectorCreate() {
                                 const texture_name = get_file_name((texture.value as any).path || '');
                                 const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
                                 result.fields.push({
-                                    name: key,
+                                    key,
                                     value: `${atlas}/${texture_name}`,
                                     type: PropertyType.LIST_TEXTURES,
                                     params: generateTextureOptions(true),
@@ -193,7 +210,7 @@ function AssetInspectorCreate() {
                             case MaterialUniformType.FLOAT:
                                 const float = uniform as IUniform<number>;
                                 result.fields.push({
-                                    name: key,
+                                    key,
                                     value: float.value,
                                     type: PropertyType.NUMBER,
                                     params: {
@@ -208,7 +225,7 @@ function AssetInspectorCreate() {
                                 const range = uniform as IUniform<number>;
                                 const range_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.RANGE];
                                 result.fields.push({
-                                    name: key,
+                                    key,
                                     value: range.value,
                                     type: PropertyType.SLIDER,
                                     params: {
@@ -224,7 +241,7 @@ function AssetInspectorCreate() {
                                 const vec2 = uniform as IUniform<Vector2>;
                                 const vec2_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC2];
                                 result.fields.push({
-                                    name: key,
+                                    key,
                                     value: vec2.value,
                                     type: PropertyType.VECTOR_2,
                                     params: {
@@ -249,7 +266,7 @@ function AssetInspectorCreate() {
                                 const vec3 = uniform as IUniform<Vector3>;
                                 const vec3_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC3];
                                 result.fields.push({
-                                    name: key,
+                                    key,
                                     value: vec3.value,
                                     type: PropertyType.VECTOR_3,
                                     params: {
@@ -280,7 +297,7 @@ function AssetInspectorCreate() {
                                 const vec4 = uniform as IUniform<Vector4>;
                                 const vec4_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.VEC4];
                                 result.fields.push({
-                                    name: key,
+                                    key,
                                     value: vec4.value,
                                     type: PropertyType.VECTOR_4,
                                     params: {
@@ -316,7 +333,7 @@ function AssetInspectorCreate() {
                             case MaterialUniformType.COLOR:
                                 const color = uniform as IUniform<Vector3>;
                                 result.fields.push({
-                                    name: key,
+                                    key,
                                     value: rgbToHex(color.value),
                                     type: PropertyType.COLOR,
                                     onBeforeChange: saveUniformColor,
@@ -643,11 +660,11 @@ function AssetInspectorCreate() {
             if (!material_info) return;
             const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
             if (!origin) return;
-            const uniform = origin.uniforms[info.field.name];
+            const uniform = origin.uniforms[info.field.key];
             if (uniform) {
                 uniforms.push({
                     material_path: path,
-                    name: info.field.name,
+                    name: info.field.key,
                     value: uniform.value
                 });
             }
@@ -670,13 +687,13 @@ function AssetInspectorCreate() {
             if (!material_info) return;
             const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
             if (!origin) return;
-            const uniform = origin.uniforms[info.field.name];
+            const uniform = origin.uniforms[info.field.key];
             if (uniform) {
                 const texture_name = get_file_name(uniform.value.path || '');
                 const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
                 sampler2Ds.push({
                     material_path: path,
-                    name: info.field.name,
+                    name: info.field.key,
                     value: `${atlas}/${texture_name}`
                 });
             }
@@ -732,13 +749,13 @@ function AssetInspectorCreate() {
             if (!material_info) return;
             const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
             if (!origin) return;
-            const uniform = origin.uniforms[info.field.name];
+            const uniform = origin.uniforms[info.field.key];
             if (uniform) {
                 const color = new Color();
                 color.setRGB(uniform.value.x, uniform.value.y, uniform.value.z);
                 colors.push({
                     material_path: path,
-                    name: info.field.name,
+                    name: info.field.key,
                     value: color.getHexString()
                 });
             }
@@ -753,7 +770,7 @@ function AssetInspectorCreate() {
             if (path == null) return null;
             return {
                 material_path: path,
-                name: info.data.field?.name,
+                name: info.data.field?.key,
                 value
             };
         }).filter(item => item != null) as AssetMaterialInfo<T>[];

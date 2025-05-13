@@ -13,21 +13,40 @@ declare global {
     const PaintInspector: ReturnType<typeof PaintInspectorCreate>;
 }
 
-enum InspectorProperty {
+export enum PaintProperty {
+    DRAWING = 'drawing',
+    BUTTONS = 'buttons',
+    TEXTURES = 'textures',
+    CREATE_SIZE = 'create_size',
+    CREATE_BTN = 'create_btn',
+    SAVE_BTN = 'save_btn',
+    DEL_BTN = 'del_btn',
+    VAL_SIZE = 'val_size',
+    VAL_COLOR = 'val_color',
+    TEX_RED = 'tex_red',
+    TEX_GREEN = 'tex_green',
+    TEX_BLUE = 'tex_blue',
+    SIZE_RED = 'size_red',
+    SIZE_GREEN = 'size_green',
+    SIZE_BLUE = 'size_blue'
+}
+
+export enum PaintPropertyTitle {
+    DRAWING = 'Рисование',
+    BUTTONS = 'Кнопки',
+    TEXTURES = 'Текстуры',
     CREATE_SIZE = 'Увеличить размер',
     CREATE_BTN = 'Создать',
     SAVE_BTN = 'Сохранить',
     DEL_BTN = 'Удалить',
-
     VAL_SIZE = 'Размер',
     VAL_COLOR = 'Цвет',
-
     TEX_RED = 'Красный',
     TEX_GREEN = 'Зеленый',
     TEX_BLUE = 'Синий',
     SIZE_RED = 'Красный(размер)',
     SIZE_GREEN = 'Зеленый(размер)',
-    SIZE_BLUE = 'Синий(размер)',
+    SIZE_BLUE = 'Синий(размер)'
 }
 
 interface SavedInfo {
@@ -52,23 +71,23 @@ function PaintInspectorCreate() {
     let shader_vp = '';
 
     const config_data = {
-        [InspectorProperty.CREATE_SIZE]: 1,
-        [InspectorProperty.VAL_SIZE]: 50,
-        [InspectorProperty.VAL_COLOR]: '#ff0000',
-        [InspectorProperty.TEX_RED]: '',
-        [InspectorProperty.TEX_GREEN]: '',
-        [InspectorProperty.TEX_BLUE]: '',
-        [InspectorProperty.SIZE_RED]: 1,
-        [InspectorProperty.SIZE_GREEN]: 1,
-        [InspectorProperty.SIZE_BLUE]: 1,
+        [PaintProperty.CREATE_SIZE]: 1,
+        [PaintProperty.VAL_SIZE]: 50,
+        [PaintProperty.VAL_COLOR]: '#ff0000',
+        [PaintProperty.TEX_RED]: '',
+        [PaintProperty.TEX_GREEN]: '',
+        [PaintProperty.TEX_BLUE]: '',
+        [PaintProperty.SIZE_RED]: 1,
+        [PaintProperty.SIZE_GREEN]: 1,
+        [PaintProperty.SIZE_BLUE]: 1,
     };
 
 
     function show() {
         const data: ObjectData[] = [{ id: 0, fields: [] as PropertyData<PropertyType>[] }];
-        let tex1 = config_data[InspectorProperty.TEX_RED];
-        let tex2 = config_data[InspectorProperty.TEX_GREEN];
-        let tex3 = config_data[InspectorProperty.TEX_BLUE];
+        let tex1 = config_data[PaintProperty.TEX_RED];
+        let tex2 = config_data[PaintProperty.TEX_GREEN];
+        let tex3 = config_data[PaintProperty.TEX_BLUE];
         const mesh = get_selected_one_mesh();
 
         const button_fields: PropertyData<PropertyType>[] = [];
@@ -82,21 +101,24 @@ function PaintInspectorCreate() {
 
             const draw_fields: PropertyData<PropertyType>[] = [];
             draw_fields.push({
-                name: InspectorProperty.VAL_SIZE,
-                value: config_data[InspectorProperty.VAL_SIZE],
+                key: PaintProperty.VAL_SIZE,
+                title: PaintPropertyTitle.VAL_SIZE,
+                value: config_data[PaintProperty.VAL_SIZE],
                 type: PropertyType.SLIDER,
                 params: { min: 0, max: 100, step: 1 },
                 onChange: updateParams
             });
             draw_fields.push({
-                name: InspectorProperty.VAL_COLOR,
-                value: config_data[InspectorProperty.VAL_COLOR],
+                key: PaintProperty.VAL_COLOR,
+                title: PaintPropertyTitle.VAL_COLOR,
+                value: config_data[PaintProperty.VAL_COLOR],
                 type: PropertyType.COLOR,
                 onChange: updateParams
             });
 
             data[0].fields.push({
-                name: 'Рисование',
+                key: PaintProperty.DRAWING,
+                title: PaintPropertyTitle.DRAWING,
                 value: draw_fields,
                 type: PropertyType.FOLDER,
                 params: { expanded: true }
@@ -104,42 +126,48 @@ function PaintInspectorCreate() {
 
             const texture_fields: PropertyData<PropertyType>[] = [];
             texture_fields.push({
-                name: InspectorProperty.SIZE_RED,
-                value: config_data[InspectorProperty.SIZE_RED],
+                key: PaintProperty.SIZE_RED,
+                title: PaintPropertyTitle.SIZE_RED,
+                value: config_data[PaintProperty.SIZE_RED],
                 type: PropertyType.SLIDER,
                 params: { min: 0, max: 100, step: 1 },
                 onChange: updateParams
             });
             texture_fields.push({
-                name: InspectorProperty.TEX_RED,
+                key: PaintProperty.TEX_RED,
+                title: PaintPropertyTitle.TEX_RED,
                 value: tex1,
                 type: PropertyType.LIST_TEXTURES,
                 params: texture_options,
                 onChange: updateParams
             });
             texture_fields.push({
-                name: InspectorProperty.SIZE_GREEN,
-                value: config_data[InspectorProperty.SIZE_GREEN],
+                key: PaintProperty.SIZE_GREEN,
+                title: PaintPropertyTitle.SIZE_GREEN,
+                value: config_data[PaintProperty.SIZE_GREEN],
                 type: PropertyType.SLIDER,
                 params: { min: 0, max: 100, step: 1 },
                 onChange: updateParams
             });
             texture_fields.push({
-                name: InspectorProperty.TEX_GREEN,
+                key: PaintProperty.TEX_GREEN,
+                title: PaintPropertyTitle.TEX_GREEN,
                 value: tex2,
                 type: PropertyType.LIST_TEXTURES,
                 params: texture_options,
                 onChange: updateParams
             });
             texture_fields.push({
-                name: InspectorProperty.SIZE_BLUE,
-                value: config_data[InspectorProperty.SIZE_BLUE],
+                key: PaintProperty.SIZE_BLUE,
+                title: PaintPropertyTitle.SIZE_BLUE,
+                value: config_data[PaintProperty.SIZE_BLUE],
                 type: PropertyType.SLIDER,
                 params: { min: 0, max: 100, step: 1 },
                 onChange: updateParams
             });
             texture_fields.push({
-                name: InspectorProperty.TEX_BLUE,
+                key: PaintProperty.TEX_BLUE,
+                title: PaintPropertyTitle.TEX_BLUE,
                 value: tex3,
                 type: PropertyType.LIST_TEXTURES,
                 params: texture_options,
@@ -147,7 +175,8 @@ function PaintInspectorCreate() {
             });
 
             data[0].fields.push({
-                name: 'Текстуры',
+                key: PaintProperty.TEXTURES,
+                title: PaintPropertyTitle.TEXTURES,
                 value: texture_fields,
                 type: PropertyType.FOLDER,
                 params: { expanded: true }
@@ -155,12 +184,14 @@ function PaintInspectorCreate() {
 
             if (mesh) {
                 button_fields.push({
-                    name: InspectorProperty.SAVE_BTN,
+                    key: PaintProperty.SAVE_BTN,
+                    title: PaintPropertyTitle.SAVE_BTN,
                     value: () => save(mesh),
                     type: PropertyType.BUTTON,
                 });
                 button_fields.push({
-                    name: InspectorProperty.DEL_BTN,
+                    key: PaintProperty.DEL_BTN,
+                    title: PaintPropertyTitle.DEL_BTN,
                     value: () => {
                         if (confirm('Удалить?'))
                             deactivate(mesh);
@@ -172,21 +203,24 @@ function PaintInspectorCreate() {
 
         else if (mesh) {
             button_fields.push({
-                name: InspectorProperty.CREATE_SIZE,
+                key: PaintProperty.CREATE_SIZE,
+                title: PaintPropertyTitle.CREATE_SIZE,
                 value: 1,
                 type: PropertyType.SLIDER,
                 params: { min: 1, max: 10, step: 1 },
                 onChange: updateParams
             });
             button_fields.push({
-                name: InspectorProperty.CREATE_BTN,
+                key: PaintProperty.CREATE_BTN,
+                title: PaintPropertyTitle.CREATE_BTN,
                 value: () => activate(mesh),
                 type: PropertyType.BUTTON,
             });
         }
 
         data[0].fields.push({
-            name: 'Кнопки',
+            key: PaintProperty.BUTTONS,
+            title: PaintPropertyTitle.BUTTONS,
             value: button_fields,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -197,26 +231,26 @@ function PaintInspectorCreate() {
     }
 
     function updateParams(info: ChangeInfo) {
-        (config_data as any)[info.data.field.name] = info.data.event.value;
+        (config_data as any)[info.data.field.key] = info.data.event.value;
         //log('update:', info.data.field.name, info.data.event.value);
         if (!selected_mesh)
             return;
         const material = (selected_mesh as any).material as ShaderMaterial;
-        if (info.data.field.name == InspectorProperty.TEX_RED) {
+        if (info.data.field.key == PaintProperty.TEX_RED) {
             const tex_data = set_texture_slot(0, info.data.event.value as string, material);
             material.uniforms.tex_size_repeat.value.x = tex_data.size.x;
         }
-        if (info.data.field.name == InspectorProperty.TEX_GREEN)
+        if (info.data.field.key == PaintProperty.TEX_GREEN)
             set_texture_slot(1, info.data.event.value as string, material);
-        if (info.data.field.name == InspectorProperty.TEX_BLUE)
+        if (info.data.field.key == PaintProperty.TEX_BLUE)
             set_texture_slot(2, info.data.event.value as string, material);
 
-        if (info.data.field.name == InspectorProperty.SIZE_RED)
-            material.uniforms.tex_size_repeat.value.y = config_data[InspectorProperty.SIZE_RED];
-        if (info.data.field.name == InspectorProperty.SIZE_GREEN)
-            material.uniforms.tex_size_repeat.value.z = config_data[InspectorProperty.SIZE_GREEN];
-        if (info.data.field.name == InspectorProperty.SIZE_BLUE)
-            material.uniforms.tex_size_repeat.value.w = config_data[InspectorProperty.SIZE_BLUE];
+        if (info.data.field.key == PaintProperty.SIZE_RED)
+            material.uniforms.tex_size_repeat.value.y = config_data[PaintProperty.SIZE_RED];
+        if (info.data.field.key == PaintProperty.SIZE_GREEN)
+            material.uniforms.tex_size_repeat.value.z = config_data[PaintProperty.SIZE_GREEN];
+        if (info.data.field.key == PaintProperty.SIZE_BLUE)
+            material.uniforms.tex_size_repeat.value.w = config_data[PaintProperty.SIZE_BLUE];
     }
 
 
@@ -263,8 +297,8 @@ function PaintInspectorCreate() {
         const size = mesh.get_size();
         size.x *= mesh.scale.x;
         size.y *= mesh.scale.y;
-        size.x *= config_data[InspectorProperty.CREATE_SIZE];
-        size.y *= config_data[InspectorProperty.CREATE_SIZE];
+        size.x *= config_data[PaintProperty.CREATE_SIZE];
+        size.y *= config_data[PaintProperty.CREATE_SIZE];
         const draw_canvas = CreateDrawCanvas(Math.floor(size.x), Math.floor(size.y));
         const mask = new Texture(draw_canvas.getCanvas());
         mask.needsUpdate = true;
@@ -326,7 +360,7 @@ function PaintInspectorCreate() {
                 const { draw_canvas, material } = mesh_list[key];
                 const uv = get_raycast_point_uv(e.x, e.y, selected_mesh as Slice9Mesh);
                 if (uv) {
-                    draw_canvas.set_size(config_data[InspectorProperty.VAL_SIZE]);
+                    draw_canvas.set_size(config_data[PaintProperty.VAL_SIZE]);
                     draw_canvas.draw(uv.x, 1 - uv.y, get_color());
                     material.uniforms.u_mask.value.needsUpdate = true;
                 }
@@ -348,7 +382,7 @@ function PaintInspectorCreate() {
                 const { draw_canvas, material } = mesh_list[key];
                 const uv = get_raycast_point_uv(e.x, e.y, selected_mesh as Slice9Mesh);
                 if (uv) {
-                    draw_canvas.set_size(config_data[InspectorProperty.VAL_SIZE]);
+                    draw_canvas.set_size(config_data[PaintProperty.VAL_SIZE]);
                     draw_canvas.draw(uv.x, 1 - uv.y, get_color());
                     material.uniforms.u_mask.value.needsUpdate = true;
                 }
@@ -372,9 +406,9 @@ function PaintInspectorCreate() {
             const mesh = get_mesh_by_hash(id);
             if (mesh) {
                 await activate(mesh);
-                config_data[InspectorProperty.SIZE_RED] = info.size1 || 1;
-                config_data[InspectorProperty.SIZE_GREEN] = info.size2 || 1;
-                config_data[InspectorProperty.SIZE_BLUE] = info.size3 || 1;
+                config_data[PaintProperty.SIZE_RED] = info.size1 || 1;
+                config_data[PaintProperty.SIZE_GREEN] = info.size2 || 1;
+                config_data[PaintProperty.SIZE_BLUE] = info.size3 || 1;
                 const { draw_canvas, material } = mesh_list[id];
                 const mask_data = ResourceManager.get_texture(id);
                 //const mask_data = ResourceManager.get_texture('tex_mask', 'texture');
@@ -398,7 +432,7 @@ function PaintInspectorCreate() {
                 material.uniforms.tex1.value = tex1.texture;
                 material.uniforms.tex2.value = tex2.texture;
                 material.uniforms.tex3.value = tex3.texture;
-                material.uniforms.tex_size_repeat.value.set(tex1.size.x, config_data[InspectorProperty.SIZE_RED], config_data[InspectorProperty.SIZE_GREEN], config_data[InspectorProperty.SIZE_BLUE]);
+                material.uniforms.tex_size_repeat.value.set(tex1.size.x, config_data[PaintProperty.SIZE_RED], config_data[PaintProperty.SIZE_GREEN], config_data[PaintProperty.SIZE_BLUE]);
                 material.uniforms.map_size.value.set(mask_data.size.x, mask_data.size.y, 0, 0);
             }
             else {
@@ -408,7 +442,7 @@ function PaintInspectorCreate() {
     }
 
     function get_color() {
-        const clr = hexToRGB(config_data[InspectorProperty.VAL_COLOR]);
+        const clr = hexToRGB(config_data[PaintProperty.VAL_COLOR]);
         return [clr.x * 255, clr.y * 255, clr.z * 255];
     }
 
@@ -461,9 +495,9 @@ function PaintInspectorCreate() {
                 tex1: get_name_atlas_by_texture(material.uniforms.tex1.value),
                 tex2: get_name_atlas_by_texture(material.uniforms.tex2.value),
                 tex3: get_name_atlas_by_texture(material.uniforms.tex3.value),
-                size1: config_data[InspectorProperty.SIZE_RED],
-                size2: config_data[InspectorProperty.SIZE_GREEN],
-                size3: config_data[InspectorProperty.SIZE_BLUE]
+                size1: config_data[PaintProperty.SIZE_RED],
+                size2: config_data[PaintProperty.SIZE_GREEN],
+                size3: config_data[PaintProperty.SIZE_BLUE]
             };
             await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(data));
             Popups.toast.success('Карта сохранена');

@@ -138,8 +138,34 @@ export class AnimatedMesh extends EntityPlane {
 		}
 	}
 
+	remove_animation(alias: string) {
+		const action = this.animations_list[alias];
+		if (action) {
+			action.stop();
+			action.reset();
+			if (action == this.activeAction) {
+				// NOTE: если это была текущая анимация, то нужно установить другую из имеющихся, если они есть, иначе сбросить состояние
+				const available_animations = Object.keys(this.animations_list).filter(key => key != alias);
+				if (available_animations.length > 0) {
+					this.activeAction = this.lastAction ?? this.animations_list[available_animations[0]];
+					this.activeAction?.reset();
+					this.activeAction?.play();
+				} else {
+					this.activeAction = null;
+					this.lastAction = null;
+				}
+			}
+		}
+		delete this.animations_list[alias];
+		delete this.animation_aliases[alias];
+	}
+
 	get_animation_list() {
 		return this.animations_list;
+	}
+
+	get_animation_name_by_alias(alias: string): string | undefined {
+		return this.animation_aliases[alias];
 	}
 
 	set_animation(alias: string, offset = 0) {
