@@ -1,4 +1,4 @@
-import { PlayerMovementSettings, default_settings, PathFinderMode, PointerControl, MovementLogic } from "../modules/PlayerMovement";
+import { PlayerMovementSettings, default_settings, PointerControl, MovementLogic } from "../modules/PlayerMovement";
 import { PathFinder } from "../modules/PathFinder";
 import { Point, Segment } from "../modules/Geometry";
 
@@ -24,8 +24,7 @@ export function test_pathfinder() {
         update_interval: 25, 
         min_update_interval: 1, 
         collision_radius: 3, 
-        speed: {WALK: 3}, 
-        path_finder_mode: PathFinderMode.WAY_PREDICTION,
+        speed: {WALK: 3},
         pointer_control: PointerControl.FP,
         max_predicted_way_intervals: 4,
         debug: true,

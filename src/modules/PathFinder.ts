@@ -35,7 +35,6 @@ const point_zero = point(0, 0);
 
 export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segment[]) {
     const max_intervals =  settings.max_predicted_way_intervals;
-    const mode = settings.path_finder_mode;
     const collision_min_error = settings.collision_min_error;
     const blocked_move_min_dist = settings.blocked_move_min_dist;
     const move_min_angle = settings.block_move_min_angle;
@@ -48,6 +47,7 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
     let current_target = point_zero;
     let checking_obstacles = true;
     let obstacles = (_obstacles) ? _obstacles : [];
+    let way_total_length = 0;
 
     function enable_obstacles(enable = true) {
         checking_obstacles = enable;
@@ -62,6 +62,7 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
         const data: PredictNextMoveData = {next_do: NextMoveType.STRAIGHT_LINE, way_required, lenght_remains, pointer_control};
         way_intervals.splice(0, way_intervals.length);
         let counter = 0;
+        way_total_length = 0;
         while (data.lenght_remains >= collision_min_error && counter < max_intervals) {
             if (debug)  {
                 log(`Next move in predicted way:`, NextMoveType[data.next_do]);   
@@ -197,6 +198,7 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
                 const new_target =  data.way_required.end;
                 data.way_required = segment(allowed_way.end().x, allowed_way.end().y, new_target.x, new_target.y);
             }
+            way_total_length += allowed_way.length();
             way_intervals.push(allowed_way);
         }
 
@@ -290,6 +292,7 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
                 const new_target =  data.way_required.end;
                 data.way_required = segment(allowed_way.end.x, allowed_way.end.y, new_target.x, new_target.y);
             }
+            way_total_length += allowed_way.length();
             way_intervals.push(allowed_way);
         }
     }
@@ -306,8 +309,6 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
                 distance_before_collision = 0;
             }
             const way_segments = data.way_required.splitAtLength(distance_before_collision);
-            log(data.way_required.length(), distance_before_collision)
-            log(way_segments)
             allowed_way = way_segments[0];
             data.way_required = way_segments[1] as Segment;
             data.obstacle_to_slide = closest.obstacle;
@@ -326,6 +327,7 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
             allowed_way = data.way_required;
         }
         if (allowed_way) {
+            way_total_length += allowed_way.length();
             way_intervals.push(allowed_way);
         }
     }
@@ -629,13 +631,17 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
     function get_predicted_way() {
         return way_intervals;
     }
+
+    function get_way_length() {
+        return way_total_length;
+    }
    
     function _compare_distances(a: {distance: [number, Segment]}, b: {distance: [number, Segment]}) {
         return a.distance[0] - b.distance[0];
     }
 
     return { get_next_pos, set_current_pos, get_current_pos, set_obstacles,
-        find_closest_obstacle_use_offsets, linear_move, bypass_vertice, slide_obstacle, get_predicted_way, 
+        find_closest_obstacle_use_offsets, linear_move, bypass_vertice, slide_obstacle, get_predicted_way, get_way_length,
         update_predicted_way, make_collision_way, enable_obstacles, check_obstacles_enabled }
 }
 

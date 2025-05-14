@@ -8,8 +8,7 @@ import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { MapData, preload_tiled_textures, get_all_tiled_textures } from '../render_engine/parsers/tile_parser';
 import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import { TileLoader } from '../render_engine/tile_loader';
-import { default_settings, load_obstacles, MovementLogic, PathFinderMode, PlayerMovementSettings, PointerControl } from '../modules/PlayerMovement';
-import { Segment } from '2d-geometry';
+import { default_settings, load_obstacles, MovementLogic, PlayerMovementSettings, PointerControl } from '../modules/PlayerMovement';
 import { make_ramk, rotate_point, rotate_point_pivot } from '../render_engine/helpers/utils';
 import { createRegionManager } from '../utils/region_manager';
 
@@ -100,8 +99,7 @@ export async function run_scene_light() {
     if (game_mode) {
         const movement_settings: PlayerMovementSettings = {
             ...default_settings,
-            path_finder_mode: PathFinderMode.WAY_PREDICTION,
-            pointer_control: PointerControl.JS,
+            pointer_control: PointerControl.FP,
             collision_radius: 2,
             max_try_dist: 0.5,
             target_stop_distance: 0.2,

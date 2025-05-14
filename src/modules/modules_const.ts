@@ -26,5 +26,5 @@ export type _SystemMessages = {
 };
 
 export type NetMessages = {
-    
+    // CS_GAME_CMD: { id: keyof GameCommands, message?: GameCommands[keyof GameCommands] },
 }

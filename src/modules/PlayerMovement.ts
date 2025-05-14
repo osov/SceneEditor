@@ -28,17 +28,11 @@ export enum PointerControl {
     // FOLLOW_DIRECTION,            
 }
 
-export enum PathFinderMode {
-    BASIC,
-    WAY_PREDICTION,
-}
-
 export type PlayerMovementSettings = {
     max_predicted_way_intervals: number,  // Макс. количество отрезков прогнозируемого пути, на котором цикл построения пути завершится преждевременно
     min_predicted_way_lenght: number,     // TODO: Проверить, нужно ли это делать, или можно обойтись без минимальной длины прогнозируемого пути
     predicted_way_lenght_mult: number,    // Множитель длины пути для построения пути с запасом
-    collision_min_error: number,          // Минимальное расстояние сближения с припятствиями, для предотвращения соприкосновений геометрий
-    path_finder_mode: PathFinderMode,     
+    collision_min_error: number,          // Минимальное расстояние сближения с припятствиями, для предотвращения соприкосновений геометрий 
     pointer_control: PointerControl,
     keys_control: boolean,         // TODO: управление через клавиатуру
     model_layer: number,    
@@ -75,7 +69,6 @@ export const default_settings: PlayerMovementSettings = {
     min_predicted_way_lenght: 4,
     predicted_way_lenght_mult: 1.5,
     collision_min_error: 0.001,
-    path_finder_mode: PathFinderMode.BASIC,
     pointer_control: PointerControl.FP,
     keys_control: true,
     target_stop_distance: 2,
@@ -180,7 +173,6 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
     const min_update_t_interval = settings.min_update_interval;
     const update_way_angle = settings.update_way_angle;
     const min_stick_dist = settings.min_stick_dist;
-    const mode = settings.path_finder_mode;
     const debug =  settings.debug;
     const clear_drawn_lines =  settings.clear_drawn_lines;
     const min_predicted_way_lenght = settings.min_predicted_way_lenght;
@@ -217,9 +209,32 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
         PF.set_current_pos(target);
         obstacles.push(...init_data.obstacles);
 
-        if (mode == PathFinderMode.WAY_PREDICTION) {
+        if (pointer_control == PointerControl.FP) {
             EventBus.on('SYS_ON_UPDATE', (e) => {
                 time_elapsed += e.dt;
+                if (!has_target) return;
+                if (is_pointer_down) {  
+                    // Если удерживать кнопку мыши, путь перестраивается раз в min_update_t_interval с.
+                    // TODO: Чтобы реже перестраивать путь, возможно стоит еще делать проверку что положение target 
+                    // (цель перемещения) изменилось на заданную минимальную величину
+                    if (time_elapsed >= min_update_t_interval) {
+                        update_predicted_way();
+                        time_elapsed = 0;
+                    }
+                }
+                else {
+                    if (time_elapsed >= update_t_interval) {
+                        update_predicted_way();
+                        time_elapsed = 0;
+                    }
+                }
+            })
+        }
+
+        if (pointer_control == PointerControl.JS) {
+            EventBus.on('SYS_ON_UPDATE', (e) => {
+                time_elapsed += e.dt;
+                if (!stick_start) return;
                 if (check_dir_change()) {
                     // TODO: Возможно стоит сделать зависимость min_update_t_interval от величины изменения 
                     // направления, чем сильнее изменилось направление, там меньше интервал времени до следующего update_predicted_way()
@@ -237,7 +252,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
             })
         }
 
-        if (PointerControl.FP == pointer_control) {
+        if (pointer_control == PointerControl.FP) {
             EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
                 if (e.button != 0)
                     return;
@@ -348,7 +363,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
                 if (!is_moving) start_movement();
                 else {
                     update_position(dt);
-                    update_pointer_position(pointer);
+                    // update_pointer_position(pointer);
                 }
             }
         }
@@ -375,6 +390,11 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
 
         function update_position(dt: number) {
             const current_pos = point(model.position.x, model.position.y);
+            const available_way = PF.get_way_length();
+            if (available_way == 0) {
+                stop_movement();
+                return;
+            }
             const end_pos = PF.get_next_pos(current_pos, dt, current_speed); 
             if (!end_pos || (end_pos.equalTo(current_pos))) {
                 stop_movement();

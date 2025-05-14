@@ -4,7 +4,7 @@ import { URL_PATHS } from "../modules_editor/modules_editor_const";
 import { get_all_tiled_textures, get_depth, MapData, preload_tiled_textures } from "../render_engine/parsers/tile_parser";
 import { IObjectTypes } from "../render_engine/types";
 import { TileLoader } from "../render_engine/tile_loader";
-import { default_settings, load_obstacles, MovementLogic, PathFinderMode, PlayerMovementSettings, PointerControl } from "../modules/PlayerMovement";
+import { default_settings, load_obstacles, MovementLogic, PlayerMovementSettings, PointerControl } from "../modules/PlayerMovement";
 
 const SORT_LAYER = 7;
 const SUB_SCALAR = WORLD_SCALAR;
@@ -83,8 +83,7 @@ export async function run_scene_anim() {
     if (game_mode) {
         const movement_settings: PlayerMovementSettings = {
             ...default_settings,
-            path_finder_mode: PathFinderMode.WAY_PREDICTION,
-            pointer_control: PointerControl.JS,
+            pointer_control: PointerControl.FP,
             collision_radius: 2,
             block_move_min_angle: 25 * Math.PI / 180,
             max_try_dist: 0.5,
