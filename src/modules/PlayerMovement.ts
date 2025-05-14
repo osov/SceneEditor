@@ -357,6 +357,11 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
 
         function handle_update_follow_pointer( dt: number ) {
             if (!has_target) return;
+            const available_way = PF.get_way_length();
+            if (available_way == 0) {
+                stop_movement();
+                return;
+            }
             const current_pos = point(model.position.x, model.position.y);
             const dist = current_pos.distanceTo(target)[0];
             is_in_target = (dist <= target_error) ? true : false;
@@ -394,11 +399,6 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
 
         function update_position(dt: number) {
             const current_pos = point(model.position.x, model.position.y);
-            const available_way = PF.get_way_length();
-            if (available_way == 0) {
-                stop_movement();
-                return;
-            }
             const end_pos = PF.get_next_pos(current_pos, dt, current_speed); 
             if (!end_pos || (end_pos.equalTo(current_pos))) {
                 stop_movement();
