@@ -249,13 +249,13 @@ function AssetInspectorCreate() {
                                             min: vec2_params.x.min ?? -1000,
                                             max: vec2_params.x.max ?? 1000,
                                             step: vec2_params.x.step ?? 0.1,
-                                            format: (v: number) => v.toFixed(2)
+                                            format: (v: number) => v.toFixed(1)
                                         },
                                         y: {
                                             min: vec2_params.y.min ?? -1000,
                                             max: vec2_params.y.max ?? 1000,
                                             step: vec2_params.y.step ?? 0.1,
-                                            format: (v: number) => v.toFixed(2)
+                                            format: (v: number) => v.toFixed(1)
                                         }
                                     },
                                     onBeforeChange: saveUniformVec2,
@@ -274,19 +274,19 @@ function AssetInspectorCreate() {
                                             min: vec3_params.x.min ?? -1000,
                                             max: vec3_params.x.max ?? 1000,
                                             step: vec3_params.x.step ?? 0.1,
-                                            format: (v: number) => v.toFixed(2)
+                                            format: (v: number) => v.toFixed(1)
                                         },
                                         y: {
                                             min: vec3_params.y.min ?? -1000,
                                             max: vec3_params.y.max ?? 1000,
                                             step: vec3_params.y.step ?? 0.1,
-                                            format: (v: number) => v.toFixed(2)
+                                            format: (v: number) => v.toFixed(1)
                                         },
                                         z: {
                                             min: vec3_params.z.min ?? -1000,
                                             max: vec3_params.z.max ?? 1000,
                                             step: vec3_params.z.step ?? 0.1,
-                                            format: (v: number) => v.toFixed(2)
+                                            format: (v: number) => v.toFixed(1)
                                         }
                                     },
                                     onBeforeChange: saveUniformVec3,
@@ -305,25 +305,25 @@ function AssetInspectorCreate() {
                                             min: vec4_params.x.min ?? -1000,
                                             max: vec4_params.x.max ?? 1000,
                                             step: vec4_params.x.step ?? 0.1,
-                                            format: (v: number) => v.toFixed(2)
+                                            format: (v: number) => v.toFixed(1)
                                         },
                                         y: {
                                             min: vec4_params.y.min ?? -1000,
                                             max: vec4_params.y.max ?? 1000,
                                             step: vec4_params.y.step ?? 0.1,
-                                            format: (v: number) => v.toFixed(2)
+                                            format: (v: number) => v.toFixed(1)
                                         },
                                         z: {
                                             min: vec4_params.z.min ?? -1000,
                                             max: vec4_params.z.max ?? 1000,
                                             step: vec4_params.z.step ?? 0.1,
-                                            format: (v: number) => v.toFixed(2)
+                                            format: (v: number) => v.toFixed(1)
                                         },
                                         w: {
                                             min: vec4_params.w.min ?? -1000,
                                             max: vec4_params.w.max ?? 1000,
                                             step: vec4_params.w.step ?? 0.1,
-                                            format: (v: number) => v.toFixed(2)
+                                            format: (v: number) => v.toFixed(1)
                                         }
                                     },
                                     onBeforeChange: saveUniformVec4,
