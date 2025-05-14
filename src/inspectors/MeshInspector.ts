@@ -145,8 +145,6 @@ function MeshInspectorCreate() {
         _selected_meshes = mesh_ids;
 
         const list = SceneManager.get_scene_list().filter((item) => _selected_meshes.includes(item.mesh_data.id));
-        if (list.length == 1 && list[0].type == IObjectTypes.COMPONENT)
-            return;
         const data = list.map((mesh) => {
             const fields: PropertyData<PropertyType>[] = [];
             generateBaseFields(fields, mesh);
@@ -215,9 +213,9 @@ function MeshInspectorCreate() {
             value: mesh.get_position(),
             type: PropertyType.VECTOR_3,
             params: {
-                x: { format: (v: number) => v.toFixed(2), step: 0.1 },
-                y: { format: (v: number) => v.toFixed(2), step: 0.1 },
-                z: { format: (v: number) => v.toFixed(2), step: 0.1 },
+                x: { step: 0.1, format: (v: number) => v.toFixed(1) },
+                y: { step: 0.1, format: (v: number) => v.toFixed(1) },
+                z: { step: 0.1, format: (v: number) => v.toFixed(1) },
             },
             onBeforeChange: savePosition,
             onChange: handlePositionChange,
@@ -232,9 +230,9 @@ function MeshInspectorCreate() {
             value: rotation,
             type: PropertyType.VECTOR_3,
             params: {
-                x: { format: (v: number) => v.toFixed(2) },
-                y: { format: (v: number) => v.toFixed(2) },
-                z: { format: (v: number) => v.toFixed(2) }
+                x: { step: 0.1, format: (v: number) => v.toFixed(1) },
+                y: { step: 0.1, format: (v: number) => v.toFixed(1) },
+                z: { step: 0.1, format: (v: number) => v.toFixed(1) }
             },
             onBeforeChange: saveRotation,
             onChange: handleRotationChange,
@@ -249,10 +247,10 @@ function MeshInspectorCreate() {
                 value: scale_factor,
                 type: PropertyType.SLIDER,
                 params: {
-                    min: 0.0001,
+                    min: 0.001,
                     max: 1,
                     step: 0.001,
-                    format: (v: number) => v.toFixed(4)
+                    format: (v: number) => v.toFixed(3)
                 },
                 onBeforeChange: saveModelScale,
                 onChange: handleModelScaleChange,
@@ -266,8 +264,8 @@ function MeshInspectorCreate() {
                 value: mesh.get_scale(),
                 type: PropertyType.VECTOR_2,
                 params: {
-                    x: { format: (v: number) => v.toFixed(2) },
-                    y: { format: (v: number) => v.toFixed(2) },
+                    x: { step: 0.1, format: (v: number) => v.toFixed(1) },
+                    y: { step: 0.1, format: (v: number) => v.toFixed(1) },
                 },
                 onBeforeChange: saveScale,
                 onChange: handleScaleChange,
@@ -336,8 +334,8 @@ function MeshInspectorCreate() {
             title: MeshPropertyTitle.ANCHOR,
             value: mesh.get_anchor(),
             type: PropertyType.POINT_2D, params: {
-                x: { min: -1, max: 1, format: (v: number) => v.toFixed(2) },
-                y: { min: -1, max: 1, format: (v: number) => v.toFixed(2) }
+                x: { min: -1, max: 1, step: 0.1, format: (v: number) => v.toFixed(1) },
+                y: { min: -1, max: 1, step: 0.1, format: (v: number) => v.toFixed(1) }
             },
             onBeforeChange: saveAnchor,
             onChange: handleAnchorChange,
@@ -352,8 +350,8 @@ function MeshInspectorCreate() {
             value: mesh.get_size(),
             type: PropertyType.VECTOR_2,
             params: {
-                x: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
-                y: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
+                x: { min: 0, max: 0xFFFFFFFF, step: 0.1, format: (v: number) => v.toFixed(1) },
+                y: { min: 0, max: 0xFFFFFFFF, step: 0.1, format: (v: number) => v.toFixed(1) },
             },
             onBeforeChange: saveSize,
             onChange: handleSizeChange,
@@ -1342,6 +1340,7 @@ function MeshInspectorCreate() {
         const [isChangedX, isChangedY, isChangedZ] = getChangedInfo(info);
 
         const pos = info.data.event.value as Vector3;
+        log('UPDATE POSITION:', pos);
         const averagePoint = new Vector3();
         averagePoint.copy(pos);
 
@@ -1367,6 +1366,7 @@ function MeshInspectorCreate() {
             const x = isDraggedX ? mesh.get_position().x + (pos.x - averagePoint.x) : isChangedX ? pos.x : mesh.get_position().x;
             const y = isDraggedY ? mesh.get_position().y + (pos.y - averagePoint.y) : isChangedY ? pos.y : mesh.get_position().y;
             const z = isDraggedZ ? mesh.get_position().z + (pos.z - averagePoint.z) : isChangedZ ? pos.z : mesh.get_position().z;
+
             return { mesh_id: id, value: new Vector3(x, y, z) };
         }).filter((item) => item != undefined);
 
@@ -1549,6 +1549,8 @@ function MeshInspectorCreate() {
     function handleSizeChange(info: ChangeInfo) {
         const [isChangedX, isChangedY] = getChangedInfo(info);
         const size = info.data.event.value as Vector2;
+
+        log('SIZE CHANGE:', size);
 
         const data = info.ids.map((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
