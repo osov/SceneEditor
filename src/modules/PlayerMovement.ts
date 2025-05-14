@@ -363,7 +363,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
                 if (!is_moving) start_movement();
                 else {
                     update_position(dt);
-                    // update_pointer_position(pointer);
+                    update_pointer_position(pointer);
                 }
             }
         }
