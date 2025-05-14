@@ -31,11 +31,15 @@ images {
    
  } 
 images { 
+  image: "/assets//tiled/Frame/256х256.jpg"
+   
+ } 
+images { 
   image: "/assets//tiled/Frame/1_17.jpg"
    
  } 
 images { 
-  image: "/assets//tiled/Frame/256х256.jpg"
+  image: "/assets//tiled/Frame/1_83.jpg"
    
  } 
 images { 
@@ -59,7 +63,11 @@ images {
    
  } 
 images { 
-  image: "/assets//tiled/Frame/1_107.jpg"
+  image: "/assets//tiled/Frame/1_105.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/1_106.jpg"
    
  } 
 images { 
@@ -87,7 +95,7 @@ images {
    
  } 
 images { 
-  image: "/assets//tiled/Frame/1_123.jpg"
+  image: "/assets//tiled/Frame/1_122.jpg"
    
  } 
 images { 
@@ -107,6 +115,10 @@ images {
    
  } 
 images { 
+  image: "/assets//tiled/Frame/Lake_18.jpg"
+   
+ } 
+images { 
   image: "/assets//tiled/Frame/Clay_3.jpg"
    
  } 
@@ -115,10 +127,138 @@ images {
    
  } 
 images { 
+  image: "/assets//tiled/Frame/Cla_1.jpg"
+   
+ } 
+images { 
   image: "/assets//tiled/Frame/Clay_4.jpg"
    
  } 
 images { 
-  image: "/assets//tiled/Frame/Cla_1.jpg"
+  image: "/assets//tiled/Frame/Lake_05.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_06.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_07.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Clay_6.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_23.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_24.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_12.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_13.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_14.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Transition.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_25.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_26.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_27.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_28.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_19.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_20.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_21.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_22.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Clay_7.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_29.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_30.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Clay_8.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Clay_9.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Clay_5.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Lake_08.jpg"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Pebble_3.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Pebble.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Pebble_2.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/BeaconLand.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Earth_2.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/ParkingCars.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Frame/Clay_round.png"
    
  } 

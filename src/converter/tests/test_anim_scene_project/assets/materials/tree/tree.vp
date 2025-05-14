@@ -1,0 +1,22 @@
+uniform float u_time;
+uniform float u_amplitude; // 1.5
+uniform float u_frequency; // 0.6
+varying vec2 vUv;
+
+void main() {
+	vUv = uv;
+	float strength = smoothstep(0.0, 1.0, vUv.y);
+
+	float amplitude = u_amplitude * strength;
+	float phaseOffset = mod(position.x + position.y, 1.0);
+
+	float offsetX = sin(u_time * u_frequency + phaseOffset * 1.0) * amplitude;
+	float offsetY = sin(u_time * u_frequency + phaseOffset * 2.0) * amplitude * 0.3;
+
+	float tilt = sin(u_time * 0.3 + position.y * 5.0) * 0.1;
+	vec3 newPosition = position;
+	newPosition +=  vec3(offsetX + tilt, offsetY, 0.0);
+
+
+	gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+}

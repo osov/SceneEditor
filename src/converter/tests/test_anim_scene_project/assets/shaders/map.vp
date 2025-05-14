@@ -1,0 +1,34 @@
+uniform vec4 uv_mask;
+uniform vec4 uv_tex1;
+uniform vec4 uv_tex2;
+uniform vec4 uv_tex3;
+uniform vec4 tex_size_repeat;
+uniform vec4 map_size;
+
+varying vec2 vUv;
+varying vec4 var_boo;
+varying vec4 var_uv0;
+varying vec4 var_uv1;
+varying vec4 var_uv2;
+varying vec4 var_uv3;
+varying vec4 var_repeat;
+
+//vec2 map_size = vec2(265., 132.);
+void main() {
+	vUv = uv;
+
+	// three js is local, defold is global
+	vec2 local_position = position.xy;
+	var_boo = vec4(
+		local_position.x / tex_size_repeat.x + 0.5, local_position.y / tex_size_repeat.x + 0.5,
+		local_position.x / map_size.x + 0.5, local_position.y / map_size.y + 0.5
+	);
+
+	var_uv0 = uv_mask;
+	var_uv1 = uv_tex1;
+	var_uv2 = uv_tex2;
+	var_uv3 = uv_tex3;
+	var_repeat = vec4(tex_size_repeat.y / 3., tex_size_repeat.z / 3., tex_size_repeat.w / 3., 0.);
+
+	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}

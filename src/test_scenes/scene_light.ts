@@ -64,7 +64,7 @@ export async function run_scene_light() {
         //RenderEngine.scene.add(l);
         const m = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, { text: it.x + '\n' + it.y });
         (m as any).no_saving = true; //  чтобы не сохранять в файл
-        (m as any).no_removing = true; 
+        (m as any).no_removing = true;
         m.maxWidth = 100;
         m.scale.setScalar(0.04);
         //SceneManager.add(m);

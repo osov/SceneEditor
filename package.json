@@ -7,7 +7,8 @@
     "dev": "bunx --bun vite --config vite.config.js",
     "build": "vite build",
     "serve": "vite preview",
-    "server-watch": "bun --watch server/main.ts"
+    "server-watch": "bun --watch server/main.ts",
+    "convert": "bun src/converter/tests/test_convert_pass.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.2.5",

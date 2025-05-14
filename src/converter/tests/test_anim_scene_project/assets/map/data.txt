@@ -1,0 +1,1 @@
+{"map":{"tex1":"Frame/1_17","tex2":"Frame/Cla_1","tex3":"/sand-512","size1":33,"size2":60,"size3":40}}

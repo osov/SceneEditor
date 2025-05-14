@@ -1,0 +1,27 @@
+{
+  "vertexShader": "/materials/water/water.vp",
+  "fragmentShader": "/materials/water/water_sea.fp",
+  "transparent": true,
+  "uniforms": {
+    "u_texture": {
+      "type": "sampler2D"
+    },
+    "u_normal": {
+      "type": "sampler2D"
+    },
+    "u_flowMap": {
+      "type": "sampler2D"
+    },
+    "u_time": {
+      "type": "float",
+      "readonly": true,
+      "hide": true
+    }
+  },
+  "data": {
+    "u_texture": null,
+    "u_normal": "/waternormals",
+    "u_flowMap": null,
+    "u_time": 0
+  }
+}

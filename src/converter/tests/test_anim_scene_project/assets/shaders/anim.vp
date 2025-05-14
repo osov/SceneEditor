@@ -1,0 +1,16 @@
+uniform float offsetZ;
+varying vec2 vUv;
+#include <skinning_pars_vertex>
+
+void main() {
+    #include <skinbase_vertex>
+    #include <begin_vertex>
+    #include <skinning_vertex>
+    
+    vUv = uv; 
+    vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);
+
+    // worldPosition.z /= 10000.0;
+    //  worldPosition.z += offsetZ;
+    gl_Position = projectionMatrix * viewMatrix * worldPosition;
+}

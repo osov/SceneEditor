@@ -1,0 +1,1 @@
+{"5226":{"u_amplitude":1.35,"u_frequency":0.6},"5227":{"u_amplitude":1.35,"u_frequency":0.6}}

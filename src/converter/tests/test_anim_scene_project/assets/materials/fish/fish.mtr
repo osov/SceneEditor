@@ -1,0 +1,37 @@
+{
+  "vertexShader": "/materials/fish/fish.vp",
+  "fragmentShader": "/materials/fish/fish.fp",
+  "transparent": true,
+  "uniforms": {
+    "u_texture": {
+      "type": "sampler2D"
+    },
+    "u_amplitude": {
+      "type": "range",
+      "params": {
+        "min": 0,
+        "step": 0.05,
+        "max": 3
+      }
+    },
+    "u_frequency": {
+      "type": "range",
+      "params": {
+        "min": 0,
+        "step": 0.05,
+        "max": 3
+      }
+    },
+    "u_time": {
+      "type": "float",
+      "readonly": true,
+      "hide": true
+    }
+  },
+  "data": {
+    "u_texture": null,
+    "u_amplitude": 1.35,
+    "u_frequency": 0.6,
+    "u_time": 88.80800008773804
+  }
+}

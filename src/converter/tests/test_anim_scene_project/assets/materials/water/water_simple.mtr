@@ -1,0 +1,104 @@
+{
+  "vertexShader": "/materials/water/water.vp",
+  "fragmentShader": "/materials/water/water_simple.fp",
+  "transparent": true,
+  "uniforms": {
+    "u_texture": {
+      "type": "sampler2D"
+    },
+    "u_normal": {
+      "type": "sampler2D"
+    },
+    "u_time": {
+      "type": "float",
+      "readonly": true,
+      "hide": true
+    },
+    "u_angle": {
+      "type": "range",
+      "params": {
+        "min": 0,
+        "step": 1,
+        "max": 360
+      }
+    },
+    "u_speed": {
+      "type": "range",
+      "params": {
+        "min": 0,
+        "step": 0.01,
+        "max": 1
+      }
+    },
+    "u_normal_scale": {
+      "type": "range",
+      "params": {
+        "min": 0,
+        "step": 0.01,
+        "max": 2
+      }
+    },
+    "u_normal_scale_2": {
+      "type": "range",
+      "params": {
+        "min": 0,
+        "step": 0.01,
+        "max": 0.5
+      }
+    },
+    "u_fade_edge_x": {
+      "type": "range",
+      "params": {
+        "min": 0,
+        "step": 0.01,
+        "max": 1
+      }
+    },
+    "u_fade_edge_y": {
+      "type": "range",
+      "params": {
+        "min": 0,
+        "step": 0.01,
+        "max": 1
+      }
+    },
+    "u_fade_offset_x": {
+      "type": "range",
+      "params": {
+        "min": 0,
+        "step": 0.01,
+        "max": 1
+      }
+    },
+    "u_fade_offset_y": {
+      "type": "range",
+      "params": {
+        "min": 0,
+        "step": 0.01,
+        "max": 1
+      }
+    },
+    "u_debug": {
+      "type": "range",
+      "params": {
+        "min": 0,
+        "step": 1,
+        "max": 1
+      }
+    }
+  },
+  "data": {
+    "u_texture": null,
+    "u_normal": "/waternormals",
+    "u_angle": 0,
+    "u_speed": 0.4,
+    "u_normal_scale": 0.75,
+    "u_normal_scale_2": 0.1,
+    "u_fade_edge_x": 1,
+    "u_fade_edge_y": 1,
+    "u_fade_offset_x": 0.5,
+    "u_fade_offset_y": 0.5,
+    "u_debug": 0,
+    "u_time": 0
+  }
+}

@@ -7,7 +7,23 @@ images {
    
  } 
 images { 
-  image: "/assets//tiled/Structures/Shadows/ShadowBushes_1.png"
+  image: "/assets//tiled/Nature/GrassCover_2.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/GrassCover.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/GrassCover_1.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/GrassCover_3.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Grass.png"
    
  } 
 images { 
@@ -15,7 +31,31 @@ images {
    
  } 
 images { 
-  image: "/assets//tiled/Structures/Shadows/ShadowBushes_2.png"
+  image: "/assets//tiled/Nature/Bridge.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/WaterLilies.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/WaterLilies_2.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Fish.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Firepit.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Descent.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/GrassRing.png"
    
  } 
 images { 
@@ -23,7 +63,19 @@ images {
    
  } 
 images { 
-  image: ""
+  image: "/assets//tiled/Structures/Shadows/ShadowBushes_1.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/ReedShadow.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Structures/Shadows/BushFenceShadow_2.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Flowers_2.png"
    
  } 
 images { 
@@ -32,10 +84,6 @@ images {
  } 
 images { 
   image: "/assets//tiled/Nature/Flowers_3.png"
-   
- } 
-images { 
-  image: "/assets//tiled/Nature/Flowers_2.png"
    
  } 
 images { 
@@ -51,10 +99,86 @@ images {
    
  } 
 images { 
-  image: "/assets//tiled/Nature/Crown.png"
+  image: "/assets//tiled/Nature/Barrel.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Bushes4.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Fence_3.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Fence_1.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Fence_4.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Fence_2.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/BushFence.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/BushFence2.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/BushFence3.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Barrel2.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Stone.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Stump_1.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Stump.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Reeds.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Reeds_2.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Tui.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/BushFence_1.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/BushFence_2.png"
    
  } 
 images { 
   image: "/assets//tiled/Nature/FlowersHome.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Crown.png"
+   
+ } 
+images { 
+  image: "/assets//tiled/Nature/Crown2.png"
    
  } 

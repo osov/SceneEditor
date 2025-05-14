@@ -1,0 +1,19 @@
+{
+  "vertexShader": "/shaders/anim.vp",
+  "fragmentShader": "/shaders/anim.fp",
+  "transparent": true,
+  "uniforms": {
+    "u_texture": {
+      "type": "sampler2D"
+    },
+    "offsetZ": {
+      "readonly": true,
+      "hide": true,
+      "type": "float"
+    }
+  },
+  "data": {
+    "u_texture": "/PolygonExplorers_Texture_01_A",
+    "offsetZ": 0
+  }
+}
