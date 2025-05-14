@@ -678,7 +678,7 @@ function InspectorModule() {
             const binding = place.addBinding(entity.obj, entity.key, entity.params);
             if (entity.onBeforeChange) binding.controller.value.emitter.on('beforechange', entity.onBeforeChange);
             if (entity.onChange) binding.on('change', entity.onChange);
-            _field_name_to_pane[entity.obj.name] = binding as Refreshable;
+            _field_name_to_pane[entity.obj.key] = binding as Refreshable;
         }
     }
 
