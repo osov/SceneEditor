@@ -30,9 +30,12 @@ export enum PointerControl {
 
 export type PlayerMovementSettings = {
     max_predicted_way_intervals: number,  // Макс. количество отрезков прогнозируемого пути, на котором цикл построения пути завершится преждевременно
-    min_predicted_way_lenght: number,     // TODO: Проверить, нужно ли это делать, или можно обойтись без минимальной длины прогнозируемого пути
     predicted_way_lenght_mult: number,    // Множитель длины пути для построения пути с запасом
     collision_min_error: number,          // Минимальное расстояние сближения с припятствиями, для предотвращения соприкосновений геометрий 
+    min_required_way: number,
+    min_awailable_way: number,
+    min_idle_time: number,
+    min_target_change: number,
     pointer_control: PointerControl,
     keys_control: boolean,         // TODO: управление через клавиатуру
     model_layer: number,    
@@ -66,12 +69,15 @@ type SpeedSettings = {
 
 export const default_settings: PlayerMovementSettings = {
     max_predicted_way_intervals: 10,
-    min_predicted_way_lenght: 4,
     predicted_way_lenght_mult: 1.5,
     collision_min_error: 0.001,
+    min_required_way: 0.6,
+    min_awailable_way: 0.5,
+    min_idle_time: 0.4,
+    min_target_change: 3,
     pointer_control: PointerControl.FP,
     keys_control: true,
-    target_stop_distance: 2,
+    target_stop_distance: 1,
     model_layer: 15, 
     animation_names: {IDLE: "idle", WALK: "walk"},
     update_interval: 2.5,
@@ -86,7 +92,6 @@ export const default_settings: PlayerMovementSettings = {
     clear_drawn_lines: true,
     min_stick_dist: 15,
 }
-
 
 
 function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
@@ -159,6 +164,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
     let pointer = point(0, 0);
     let target = point(0, 0);
     let last_check_dir = vector(pointer, target);
+    let last_check_target = point(0, 0);
     let stick_start: Point | undefined = undefined;
     let stick_end: Point | undefined = undefined;
     let current_dir = vector(pointer, target);
@@ -168,6 +174,10 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
     const animations = settings.animation_names;
     const pointer_control = settings.pointer_control;
     const max_blocked_move_time = settings.max_blocked_move_time;
+    const min_required_way = settings.min_required_way;
+    const min_awailable_way = settings.min_awailable_way;
+    const min_idle_time = settings.min_idle_time;
+    const min_target_change = settings.min_target_change;
     const blocked_max_dist = settings.blocked_move_min_dist;
     const update_t_interval = settings.update_interval;
     const min_update_t_interval = settings.min_update_interval;
@@ -175,7 +185,6 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
     const min_stick_dist = settings.min_stick_dist;
     const debug =  settings.debug;
     const clear_drawn_lines =  settings.clear_drawn_lines;
-    const min_predicted_way_lenght = settings.min_predicted_way_lenght;
     const predicted_way_lenght_mult = settings.predicted_way_lenght_mult;
     const PF = PathFinder(settings, obstacles);
     const LD = LinesDrawer();
@@ -186,7 +195,8 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
     let is_pointer_down = false;
     let is_in_target = false;
     let blocked_move_time = 0;
-    let time_elapsed = 0;
+    let last_upd_time_elapsed = 0;
+    let last_stop_time_elapsed = 0;
     let has_target = false;
     const player_container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     player_container.name = 'player collision circle';
@@ -211,21 +221,18 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
 
         if (pointer_control == PointerControl.FP) {
             EventBus.on('SYS_ON_UPDATE', (e) => {
-                time_elapsed += e.dt;
+                last_upd_time_elapsed += e.dt;
                 if (!has_target) return;
-                if (is_pointer_down) {  
-                    // Если удерживать кнопку мыши, путь перестраивается раз в min_update_t_interval с.
-                    // TODO: Чтобы реже перестраивать путь, возможно стоит еще делать проверку что положение target 
-                    // (цель перемещения) изменилось на заданную минимальную величину
-                    if (time_elapsed >= min_update_t_interval) {
+                if (is_pointer_down && check_target_change()) {  
+                    if (last_upd_time_elapsed >= min_update_t_interval) {
                         update_predicted_way();
-                        time_elapsed = 0;
+                        last_upd_time_elapsed = 0;
                     }
                 }
                 else {
-                    if (time_elapsed >= update_t_interval) {
+                    if (last_upd_time_elapsed >= update_t_interval) {
                         update_predicted_way();
-                        time_elapsed = 0;
+                        last_upd_time_elapsed = 0;
                     }
                 }
             })
@@ -233,20 +240,20 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
 
         if (pointer_control == PointerControl.JS) {
             EventBus.on('SYS_ON_UPDATE', (e) => {
-                time_elapsed += e.dt;
+                last_upd_time_elapsed += e.dt;
                 if (!stick_start) return;
                 if (check_dir_change()) {
                     // TODO: Возможно стоит сделать зависимость min_update_t_interval от величины изменения 
                     // направления, чем сильнее изменилось направление, там меньше интервал времени до следующего update_predicted_way()
-                    if (time_elapsed >= min_update_t_interval) {
+                    if (last_upd_time_elapsed >= min_update_t_interval) {
                         update_predicted_way();
-                        time_elapsed = 0;
+                        last_upd_time_elapsed = 0;
                     }
                 }
                 else {
-                    if (time_elapsed >= update_t_interval) {
+                    if (last_upd_time_elapsed >= update_t_interval) {
                         update_predicted_way();
-                        time_elapsed = 0;
+                        last_upd_time_elapsed = 0;
                     }
                 }
             })
@@ -313,14 +320,20 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
                 handle_update_follow_direction(e.dt);
             });
         }
+
+        EventBus.on('SYS_ON_UPDATE', (e) => {
+            last_stop_time_elapsed += e.dt;
+        })
     
         function update_predicted_way() {
             let way_required = get_required_way(update_t_interval);
-            if (EQ_0(way_required.length())) {
+            if (way_required.length() < min_required_way) {
+                PF.clear_way();
                 return;
             }
             last_check_dir = current_dir.clone();
-            PF.update_predicted_way(way_required, pointer_control);
+            last_check_target = target.clone();
+            PF.update_way(way_required, pointer_control);
         }
 
         function get_required_way(dt: number) {
@@ -344,6 +357,14 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
             return way_required;
         }
 
+        function check_target_change() {
+            let result = false;
+            if (last_check_target.distanceTo(target)[0] > min_target_change) {
+                result = true;
+            }
+            return result;
+        }
+
         function check_dir_change() {
             let result = false;
             if (last_check_dir.length() == 0 && current_dir.length() != last_check_dir.length())
@@ -358,7 +379,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
         function handle_update_follow_pointer( dt: number ) {
             if (!has_target) return;
             const available_way = PF.get_way_length();
-            if (available_way == 0) {
+            if (available_way < min_awailable_way) {
                 stop_movement();
                 return;
             }
@@ -369,8 +390,11 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
                 stop_movement();
             }
             else if (!is_in_target) {
-                if (!is_moving) start_movement();
-                else {
+                if (!is_moving && last_stop_time_elapsed > min_idle_time) {
+                    last_stop_time_elapsed = 0;
+                    start_movement();
+                }
+                else if (is_moving) {
                     update_position(dt);
                     update_pointer_position(pointer);
                 }
@@ -403,9 +427,6 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
             if (!end_pos || (end_pos.equalTo(current_pos))) {
                 stop_movement();
                 return;
-            }
-            else {
-                if (!is_moving) start_movement();
             }
             if (current_pos.distanceTo(end_pos)[0] > blocked_max_dist) {
                 model.position.x = end_pos.x;

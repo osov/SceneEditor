@@ -25,7 +25,6 @@ export function test_pathfinder() {
         min_update_interval: 1, 
         collision_radius: 3, 
         speed: {WALK: 3},
-        pointer_control: PointerControl.FP,
         max_predicted_way_intervals: 4,
         debug: true,
         clear_drawn_lines: false,
@@ -37,7 +36,7 @@ export function test_pathfinder() {
         PF.set_obstacles(batch.obstacles);
         ML.mark_obstacles(batch.obstacles);
         const way_req = Segment(batch.pos, batch.target);
-        PF.update_predicted_way(way_req, settings.pointer_control);
+        PF.update_way(way_req, settings.pointer_control);
         // const way_intervals = PF.get_predicted_way();
         // log(way_intervals)
         // for (let i = 1; i < 10; i++) {

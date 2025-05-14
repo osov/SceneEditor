@@ -57,12 +57,11 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
         return checking_obstacles;
     }
 
-    function update_predicted_way(way_required: Segment, pointer_control: PointerControl) {
+    function update_way(way_required: Segment, pointer_control: PointerControl) {
         let lenght_remains = way_required.length();
         const data: PredictNextMoveData = {next_do: NextMoveType.STRAIGHT_LINE, way_required, lenght_remains, pointer_control};
-        way_intervals.splice(0, way_intervals.length);
         let counter = 0;
-        way_total_length = 0;
+        clear_way();
         while (data.lenght_remains >= collision_min_error && counter < max_intervals) {
             if (debug)  {
                 log(`Next move in predicted way:`, NextMoveType[data.next_do]);   
@@ -79,6 +78,11 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
             else if (data.next_do == NextMoveType.STOP) break;
             counter ++;
         }
+    }
+
+    function clear_way() {        
+        way_intervals.splice(0, way_intervals.length);
+        way_total_length = 0;
     }
 
     function _get_correction_angle(pos: Point, vertice: Point, way_req: Segment) {
@@ -628,7 +632,7 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
         return current_pos;
     }
 
-    function get_predicted_way() {
+    function get_way() {
         return way_intervals;
     }
 
@@ -641,7 +645,7 @@ export function PathFinder(settings: PlayerMovementSettings, _obstacles?: Segmen
     }
 
     return { get_next_pos, set_current_pos, get_current_pos, set_obstacles,
-        find_closest_obstacle_use_offsets, linear_move, bypass_vertice, slide_obstacle, get_predicted_way, get_way_length,
-        update_predicted_way, make_collision_way, enable_obstacles, check_obstacles_enabled }
+        find_closest_obstacle_use_offsets, linear_move, bypass_vertice, slide_obstacle, get_way, get_way_length,
+        update_way, clear_way, make_collision_way, enable_obstacles, check_obstacles_enabled }
 }
 

@@ -99,10 +99,7 @@ export async function run_scene_light() {
     if (game_mode) {
         const movement_settings: PlayerMovementSettings = {
             ...default_settings,
-            pointer_control: PointerControl.FP,
             collision_radius: 2,
-            max_try_dist: 0.5,
-            target_stop_distance: 0.2,
             speed: { WALK: 18 },
             blocked_move_min_dist: 0.01,
             debug: true,

@@ -60,12 +60,9 @@ export async function run_scene_digg() {
     if (game_mode) {
         const movement_settings: PlayerMovementSettings = {
             ...default_settings,
-            pointer_control: PointerControl.FP,
             collision_radius: 2,
             block_move_min_angle: 25 * Math.PI / 180,
-            max_try_dist: 0.5,
             speed: { WALK: 26 },
-            target_stop_distance: 0.2,
             blocked_move_min_dist: 0.01,
             min_update_interval: 0.3,
             debug: true,
