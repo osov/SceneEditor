@@ -270,6 +270,10 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
                 if (!is_pointer_down)
                     return;
                 update_pointer_position(e);
+                const current_pos = point(model.position.x, model.position.y);
+                const dist = current_pos.distanceTo(target)[0];
+                is_in_target = (dist <= target_error) ? true : false;
+                if (!is_in_target) has_target = true;
             });
             EventBus.on('SYS_ON_UPDATE', (e) => handle_update_follow_pointer(e.dt));
         }
@@ -283,7 +287,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
             });
             
             EventBus.on('SYS_INPUT_POINTER_MOVE', (e) => {
-                update_stick_direction(e)
+                update_stick_direction(e);
             });
     
             EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
