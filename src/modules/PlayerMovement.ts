@@ -71,13 +71,13 @@ export const default_settings: PlayerMovementSettings = {
     max_predicted_way_intervals: 10,
     predicted_way_lenght_mult: 1.5,
     collision_min_error: 0.001,
-    min_required_way: 0.6,
-    min_awailable_way: 0.5,
-    min_idle_time: 0.4,
-    min_target_change: 3,
+    min_required_way: 0.8,
+    min_awailable_way: 0.8,
+    min_idle_time: 0.7,
+    min_target_change: 1.5,
     pointer_control: PointerControl.FP,
     keys_control: true,
-    target_stop_distance: 1,
+    target_stop_distance: 0.5,
     model_layer: 15, 
     animation_names: {IDLE: "idle", WALK: "walk"},
     update_interval: 2.5,
@@ -413,6 +413,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
         function stop_movement() {
             is_moving = false;
             model.set_animation(animations.IDLE);
+            PF.clear_way();
             has_target = false;
         }
 

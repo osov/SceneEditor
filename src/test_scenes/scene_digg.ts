@@ -61,10 +61,7 @@ export async function run_scene_digg() {
         const movement_settings: PlayerMovementSettings = {
             ...default_settings,
             collision_radius: 2,
-            block_move_min_angle: 25 * Math.PI / 180,
             speed: { WALK: 26 },
-            blocked_move_min_dist: 0.01,
-            min_update_interval: 0.3,
             debug: true,
         }
         const obstacles = load_obstacles(map_data);
