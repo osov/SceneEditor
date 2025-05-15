@@ -4,9 +4,16 @@ import { URL_PATHS } from "../modules_editor/modules_editor_const";
 import { get_all_tiled_textures, get_depth, MapData, preload_tiled_textures } from "../render_engine/parsers/tile_parser";
 import { IObjectTypes } from "../render_engine/types";
 import { default_settings, load_obstacles, MovementLogic, PlayerMovementSettings, PointerControl } from "../modules/PlayerMovement";
-
-const SORT_LAYER = 7;
-const SUB_SCALAR = WORLD_SCALAR;
+import { Vector2 } from "three";
+import { randInt, randFloat } from "three/src/math/MathUtils.js";
+import { AnimatedMesh } from "../render_engine/objects/animated_mesh";
+import { Slice9Mesh } from "../render_engine/objects/slice9";
+import { get_rand_stone, get_rand_size, Scanner } from "./scaner_manager";
+import { createHolesManager } from "./holes_manager";
+let scaner: ReturnType<typeof Scanner>;
+let hole_manager: ReturnType<typeof createHolesManager>;
+const cells: Vector2[] = [];
+const hole_scale = 10;
 export async function run_scene_digg() {
     (window as any).get_depth = get_depth;
 
@@ -28,33 +35,74 @@ export async function run_scene_digg() {
     map_data.objects.push(physic_layer as any);
     preload_tiled_textures(map_data);
 
-    const size = 10;
-    const scale = 256 * SUB_SCALAR;
-    for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-            const spr = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: scale, height: scale });
-            spr.set_texture('1_17');
-            spr.set_position((x-size/2)*scale,(y-size/2)*scale);
-            SceneManager.add(spr); 
-        }
-        
+    await AssetControl.open_scene('/digg.scn');
+    const tiles = SceneManager.get_mesh_by_id(1)!;
+    for (let i = 0; i < tiles.children.length; i++) {
+        const it = tiles.children[i] as Slice9Mesh;
+        it.set_texture('Cla_1');
+    }
+
+    scaner = Scanner();
+    hole_manager = createHolesManager(hole_scale);
+
+    const am = SceneManager.get_mesh_by_id(102)! as AnimatedMesh;
+
+
+    const parent = SceneManager.get_mesh_by_id(121)!;
+    for (let i = 0; i < parent.children.length; i++) {
+        const it = parent.children[i] as Slice9Mesh;
+        it.set_alpha(0);
+        it.set_texture(get_rand_stone());
+        const size = get_rand_size();
+        it.set_size(size, size);
+        scaner.add_item({position:new Vector2(it.position.x, it.position.y)});
+        cells.push(new Vector2(it.position.x, it.position.y));
     }
 
 
-    const am = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * SUB_SCALAR, height: 50 * SUB_SCALAR });
-    const x = 0 * SUB_SCALAR;
-    const y = 0 * SUB_SCALAR;
-    const z = get_depth(x, y, SORT_LAYER, 50 * SUB_SCALAR, 50 * SUB_SCALAR);
-    am.set_mesh('Unarmed Idle');
-    am.children[0].scale.setScalar(1 / 100 * SUB_SCALAR);
-    am.add_animation('Unarmed Idle', 'idle');
-    am.add_animation('Unarmed Run Forward', 'walk');
-    am.set_texture('PolygonExplorers_Texture_01_A')
-    am.rotateX(30 / 180 * Math.PI)
-    am.position.set(x, y, z)
-    SceneManager.add(am);
+    const size = 20;
 
-    ControlManager.update_graph(true, 'digg');
+    for (let x = 0; x < size; x++) {
+        for (let y = 0; y < size; y++) {
+            if (randInt(1, 100) > 70) {
+                const v = new Vector2((x - size / 2) * hole_scale, (y - size / 2) * hole_scale);
+
+                let is_ok = true;
+                for (let i = 0; i < cells.length; i++) {
+                    const cell = cells[i];
+                    if (cell.distanceTo(v) < hole_scale * 0.75) {
+                        is_ok = false;
+                    }
+                }
+                if (is_ok)
+                    cells.push(v);
+                
+            }
+        }
+    }
+
+    for (let i = 0; i < cells.length; i++) {
+        const v = cells[i];
+        hole_manager.add(v.x, v.y);
+        //const m = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: hole_scale * 0.9, height: hole_scale * 0.9 });
+        //m.set_position(v.x, v.y, 3511);
+        //m.set_texture('h5');
+        //SceneManager.add(m);
+    }
+
+
+    EventBus.on('SYS_ON_UPDATE', (e) => {
+        scaner.update(e.dt);
+        hole_manager.update(e.dt);
+    });
+
+    EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
+        if (e.button == 2)
+            scaner.do_scan(am.position.x, am.position.y);
+        if (e.button == 1)
+           hole_manager.toggle_cells();
+    });
+
 
     let game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';
     if (game_mode) {
@@ -62,7 +110,7 @@ export async function run_scene_digg() {
             ...default_settings,
             collision_radius: 2,
             speed: { WALK: 26 },
-            debug: true,
+            debug: !true,
         }
         const obstacles = load_obstacles(map_data);
         const move_logic = MovementLogic(movement_settings);
@@ -75,5 +123,7 @@ export async function run_scene_digg() {
         })
     }
 
-    // console.log(JSON.stringify(SceneManager.save_scene()));
 }
+
+
+

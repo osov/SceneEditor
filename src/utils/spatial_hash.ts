@@ -1,4 +1,4 @@
-export type Aabb = { id: string; x: number; y: number; width: number; height: number };
+export type Aabb = { id: string|number; x: number; y: number; width: number; height: number };
 
 export function createSpatialHash(cell_size: number) {
     const grid: Record<string, Aabb[]> = {};

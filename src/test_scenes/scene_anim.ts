@@ -85,7 +85,7 @@ export async function run_scene_anim() {
             ...default_settings,
             collision_radius: 2,
             speed: { WALK: 26 },
-            debug: true,
+            debug: !true,
         }
         const obstacles = load_obstacles(map_data);
         const move_logic = MovementLogic(movement_settings);
