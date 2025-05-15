@@ -87,15 +87,13 @@ function convert(data: IBaseEntityData[], nodes: INodesList) {
         const mesh = entity.other_data as any;
         switch (entity.type) {
             case IObjectTypes.GO_CONTAINER:
-                const go_pos = new Vector3().fromArray(entity.position);
-                go_pos.z = Math.max(-15000, Math.min(4999, go_pos.z));
                 nodes.list.push({
                     type: NodeType.GO,
                     data: {
                         id: entity.id,
                         pid: entity.pid,
                         name: entity.name,
-                        position: go_pos,
+                        position: new Vector3().fromArray(entity.position),
                         rotation: new Vector3().fromArray(entity.rotation),
                         scale: new Vector3().fromArray(entity.scale)
                     }
@@ -103,8 +101,6 @@ function convert(data: IBaseEntityData[], nodes: INodesList) {
                 break;
 
             case IObjectTypes.GO_SPRITE_COMPONENT:
-                const sprite_pos = new Vector3().fromArray(entity.position);
-                sprite_pos.z = Math.max(-15000, Math.min(4999, sprite_pos.z));
                 const sprite_info = mesh?.material_uniforms?.u_texture;
                 const sprite_atlas = sprite_info ? sprite_info.split('/')[0] : '';
                 const sprite_texture = sprite_info ? sprite_info.split('/')[1] : '';
@@ -114,7 +110,7 @@ function convert(data: IBaseEntityData[], nodes: INodesList) {
                         id: entity.id,
                         pid: entity.pid,
                         name: entity.name,
-                        position: sprite_pos,
+                        position: new Vector3().fromArray(entity.position),
                         rotation: new Vector3().fromArray(entity.rotation),
                         scale: new Vector3().fromArray(entity.scale),
                         width: mesh.size ? mesh.size[0] : 100,
@@ -129,15 +125,13 @@ function convert(data: IBaseEntityData[], nodes: INodesList) {
                 break;
 
             case IObjectTypes.GO_LABEL_COMPONENT:
-                const label_pos = new Vector3().fromArray(entity.position);
-                label_pos.z = Math.max(-15000, Math.min(4999, label_pos.z));
                 nodes.list.push({
                     type: NodeType.LABEL,
                     data: {
                         id: entity.id,
                         pid: entity.pid,
                         name: entity.name,
-                        position: label_pos,
+                        position: new Vector3().fromArray(entity.position),
                         rotation: new Vector3().fromArray(entity.rotation),
                         scale: new Vector3().fromArray(entity.scale),
                         width: mesh.size ? mesh.size[0] : 100,
@@ -165,8 +159,6 @@ function convert(data: IBaseEntityData[], nodes: INodesList) {
                 break;
 
             case IObjectTypes.GUI_BOX:
-                const box_pos = new Vector3().fromArray(entity.position);
-                box_pos.z = Math.max(-15000, Math.min(4999, box_pos.z));
                 const box_info = mesh?.material_uniforms?.u_texture;
                 const box_atlas = box_info ? box_info.split('/')[0] : undefined;
                 const box_texture = box_info ? box_info.split('/')[1] : undefined;
@@ -177,7 +169,7 @@ function convert(data: IBaseEntityData[], nodes: INodesList) {
                         id: entity.id,
                         pid: entity.pid,
                         name: entity.name,
-                        position: box_pos,
+                        position: new Vector3().fromArray(entity.position),
                         rotation: new Vector3().fromArray(entity.rotation),
                         scale: new Vector3().fromArray(entity.scale),
                         width: mesh.size[0],
@@ -197,15 +189,13 @@ function convert(data: IBaseEntityData[], nodes: INodesList) {
                 break;
 
             case IObjectTypes.GUI_TEXT:
-                const text_pos = new Vector3().fromArray(entity.position);
-                text_pos.z = Math.max(-15000, Math.min(4999, text_pos.z));
                 nodes.list.push({
                     type: NodeType.GUI_TEXT,
                     data: {
                         id: entity.id,
                         pid: entity.pid,
                         name: entity.name,
-                        position: text_pos,
+                        position: new Vector3().fromArray(entity.position),
                         rotation: new Vector3().fromArray(entity.rotation),
                         scale: new Vector3().fromArray(entity.scale),
                         width: mesh.size ? mesh.size[0] : 100,

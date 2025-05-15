@@ -5,7 +5,7 @@ nodes {
   position { 
     x: -15 
     y: -420 
-    z: 4999 
+    z: 9000 
     w: 1 
      
    } 
