@@ -63,7 +63,7 @@ embedded_instances {
   children: "AtticBig"
   children: "Антена"
   children: "Физика"
-  data: ""
+  data: "embedded_components { \n  id: \"Label\"\n  position { \n    x: 0 \n    y: 0 \n    z: 0 \n     \n   } \n  rotation { \n    x: 0 \n    y: 0 \n    z: 0 \n    w: 1 \n     \n   } \n  scale { \n    x: 1 \n    y: 1 \n    z: 1 \n     \n   } \n  type: \"label\"\n  data: \"text: \\\"Label\\\"\\nfont: \\\"/assets/ShantellSans-Light11.font\\\"\\nsize { \\n  x: 100 \\n  y: 100 \\n  z: 0 \\n  w: 1 \\n   \\n } \\nscale { \\n  x: 1 \\n  y: 1 \\n  z: 1 \\n  w: 1 \\n   \\n } \\ncolor { \\n  x: 1 \\n  y: 1 \\n  z: 1 \\n   \\n } \\noutline { \\n  x: 0 \\n  y: 0 \\n  z: 0 \\n   \\n } \\nshadow { \\n  x: 0 \\n  y: 0 \\n  z: 0 \\n   \\n } \\nleading: 0.7 \\ntracking: 0 \\npivot: 0 \\nblend_mode: 0 \\nline_break: true \\nmaterial: \\\"/builtins/fonts/label-df.material\\\"\\n\"\n   \n } \n"
    
  } 
 embedded_instances { 

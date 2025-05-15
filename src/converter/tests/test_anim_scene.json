@@ -24,6 +24,33 @@
         "other_data": {},
         "children": [
             {
+                "id": 444234,
+                "pid": 1,
+                "type": "label",
+                "name": "Label",
+                "visible": true,
+                "position": [
+                    0,
+                    0,
+                    0
+                ],
+                "rotation": [
+                    0,
+                    0,
+                    0,
+                    1
+                ],
+                "scale": [
+                    1,
+                    1,
+                    1
+                ],
+                "other_data": {
+                    "text": "Label",
+                    "font": "ShantellSans-Light11"
+                }
+            },
+            {
                 "id": 2,
                 "pid": 1,
                 "type": "go",
@@ -97630,6 +97657,37 @@
                     "slice_height": 8
                 },
                 "children": [
+                    {
+                        "id": 22132342,
+                        "pid": 2209,
+                        "type": "text",
+                        "name": "text",
+                        "visible": true,
+                        "position": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "rotation": [
+                            0,
+                            0,
+                            0,
+                            1
+                        ],
+                        "scale": [
+                            1,
+                            1,
+                            1
+                        ],
+                        "other_data": {
+                            "size": [
+                                230,
+                                50
+                            ],
+                            "text": "Hello",
+                            "font": "ShantellSans-Light11"
+                        }
+                    },
                     {
                         "id": 2210,
                         "pid": 2209,

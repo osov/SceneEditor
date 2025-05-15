@@ -1,0 +1,5 @@
+font: "/assets/ShantellSans-Light11.ttf"
+material: "/builtins/fonts/font-df.material"
+output_format: 1 
+size: 32 
+all_chars: true 

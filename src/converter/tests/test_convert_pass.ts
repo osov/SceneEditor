@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import { Vector3 } from "three";
 import { INodesList, NodeData, NodeType } from "../convert_types";
-import { DefoldData, DefoldType, parseAtlas, parseScene } from "../scene_parser";
+import { DefoldData, DefoldType, parseAtlas, parseFont, parseScene } from "../scene_parser";
 import { IBaseEntityData, IObjectTypes } from '../../render_engine/types';
 import { TRecursiveDict } from '../../modules_editor/modules_editor_const';
 
@@ -79,6 +79,19 @@ function pass() {
         }));
     }
 
+    main.list.forEach((node) => {
+        if (node.type != NodeType.LABEL) {
+            return;
+        }
+
+        const font = (node.data as any).font.replace('.font', '.ttf');
+        const size = (node.data as any).font_size;
+        result.push(parseFont({
+            font: font,
+            size: size
+        }));
+    });
+
     generateFiles(result, `${__dirname}/test_anim_scene_project`);
 }
 
@@ -139,6 +152,7 @@ function convert(data: IBaseEntityData[], nodes: INodesList) {
                         color: mesh.color,
                         text: mesh.text,
                         font: `/assets/${mesh.font}.font`,
+                        font_size: mesh.font_size ?? 32,
                         line_break: true,
                         outline: "#000000",
                         shadow: "#000000",

@@ -123,6 +123,7 @@ export interface ISprite extends INodeBase {
 export interface ILabel extends INodeBase {
     text: string;
     font: string;
+    font_size: number;
     line_break: boolean;
     outline: string; // hex формат #RRGGBB
     shadow: string; // hex формат #RRGGBB
