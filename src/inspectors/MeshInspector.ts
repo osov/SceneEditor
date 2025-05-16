@@ -1340,7 +1340,6 @@ function MeshInspectorCreate() {
         const [isChangedX, isChangedY, isChangedZ] = getChangedInfo(info);
 
         const pos = info.data.event.value as Vector3;
-        log('UPDATE POSITION:', pos);
         const averagePoint = new Vector3();
         averagePoint.copy(pos);
 

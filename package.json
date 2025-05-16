@@ -40,7 +40,7 @@
     "ts-browser-helpers": "^0.16.3",
     "tweakpane": "4.0.5",
     "tweakpane4-extended-boolean-plugin": "^0.0.5",
-    "tweakpane4-extended-vector-plugin": "^1.0.0",
+    "tweakpane4-extended-vector-plugin": "^1.0.1",
     "tweakpane4-image-list-plugin": "1.1.5",
     "tweakpane4-search-list-plugin": "2.0.3",
     "tweakpane4-item-list-plugin": "1.0.4"
