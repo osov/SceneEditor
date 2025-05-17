@@ -447,6 +447,9 @@ function InspectorModule() {
                     // для чекбокса если между обьектами разные значения
                     unique_fields[index].data.value = false;
                     unique_fields[index].data.params = { disabled: true };
+                } else if (field.type == PropertyType.SLIDER) {
+                    const min = (unique_fields[index].data.params as PropertyParams[PropertyType.SLIDER]).min;
+                    unique_fields[index].data.value = min;
                 } else {
                     // в ином случае просто убираем поле
                     unique_fields.splice(index, 1);
