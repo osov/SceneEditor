@@ -2,7 +2,7 @@
 import { Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
-import { IBaseEntityAndThree, IBaseEntityData, IBaseMeshAndThree, IObjectTypes } from "./types";
+import { IBaseEntityAndThree, IBaseEntityData, IObjectTypes } from "./types";
 import { TextMesh } from "./objects/text";
 import { deepClone } from "../modules/utils";
 import { GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
@@ -10,6 +10,7 @@ import { AnimatedMesh } from "./objects/animated_mesh";
 import { EntityBase } from "./objects/entity_base";
 import { Component } from "./components/container_component";
 import { FLOAT_PRECISION } from "../config";
+import { Tween } from "@tweenjs/tween.js";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -20,7 +21,6 @@ export function register_scene_manager() {
 }
 
 type IMeshTypes = {
-
     [IObjectTypes.EMPTY]: EntityBase,
     [IObjectTypes.ENTITY]: EntityBase,
     [IObjectTypes.SLICE9_PLANE]: Slice9Mesh,
@@ -36,13 +36,12 @@ type IMeshTypes = {
     [IObjectTypes.GO_MODEL_COMPONENT]: AnimatedMesh,
 
     [IObjectTypes.COMPONENT]: Component
-
-
-
 }
 
 export function SceneManagerModule() {
     const scene = RenderEngine.scene;
+    const mesh_properties_to_tween: { [key in number]: { [key: string]: Tween } } = {};
+
     let id_counter = 0;
 
     function get_unique_id() {
@@ -276,6 +275,57 @@ export function SceneManagerModule() {
         return null;
     }
 
+    function set_mesh_property_tween(id: number, property: string, tween: Tween) {
+        if (!mesh_properties_to_tween[id]) mesh_properties_to_tween[id] = {};
+        mesh_properties_to_tween[id][property] = tween;
+    }
+
+    function remove_mesh_property_tween(id: number, property: string) {
+        const properties = mesh_properties_to_tween[id];
+        if (!properties) {
+            Log.error(`Not found mesh properties tweens by id ${id}`);
+            return null;
+        }
+
+        delete properties[property];
+    }
+
+    function remove_all_mesh_properties_tweens(id: number) {
+        const properties = mesh_properties_to_tween[id];
+        if (!properties) {
+            Log.error(`Not found mesh properties tweens by id ${id}`);
+            return null;
+        }
+
+        Object.keys(properties).forEach((property) => delete properties[property]);
+    }
+
+    function get_mesh_property_tween(id: number, property: string) {
+        const properties = mesh_properties_to_tween[id];
+        if (!properties) {
+            Log.error(`Not found mesh properties tweens by id ${id}`);
+            return null;
+        }
+
+        const tween = properties[property];
+        if (!tween) {
+            Log.error(`Not found tween by property ${property}`);
+            return null;
+        }
+
+        return tween;
+    }
+
+    function get_all_mesh_properties_tweens(id: number) {
+        const properties = mesh_properties_to_tween[id];
+        if (!properties) {
+            Log.error(`Not found mesh properties tweens by id ${id}`);
+            return null;
+        }
+
+        return Object.values(properties);
+    }
+
     function move_mesh_id(id: number, pid = -1, next_id = -1) {
         const mesh = get_mesh_by_id(id);
         if (mesh)
@@ -415,6 +465,11 @@ export function SceneManagerModule() {
         add_to_mesh,
         remove,
         get_mesh_by_id,
+        set_mesh_property_tween,
+        remove_mesh_property_tween,
+        remove_all_mesh_properties_tweens,
+        get_mesh_property_tween,
+        get_all_mesh_properties_tweens,
         move_mesh,
         move_mesh_id,
         find_next_id_mesh,
