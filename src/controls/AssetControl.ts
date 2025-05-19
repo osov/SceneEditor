@@ -1091,12 +1091,20 @@ function AssetControlCreate() {
         ControlManager.update_graph(true, current_scene.name);
     }
 
-    async function loadPartOfSceneInPos(pathToScene: string, position: Vector3, rotation?: Quaternion, scale?: Vector3, with_check = false) {
+    async function loadPartOfSceneInPos(
+        pathToScene: string,
+        position: Vector3,
+        rotation?: Quaternion,
+        scale?: Vector3,
+        with_check = false
+    ) {
         const resp = await ClientAPI.get_data(pathToScene);
         if (!resp || resp.result === 0 || !resp.data)
             return Popups.toast.error(`Не удалось получить данные: ${resp.message}`);
         const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
+
         if (with_check) {
+            // NOTE: проверяем, что в файле сцены нет вложенных GO
             const is_more_than_one_object = data.scene_data.length > 1;
             if (is_more_than_one_object) return null
             if (data.scene_data[0].children != undefined) {
@@ -1107,10 +1115,34 @@ function AssetControlCreate() {
                 }
             }
         }
+
         let root: IBaseEntityAndThree | null = null;
         for (let i = 0; i < data.scene_data.length; i++) {
             const obj_data = data.scene_data[i];
             const obj = SceneManager.deserialize_mesh(obj_data, false);
+
+            // NOTE: ищем уникальное имя для root и всех его детей
+            const baseName = obj_data.name;
+            let counter = 1;
+            let uniqueName = baseName; //`${baseName}_${Date.now()}`;
+            while (SceneManager.get_mesh_id_by_name(uniqueName)) {
+                uniqueName = `${baseName}_${counter}`;
+                counter++;
+            }
+            SceneManager.set_mesh_name(obj, uniqueName);
+            obj.traverse((child) => {
+                if (child !== obj && child.name) {
+                    const childBaseName = child.name;
+                    let childCounter = 1;
+                    let childUniqueName = childBaseName;
+                    while (SceneManager.get_mesh_id_by_name(childUniqueName)) {
+                        childUniqueName = `${childBaseName}_${childCounter}`;
+                        childCounter++;
+                    }
+                    SceneManager.set_mesh_name(child as any, childUniqueName);
+                }
+            });
+
             obj.set_position(position.x, position.y, position.z);
             // TODO: set_rotation нету в EntityBase
             // if (rotation) obj.set_rotation(rotation);

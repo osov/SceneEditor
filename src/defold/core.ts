@@ -654,6 +654,46 @@ function go_module() {
         SceneManager.remove(url_to_id(url));
     }
 
+    function applyPlayback(tween: TWEEN.Tween, playback: string) {
+        switch (playback) {
+            case PLAYBACK_ONCE_PINGPONG:
+                tween.yoyo(true).repeat(1);
+                break;
+            case PLAYBACK_LOOP_FORWARD:
+                tween.repeat(Infinity);
+                break;
+            case PLAYBACK_LOOP_BACKWARD:
+                tween.repeat(Infinity);
+                break;
+            case PLAYBACK_LOOP_PINGPONG:
+                tween.yoyo(true).repeat(Infinity);
+                break;
+        }
+    }
+
+    function get_nested_property(obj: any, path: string): any {
+        const parts = path.split('.');
+        let current = obj;
+        for (const part of parts) {
+            if (current === undefined || current === null) return undefined;
+            current = current[part];
+        }
+        return current;
+    }
+
+    function set_nested_property(obj: any, path: string, value: any): void {
+        const parts = path.split('.');
+        let current = obj;
+        for (let i = 0; i < parts.length - 1; i++) {
+            const part = parts[i];
+            if (current[part] === undefined || current[part] === null) {
+                current[part] = {};
+            }
+            current = current[part];
+        }
+        current[parts[parts.length - 1]] = value;
+    }
+
     function animate(
         url: string,
         property: string,
@@ -670,45 +710,29 @@ function go_module() {
             Log.error(`Mesh with url ${url} not found`);
             return;
         }
+
+        const currentValue = get_nested_property(mesh, property);
+        if (currentValue === undefined) {
+            Log.error(`Property ${property} not found on mesh`);
+            return;
+        }
+
         const is_backward = playback == go.PLAYBACK_ONCE_BACKWARD || playback == go.PLAYBACK_LOOP_BACKWARD;
-        const obj = { [property]: is_backward ? to : (mesh as any)[property] };
+        const obj = { value: is_backward ? to : currentValue };
         const tween = new TWEEN.Tween(obj)
-            .to({ [property]: is_backward ? (mesh as any)[property] : to }, duration)
+            .to({ value: is_backward ? currentValue : to }, duration)
             .onUpdate(() => {
-                (mesh as any)[property] = obj[property];
+                set_nested_property(mesh, property, obj.value);
             })
             .delay(delay)
             .easing(EASING_MAP[easing] ?? TWEEN.Easing.Linear.None)
             .onComplete((_: { [key: string]: any }) => {
-                if (complete_function) complete_function(mesh, url, property);
                 TweenManager.remove_mesh_property_tween(mesh_id, property);
+                if (complete_function) complete_function(mesh, url, property);
             });
         applyPlayback(tween, playback);
         TweenManager.set_mesh_property_tween(mesh_id, property, tween);
         tween.start();
-    }
-
-    function applyPlayback(tween: TWEEN.Tween, playback: string) {
-        switch (playback) {
-            case PLAYBACK_ONCE_FORWARD:
-                tween.repeat(0).yoyo(false);
-                break;
-            case PLAYBACK_ONCE_BACKWARD:
-                tween.repeat(0).yoyo(false);
-                break;
-            case PLAYBACK_ONCE_PINGPONG:
-                tween.repeat(1).yoyo(true);
-                break;
-            case PLAYBACK_LOOP_FORWARD:
-                tween.repeat(Infinity).yoyo(false);
-                break;
-            case PLAYBACK_LOOP_BACKWARD:
-                tween.repeat(Infinity).yoyo(false);
-                break;
-            case PLAYBACK_LOOP_PINGPONG:
-                tween.repeat(Infinity).yoyo(true);
-                break;
-        }
     }
 
     function cancel_animations(url: string, property?: string) {

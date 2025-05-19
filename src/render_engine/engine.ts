@@ -63,7 +63,6 @@ export function RenderEngineModule() {
         if (resize_renderer_to_display_size(renderer))
             on_resize();
         EventBus.trigger('SYS_ON_UPDATE', { dt: delta }, false);
-        TWEEN.update(delta);
         if (_is_active_render) {
             renderer.clear();
             renderer.render(scene, camera);

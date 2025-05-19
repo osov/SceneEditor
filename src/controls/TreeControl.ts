@@ -1234,7 +1234,7 @@ function TreeControlCreate() {
 
 
 
-    function addNodeTexture(event: any, isPos: boolean, icon: string = '', id: number = -1) {
+    async function addNodeTexture(event: any, isPos: boolean, icon: string = '', id: number = -1) {
         const data = event.dataTransfer.getData("text/plain");
 
         // Перетаскиваемый ассет может быть не текстурой, а сохранённым в файл .scn графом сцены
@@ -1242,7 +1242,8 @@ function TreeControlCreate() {
         if (asset_type == ASSET_SCENE_GRAPH) {
             const mouseUpPos = getMousePos(event);
             const path = event.dataTransfer.getData("path");
-            AssetControl.loadPartOfSceneInPos(path, mouseUpPos);
+            await AssetControl.loadPartOfSceneInPos(path, mouseUpPos);
+            ControlManager.update_graph();
             return;
         }
 
