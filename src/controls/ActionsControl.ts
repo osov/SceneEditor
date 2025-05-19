@@ -282,7 +282,9 @@ function ActionsControlCreate() {
             if (namesMap[baseName]) {
                 namesMap[baseName]++;
                 const mesh = SceneManager.get_mesh_by_id(item.id);
-                if (mesh) mesh.name = baseName + ` (${namesMap[baseName] - 1})`;
+                if (mesh) {
+                    SceneManager.set_mesh_name(mesh, baseName + ` (${namesMap[baseName] - 1})`);
+                }
             } else {
                 namesMap[baseName] = 1;
             }

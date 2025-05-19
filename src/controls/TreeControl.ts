@@ -2,7 +2,7 @@ import { deepClone } from "../modules/utils";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui, componentsGo, paramsTexture } from "./ActionsControl";
 import { IBaseEntityData, IObjectTypes } from '../render_engine/types';
-import { Vector2 } from "three";
+import { Vector2, Vector3 } from "three";
 import { ASSET_SCENE_GRAPH, TDictionary } from "../modules_editor/modules_editor_const";
 import { DEFOLD_LIMITS } from "../config";
 import { ComponentType } from "../render_engine/components/container_component";
@@ -1232,8 +1232,9 @@ function TreeControlCreate() {
         addNodeTexture(event, true);
     }
 
-    function addNodeTexture(event: any, isPos: boolean, icon: string = '', id: number = -1) {
 
+
+    function addNodeTexture(event: any, isPos: boolean, icon: string = '', id: number = -1) {
         const data = event.dataTransfer.getData("text/plain");
 
         // Перетаскиваемый ассет может быть не текстурой, а сохранённым в файл .scn графом сцены
@@ -1241,17 +1242,7 @@ function TreeControlCreate() {
         if (asset_type == ASSET_SCENE_GRAPH) {
             const mouseUpPos = getMousePos(event);
             const path = event.dataTransfer.getData("path");
-            ClientAPI.get_data(path).then((resp) => {
-                if (resp.result) {
-                    const data = JSON.parse(resp.data!) as unknown as TDictionary<IBaseEntityData[]>;
-                    for (let i = 0; i < data.scene_data.length; i++) {
-                        const obj_data = data.scene_data[i];
-                        const obj = SceneManager.deserialize_mesh(obj_data, false);
-                        obj.set_position(mouseUpPos.x, mouseUpPos.y);
-                        SceneManager.add(obj);
-                    }
-                }
-            })
+            AssetControl.loadPartOfSceneInPos(path, mouseUpPos);
             return;
         }
 
@@ -1460,5 +1451,4 @@ function TreeControlCreate() {
 
 
     return { draw_graph, preRename, setCutList, paintIdentical };
-
 }

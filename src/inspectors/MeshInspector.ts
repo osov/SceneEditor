@@ -1125,7 +1125,7 @@ function MeshInspectorCreate() {
                 Log.error('[updateName] Mesh not found for id:', item.mesh_id);
                 return;
             }
-            mesh.name = item.value;
+            SceneManager.set_mesh_name(mesh, item.value);
             ControlManager.update_graph();
         }
     }

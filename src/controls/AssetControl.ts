@@ -11,9 +11,9 @@ import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction } from "./ActionsControl";
 import { api } from "../modules_editor/ClientAPI";
-import { IBaseEntityData } from "../render_engine/types";
+import { IBaseEntityAndThree, IBaseEntityData } from "../render_engine/types";
 import { get_file_name } from "../render_engine/helpers/utils";
-import { LOD } from "three";
+import { Quaternion, Vector3 } from "three";
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
 }
@@ -1091,6 +1091,38 @@ function AssetControlCreate() {
         ControlManager.update_graph(true, current_scene.name);
     }
 
+    async function loadPartOfSceneInPos(pathToScene: string, position: Vector3, rotation?: Quaternion, scale?: Vector3, with_check = false) {
+        const resp = await ClientAPI.get_data(pathToScene);
+        if (!resp || resp.result === 0 || !resp.data)
+            return Popups.toast.error(`Не удалось получить данные: ${resp.message}`);
+        const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
+        if (with_check) {
+            const is_more_than_one_object = data.scene_data.length > 1;
+            if (is_more_than_one_object) return null
+            if (data.scene_data[0].children != undefined) {
+                for (const obj of data.scene_data[0].children) {
+                    if (["sprite", "text", "lable"].includes(obj.type))
+                        continue;
+                    return Popups.toast.error(`${pathToScene} не может быть создан, так как он содержит вложенные GO`);
+                }
+            }
+        }
+        let root: IBaseEntityAndThree | null = null;
+        for (let i = 0; i < data.scene_data.length; i++) {
+            const obj_data = data.scene_data[i];
+            const obj = SceneManager.deserialize_mesh(obj_data, false);
+            obj.set_position(position.x, position.y, position.z);
+            // TODO: set_rotation нету в EntityBase
+            // if (rotation) obj.set_rotation(rotation);
+            if (scale) obj.set_scale(scale.x, scale.y);
+            SceneManager.add(obj);
+            if (root == null) {
+                root = obj;
+            }
+        }
+        return root;
+    }
+
     async function save_current_scene(event?: any) {
         if (!current_scene.name && current_dir != undefined) {
             // Если у AssetControl нет данных о текущем открытом файле сцены, создаём новый файл сцены, указаем его 
@@ -1188,7 +1220,7 @@ function AssetControlCreate() {
 
     init();
     return {
-        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene, select_file
+        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene, select_file, loadPartOfSceneInPos
     };
 }
 

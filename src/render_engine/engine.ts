@@ -10,6 +10,8 @@ https://stackoverflow.com/questions/76514035/how-to-render-1000-2d-text-labels-u
 import { Clock, Color, Object3D, OrthographicCamera, PerspectiveCamera, Raycaster, Scene, Vector2, WebGLRenderer, } from 'three'
 import { resize_renderer_to_display_size } from './helpers/window_utils'
 import { CAMERA_FAR, CAMERA_Z, IS_CAMERA_ORTHOGRAPHIC } from '../config';
+import * as TWEEN from '@tweenjs/tween.js';
+
 declare global {
     const RenderEngine: ReturnType<typeof RenderEngineModule>;
 }
@@ -61,6 +63,7 @@ export function RenderEngineModule() {
         if (resize_renderer_to_display_size(renderer))
             on_resize();
         EventBus.trigger('SYS_ON_UPDATE', { dt: delta }, false);
+        TWEEN.update(delta);
         if (_is_active_render) {
             renderer.clear();
             renderer.render(scene, camera);

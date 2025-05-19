@@ -56,8 +56,8 @@ import {
     IDefoldSpineModel,
     IDefoldResource
 } from "./defold_encoder";
-import { eulerToQuaternion, hexToRGB } from "../modules/utils";
-import { PivotX, PivotY } from "../render_engine/types";
+import { eulerToQuaternion, hexToRGB } from "../../modules/utils";
+import { PivotX, PivotY } from "../../render_engine/types";
 
 
 export enum DefoldType {

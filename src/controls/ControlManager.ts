@@ -89,7 +89,7 @@ function ControlManagerCreate() {
             const mesh = SceneManager.get_mesh_by_id(e.id);
             if (!mesh) return Log.error('mesh is null', e.id);
             HistoryControl.add('MESH_NAME', [{ mesh_id: e.id, value: mesh.name }], HistoryOwner.CONTROL_MANAGER);
-            mesh.name = e.name;
+            SceneManager.set_mesh_name(mesh, e.name);
             SelectControl.set_selected_list([mesh]);
             update_graph();
         });
@@ -282,7 +282,7 @@ function ControlManagerCreate() {
             case 'MESH_NAME':
                 for (const data of event.data) {
                     const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
-                    mesh.name = data.value;
+                    SceneManager.set_mesh_name(mesh, data.value);
                     mesh_list.push(mesh);
                 }
                 break;

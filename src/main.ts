@@ -23,6 +23,8 @@ import { register_paint_inspector } from './inspectors/PaintInspector';
 import { register_cmp_mover_inspector } from './inspectors/ComponentMoverInspector';
 import { register_components_control } from './controls/ComponentsControl';
 import { PROJECT_NAME } from './config';
+import { register_lua_core } from './defold/core';
+import { register_tween_manager } from './render_engine/tween_manager';
 
 
 function register_managers() {
@@ -30,6 +32,7 @@ function register_managers() {
     register_engine();
     register_resource_manager();
     register_scene_manager();
+    register_tween_manager();
     RenderEngine.init();
 }
 
@@ -71,6 +74,8 @@ async function run_selected_scene() {
     else
         Log.error('Не передано имя проекта');
 }
+
+register_lua_core();
 
 register_managers();
 register_controls();

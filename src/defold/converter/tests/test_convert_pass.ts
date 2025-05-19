@@ -2,8 +2,8 @@ import * as fs from 'fs';
 import { Vector3 } from "three";
 import { INodesList, NodeData, NodeType } from "../convert_types";
 import { DefoldData, DefoldType, parseAtlas, parseFont, parseScene } from "../scene_parser";
-import { IBaseEntityData, IObjectTypes } from '../../render_engine/types';
-import { TRecursiveDict } from '../../modules_editor/modules_editor_const';
+import { IBaseEntityData, IObjectTypes } from '../../../render_engine/types';
+import { TRecursiveDict } from '../../../modules_editor/modules_editor_const';
 
 import test_scene from './test_anim_scene.json';
 import metadata from './test_anim_scene_project/assets/metadata.json';

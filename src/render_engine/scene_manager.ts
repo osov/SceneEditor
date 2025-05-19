@@ -1,4 +1,3 @@
-
 import { Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
@@ -10,7 +9,7 @@ import { AnimatedMesh } from "./objects/animated_mesh";
 import { EntityBase } from "./objects/entity_base";
 import { Component } from "./components/container_component";
 import { FLOAT_PRECISION } from "../config";
-import { Tween } from "@tweenjs/tween.js";
+import { TDictionary } from "../modules_editor/modules_editor_const";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -40,7 +39,8 @@ type IMeshTypes = {
 
 export function SceneManagerModule() {
     const scene = RenderEngine.scene;
-    const mesh_properties_to_tween: { [key in number]: { [key: string]: Tween } } = {};
+
+    const mesh_name_to_mesh_id: TDictionary<number> = {};
 
     let id_counter = 0;
 
@@ -104,9 +104,18 @@ export function SceneManagerModule() {
             //mesh.set_color('#f00');
         }
 
-        mesh.name = type + mesh.mesh_data.id;
+        set_mesh_name(mesh, type + mesh.mesh_data.id);
         mesh.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
         return mesh as IMeshTypes[T];
+    }
+
+    function set_mesh_name(mesh: IBaseEntityAndThree, name: string) {
+        mesh_name_to_mesh_id[name] = mesh.mesh_data.id;
+        mesh.name = name;
+    }
+
+    function get_mesh_id_by_name(name: string) {
+        return mesh_name_to_mesh_id[name];
     }
 
     function check_id_is_available_or_generate_new(id: number) {
@@ -275,57 +284,6 @@ export function SceneManagerModule() {
         return null;
     }
 
-    function set_mesh_property_tween(id: number, property: string, tween: Tween) {
-        if (!mesh_properties_to_tween[id]) mesh_properties_to_tween[id] = {};
-        mesh_properties_to_tween[id][property] = tween;
-    }
-
-    function remove_mesh_property_tween(id: number, property: string) {
-        const properties = mesh_properties_to_tween[id];
-        if (!properties) {
-            Log.error(`Not found mesh properties tweens by id ${id}`);
-            return null;
-        }
-
-        delete properties[property];
-    }
-
-    function remove_all_mesh_properties_tweens(id: number) {
-        const properties = mesh_properties_to_tween[id];
-        if (!properties) {
-            Log.error(`Not found mesh properties tweens by id ${id}`);
-            return null;
-        }
-
-        Object.keys(properties).forEach((property) => delete properties[property]);
-    }
-
-    function get_mesh_property_tween(id: number, property: string) {
-        const properties = mesh_properties_to_tween[id];
-        if (!properties) {
-            Log.error(`Not found mesh properties tweens by id ${id}`);
-            return null;
-        }
-
-        const tween = properties[property];
-        if (!tween) {
-            Log.error(`Not found tween by property ${property}`);
-            return null;
-        }
-
-        return tween;
-    }
-
-    function get_all_mesh_properties_tweens(id: number) {
-        const properties = mesh_properties_to_tween[id];
-        if (!properties) {
-            Log.error(`Not found mesh properties tweens by id ${id}`);
-            return null;
-        }
-
-        return Object.values(properties);
-    }
-
     function move_mesh_id(id: number, pid = -1, next_id = -1) {
         const mesh = get_mesh_by_id(id);
         if (mesh)
@@ -465,11 +423,6 @@ export function SceneManagerModule() {
         add_to_mesh,
         remove,
         get_mesh_by_id,
-        set_mesh_property_tween,
-        remove_mesh_property_tween,
-        remove_all_mesh_properties_tweens,
-        get_mesh_property_tween,
-        get_all_mesh_properties_tweens,
         move_mesh,
         move_mesh_id,
         find_next_id_mesh,
@@ -482,5 +435,7 @@ export function SceneManagerModule() {
         save_scene,
         load_scene,
         get_scene_list,
+        set_mesh_name,
+        get_mesh_id_by_name,
     };
 }

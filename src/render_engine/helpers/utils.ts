@@ -1,6 +1,8 @@
 import { BufferGeometry, Line, LineDashedMaterial, Object3D, ShaderMaterial, Vector2, Vector3, Vector4, Texture, IUniform, Intersection, Object3DEventMap } from "three";
 import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
 import { deepClone, getObjectHash } from "../../modules/utils";
+import { TextMesh } from "../objects/text";
+import { GoText, GoSprite } from "../objects/sub_types";
 
 
 export function get_basename(path: string) {
@@ -218,4 +220,16 @@ export function get_material_hash(material: ShaderMaterial) {
 
 export function lerp(a: number, b: number, t: number) {
     return a + (b - a) * t;
+}
+
+export function is_text(mesh: Object3D) {
+    return mesh instanceof TextMesh;
+}
+
+export function is_label(mesh: Object3D) {
+    return mesh instanceof GoText;
+}
+
+export function is_sprite(mesh: Object3D) {
+    return mesh instanceof GoSprite;
 }
