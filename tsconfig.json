@@ -3,7 +3,10 @@
     "target": "ESNext",
     "useDefineForClassFields": true,
     "module": "ESNext",
-    "lib": ["ESNext", "DOM"],
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
     "moduleResolution": "bundler",
     "strict": true,
     "sourceMap": true,
@@ -15,7 +18,24 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "skipLibCheck": true,
-    "typeRoots": ["@types", "node_modules/@types"]
+    "baseUrl": ".",
+    "paths": {
+      "@tweenjs/tween.js": [
+        "./node_modules/@tweenjs/tween.js/dist/tween.d.ts"
+      ],
+      "@editor/*": [
+        "./src/*"
+      ],
+    },
+    "typeRoots": [
+      "@types",
+      "node_modules/@types"
+    ]
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "../SceneEditor_ExampleProject/src",
+    "../SceneEditor_Stereo/src",
+    "../SceneEditor_Digg_Scan/src"
+  ]
 }

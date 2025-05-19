@@ -28,7 +28,6 @@
     "@tweenjs/tween.js": "^25.0.0",
     "@types/cookie": "^0.6.0",
     "@types/stats": "^0.16.30",
-    "@types/tween.js": "^18.6.1",
     "bun-serve-router": "^0.0.3",
     "camera-controls": "^2.10.0",
     "cookie": "^1.0.2",

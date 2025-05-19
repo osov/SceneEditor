@@ -32,7 +32,10 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": resolve(__dirname, "./src")
+      '@': resolve(__dirname, "./src"),
+      '@editor': resolve(__dirname, 'src'),
+      'three': resolve(__dirname, 'node_modules/three'),
+      '@tweenjs/tween.js': resolve(__dirname, 'node_modules/@tweenjs/tween.js')
     }
   },
   base: "./",

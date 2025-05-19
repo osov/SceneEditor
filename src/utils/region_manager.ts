@@ -75,7 +75,7 @@ export function createRegionManager(cell_size: number, object_size: number) {
             if (result.length > 0) {
                 for (let j = 0; j < result.length; j++) {
                     const reg = result[j];
-                    on_entered_check(reg.id, it);
+                    on_entered_check(reg.id as string, it);
                     if (!active_regions_data[reg.id])
                         active_regions_data[reg.id] = {};
                     active_regions_data[reg.id][it.id] = true;
