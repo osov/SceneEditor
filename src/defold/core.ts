@@ -66,59 +66,60 @@ declare global {
     }
 
     namespace go {
-        function set_position(id: string, position: vmath.vector3): void
-        function get_position(id: string): vmath.vector3 | null
-        function set_rotation(rotation: vmath.quat, id?: string): void
-        function get_rotation(id: string): vmath.quat | null
-        function set_scale(id: string, scale: vmath.vector3): void
-        function get_scale(id: string): vmath.vector3 | null
-        function set_parent(id: string, parent_id: string): void
-        function get_parent(id: string): string | null
-        function get_world_position(id: string): vmath.vector3 | null
-        function get_world_rotation(id: string): vmath.quat | null
-        function get_world_scale(id: string): vmath.vector3 | null
-        function _delete(url: string): void
-        function animate(id: string, property: string, to: any, easing: string, duration: number, delay?: number, complete_function?: () => void): void
-        function cancel_animations(id: string, property?: string): void
+        export function set_position(id: string, position: vmath.vector3): void
+        export function get_position(id: string): vmath.vector3 | null
+        export function set_rotation(rotation: vmath.quat, id?: string): void
+        export function get_rotation(id: string): vmath.quat | null
+        export function set_scale(id: string, scale: vmath.vector3): void
+        export function get_scale(id: string): vmath.vector3 | null
+        export function set_parent(id: string, parent_id: string): void
+        export function get_parent(id: string): string | null
+        export function get_world_position(id: string): vmath.vector3 | null
+        export function get_world_rotation(id: string): vmath.quat | null
+        export function get_world_scale(id: string): vmath.vector3 | null
+        function _delete(url: string): void; export { _delete as delete };
 
-        const PLAYBACK_ONCE_FORWARD: string;
-        const PLAYBACK_ONCE_BACKWARD: string;
-        const PLAYBACK_ONCE_PINGPONG: string;
-        const PLAYBACK_LOOP_FORWARD: string;
-        const PLAYBACK_LOOP_BACKWARD: string;
-        const PLAYBACK_LOOP_PINGPONG: string;
+        export function animate(id: string, property: string, to: any, easing: string, duration: number, delay?: number, complete_function?: () => void): void
+        export function cancel_animations(id: string, property?: string): void
 
-        const EASING_LINEAR: string;
-        const EASING_INQUAD: string;
-        const EASING_OUTQUAD: string;
-        const EASING_INOUTQUAD: string;
-        const EASING_INCUBIC: string;
-        const EASING_OUTCUBIC: string;
-        const EASING_INOUTCUBIC: string;
-        const EASING_INQUART: string;
-        const EASING_OUTQUART: string;
-        const EASING_INOUTQUART: string;
-        const EASING_INQUINT: string;
-        const EASING_OUTQUINT: string;
-        const EASING_INOUTQUINT: string;
-        const EASING_INSINE: string;
-        const EASING_OUTSINE: string;
-        const EASING_INOUTSINE: string;
-        const EASING_INEXPO: string;
-        const EASING_OUTEXPO: string;
-        const EASING_INOUTEXPO: string;
-        const EASING_INCIRC: string;
-        const EASING_OUTCIRC: string;
-        const EASING_INOUTCIRC: string;
-        const EASING_INELASTIC: string;
-        const EASING_OUTELASTIC: string;
-        const EASING_INOUTELASTIC: string;
-        const EASING_INBACK: string;
-        const EASING_OUTBACK: string;
-        const EASING_INOUTBACK: string;
-        const EASING_INBOUNCE: string;
-        const EASING_OUTBOUNCE: string;
-        const EASING_INOUTBOUNCE: string;
+        export const PLAYBACK_ONCE_FORWARD: string;
+        export const PLAYBACK_ONCE_BACKWARD: string;
+        export const PLAYBACK_ONCE_PINGPONG: string;
+        export const PLAYBACK_LOOP_FORWARD: string;
+        export const PLAYBACK_LOOP_BACKWARD: string;
+        export const PLAYBACK_LOOP_PINGPONG: string;
+
+        export const EASING_LINEAR: string;
+        export const EASING_INQUAD: string;
+        export const EASING_OUTQUAD: string;
+        export const EASING_INOUTQUAD: string;
+        export const EASING_INCUBIC: string;
+        export const EASING_OUTCUBIC: string;
+        export const EASING_INOUTCUBIC: string;
+        export const EASING_INQUART: string;
+        export const EASING_OUTQUART: string;
+        export const EASING_INOUTQUART: string;
+        export const EASING_INQUINT: string;
+        export const EASING_OUTQUINT: string;
+        export const EASING_INOUTQUINT: string;
+        export const EASING_INSINE: string;
+        export const EASING_OUTSINE: string;
+        export const EASING_INOUTSINE: string;
+        export const EASING_INEXPO: string;
+        export const EASING_OUTEXPO: string;
+        export const EASING_INOUTEXPO: string;
+        export const EASING_INCIRC: string;
+        export const EASING_OUTCIRC: string;
+        export const EASING_INOUTCIRC: string;
+        export const EASING_INELASTIC: string;
+        export const EASING_OUTELASTIC: string;
+        export const EASING_INOUTELASTIC: string;
+        export const EASING_INBACK: string;
+        export const EASING_OUTBACK: string;
+        export const EASING_INOUTBACK: string;
+        export const EASING_INBOUNCE: string;
+        export const EASING_OUTBOUNCE: string;
+        export const EASING_INOUTBOUNCE: string;
     }
 
     namespace sprite {
@@ -754,7 +755,7 @@ function go_module() {
         set_position, get_position, set_rotation, get_rotation,
         set_scale, get_scale, set_parent, get_parent,
         get_world_position, get_world_rotation, get_world_scale,
-        _delete, animate, cancel_animations,
+        delete: _delete, animate, cancel_animations,
         PLAYBACK_ONCE_FORWARD, PLAYBACK_ONCE_BACKWARD, PLAYBACK_ONCE_PINGPONG,
         PLAYBACK_LOOP_FORWARD, PLAYBACK_LOOP_BACKWARD, PLAYBACK_LOOP_PINGPONG,
         EASING_LINEAR, EASING_INQUAD, EASING_OUTQUAD, EASING_INOUTQUAD,
