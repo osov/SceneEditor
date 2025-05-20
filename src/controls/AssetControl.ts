@@ -1112,7 +1112,7 @@ function AssetControlCreate() {
 
     function loadPartOfSceneInPos(
         pathToScene: string,
-        position: Vector3,
+        position?: Vector3,
         rotation?: Quaternion,
         scale?: Vector3,
         with_check = false
@@ -1151,7 +1151,7 @@ function AssetControlCreate() {
             }
         });
 
-        root.set_position(position.x, position.y, position.z);
+        if (position) root.set_position(position.x, position.y, position.z);
         // TODO: set_rotation нету в EntityBase
         // if (rotation) obj.set_rotation(rotation);
         if (scale) root.set_scale(scale.x, scale.y);

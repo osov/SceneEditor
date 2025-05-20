@@ -75,11 +75,11 @@ async function run_selected_scene() {
         Log.error('Не передано имя проекта');
 }
 
-register_lua_core();
 
 register_managers();
 register_controls();
 register_inspectors();
+register_lua_core();
 run_selected_scene();
 
 const game_mode = new URLSearchParams(document.location.search).get('is_game') == '1';

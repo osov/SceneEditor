@@ -30,6 +30,7 @@ export function TweenManagerModule() {
         if (!properties) {
             return;
         }
+        properties[property].remove();
         group.remove(properties[property]);
         delete properties[property];
     }
@@ -40,6 +41,7 @@ export function TweenManagerModule() {
             return;
         }
         Object.keys(properties).forEach((property) => {
+            properties[property].remove();
             group.remove(properties[property]);
             delete properties[property]
         });
