@@ -4,9 +4,13 @@ import * as TWEEN from '@tweenjs/tween.js';
 import { IBaseEntityAndThree } from "../render_engine/types";
 import { is_base_mesh, is_label, is_sprite, is_text } from "../render_engine/helpers/utils";
 
-declare global {
-    const json: ReturnType<typeof json_module>
 
+
+declare global {
+    type hash = {};
+    function hash(s: string): hash;
+    
+    const json: ReturnType<typeof json_module>
     function tonumber(e: any, base?: number): number | undefined;
 
     namespace math {
@@ -153,6 +157,10 @@ export function register_lua_core() {
     (window as any).factory = factory_module();
     (window as any).collectionfactory = collectionfactory_module();
     (window as any).msg = msg_module();
+    (window as any).hash = function(s:string) {
+        const id = SceneManager.get_mesh_id_by_name(s); 
+        return {id} as hash; 
+    };
 }
 
 
