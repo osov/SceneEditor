@@ -33,7 +33,7 @@ export function get_hash_by_mesh(mesh: IBaseMeshAndThree) {
         if ('id_object' in tile)
             key = tile.id_object + '';
         else
-            key = tile.id + '_' + tile.x + '.' + tile.y;
+            key = mesh.userData.id_layer + '_' + tile.x + '.' + tile.y;
     }
     return key;
 }

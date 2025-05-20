@@ -80,7 +80,7 @@ function GrassTreeControlCreate() {
         EventBus.on('SYS_INPUT_POINTER_MOVE', (e) => {
             if (Input.is_shift()) {
                 const tmp = filter_intersect_list(RenderEngine.raycast_scene(new Vector2(e.x, e.y)));
-                const list = tmp.filter((m) => (['Flowers_1', 'Flowers_2', 'Flowers_3', 'Flowers_4'].includes(m.get_texture()[0])));
+                const list = tmp.filter((m) => (['Flowers_1', 'Flowers_2', 'Flowers_3', 'Flowers_4',  'Daisies_1', 'Daisies'].includes(m.get_texture()[0])));
                 for (const mesh of list) {
                     gm.activate(mesh as any);
                 }

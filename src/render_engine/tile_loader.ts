@@ -1,8 +1,8 @@
 import { Vector3, Vector2, Line, BufferGeometry, LineBasicMaterial } from "three";
 import { CAMERA_Z, WORLD_SCALAR } from "../config";
-import {  rotate_point } from "./helpers/utils";
+import { rotate_point } from "./helpers/utils";
 import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo } from "./parsers/tile_parser";
-import {  IObjectTypes } from "./types";
+import { IObjectTypes } from "./types";
 import { GoContainer, GoSprite } from "./objects/sub_types";
 
 export interface SpriteTileInfo {
@@ -13,9 +13,9 @@ export interface SpriteTileInfo {
 
 export type SpriteTileInfoDict = { [k: string]: SpriteTileInfo };
 
-export function get_id_by_tile(tile: RenderTileData | RenderTileObject) {
+export function get_id_by_tile(tile: RenderTileData | RenderTileObject, id_layer:number) {
     if ('id' in tile)
-        return tile.id + '_' + tile.x + '.' + tile.y;
+        return id_layer + '_' + tile.x + '.' + tile.y;
     else
         return tile.id_object + '';
 }
@@ -60,8 +60,8 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                 apply_tile_transform(plane, tile.id);
                 container.add(plane);
                 plane.name = tile_info.name + '' + plane.mesh_data.id;
-                plane.userData = { tile };
-                tiles[get_id_by_tile(tile)] = {tile_info, tile, _hash:plane};
+                plane.userData = { tile,id_layer };
+                tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
             }
         }
 
@@ -114,8 +114,8 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                             plane.rotation.z = -tile.rotation! * Math.PI / 180;
                         container.add(plane);
                         plane.name = tile_info.name + '' + plane.mesh_data.id;
-                        plane.userData = { tile };
-                        tiles[get_id_by_tile(tile)] = {tile_info, tile, _hash:plane};
+                        plane.userData = { tile ,id_layer};
+                        tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
                     }
 
                 }
