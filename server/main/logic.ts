@@ -13,7 +13,8 @@ import {
     GET_SERVER_DATA_CMD,
     MATERIAL_EXT,
     VERTEX_PROGRAM_EXT,
-    FRAGMENT_PROGRAM_EXT
+    FRAGMENT_PROGRAM_EXT,
+    AUDIO_EXT
 } from "../../src/modules_editor/modules_editor_const";
 import { PromiseChains } from "./PromiseChains";
 import { log } from "console";
@@ -85,7 +86,7 @@ export function Logic(use_queues: boolean) {
         }
 
         async function gather_paths(project: string, assets: FSObject[]) {
-            const paths: ProjectPathsData = { textures: [], atlases: [], models: [], fonts: [], materials: [], vertex_programs: [], fragment_programs: [] };
+            const paths: ProjectPathsData = { textures: [], atlases: [], models: [], fonts: [], materials: [], vertex_programs: [], fragment_programs: [], scenes: [], audios: [] };
             const atlases_textures: string[] = [];
             assets.forEach(async element => {
                 if (element.ext && model_ext.includes(element.ext))
@@ -110,6 +111,12 @@ export function Logic(use_queues: boolean) {
                 }
                 if (element.ext == FRAGMENT_PROGRAM_EXT) {
                     paths.fragment_programs.push(element.path);
+                }
+                if (element.ext == SCENE_EXT) {
+                    paths.scenes.push(element.path);
+                }
+                if (element.ext && AUDIO_EXT.includes(element.ext)) {
+                    paths.audios.push(element.path);
                 }
             });
             assets.forEach(element => {

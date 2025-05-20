@@ -23,7 +23,7 @@ NOTE: API для материалов:
         get_info_about_unique_materials
 */
 
-import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4 } from 'three';
+import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4, AudioLoader } from 'three';
 import { copy_material, get_file_name, get_material_hash } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
@@ -31,11 +31,12 @@ import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
-import { FSEvent, TRecursiveDict } from '../modules_editor/modules_editor_const';
+import { FSEvent, TDictionary, TRecursiveDict } from '../modules_editor/modules_editor_const';
 import { shader } from './objects/entity_base';
 import { deepClone, getObjectHash, hexToRGB } from '../modules/utils';
 import { Slice9Mesh } from './objects/slice9';
 import { AnimatedMesh } from './objects/animated_mesh';
+import { IBaseEntityData } from './types';
 
 
 declare global {
@@ -134,6 +135,11 @@ export interface MaterialInfo {
     };
 }
 
+export interface SceneInfo {
+    is_component: boolean;
+    data: IBaseEntityData
+};
+
 export enum MaterialUniformType {
     FLOAT = 'float',
     RANGE = 'range',
@@ -147,6 +153,9 @@ export enum MaterialUniformType {
 export function ResourceManagerModule() {
     const font_characters = " !\"#$%&'()*+,-./0123456789:;<=> ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~йцукенгшщзхфывапролджэячсмитьбюЙЦУКЕНГШЩЗХФЫВАПРОЛДЖЯЧСМИТЬБЮЭ";
     const texture_loader = new TextureLoader();
+    const audio_loader = new AudioLoader();
+    const scenes: { [path: string]: SceneInfo } = {};
+    const audio: { [path: string]: AudioBuffer } = {};
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
     const vertex_programs: { [path: string]: string } = {};
@@ -180,17 +189,8 @@ export function ResourceManagerModule() {
         }
     }
 
-    async function get_file_data(path: string) {
-        const data = await AssetControl.get_file_data(path);
-        if (data.result != 1) {
-            Log.error('[get_file_data]:', data.error_code, data.message);
-            return;
-        }
-        return data.data!;
-    }
-
     async function on_vertex_shader_change(path: string) {
-        const vertexShader = await get_file_data(path);
+        const vertexShader = await AssetControl.get_file_data(path);
         if (!vertexShader) return;
 
         vertex_programs[path] = vertexShader;
@@ -216,7 +216,7 @@ export function ResourceManagerModule() {
     }
 
     async function on_fragment_shader_change(path: string) {
-        const fragmentShader = await get_file_data(path);
+        const fragmentShader = await AssetControl.get_file_data(path);
         if (!fragmentShader) return;
 
         fragment_programs[path] = fragmentShader;
@@ -467,6 +467,37 @@ export function ResourceManagerModule() {
         return texture;
     }
 
+    async function preload_audio(path: string) {
+        const audio_buffer = await audio_loader.loadAsync(path);
+        audio[path] = audio_buffer;
+    }
+
+    async function preload_scene(path: string) {
+        const response = await AssetControl.get_file_data(path);
+        if (!response) {
+            return;
+        }
+
+        const data = JSON.parse(response) as TDictionary<IBaseEntityData[]>;
+        cache_scene(path, data.scene_data[0]);
+    }
+
+    function cache_scene(path: string, data: IBaseEntityData) {
+        if (data.children != undefined) {
+            for (const obj of data.children) {
+                if (["sprite", "text", "lable"].includes(obj.type))
+                    continue;
+                scenes[path] = { is_component: false, data };
+                return;
+            }
+        }
+        scenes[path] = { is_component: true, data };
+    }
+
+    function get_scene_info(path: string) {
+        return scenes[path];
+    }
+
     async function preload_texture(path: string, atlas = '', override = false) {
         const name = get_file_name(path);
         if (!override && has_texture_name(name, atlas)) {
@@ -594,7 +625,7 @@ export function ResourceManagerModule() {
             Log.warn('vertex program exists', path);
             return;
         }
-        const shader_program = await load_shader_program(path);
+        const shader_program = await AssetControl.get_file_data(path);
         if (!shader_program) {
             return;
         }
@@ -620,7 +651,7 @@ export function ResourceManagerModule() {
             Log.warn('fragment program exists', path);
             return;
         }
-        const shader_program = await load_shader_program(path);
+        const shader_program = await AssetControl.get_file_data(path);
         if (!shader_program) {
             return;
         }
@@ -628,23 +659,13 @@ export function ResourceManagerModule() {
         return shader_program;
     }
 
-    async function load_shader_program(path: string) {
-        const response = await AssetControl.get_file_data(path);
-        if (response.result != 1) {
-            Log.error('[load_shader_program]:')
-            return;
-        }
-        return response.data;
-    }
-
     async function load_material(path: string) {
         const response = await AssetControl.get_file_data(path);
-        if (response.result != 1) {
-            Log.error('[load_material]:', response.error_code, response.message);
+        if (!response) {
             return;
         }
 
-        const data = JSON.parse(response.data!);
+        const data = JSON.parse(response);
         const material_info = {} as MaterialInfo;
         const name = get_file_name(path);
 
@@ -953,10 +974,10 @@ export function ResourceManagerModule() {
 
         if (is_save && !is_readonly) {
             // NOTE: обновляем значение в файле
-            const get_response = await AssetControl.get_file_data(material_info.path);
-            if (get_response.result != 1) return;
+            const response = await AssetControl.get_file_data(material_info.path);
+            if (!response) return;
 
-            const material_data = JSON.parse(get_response.data!);
+            const material_data = JSON.parse(response);
 
             // NOTE: в случае если юниформа это текстура, то составляем строку атлас/текстура
             if (value instanceof Texture) {
@@ -1489,6 +1510,8 @@ export function ResourceManagerModule() {
         add_texture,
         load_texture,
         has_texture_name,
+        preload_audio,
+        preload_scene,
         preload_atlas,
         preload_texture,
         preload_font,
@@ -1533,6 +1556,8 @@ export function ResourceManagerModule() {
         override_atlas_texture,
         update_from_metadata,
         write_metadata,
+        get_scene_info,
+        cache_scene,
         models,
         animations
     };

@@ -114,6 +114,16 @@ function AssetControlCreate() {
                     return ResourceManager.preload_atlas("/" + paths.atlas, "/" + paths.texture);
                 }
             }
+            else if (key == "scenes") {
+                func = (path: string) => {
+                    return ResourceManager.preload_scene("/" + path);
+                }
+            }
+            else if (key == "audios") {
+                func = (path: string) => {
+                    return ResourceManager.preload_audio("/" + path);
+                }
+            }
             else func = async () => { };
 
             if (func != undefined) {
@@ -349,8 +359,13 @@ function AssetControlCreate() {
         return ClientAPI.save_data(path, data, "base64");
     }
 
-    function get_file_data(path: string) {
-        return ClientAPI.get_data(path);
+    async function get_file_data(path: string) {
+        const resp = await ClientAPI.get_data(path);
+        if (!resp || resp.result === 0 || !resp.data) {
+            Popups.toast.error(`Не удалось получить данные: ${resp.message}`);
+            return null;
+        }
+        return resp.data;
     }
 
     function save_file_data(path: string, data: string, format: DataFormatType = "string") {
@@ -632,6 +647,10 @@ function AssetControlCreate() {
             callback: async (success, name) => {
                 if (success && name) {
                     const path = `${current_path}/${name}.${SCENE_EXT}`;
+
+                    ResourceManager.cache_scene(path, data);
+
+                    // NOTE: для чего сохраянем как IBaseEntityData[] ?
                     const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: [data] }))
                     if (r && r.result)
                         Popups.toast.success(`Объект ${name} сохранён, путь: ${path}`);
@@ -1091,67 +1110,52 @@ function AssetControlCreate() {
         ControlManager.update_graph(true, current_scene.name);
     }
 
-    async function loadPartOfSceneInPos(
+    function loadPartOfSceneInPos(
         pathToScene: string,
         position: Vector3,
         rotation?: Quaternion,
         scale?: Vector3,
         with_check = false
     ) {
-        const resp = await ClientAPI.get_data(pathToScene);
-        if (!resp || resp.result === 0 || !resp.data)
-            return Popups.toast.error(`Не удалось получить данные: ${resp.message}`);
-        const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
-
-        if (with_check) {
-            // NOTE: проверяем, что в файле сцены нет вложенных GO
-            const is_more_than_one_object = data.scene_data.length > 1;
-            if (is_more_than_one_object) return null
-            if (data.scene_data[0].children != undefined) {
-                for (const obj of data.scene_data[0].children) {
-                    if (["sprite", "text", "lable"].includes(obj.type))
-                        continue;
-                    return Popups.toast.error(`${pathToScene} не может быть создан, так как он содержит вложенные GO`);
-                }
-            }
+        const info = ResourceManager.get_scene_info(pathToScene);
+        if (!info) {
+            return Log.error(`Не удалось получить данные сцены: ${pathToScene}`);
         }
 
-        let root: IBaseEntityAndThree | null = null;
-        for (let i = 0; i < data.scene_data.length; i++) {
-            const obj_data = data.scene_data[i];
-            const obj = SceneManager.deserialize_mesh(obj_data, false);
-
-            // NOTE: ищем уникальное имя для root и всех его детей
-            const baseName = obj_data.name;
-            let counter = 1;
-            let uniqueName = baseName; //`${baseName}_${Date.now()}`;
-            while (SceneManager.get_mesh_id_by_name(uniqueName)) {
-                uniqueName = `${baseName}_${counter}`;
-                counter++;
-            }
-            SceneManager.set_mesh_name(obj, uniqueName);
-            obj.traverse((child) => {
-                if (child !== obj && child.name) {
-                    const childBaseName = child.name;
-                    let childCounter = 1;
-                    let childUniqueName = childBaseName;
-                    while (SceneManager.get_mesh_id_by_name(childUniqueName)) {
-                        childUniqueName = `${childBaseName}_${childCounter}`;
-                        childCounter++;
-                    }
-                    SceneManager.set_mesh_name(child as any, childUniqueName);
-                }
-            });
-
-            obj.set_position(position.x, position.y, position.z);
-            // TODO: set_rotation нету в EntityBase
-            // if (rotation) obj.set_rotation(rotation);
-            if (scale) obj.set_scale(scale.x, scale.y);
-            SceneManager.add(obj);
-            if (root == null) {
-                root = obj;
-            }
+        if (with_check && !info.is_component) {
+            return Log.error(`${pathToScene} не может быть создан, так как он содержит вложенные GO`);
         }
+
+        const obj_data = info.data;
+        const root = SceneManager.deserialize_mesh(obj_data, false);
+
+        // NOTE: ищем уникальное имя для root и всех его детей
+        const baseName = obj_data.name;
+        let counter = 1;
+        let uniqueName = baseName; //`${baseName}_${Date.now()}`;
+        while (SceneManager.get_mesh_id_by_name(uniqueName)) {
+            uniqueName = `${baseName}_${counter}`;
+            counter++;
+        }
+        SceneManager.set_mesh_name(root, uniqueName);
+        root.traverse((child) => {
+            if (child !== root && child.name) {
+                const childBaseName = child.name;
+                let childCounter = 1;
+                let childUniqueName = childBaseName;
+                while (SceneManager.get_mesh_id_by_name(childUniqueName)) {
+                    childUniqueName = `${childBaseName}_${childCounter}`;
+                    childCounter++;
+                }
+                SceneManager.set_mesh_name(child as any, childUniqueName);
+            }
+        });
+
+        root.set_position(position.x, position.y, position.z);
+        // TODO: set_rotation нету в EntityBase
+        // if (rotation) obj.set_rotation(rotation);
+        if (scale) root.set_scale(scale.x, scale.y);
+        SceneManager.add(root);
         return root;
     }
 

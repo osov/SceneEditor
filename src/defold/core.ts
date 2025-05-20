@@ -3,8 +3,6 @@ import { MessageId } from "../modules/modules_const"
 import * as TWEEN from '@tweenjs/tween.js';
 import { IBaseEntityAndThree } from "../render_engine/types";
 import { is_base_mesh, is_label, is_sprite, is_text } from "../render_engine/helpers/utils";
-import { NotyfNotification } from "notyf";
-import { TDictionary } from "@editor/modules_editor/modules_editor_const";
 
 declare global {
     const json: ReturnType<typeof json_module>
@@ -134,7 +132,7 @@ declare global {
     }
 
     namespace collectionfactory {
-        function create(url: string, position: Vector3, rotation?: Quaternion, scale?: Vector3): TDictionary<string>;
+        function create(url: string, position: Vector3, rotation?: Quaternion, scale?: Vector3): string[];
     }
 
     namespace msg {
@@ -817,21 +815,20 @@ function sprite_module() {
 }
 
 function factory_module() {
-    async function create(
+    function create(
         url: string,
         position: vmath.vector3,
         rotation?: vmath.quat,
         properties?: any,
         scale?: vmath.vector3
     ) {
-        const result = await AssetControl.loadPartOfSceneInPos(
+        const result = AssetControl.loadPartOfSceneInPos(
             url,
             new Vector3().copy(position),
             rotation ? new Quaternion().copy(rotation) : undefined,
-            scale ? new Vector3().copy(scale) : undefined,
-            true
+            scale ? new Vector3().copy(scale) : undefined
         );
-        if (result instanceof NotyfNotification || result == null) return null;
+        if (result == null) return null;
         return id_to_url(result.mesh_data.id);
     }
 
@@ -840,20 +837,20 @@ function factory_module() {
 
 
 function collectionfactory_module() {
-    async function create(
+    function create(
         url: string,
         position: vmath.vector3,
         rotation?: vmath.quat,
         properties?: any,
         scale?: vmath.vector3
     ) {
-        const result = await AssetControl.loadPartOfSceneInPos(
+        const result = AssetControl.loadPartOfSceneInPos(
             url,
             new Vector3().copy(position),
             rotation ? new Quaternion().copy(rotation) : undefined,
             scale ? new Vector3().copy(scale) : undefined
         );
-        if (result instanceof NotyfNotification || result == null) return null;
+        if (!result) return null;
         return SceneManager.get_scene_list().filter(obj => {
             return obj.mesh_data.id > result.mesh_data.id;
         }).map((obj: IBaseEntityAndThree) => id_to_url(obj.mesh_data.id));

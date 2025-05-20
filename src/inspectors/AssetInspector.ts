@@ -501,25 +501,6 @@ function AssetInspectorCreate() {
         }
     }
 
-    async function updateMaterialProperty<T>(data: AssetMaterialInfo<T>[], last: boolean) {
-        for (const item of data) {
-            EventBus.trigger('SYS_MATERIAL_CHANGED', {
-                material_name: get_file_name(item.material_path),
-                is_uniform: false,
-                property: item.name,
-                value: item.value
-            }, false);
-
-            if (last) {
-                const get_response = await AssetControl.get_file_data(item.material_path);
-                if (get_response.result != 1) continue;
-                const material_data = JSON.parse(get_response.data!);
-                material_data[item.name] = item.value;
-                await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
-            }
-        }
-    }
-
     function saveMaterialVertexProgram(info: BeforeChangeInfo) {
         const vertexPrograms: AssetMaterialInfo<string>[] = [];
         info.ids.forEach((id) => {
@@ -553,9 +534,9 @@ function AssetInspectorCreate() {
             }, false);
 
             if (last) {
-                const get_response = await AssetControl.get_file_data(item.material_path);
-                if (get_response.result != 1) continue;
-                const material_data = JSON.parse(get_response.data!);
+                const response = await AssetControl.get_file_data(item.material_path);
+                if (!response) continue;
+                const material_data = JSON.parse(response);
                 material_data['vertexShader'] = item.value;
                 await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
             }
@@ -595,9 +576,9 @@ function AssetInspectorCreate() {
             }, false);
 
             if (last) {
-                const get_response = await AssetControl.get_file_data(item.material_path);
-                if (get_response.result != 1) continue;
-                const material_data = JSON.parse(get_response.data!);
+                const response = await AssetControl.get_file_data(item.material_path);
+                if (!response) continue;
+                const material_data = JSON.parse(response);
                 material_data['fragmentShader'] = item.value;
                 await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
             }
@@ -637,9 +618,9 @@ function AssetInspectorCreate() {
             }, false);
 
             if (last) {
-                const get_response = await AssetControl.get_file_data(item.material_path);
-                if (get_response.result != 1) continue;
-                const material_data = JSON.parse(get_response.data!);
+                const response = await AssetControl.get_file_data(item.material_path);
+                if (!response) continue;
+                const material_data = JSON.parse(response);
                 material_data['transparent'] = item.value;
                 await AssetControl.save_file_data(item.material_path, JSON.stringify(material_data, null, 2));
             }

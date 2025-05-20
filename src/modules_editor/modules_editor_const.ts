@@ -103,6 +103,8 @@ export type ProjectPathsData = {
     materials: string[],
     vertex_programs: string[],
     fragment_programs: string[],
+    scenes: string[],
+    audios: string[],
 }
 export type ProjectLoadData = { assets: FSObject[], name: string, paths: ProjectPathsData }
 export type ProjectCache = { name?: string, current_dir: string, current_scene: { name?: string, path?: string } }
@@ -158,6 +160,7 @@ export const PUBLIC = '/public'  // Путь к папке с ассетами �
 export const METADATA = '/metadata.json'  // Путь к файлу с метаинфо проекта
 export const CACHE = '/server_cache.json';
 export const SCENE_EXT = `scn`;
+export const AUDIO_EXT = ['ogg', 'mp3'];
 export const ATLAS_EXT = `tpsheet`;
 export const MATERIAL_EXT = `mtr`;
 export const VERTEX_PROGRAM_EXT = `vp`;
