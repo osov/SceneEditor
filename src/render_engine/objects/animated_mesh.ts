@@ -24,7 +24,6 @@ export class AnimatedMesh extends EntityPlane {
 	public type = IObjectTypes.GO_MODEL_COMPONENT;
 	private mixer = new AnimationMixer(this);
 	private animations_list: { [k: string]: AnimationAction } = {};
-	private animation_aliases: { [k: string]: string } = {};
 	private activeAction: AnimationAction | null = null;
 	private lastAction: AnimationAction | null = null;
 	private mesh_name = '';
@@ -122,30 +121,26 @@ export class AnimatedMesh extends EntityPlane {
 		}
 	}
 
-	add_animation(name: string, alias = '') {
+	add_animation(name: string) {
 		const clip = ResourceManager.find_animation(name, this.mesh_name);
 		if (!clip)
 			return Log.error('Animation not found', name);
 		const animationAction = this.mixer.clipAction(clip.clip)
-		const final_alias = alias == '' ? name : alias;
-		this.animations_list[final_alias] = animationAction;
-		if (alias != '') {
-			this.animation_aliases[alias] = name;
-		}
+		this.animations_list[name] = animationAction;
 		if (Object.keys(this.animations_list).length == 1) {
 			this.activeAction = animationAction;
 			animationAction.play();
 		}
 	}
 
-	remove_animation(alias: string) {
-		const action = this.animations_list[alias];
+	remove_animation(name: string) {
+		const action = this.animations_list[name];
 		if (action) {
 			action.stop();
 			action.reset();
 			if (action == this.activeAction) {
 				// NOTE: если это была текущая анимация, то нужно установить другую из имеющихся, если они есть, иначе сбросить состояние
-				const available_animations = Object.keys(this.animations_list).filter(key => key != alias);
+				const available_animations = Object.keys(this.animations_list).filter(key => key != name);
 				if (available_animations.length > 0) {
 					this.activeAction = this.lastAction ?? this.animations_list[available_animations[0]];
 					this.activeAction?.reset();
@@ -156,8 +151,7 @@ export class AnimatedMesh extends EntityPlane {
 				}
 			}
 		}
-		delete this.animations_list[alias];
-		delete this.animation_aliases[alias];
+		delete this.animations_list[name];
 	}
 
 	get_animation_list() {
@@ -165,7 +159,7 @@ export class AnimatedMesh extends EntityPlane {
 	}
 
 	get_animation_name_by_alias(alias: string): string | undefined {
-		return this.animation_aliases[alias];
+		return alias;
 	}
 
 	set_animation(alias: string, offset = 0) {
@@ -197,10 +191,8 @@ export class AnimatedMesh extends EntityPlane {
 
 		data.scales = this.children.map(child => child.scale.clone());
 
-		for (const [alias, action] of Object.entries(this.animations_list)) {
-			const clip = action.getClip();
-			const animName = this.animation_aliases[alias] || clip.name;
-			data.animations.push({ name: animName, alias });
+		for (const [name] of Object.entries(this.animations_list)) {
+			data.animations.push({ name: name });
 		}
 
 		this.materials.forEach((material, idx) => {
@@ -250,14 +242,13 @@ export class AnimatedMesh extends EntityPlane {
 
 		if (data.animations) {
 			for (const animation of data.animations) {
-				this.add_animation(animation.name, animation.alias);
+				this.add_animation(animation.name);
 			}
 		}
 
 		// Set current animation if it exists
 		if (data.current_animation) {
-			const alias = Object.entries(this.animation_aliases).find(([_, name]) => name === data.current_animation)?.[0] || data.current_animation;
-			this.set_animation(alias);
+			this.set_animation(data.current_animation);
 		}
 
 		// if (data.texture) {

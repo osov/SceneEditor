@@ -1319,14 +1319,17 @@ export function ResourceManagerModule() {
         return is_model;
     }
 
-    function add_animations(anim_list: AnimationClip[], has_mesh = false, model_path = '') {
+    function add_animations(anim_list: AnimationClip[], model_path = '') {
         if (anim_list.length) {
-            const model_name = get_file_name(model_path);
+            const file_name = get_file_name(model_path);
+            let model_name = get_model_name(model_path);
+            let anim_name = file_name;
+            if (file_name.indexOf('@') > -1) {
+                anim_name = file_name.substring(file_name.indexOf('@') + 1);
+            }
             for (let i = 0; i < anim_list.length; i++) {
                 const clip = anim_list[i];
-                let cur_anim_name = has_mesh ? clip.name : model_name;
-                if (cur_anim_name.includes('mixamo.com'))
-                    cur_anim_name = model_name
+                let cur_anim_name = anim_name;
                 if (find_animation(cur_anim_name, model_name))
                     Log.warn('animation exists already', cur_anim_name, model_name);
                 animations.push({ model: model_name, animation: cur_anim_name, clip });
@@ -1334,9 +1337,16 @@ export function ResourceManagerModule() {
         }
     }
 
+    function get_model_name(path: string) {
+        let model_name = get_file_name(path);
+        if (model_name.indexOf('@') > -1)
+            model_name = model_name.substring(0, model_name.indexOf('@'));
+        return model_name;
+    }
+
     async function preload_model(path: string) {
         path = project_path + path;
-        const model_name = get_file_name(path);
+        let model_name = get_model_name(path);
         if (path.toLowerCase().endsWith('.fbx')) {
             return new Promise<Group>(async (resolve, _) => {
                 const loader = new FBXLoader(manager);
@@ -1345,7 +1355,7 @@ export function ResourceManagerModule() {
                     const has_mesh = has_skinned_mesh(mesh);
                     if (has_mesh)
                         models[model_name] = mesh;
-                    add_animations(mesh.animations, has_mesh, path);
+                    add_animations(mesh.animations, path);
                     resolve(mesh);
                 });
             })
@@ -1357,8 +1367,9 @@ export function ResourceManagerModule() {
                     //log(gltf)
                     const has_mesh = has_skinned_mesh(gltf.scene);
                     if (has_mesh)
-                        models[model_name] = gltf.scene;
-                    add_animations(gltf.animations, has_mesh, path);
+                        if (has_mesh)
+                            models[model_name] = gltf.scene;
+                    add_animations(gltf.animations, path);
                     resolve(gltf.scene);
                 });
             })
