@@ -29,6 +29,7 @@ export enum NodeAction {
     add_go_container,
     add_go_sprite_component,
     add_go_label_component,
+    add_go_model_component,
     add_go_animated_model_component,
     add_component_spline,
     add_component_mover,
@@ -57,12 +58,14 @@ export const NodeActionGo: number[] = [
 
 export const worldGo: string[] = [
     IObjectTypes.GO_CONTAINER,
+    IObjectTypes.GO_MODEL_COMPONENT,
     IObjectTypes.GO_ANIMATED_MODEL_COMPONENT,
     IObjectTypes.GO_SPRITE_COMPONENT,
     IObjectTypes.GO_LABEL_COMPONENT
 ];
 
 export const componentsGo: string[] = [
+    IObjectTypes.GO_MODEL_COMPONENT,
     IObjectTypes.GO_ANIMATED_MODEL_COMPONENT,
     IObjectTypes.GO_SPRITE_COMPONENT,
     IObjectTypes.GO_LABEL_COMPONENT
@@ -236,8 +239,15 @@ function ActionsControlCreate() {
         sceneAddItem(label, data.pid);
     }
 
-    function add_go_animated_model_component(data: ParamsPidPos) {
+    function add_go_model_component(data: ParamsPidPos) {
         const model = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
+        if (!model) return;
+        model.set_position(data.pos.x, data.pos.y);
+        sceneAddItem(model, data.pid);
+    }
+
+    function add_go_animated_model_component(data: ParamsPidPos) {
+        const model = SceneManager.create(IObjectTypes.GO_ANIMATED_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
         if (!model) return;
         model.set_position(data.pos.x, data.pos.y);
         sceneAddItem(model, data.pid);
@@ -448,6 +458,7 @@ function ActionsControlCreate() {
         add_go_container,
         add_go_sprite_component,
         add_go_label_component,
+        add_go_model_component,
         add_go_animated_model_component,
         add_go_with_sprite_component,
         add_component,
