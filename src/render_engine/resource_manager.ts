@@ -33,7 +33,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
 import { FSEvent, TDictionary, TRecursiveDict } from '../modules_editor/modules_editor_const';
 import { shader } from './objects/entity_base';
-import { deepClone, getObjectHash, hexToRGB } from '../modules/utils';
+import { deepClone, getObjectHash, hexToRGB, rgbToHex } from '../modules/utils';
 import { Slice9Mesh } from './objects/slice9';
 import { IBaseEntityData } from './types';
 import { MultipleMaterialMesh } from './objects/multiple_material_mesh';
@@ -984,6 +984,8 @@ export function ResourceManagerModule() {
                 const texture_name = get_file_name((value as any).path || '');
                 const atlas = get_atlas_by_texture_name(texture_name) || '';
                 material_data.data[uniform_name] = `${atlas}/${texture_name}`;
+            } else if (material_data.uniforms[uniform_name].type == MaterialUniformType.COLOR) {
+                material_data.data[uniform_name] = rgbToHex(value as Vector3);
             } else {
                 material_data.data[uniform_name] = value;
             }
@@ -1006,17 +1008,17 @@ export function ResourceManagerModule() {
     }
 
     function set_material_uniform_for_multiple_material_mesh<T>(mesh: MultipleMaterialMesh, index: number, uniform_name: string, value: T) {
-        const mesh_id = mesh.mesh_data.id;
         const materials = mesh.get_materials();
-        if (materials.length == 0){
-            Log.error('Materials not found', mesh_id);
+        if (materials.length >= index) {
+            Log.error('[set_material_uniform_for_multiple_material_mesh] Material index out of range:', index);
             return;
         }
+
         const material_name = materials[index].name;
         const material_info = get_material_info(material_name);
         if (!material_info) return;
 
-        if (set_material_uniform(material_info, mesh_id, index, uniform_name, value)) {
+        if (set_material_uniform(material_info, mesh.mesh_data.id, index, uniform_name, value)) {
             mesh.set_material(material_info.name, index);
         }
     }

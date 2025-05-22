@@ -7,7 +7,7 @@ import { MaterialUniformParams, MaterialUniformType } from "../render_engine/res
 import { IObjectTypes, IBaseMesh } from "../render_engine/types";
 import { PropertyData, PropertyType, ChangeInfo, BeforeChangeInfo } from "../modules_editor/Inspector";
 import { AssetTextureInfo, AssetMaterialInfo } from "../controls/types";
-import { rgbToHex } from "../modules/utils";
+import { hexToRGB, rgbToHex } from "../modules/utils";
 import { convertFilterModeToThreeJS, convertThreeJSFilterToFilterMode, generateAtlasOptions, generateFragmentProgramOptions, generateTextureOptions, generateVertexProgramOptions } from "./helpers";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 
@@ -337,7 +337,7 @@ function AssetInspectorCreate() {
                                     value: rgbToHex(color.value),
                                     type: PropertyType.COLOR,
                                     onBeforeChange: saveUniformColor,
-                                    onChange: handleUniformChange<string>
+                                    onChange: handleUniformColorChange
                                 });
                                 break;
                         }
@@ -696,6 +696,41 @@ function AssetInspectorCreate() {
         }
     }
 
+    function saveUniformColor(info: BeforeChangeInfo) {
+        const colors: AssetMaterialInfo<string>[] = [];
+        info.ids.forEach((id) => {
+            const path = _selected_materials[id];
+            const name = get_file_name(path);
+            const material_info = ResourceManager.get_material_info(name);
+            if (!material_info) return;
+            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
+            if (!origin) return;
+            const uniform = origin.uniforms[info.field.key];
+            if (uniform) {
+                const color = new Color();
+                color.setRGB(uniform.value.x, uniform.value.y, uniform.value.z);
+                colors.push({
+                    material_path: path,
+                    name: info.field.key,
+                    value: color.getHexString()
+                });
+            }
+        });
+        HistoryControl.add('MATERIAL_COLOR', colors, HistoryOwner.ASSET_INSPECTOR);
+    }
+
+    async function handleUniformColorChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMaterialData<string>(info);
+        await updateUniformColor(data, info.data.event.last);
+    }
+
+    async function updateUniformColor(data: AssetMaterialInfo<string>[], last: boolean) {
+        for (const item of data) {
+            const rgb = hexToRGB(item.value);
+            await ResourceManager.set_material_uniform_for_original(get_file_name(item.material_path), item.name, rgb, last);
+        }
+    }
+
     function saveUniformFloat(info: BeforeChangeInfo) {
         const floats = saveUniforms<number>(info);
         HistoryControl.add('MATERIAL_FLOAT', floats, HistoryOwner.ASSET_INSPECTOR);
@@ -719,29 +754,6 @@ function AssetInspectorCreate() {
     function saveUniformVec4(info: BeforeChangeInfo) {
         const vec4s = saveUniforms<Vector4>(info);
         HistoryControl.add('MATERIAL_VEC4', vec4s, HistoryOwner.ASSET_INSPECTOR);
-    }
-
-    function saveUniformColor(info: BeforeChangeInfo) {
-        const colors: AssetMaterialInfo<string>[] = [];
-        info.ids.forEach((id) => {
-            const path = _selected_materials[id];
-            const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
-            if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
-            if (!origin) return;
-            const uniform = origin.uniforms[info.field.key];
-            if (uniform) {
-                const color = new Color();
-                color.setRGB(uniform.value.x, uniform.value.y, uniform.value.z);
-                colors.push({
-                    material_path: path,
-                    name: info.field.key,
-                    value: color.getHexString()
-                });
-            }
-        });
-        HistoryControl.add('MATERIAL_COLOR', colors, HistoryOwner.ASSET_INSPECTOR);
     }
 
     function convertChangeInfoToMaterialData<T>(info: ChangeInfo): AssetMaterialInfo<T>[] {

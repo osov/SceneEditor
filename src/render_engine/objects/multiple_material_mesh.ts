@@ -22,6 +22,8 @@ export class MultipleMaterialMesh extends EntityPlane {
     protected materials: ShaderMaterial[] = [];
     protected textures: string[][] = [];
 
+    protected default_material_name = 'model';
+
     constructor(id: number, width = 0, height = 0) {
         super(id);
         this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
@@ -85,7 +87,7 @@ export class MultipleMaterialMesh extends EntityPlane {
                     old_maps.push(old_material.map);
                 }
 
-                const new_material = ResourceManager.get_material_by_mesh_id('anim', this.mesh_data.id)!;
+                const new_material = ResourceManager.get_material_by_mesh_id(this.default_material_name, this.mesh_data.id)!;
                 this.materials.push(new_material);
                 child.material = new_material;
             }

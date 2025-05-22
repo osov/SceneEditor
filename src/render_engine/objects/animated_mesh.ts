@@ -16,6 +16,7 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 
 	constructor(id: number, width = 0, height = 0) {
 		super(id, width, height);
+		this.default_material_name = 'anim_model';
 		EventBus.on('SYS_ON_UPDATE', this.on_mixer_update.bind(this));
 	}
 

@@ -547,15 +547,11 @@ function MeshInspectorCreate() {
                     switch (uniformInfo.type) {
                         case MaterialUniformType.SAMPLER2D:
                             const texture = uniform as IUniform<Texture>;
-
                             // NOTE: берем данные из меша a не из юниформы для u_texture, так как в ней хранится просто Texture и даже если хранить в userData информацию об атласе и имени, то в случаях когда текстура это атлас который по uv режиться на текстуры, она будет перезаписываться по мере загрузки других частей из этой текстуры-атласа, так как все они ссылаются на один и тот же объект Texture
                             // FIXME: остается косяк с с другими текстурными юниформами так как о них нет информации какие части текстуры-атласа они используют
-
-                            // FIXME: mesh.get_texture() может быть undefined, поэтому обращаться mesh.get_texture()[0] не безопасно
-                            // по хорошему иметь дефолтное состояние, то так как нет дефолтной модели, то нужно уметь обходить вариант когда может вернуться undefined
                             let texture_name = '';
                             if (key == 'u_texture') {
-                                if (mesh instanceof AnimatedMesh) {
+                                if (mesh instanceof MultipleMaterialMesh) {
                                     const info = mesh.get_texture(index);
                                     texture_name = info ? info[0] : '';
                                 } else {
@@ -567,7 +563,7 @@ function MeshInspectorCreate() {
 
                             let atlas = '';
                             if (key == 'u_texture') {
-                                if (mesh instanceof AnimatedMesh) {
+                                if (mesh instanceof MultipleMaterialMesh) {
                                     const info = mesh.get_texture(index);
                                     atlas = info ? info[1] : '';
                                 } else {
@@ -893,7 +889,12 @@ function MeshInspectorCreate() {
             if (mesh == undefined) break;
             let material;
             if (mesh instanceof Slice9Mesh) material = (mesh as Slice9Mesh).material;
-            else if (mesh instanceof AnimatedMesh) material = (mesh as AnimatedMesh).get_materials()[index ?? 0];
+            else if (mesh instanceof MultipleMaterialMesh) {
+                const materials = (mesh as MultipleMaterialMesh).get_materials();
+                if (materials) {
+                    material = materials[index ?? 0];
+                }
+            }
             if (material == undefined) break;
             if (selected_meshes_material == '') {
                 selected_meshes_material = material.name;
@@ -2242,12 +2243,15 @@ function MeshInspectorCreate() {
                     }
                 }
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
+                let texture_name = '';
+                let atlas = '';
                 const texture_info = mesh.get_texture();
-                const texture_name = texture_info[0];
-                const atlas = texture_info[1];
+                if (texture_info) {
+                    texture_name = texture_info[0];
+                    atlas = texture_info[1];
+                }
                 const has_texture = texture_name != '';
-
                 const material_name = item.value as string;
                 mesh.set_material(material_name, item.index);
 
@@ -2427,8 +2431,14 @@ function MeshInspectorCreate() {
                     ResourceManager.set_material_define_for_mesh(mesh, 'USE_TEXTURE', '');
                 }
             }
-            else if (mesh instanceof AnimatedMesh) {
-                const material = ResourceManager.get_material_by_mesh_id(mesh.get_materials()[item.material_index].name, item.mesh_id, item.material_index);
+            else if (mesh instanceof MultipleMaterialMesh) {
+                const materials = mesh.get_materials();
+
+                let material_name = '';
+                if (materials.length >= item.material_index) material_name = materials[item.material_index].name;
+                else Log.error('[updateUniformSampler2D] Material index out of range:', item.material_index);
+
+                const material = ResourceManager.get_material_by_mesh_id(material_name, item.mesh_id, item.material_index);
                 if (!material) return;
 
                 if (item.uniform_name == 'u_texture') {
@@ -2865,7 +2875,7 @@ function MeshInspectorCreate() {
 
                 ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, rgb);
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
