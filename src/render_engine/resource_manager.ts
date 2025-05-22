@@ -1009,8 +1009,9 @@ export function ResourceManagerModule() {
 
     function set_material_uniform_for_multiple_material_mesh<T>(mesh: MultipleMaterialMesh, index: number, uniform_name: string, value: T) {
         const materials = mesh.get_materials();
-        if (materials.length >= index) {
-            Log.error('[set_material_uniform_for_multiple_material_mesh] Material index out of range:', index);
+        if (materials.length == 0) {
+            Log.error('Materials not found', mesh.mesh_data.id);
+            // Log.error('[set_material_uniform_for_multiple_material_mesh] Material index out of range:', index);
             return;
         }
 
