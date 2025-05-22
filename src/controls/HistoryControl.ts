@@ -34,7 +34,8 @@ export type HistoryData = {
     MESH_FONT_SIZE: MeshPropertyInfo<Vector3>
     MESH_TEXT_ALIGN: MeshPropertyInfo<'left' | 'right' | 'center' | 'justify'>
     MESH_LINE_HEIGHT: MeshPropertyInfo<number | 'normal'>
-    MESH_MODEL: MeshPropertyInfo<string>
+    MESH_MODEL: MeshPropertyInfo<{ mesh_name: string, scale: number }>
+    MESH_ANIMATED_MODEL: MeshPropertyInfo<{ mesh_name: string, scale: number, animations: string[], current_animation: string }>
     MESH_ANIMATION_LIST: MeshPropertyInfo<string[]>
     MESH_ACTIVE_MODEL_ANIMATION: MeshPropertyInfo<string>
     MESH_BLEND_MODE: MeshPropertyInfo<BlendMode>

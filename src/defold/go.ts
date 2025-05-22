@@ -2,6 +2,7 @@ import * as TWEEN from '@tweenjs/tween.js';
 import { IBaseEntityAndThree, IObjectTypes } from "@editor/render_engine/types";
 import { Quaternion, Vector3 } from "three";
 import { get_nested_property, id_to_url, set_nested_property, uh_to_id } from "./utils";
+import { Slice9Mesh } from '@editor/render_engine/objects/slice9';
 
 declare global {
     namespace go {
@@ -349,6 +350,10 @@ export function go_module() {
         }
     }
 
+    // NOTE: важно что для полей материала не поддерживается передача c доступом через '.'
+    // если нужно к примеру передать vector, то нужно передавать целиком
+    // pos.x - выдаст что поле не найдено
+    // pos - верно
     function animate(
         url: string | hash,
         property: string,
@@ -366,15 +371,16 @@ export function go_module() {
             return;
         }
 
-        if (mesh.type != IObjectTypes.GO_CONTAINER) {
-            Log.error(`Mesh with url ${url} is not go`);
-            return;
-        }
-
-        const currentValue = get_nested_property(mesh, property);
-        if (currentValue === undefined) {
-            Log.error(`Property ${property} not found on mesh`);
-            return;
+        let is_material_property = false;
+        let currentValue = get_nested_property(mesh, property);
+        if (currentValue == undefined) {
+            is_material_property = true;
+            const material = (mesh as any).material;
+            if (material) currentValue = material.uniforms[property]?.value;
+            if (currentValue == undefined) {
+                Log.error(`Property ${property} not found on mesh`);
+                return;
+            }
         }
 
         const is_backward = playback == go.PLAYBACK_ONCE_BACKWARD || playback == go.PLAYBACK_LOOP_BACKWARD;
@@ -382,6 +388,10 @@ export function go_module() {
         const tween = new TWEEN.Tween(obj)
             .to({ value: is_backward ? currentValue : to }, duration)
             .onUpdate(() => {
+                if (is_material_property) {
+                    ResourceManager.set_material_uniform_for_mesh(mesh as Slice9Mesh, property, obj.value);
+                    return;
+                }
                 set_nested_property(mesh, property, obj.value);
             })
             .delay(delay)

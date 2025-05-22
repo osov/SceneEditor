@@ -1,7 +1,7 @@
 import { TextureInfo } from "../render_engine/resource_manager";
 import { ChangeInfo } from "../modules_editor/Inspector";
 import { BlendMode, ScreenPointPreset } from "./MeshInspector";
-import { AdditiveBlending, LinearFilter, MultiplyBlending, NearestFilter, NormalBlending, SubtractiveBlending, Vector2 } from "three";
+import { AdditiveBlending, Blending, LinearFilter, MultiplyBlending, NearestFilter, NormalBlending, SubtractiveBlending, Vector2 } from "three";
 import { FilterMode } from "./AssetInspector";
 
 export function getChangedInfo(info: ChangeInfo) {
@@ -225,7 +225,7 @@ export function screenPresetToAnchorValue(preset: ScreenPointPreset) {
     }
 }
 
-export function convertBlendModeToThreeJS(blend_mode: BlendMode): number {
+export function convertBlendModeToThreeJS(blend_mode: BlendMode): Blending {
     switch (blend_mode) {
         case BlendMode.NORMAL:
             return NormalBlending;

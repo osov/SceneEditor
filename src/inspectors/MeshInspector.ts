@@ -16,6 +16,8 @@ import { get_file_name, is_base_mesh } from "../render_engine/helpers/utils";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 import { AnimatedMesh } from "../render_engine/objects/animated_mesh";
 import { WORLD_SCALAR } from "../config";
+import { Model } from "@editor/render_engine/objects/model";
+import { MultipleMaterialMesh } from "@editor/render_engine/objects/multiple_material_mesh";
 
 
 declare global {
@@ -166,7 +168,10 @@ function MeshInspectorCreate() {
                     generateLabelFields(fields, mesh);
                     break;
                 case IObjectTypes.GO_MODEL_COMPONENT:
-                    generateModelFields(list, fields, mesh as AnimatedMesh);
+                    generateModelFields(list, fields, mesh as Model);
+                    break;
+                case IObjectTypes.GO_ANIMATED_MODEL_COMPONENT:
+                    generateAnimatedModelFields(list, fields, mesh as AnimatedMesh);
                     break;
             }
 
@@ -239,15 +244,17 @@ function MeshInspectorCreate() {
             onRefresh: refreshRotation
         });
 
-        if (mesh instanceof AnimatedMesh) {
-            const scale_factor = Math.max(...mesh.children[0].scale.toArray()) / WORLD_SCALAR;
+        if (mesh instanceof MultipleMaterialMesh) {
+            const min_scale = 0.001;
+            const first_child = mesh.children[0];
+            const scale_factor = first_child ? Math.max(...first_child.scale.toArray()) : min_scale;
             transform_fields.push({
                 key: MeshProperty.SCALE,
                 title: MeshPropertyTitle.SCALE,
                 value: scale_factor,
                 type: PropertyType.SLIDER,
                 params: {
-                    min: 0.001,
+                    min: min_scale,
                     max: 1,
                     step: 0.001,
                     format: (v: number) => v.toFixed(3)
@@ -473,7 +480,7 @@ function MeshInspectorCreate() {
         });
     }
 
-    function generateMaterialFields(title: string, list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree, material: ShaderMaterial, expanded = false, with_slice9 = false, with_flip = false, index?: number) {
+    function generateMaterialFields(title: string, list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree, material: ShaderMaterial, expanded = false, with_slice9 = false, with_flip = false, index = 0) {
         const material_fields: PropertyData<PropertyType>[] = [];
         material_fields.push({
             key: MeshProperty.MATERIAL,
@@ -486,20 +493,22 @@ function MeshInspectorCreate() {
             onChange: handleMaterialChange
         });
 
-        material_fields.push({
-            key: MeshProperty.COLOR,
-            title: MeshPropertyTitle.COLOR,
-            value: mesh.get_color(),
-            type: PropertyType.COLOR,
-            data: { material_index: index },
-            onBeforeChange: saveColor,
-            onChange: handleColorChange,
-        });
+        if (!(mesh instanceof MultipleMaterialMesh)) {
+            material_fields.push({
+                key: MeshProperty.COLOR,
+                title: MeshPropertyTitle.COLOR,
+                value: mesh.get_color(),
+                type: PropertyType.COLOR,
+                data: { material_index: index },
+                onBeforeChange: saveColor,
+                onChange: handleColorChange,
+            });
+        }
 
         material_fields.push({
             key: MeshProperty.BLEND_MODE,
             title: MeshPropertyTitle.BLEND_MODE,
-            value: convertThreeJSBlendingToBlendMode(material.blending),
+            value: convertThreeJSBlendingToBlendMode(mesh instanceof MultipleMaterialMesh ? mesh.get_materials()[index].blending : material.blending),
             type: PropertyType.LIST_TEXT, params: {
                 'Нормальный': BlendMode.NORMAL,
                 'Сложение': BlendMode.ADD,
@@ -541,8 +550,33 @@ function MeshInspectorCreate() {
 
                             // NOTE: берем данные из меша a не из юниформы для u_texture, так как в ней хранится просто Texture и даже если хранить в userData информацию об атласе и имени, то в случаях когда текстура это атлас который по uv режиться на текстуры, она будет перезаписываться по мере загрузки других частей из этой текстуры-атласа, так как все они ссылаются на один и тот же объект Texture
                             // FIXME: остается косяк с с другими текстурными юниформами так как о них нет информации какие части текстуры-атласа они используют
-                            const texture_name = key == 'u_texture' ? mesh instanceof AnimatedMesh ? mesh.get_texture(index)[0] : mesh.get_texture()[0] : get_file_name((texture.value as any).path || '');
-                            const atlas = key == 'u_texture' ? mesh instanceof AnimatedMesh ? mesh.get_texture(index)[1] : mesh.get_texture()[1] : ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+
+                            // FIXME: mesh.get_texture() может быть undefined, поэтому обращаться mesh.get_texture()[0] не безопасно
+                            // по хорошему иметь дефолтное состояние, то так как нет дефолтной модели, то нужно уметь обходить вариант когда может вернуться undefined
+                            let texture_name = '';
+                            if (key == 'u_texture') {
+                                if (mesh instanceof AnimatedMesh) {
+                                    const info = mesh.get_texture(index);
+                                    texture_name = info ? info[0] : '';
+                                } else {
+                                    texture_name = get_file_name((texture.value as any).path) || '';
+                                }
+                            } else {
+                                texture_name = get_file_name((texture.value as any).path) || '';
+                            }
+
+                            let atlas = '';
+                            if (key == 'u_texture') {
+                                if (mesh instanceof AnimatedMesh) {
+                                    const info = mesh.get_texture(index);
+                                    atlas = info ? info[1] : '';
+                                } else {
+                                    const info = mesh.get_texture();
+                                    atlas = info ? info[1] : '';
+                                }
+                            } else {
+                                atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+                            }
 
                             material_fields.push({
                                 key,
@@ -889,7 +923,7 @@ function MeshInspectorCreate() {
 
         const model_fields: PropertyData<PropertyType>[] = [];
 
-        const model = (mesh as AnimatedMesh).get_mesh_name();
+        const model = (mesh as Model).get_mesh_name();
 
         model_fields.push({
             key: MeshProperty.MODEL,
@@ -901,19 +935,60 @@ function MeshInspectorCreate() {
             onChange: handleModelChange
         });
 
-        const animations: string[] = [];
-        ResourceManager.get_all_model_animations(model).forEach((animation) => {
-            animations.push((mesh as AnimatedMesh).get_animation_name_by_alias(animation) ?? animation);
+        fields.push({
+            key: MeshProperty.MODEL,
+            title: MeshPropertyTitle.MODEL,
+            value: model_fields,
+            type: PropertyType.FOLDER,
+            params: { expanded: true }
         });
 
-        log('MODEL ANIMATIONS:', animations);
+        const material_folders: PropertyData<PropertyType>[] = [];
+        (mesh as MultipleMaterialMesh).get_materials().forEach((material: ShaderMaterial, idx: number) => {
+            const is_first = (idx == 0);
+            generateMaterialFields(`Материал ${idx}`, list, material_folders, mesh, material, is_first, false, false, idx);
+        });
+
+        fields.push({
+            key: MeshProperty.MATERIAL,
+            title: MeshPropertyTitle.MATERIAL,
+            value: material_folders,
+            type: PropertyType.FOLDER,
+            params: { expanded: true }
+        });
+    }
+
+    function generateAnimatedModelFields(list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        generateTransformFields(fields, mesh);
+
+        const model_fields: PropertyData<PropertyType>[] = [];
+
+        const model = (mesh as AnimatedMesh).get_mesh_name();
+
+        model_fields.push({
+            key: MeshProperty.MODEL,
+            title: MeshPropertyTitle.MODEL,
+            value: model,
+            type: PropertyType.LIST_TEXT,
+            params: generateModelOptions(),
+            onBeforeChange: saveAnimatedModel,
+            onChange: handleAnimatedModelChange
+        });
+
+        fields.push({
+            key: MeshProperty.MODEL,
+            title: MeshPropertyTitle.MODEL,
+            value: model_fields,
+            type: PropertyType.FOLDER,
+            params: { expanded: true }
+        });
 
         model_fields.push({
             key: MeshProperty.ANIMATION_LIST,
             title: MeshPropertyTitle.ANIMATION_LIST,
-            value: Object.keys((mesh as AnimatedMesh).get_animation_list()).map(animation => (mesh as AnimatedMesh).get_animation_name_by_alias(animation) ?? animation),
+            value: Object.keys((mesh as AnimatedMesh).get_animation_list()),
             type: PropertyType.ITEM_LIST,
-            params: animations,
+            params: ResourceManager.get_all_model_animations(model),
             onBeforeChange: saveAnimationList,
             onChange: handleAnimationListChange
         });
@@ -933,16 +1008,8 @@ function MeshInspectorCreate() {
             onChange: handleActiveModelAnimationChange
         });
 
-        fields.push({
-            key: MeshProperty.MODEL,
-            title: MeshPropertyTitle.MODEL,
-            value: model_fields,
-            type: PropertyType.FOLDER,
-            params: { expanded: true }
-        });
-
         const material_folders: PropertyData<PropertyType>[] = [];
-        (mesh as AnimatedMesh).get_materials().forEach((material: ShaderMaterial, idx: number) => {
+        (mesh as MultipleMaterialMesh).get_materials().forEach((material: ShaderMaterial, idx: number) => {
             const is_first = (idx == 0);
             generateMaterialFields(`Материал ${idx}`, list, material_folders, mesh, material, is_first, false, false, idx);
         });
@@ -954,6 +1021,7 @@ function MeshInspectorCreate() {
             type: PropertyType.FOLDER,
             params: { expanded: true }
         });
+
     }
 
     function generateGuiBoxFields(list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
@@ -1014,7 +1082,11 @@ function MeshInspectorCreate() {
             Log.error('[refreshModelScale] Mesh not found for id:', ids);
             return;
         }
-        return Math.max(...mesh.children[0].scale.toArray());
+        const firstChild = (mesh as AnimatedMesh).children[0];
+        if (firstChild) {
+            return Math.max(...firstChild.scale.toArray());
+        }
+        return WORLD_SCALAR;
     }
 
     function refreshSize(ids: number[]) {
@@ -1199,25 +1271,42 @@ function MeshInspectorCreate() {
     }
 
     function saveModel(info: BeforeChangeInfo) {
-        const oldModels: MeshPropertyInfo<string>[] = [];
+        const oldModels: MeshPropertyInfo<{ mesh_name: string, scale: number }>[] = [];
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveModel] Mesh not found for id:', id);
                 return;
             }
-            if (mesh.type != IObjectTypes.GO_MODEL_COMPONENT) return;
-            oldModels.push({ mesh_id: mesh.mesh_data.id, value: (mesh as AnimatedMesh).get_mesh_name() });
+            if (mesh.type != IObjectTypes.GO_ANIMATED_MODEL_COMPONENT) return;
+            const firstChild = (mesh as AnimatedMesh).children[0];
+            oldModels.push({
+                mesh_id: mesh.mesh_data.id, value: {
+                    mesh_name: (mesh as AnimatedMesh).get_mesh_name(),
+                    scale: firstChild ? Math.max(...firstChild.scale.toArray()) : WORLD_SCALAR,
+                }
+            });
         });
         HistoryControl.add("MESH_MODEL", oldModels, HistoryOwner.MESH_INSPECTOR);
     }
 
     function handleModelChange(info: ChangeInfo) {
         const data = convertChangeInfoToMeshData<string>(info);
-        updateModel(data, info.data.event.last);
+        const pathedData = data.map(item => {
+            return {
+                mesh_id: item.mesh_id,
+                value: {
+                    mesh_name: item.value,
+                    scale: WORLD_SCALAR,
+                    animations: [],
+                    current_animation: ''
+                }
+            };
+        });
+        updateModel(pathedData, info.data.event.last);
     }
 
-    function updateModel(data: MeshPropertyInfo<string>[], _: boolean) {
+    function updateModel(data: MeshPropertyInfo<{ mesh_name: string, scale: number }>[], _: boolean) {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
@@ -1226,10 +1315,97 @@ function MeshInspectorCreate() {
             }
             const model = item.value;
             if (model) {
-                const [texture, atlas] = (mesh as AnimatedMesh).get_texture();
-                (mesh as AnimatedMesh).set_mesh(model);
-                (mesh as AnimatedMesh).children[0].scale.setScalar(1 / 50 * WORLD_SCALAR);
-                (mesh as AnimatedMesh).set_texture(texture, atlas);
+                const info = (mesh as AnimatedMesh).get_texture();
+                let [texture, atlas] = '';
+                if (info) {
+                    [texture, atlas] = info;
+                }
+
+                (mesh as Model).set_mesh(model.mesh_name);
+                const firstChild = (mesh as Model).children[0];
+                if (firstChild) {
+                    firstChild.scale.setScalar(model.scale);
+                }
+                if (texture && atlas) {
+                    (mesh as Model).set_texture(texture, atlas);
+                }
+            }
+        }
+
+        setTimeout(() => {
+            set_selected_meshes(_selected_meshes);
+        });
+    }
+
+    function saveAnimatedModel(info: BeforeChangeInfo) {
+        const oldModels: MeshPropertyInfo<{ mesh_name: string, scale: number, animations: string[], current_animation: string }>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[saveModel] Mesh not found for id:', id);
+                return;
+            }
+            if (mesh.type != IObjectTypes.GO_ANIMATED_MODEL_COMPONENT) return;
+            const firstChild = (mesh as AnimatedMesh).children[0];
+            oldModels.push({
+                mesh_id: mesh.mesh_data.id, value: {
+                    mesh_name: (mesh as AnimatedMesh).get_mesh_name(),
+                    scale: firstChild ? Math.max(...firstChild.scale.toArray()) : WORLD_SCALAR,
+                    animations: Object.keys((mesh as AnimatedMesh).get_animation_list()),
+                    current_animation: (mesh as AnimatedMesh).get_animation()
+                }
+            });
+        });
+        HistoryControl.add("MESH_ANIMATED_MODEL", oldModels, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleAnimatedModelChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        const pathedData = data.map(item => {
+            return {
+                mesh_id: item.mesh_id,
+                value: {
+                    mesh_name: item.value,
+                    scale: WORLD_SCALAR,
+                    animations: [],
+                    current_animation: ''
+                }
+            };
+        });
+        updateAnimatedModel(pathedData, info.data.event.last);
+    }
+
+    function updateAnimatedModel(data: MeshPropertyInfo<{ mesh_name: string, scale: number, animations: string[], current_animation: string }>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updateModel] Mesh not found for id:', item.mesh_id);
+                return;
+            }
+            const model = item.value;
+            if (model) {
+                const info = (mesh as AnimatedMesh).get_texture();
+                let [texture, atlas] = '';
+                if (info) {
+                    [texture, atlas] = info;
+                }
+
+                (mesh as AnimatedMesh).set_mesh(model.mesh_name);
+                const firstChild = (mesh as AnimatedMesh).children[0];
+                if (firstChild) {
+                    firstChild.scale.setScalar(model.scale);
+                    mesh.transform_changed();
+                }
+                if (texture && atlas) {
+                    (mesh as AnimatedMesh).set_texture(texture, atlas);
+                }
+
+                if (mesh instanceof AnimatedMesh) {
+                    model.animations.forEach(animation => {
+                        (mesh as AnimatedMesh).add_animation(animation);
+                    });
+                    (mesh as AnimatedMesh).set_animation(model.current_animation);
+                }
             }
         }
 
@@ -1246,7 +1422,7 @@ function MeshInspectorCreate() {
                 Log.error('[saveAnimationList] Mesh not found for id:', id);
                 return;
             }
-            oldAnimations.push({ mesh_id: mesh.mesh_data.id, value: Object.keys((mesh as AnimatedMesh).get_animation_list()).map(animation => (mesh as AnimatedMesh).get_animation_name_by_alias(animation) ?? animation) });
+            oldAnimations.push({ mesh_id: mesh.mesh_data.id, value: Object.keys((mesh as AnimatedMesh).get_animation_list()) });
         });
         HistoryControl.add("MESH_ANIMATION_LIST", oldAnimations, HistoryOwner.MESH_INSPECTOR);
     }
@@ -1296,7 +1472,7 @@ function MeshInspectorCreate() {
                 Log.error('[saveActiveModelAnimation] Mesh not found for id:', id);
                 return;
             }
-            if (mesh.type != IObjectTypes.GO_MODEL_COMPONENT) return;
+            if (mesh.type != IObjectTypes.GO_ANIMATED_MODEL_COMPONENT) return;
             oldAnimations.push({ mesh_id: mesh.mesh_data.id, value: (mesh as AnimatedMesh).get_animation() });
         });
         HistoryControl.add("MESH_ACTIVE_MODEL_ANIMATION", oldAnimations, HistoryOwner.MESH_INSPECTOR);
@@ -1485,8 +1661,11 @@ function MeshInspectorCreate() {
                 const max_delta = Math.max(delta.x, delta.y);
                 mesh.fontSize * max_delta;
             }
-            else if (mesh instanceof AnimatedMesh) {
-                mesh.children[0].scale.setScalar(Math.max(item.value.x, item.value.y));
+            else if (mesh instanceof MultipleMaterialMesh) {
+                const first_child = mesh.children[0];
+                if (first_child) {
+                    first_child.scale.setScalar(Math.max(item.value.x, item.value.y));
+                }
                 mesh.transform_changed();
             }
         }
@@ -1506,7 +1685,7 @@ function MeshInspectorCreate() {
                 return;
             }
             if (mesh instanceof AnimatedMesh) {
-                const scale_factor = Math.max(...mesh.children[0].scale.toArray()) / WORLD_SCALAR;
+                const scale_factor = Math.max(...mesh.children[0].scale.toArray());
                 oldScales.push({ mesh_id: id, value: scale_factor });
             }
         });
@@ -1525,9 +1704,12 @@ function MeshInspectorCreate() {
                 Log.error('[updateModelScale] Mesh not found for id:', item.mesh_id);
                 continue;
             }
-            if (mesh instanceof AnimatedMesh) {
-                mesh.children[0].scale.setScalar(item.value * WORLD_SCALAR);
-                mesh.transform_changed();
+            if (mesh instanceof MultipleMaterialMesh) {
+                const firstChild = mesh.children[0];
+                if (firstChild) {
+                    firstChild.scale.setScalar(item.value);
+                    mesh.transform_changed();
+                }
             }
         }
     }
@@ -1965,16 +2147,24 @@ function MeshInspectorCreate() {
                 Log.error('[saveBlendMode] Mesh not found for id:', id);
                 return;
             }
-            blendModes.push({
-                mesh_id: id,
-                value: (mesh as any).material.blending
-            });
+            if (mesh instanceof Slice9Mesh) {
+                const blend_mode = convertThreeJSBlendingToBlendMode(mesh.material.blending);
+                blendModes.push({ mesh_id: id, value: blend_mode });
+            }
+            else if (mesh instanceof MultipleMaterialMesh) {
+                const blend_mode = convertThreeJSBlendingToBlendMode(mesh.get_materials()[info.field.data.material_index].blending);
+                blendModes.push({ mesh_id: id, value: blend_mode });
+            }
         });
         HistoryControl.add('MESH_BLEND_MODE', blendModes, HistoryOwner.MESH_INSPECTOR);
     }
 
     function handleBlendModeChange(info: ChangeInfo) {
         const data = convertChangeInfoToMeshData<BlendMode>(info);
+        // HACK: только для этого поля добавлен material_index MeshData - нужно сделать индекс в MeshPropertyInfo как в MeshMaterialUniformInfo
+        data.forEach(item => {
+            (item as any).material_index = info.data.field.data.material_index;
+        });
         updateBlendMode(data, info.data.event.last);
     }
 
@@ -1987,7 +2177,12 @@ function MeshInspectorCreate() {
             }
             const blend_mode = item.value as BlendMode;
             const threeBlendMode = convertBlendModeToThreeJS(blend_mode);
-            (mesh as any).material.blending = threeBlendMode;
+            if (mesh instanceof Slice9Mesh) {
+                (mesh as Slice9Mesh).material.blending = threeBlendMode;
+            }
+            else if (mesh instanceof MultipleMaterialMesh) {
+                (mesh as MultipleMaterialMesh).get_materials()[(item as any).material_index].blending = threeBlendMode;
+            }
         }
     }
 
@@ -2240,8 +2435,8 @@ function MeshInspectorCreate() {
                     mesh.set_texture(texture_name, atlas);
                 }
                 else {
-                    ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, texture);
-                    ResourceManager.set_material_define_for_animated_mesh(mesh, item.material_index, 'USE_TEXTURE', '');
+                    ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, texture);
+                    ResourceManager.set_material_define_for_multiple_material_mesh(mesh, item.material_index, 'USE_TEXTURE', '');
                 }
             }
 
@@ -2313,7 +2508,7 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
-                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, item.value);
+                ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, item.value);
             }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
@@ -2384,7 +2579,7 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
-                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, item.value);
+                ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, item.value);
             }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
@@ -2455,7 +2650,7 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
-                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, item.value);
+                ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, item.value);
             }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
@@ -2527,7 +2722,7 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
-                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, item.value);
+                ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, item.value);
             }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
@@ -2598,7 +2793,7 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
-                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, item.value);
+                ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, item.value);
             }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
@@ -2674,7 +2869,7 @@ function MeshInspectorCreate() {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
-                ResourceManager.set_material_uniform_for_animated_mesh(mesh, item.material_index, item.uniform_name, rgb);
+                ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, rgb);
             }
 
             EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
@@ -2770,8 +2965,12 @@ function MeshInspectorCreate() {
                 updateLineHeight(lineHeights, true);
                 break;
             case 'MESH_MODEL':
-                const models = event.data as MeshPropertyInfo<string>[];
+                const models = event.data as MeshPropertyInfo<{ mesh_name: string, scale: number }>[];
                 updateModel(models, true);
+                break;
+            case 'MESH_ANIMATED_MODEL':
+                const animated_models = event.data as MeshPropertyInfo<{ mesh_name: string, scale: number, animations: string[], current_animation: string }>[];
+                updateAnimatedModel(animated_models, true);
                 break;
             case 'MESH_ANIMATION_LIST':
                 const animationLists = event.data as MeshPropertyInfo<string[]>[];

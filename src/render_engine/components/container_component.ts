@@ -36,7 +36,4 @@ export class Component extends EntityBase implements IBaseEntity {
         this.sub_type = _data.t;
         this.cmp.deserialize(_data.data);
     }
-
-
-
 }

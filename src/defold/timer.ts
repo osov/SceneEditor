@@ -1,53 +1,50 @@
-import { TDictionary } from "../modules_editor/modules_editor_const";
-
 declare global {
     namespace timer {
-        export function delay(delay: number, callback: (self: any, handle: any, time_elapsed: number) => void): any;
-        export function cancel(handle: any): void;
+        export function delay(delay: number, repeat: boolean, callback: (self: any, handle: any, time_elapsed: number) => void): any;
+        export function cancel(handle: any): boolean;
     }
 }
 
 export function timer_module() {
-    let nextHandle = 1;
-    const activeTimers: TDictionary<{
-        callback: (self: any, handle: any, time_elapsed: number) => void,
-        startTime: number,
-        delay: number,
-        repeat: boolean
-    }> = {};
+    const timeoutHandles: ReturnType<typeof setTimeout>[] = [];
+    const intervalHandles: ReturnType<typeof setInterval>[] = [];
 
-    function init() {
-        EventBus.on('SYS_ON_UPDATE', (e) => {
-            Object.entries(activeTimers).forEach(([handle, timer]) => {
-                timer.startTime += e.dt;
-                if (timer.startTime >= timer.delay) {
-                    timer.callback(null, handle, timer.startTime / 1000);
-                    if (timer.repeat) timer.startTime = 0;
-                    else delete activeTimers[handle];
-                }
-            });
-        });
-    }
+    function delay(delay: number, repeat: boolean, callback: (self: any, handle: any, time_elapsed: number) => void): any {
+        if (repeat) {
+            let startTime = Date.now();
+            const handle = setInterval(() => {
+                const timeElapsed = Date.now() - startTime;
+                callback(null, handle, timeElapsed);
+                startTime = Date.now();
+            }, delay);
+            intervalHandles.push(handle);
+            return handle;
+        }
 
-    function delay(delay: number, repeat: boolean, callback: (self: any, handle: any, time_elapsed: number) => void) {
-        const handle = nextHandle++;
-        activeTimers[handle] = {
-            callback,
-            startTime: 0,
-            delay: delay,
-            repeat: repeat
-        };
+        const startTime = Date.now();
+        const handle = setTimeout(() => {
+            const timeElapsed = Date.now() - startTime;
+            callback(null, handle, timeElapsed);
+        }, delay);
+        timeoutHandles.push(handle);
         return handle;
     }
 
     function cancel(handle: any): boolean {
-        if (!activeTimers[handle])
-            return false;
-        delete activeTimers[handle];
-        return true;
+        if (timeoutHandles.includes(handle)) {
+            clearTimeout(handle);
+            timeoutHandles.splice(timeoutHandles.indexOf(handle), 1);
+            return true;
+        }
+
+        if (intervalHandles.includes(handle)) {
+            clearInterval(handle);
+            return true;
+        }
+
+        return false;
     }
 
-    init();
     return {
         delay,
         cancel

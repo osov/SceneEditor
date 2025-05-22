@@ -35,8 +35,8 @@ import { FSEvent, TDictionary, TRecursiveDict } from '../modules_editor/modules_
 import { shader } from './objects/entity_base';
 import { deepClone, getObjectHash, hexToRGB } from '../modules/utils';
 import { Slice9Mesh } from './objects/slice9';
-import { AnimatedMesh } from './objects/animated_mesh';
 import { IBaseEntityData } from './types';
+import { MultipleMaterialMesh } from './objects/multiple_material_mesh';
 
 
 declare global {
@@ -1005,9 +1005,9 @@ export function ResourceManagerModule() {
         }
     }
 
-    function set_material_uniform_for_animated_mesh<T>(mesh: AnimatedMesh, index: number, uniform_name: string, value: T) {
+    function set_material_uniform_for_multiple_material_mesh<T>(mesh: MultipleMaterialMesh, index: number, uniform_name: string, value: T) {
         const mesh_id = mesh.mesh_data.id;
-        const material_name = (mesh as AnimatedMesh).get_materials()[index].name;
+        const material_name = mesh.get_materials()[index].name;
         const material_info = get_material_info(material_name);
         if (!material_info) return;
 
@@ -1071,9 +1071,9 @@ export function ResourceManagerModule() {
         }
     }
 
-    function set_material_define_for_animated_mesh<T>(mesh: AnimatedMesh, index: number, define_name: string, value?: T) {
+    function set_material_define_for_multiple_material_mesh<T>(mesh: MultipleMaterialMesh, index: number, define_name: string, value?: T) {
         const mesh_id = mesh.mesh_data.id;
-        const material_name = (mesh as AnimatedMesh).get_materials()[index].name;
+        const material_name = mesh.get_materials()[index].name;
         const material_info = get_material_info(material_name);
         if (!material_info) return;
 
@@ -1131,7 +1131,7 @@ export function ResourceManagerModule() {
         unlink_material(material_info, mesh_id, 0);
     }
 
-    function unlink_material_for_animated_mesh(material_name: string, mesh_id: number, index: number) {
+    function unlink_material_for_multiple_material_mesh(material_name: string, mesh_id: number, index: number) {
         const material_info = get_material_info(material_name);
         if (!material_info) return;
 
@@ -1536,12 +1536,12 @@ export function ResourceManagerModule() {
         get_material_by_mesh_id,
         set_material_uniform_for_original,
         set_material_uniform_for_mesh,
-        set_material_uniform_for_animated_mesh,
+        set_material_uniform_for_multiple_material_mesh,
         set_material_define_for_mesh,
-        set_material_define_for_animated_mesh,
+        set_material_define_for_multiple_material_mesh,
         has_material_by_mesh_id,
         unlink_material_for_mesh,
-        unlink_material_for_animated_mesh,
+        unlink_material_for_multiple_material_mesh,
         get_info_about_unique_materials,
         get_font,
         get_texture,

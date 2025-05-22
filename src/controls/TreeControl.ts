@@ -211,7 +211,7 @@ function TreeControlCreate() {
         if (icon == IObjectTypes.GO_CONTAINER) return "cube";
         if (icon == IObjectTypes.GO_SPRITE_COMPONENT) return "texture";
         if (icon == IObjectTypes.GO_LABEL_COMPONENT) return "tag";
-        if (icon == IObjectTypes.GO_MODEL_COMPONENT) return "box_model";
+        if (icon == IObjectTypes.GO_ANIMATED_MODEL_COMPONENT) return "box_model";
 
         if (icon == IObjectTypes.EMPTY) return "percentage_0";
         if (icon == IObjectTypes.ENTITY) return "ghost_3";
@@ -1016,7 +1016,7 @@ function TreeControlCreate() {
                 NodeAction.add_gui_text,
                 NodeAction.add_go_sprite_component,
                 NodeAction.add_go_label_component,
-                NodeAction.add_go_model_component
+                NodeAction.add_go_animated_model_component
             ];
             if (itemDrag?.id == -1 && blackList.includes(action)) not_active = true;
         }
@@ -1059,7 +1059,7 @@ function TreeControlCreate() {
                 getItemCM('Добавить контейнер', NodeAction.add_go_container),
                 getItemCM('Добавить спрайт', NodeAction.add_go_sprite_component),
                 getItemCM('Добавить надпись', NodeAction.add_go_label_component),
-                getItemCM('Добавить модель', NodeAction.add_go_model_component),
+                getItemCM('Добавить модель', NodeAction.add_go_animated_model_component),
             ]
         });
 
@@ -1151,8 +1151,8 @@ function TreeControlCreate() {
         if (action == NodeAction.add_go_label_component) {
             ActionsControl.add_go_label_component({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
-        if (action == NodeAction.add_go_model_component) {
-            ActionsControl.add_go_model_component({ pid: copyItemDrag?.id, pos: get_position_view() });
+        if (action == NodeAction.add_go_animated_model_component) {
+            ActionsControl.add_go_animated_model_component({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_component_spline) {
             ActionsControl.add_component({ pid: copyItemDrag?.id, pos: get_position_view() }, ComponentType.SPLINE);

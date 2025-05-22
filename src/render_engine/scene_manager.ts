@@ -1,4 +1,4 @@
-import { Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
+import { Mesh, Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
 import { IBaseEntityAndThree, IBaseEntityData, IObjectTypes } from "./types";
@@ -10,6 +10,7 @@ import { EntityBase } from "./objects/entity_base";
 import { Component } from "./components/container_component";
 import { FLOAT_PRECISION } from "../config";
 import { TDictionary } from "../modules_editor/modules_editor_const";
+import { Model } from "./objects/model";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -32,7 +33,9 @@ type IMeshTypes = {
     [IObjectTypes.GO_CONTAINER]: GoContainer,
     [IObjectTypes.GO_SPRITE_COMPONENT]: GoSprite,
     [IObjectTypes.GO_LABEL_COMPONENT]: GoText,
-    [IObjectTypes.GO_MODEL_COMPONENT]: AnimatedMesh,
+
+    [IObjectTypes.GO_MODEL_COMPONENT]: Model,
+    [IObjectTypes.GO_ANIMATED_MODEL_COMPONENT]: AnimatedMesh,
 
     [IObjectTypes.COMPONENT]: Component
 }
@@ -94,6 +97,9 @@ export function SceneManagerModule() {
             mesh = new GoText(check_id_is_available_or_generate_new(id), params.text || '', params.width || default_size, params.height || default_size);
         }
         else if (type == IObjectTypes.GO_MODEL_COMPONENT) {
+            mesh = new Model(check_id_is_available_or_generate_new(id), params.width || default_size, params.height || default_size);
+        }
+        else if (type == IObjectTypes.GO_ANIMATED_MODEL_COMPONENT) {
             mesh = new AnimatedMesh(check_id_is_available_or_generate_new(id), params.width || default_size, params.height || default_size);
         }
         else if (type == IObjectTypes.COMPONENT)

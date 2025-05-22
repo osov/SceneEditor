@@ -16,16 +16,22 @@ export function collectionfactory_module() {
         properties?: any,
         scale?: vmath.vector3
     ) {
-        const result = AssetControl.loadPartOfSceneInPos(
+        const part = AssetControl.loadPartOfSceneInPos(
             url,
             position ? new Vector3().copy(position) : undefined,
             rotation ? new Quaternion().copy(rotation) : undefined,
             scale ? new Vector3().copy(scale) : undefined
         );
-        if (!result) return null;
-        return SceneManager.get_scene_list().filter(obj => {
-            return obj.mesh_data.id >= result.mesh_data.id;
-        }).map((obj: IBaseEntityAndThree) => id_to_url(obj.mesh_data.id));
+        if (!part) return null;
+        const result: { [key: string]: hash } = {};
+        SceneManager.get_scene_list().filter(obj => {
+            return obj.mesh_data.id >= part.mesh_data.id;
+        }).forEach((obj: IBaseEntityAndThree) => {
+            const name = obj.name;
+            const id = obj.mesh_data.id;
+            result['/' + name] = { id } as hash;
+        });
+        return result;
     }
 
     return { create };

@@ -11,13 +11,13 @@ export enum IObjectTypes {
     GO_SPRITE_COMPONENT = 'sprite',
     GO_LABEL_COMPONENT = 'label',
     GO_MODEL_COMPONENT = 'model',
+    GO_ANIMATED_MODEL_COMPONENT = 'animated_model',
 
     GUI_CONTAINER = 'gui',
     GUI_BOX = 'box',
     GUI_TEXT = 'text',
 
     COMPONENT = 'component',
-
 };
 
 export enum PivotX {
@@ -43,7 +43,7 @@ export interface IBaseEntity {
     mesh_data: { id: number };
     no_saving?: boolean;
     no_removing?: boolean;
-    ignore_history?:HistoryDataKeys[];
+    ignore_history?: HistoryDataKeys[];
     set_position(x: number, y: number, z?: number): void
     get_position(): Vector3
     set_scale(x: number, y: number): void
