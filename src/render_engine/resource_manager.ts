@@ -469,7 +469,11 @@ export function ResourceManagerModule() {
 
     async function preload_audio(path: string) {
         const audio_buffer = await audio_loader.loadAsync(path);
-        audio[path] = audio_buffer;
+        audio[get_file_name(path)] = audio_buffer;
+    }
+
+    function get_sound(name: string) {
+        return audio[name];
     }
 
     async function preload_scene(path: string) {
@@ -1576,6 +1580,7 @@ export function ResourceManagerModule() {
         write_metadata,
         get_scene_info,
         cache_scene,
+        get_sound,
         models,
         animations
     };

@@ -2,7 +2,7 @@
     Модуль для работы с камерой и преобразованиями
 */
 
-import { OrthographicCamera, PerspectiveCamera, Vector3 } from "three";
+import { OrthographicCamera, PerspectiveCamera, AudioListener, Vector3 } from "three";
 import { get_window_size } from "../render_engine/helpers/window_utils";
 import { IS_CAMERA_ORTHOGRAPHIC } from "../config";
 
@@ -60,6 +60,10 @@ function CameraModule() {
 
     function set_zoom(zoom: number) {
         _zoom = zoom;
+    }
+
+    function set_listener(listener: AudioListener) {
+        RenderEngine.camera.add(listener);
     }
 
     function screen_viewport() {
@@ -199,5 +203,5 @@ function CameraModule() {
     }
 
     init();
-    return { set_width_prjection, get_zoom, set_zoom, set_auto_zoom, is_dynamic_orientation, set_dynamic_orientation, screen_to_world };
+    return { set_width_prjection, get_zoom, set_zoom, set_auto_zoom, is_dynamic_orientation, set_dynamic_orientation, screen_to_world, set_listener };
 }

@@ -25,7 +25,7 @@ import { register_components_control } from './controls/ComponentsControl';
 import { PROJECT_NAME } from './config';
 import { register_lua_core } from './defold/core';
 import { register_tween_manager } from './render_engine/tween_manager';
-
+import { register_sound_manager } from './modules/SoundManager';
 
 function register_managers() {
     register_manager();
@@ -33,6 +33,7 @@ function register_managers() {
     register_resource_manager();
     register_scene_manager();
     register_tween_manager();
+    register_sound_manager();
     RenderEngine.init();
 }
 
