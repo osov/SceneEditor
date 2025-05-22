@@ -1007,7 +1007,12 @@ export function ResourceManagerModule() {
 
     function set_material_uniform_for_multiple_material_mesh<T>(mesh: MultipleMaterialMesh, index: number, uniform_name: string, value: T) {
         const mesh_id = mesh.mesh_data.id;
-        const material_name = mesh.get_materials()[index].name;
+        const materials = mesh.get_materials();
+        if (materials.length == 0){
+            Log.error('Materials not found', mesh_id);
+            return;
+        }
+        const material_name = materials[index].name;
         const material_info = get_material_info(material_name);
         if (!material_info) return;
 

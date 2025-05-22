@@ -190,6 +190,14 @@ export class TextMesh extends Text implements IBaseMesh {
         return this.geometry.drawRange.count != 0;
     }
 
+    set_alpha(value: number) {
+        this.fillOpacity = value;
+    }
+
+    get_alpha() {
+        return this.fillOpacity;
+    }
+
     serialize(): SerializeData {
         const data: SerializeData = {};
 
