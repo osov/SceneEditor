@@ -1114,32 +1114,35 @@ function MeshInspectorCreate() {
             onChange: handlePanChange
         });
 
-        const is_playing = AudioManager.is_playing(mesh.get_id());
-        audio_fields.push({
-            key: is_playing ? MeshProperty.STOP : MeshProperty.PLAY,
-            title: is_playing ? MeshPropertyTitle.STOP : MeshPropertyTitle.PLAY,
-            value: () => {
-                if (is_playing) AudioManager.stop(mesh.get_id());
-                else {
-                    // NOTE: для того чтобы сменить кнопку по окончанию проигрывания звука
-                    AudioManager.set_end_callback(mesh.get_id(), () => {
-                        set_selected_meshes(_selected_meshes);
-                    });
+        if (mesh.get_sound() != '') {
+            const is_playing = AudioManager.is_playing(mesh.get_id());
+            audio_fields.push({
+                key: is_playing ? MeshProperty.STOP : MeshProperty.PLAY,
+                title: is_playing ? MeshPropertyTitle.STOP : MeshPropertyTitle.PLAY,
+                value: () => {
+                    if (is_playing) AudioManager.stop(mesh.get_id());
+                    else {
 
-                    AudioManager.play(
-                        mesh.get_id(),
-                        mesh.get_loop(),
-                        mesh.get_volume(),
-                        mesh.get_speed(),
-                        mesh.get_pan()
-                    );
-                }
+                        // NOTE: для того чтобы сменить кнопку по окончанию проигрывания звука
+                        AudioManager.set_end_callback(mesh.get_id(), () => {
+                            set_selected_meshes(_selected_meshes);
+                        });
 
-                // NOTE: для того чтобы сменить кнопку
-                set_selected_meshes(_selected_meshes);
-            },
-            type: PropertyType.BUTTON,
-        });
+                        AudioManager.play(
+                            mesh.get_id(),
+                            mesh.get_loop(),
+                            mesh.get_volume(),
+                            mesh.get_speed(),
+                            mesh.get_pan()
+                        );
+                    }
+
+                    // NOTE: для того чтобы сменить кнопку
+                    set_selected_meshes(_selected_meshes);
+                },
+                type: PropertyType.BUTTON,
+            });
+        }
 
         fields.push({
             key: MeshProperty.SOUND,
