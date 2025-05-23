@@ -79,7 +79,8 @@ function AudioManagerModule() {
                     end_callbacks[id]();
                 }
             }
-            sound.source.connect(panner);
+            // NOTE/HACK: для того чтобы выключить звук если громкость 0
+            if (volume > 0) sound.source.connect(panner);
             panner.connect(listener.context.destination);
         }
     }
