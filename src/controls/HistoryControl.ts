@@ -63,6 +63,11 @@ export type HistoryData = {
     TEXTURE_MAG_FILTER: AssetTextureInfo<MagnificationTextureFilter>
     TEXTURE_ATLAS: AssetTextureInfo<string>
     SPLINE_STATE: MeshPropertyInfo<Vector3>[]
+    MESH_SOUND: MeshPropertyInfo<string>
+    MESH_SOUND_LOOP: MeshPropertyInfo<boolean>
+    MESH_SOUND_VOLUME: MeshPropertyInfo<number>
+    MESH_SOUND_SPEED: MeshPropertyInfo<number>
+    MESH_SOUND_PAN: MeshPropertyInfo<number>
 }
 
 export type HistoryDataKeys = keyof HistoryData;

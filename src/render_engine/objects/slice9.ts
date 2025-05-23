@@ -418,10 +418,6 @@ export class Slice9Mesh extends EntityPlane {
         this.template.set_anchor(x, y);
     }
 
-    dispose() {
-        ResourceManager.unlink_material_for_mesh(this.material.name, this.mesh_data.id);
-    }
-
     serialize() {
         return { ...super.serialize(), ...this.template.serialize() };
     }
@@ -433,5 +429,10 @@ export class Slice9Mesh extends EntityPlane {
 
         super.deserialize(data);
         this.template.deserialize(data);
+    }
+
+    dispose() {
+        super.dispose();
+        ResourceManager.unlink_material_for_mesh(this.material.name, this.mesh_data.id);
     }
 }

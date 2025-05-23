@@ -1017,7 +1017,8 @@ function TreeControlCreate() {
                 NodeAction.add_go_sprite_component,
                 NodeAction.add_go_label_component,
                 NodeAction.add_go_model_component,
-                NodeAction.add_go_animated_model_component
+                NodeAction.add_go_animated_model_component,
+                NodeAction.add_go_audio_component
             ];
             if (itemDrag?.id == -1 && blackList.includes(action)) not_active = true;
         }
@@ -1062,6 +1063,7 @@ function TreeControlCreate() {
                 getItemCM('Добавить надпись', NodeAction.add_go_label_component),
                 getItemCM('Добавить модель', NodeAction.add_go_model_component),
                 getItemCM('Добавить аним-модель', NodeAction.add_go_animated_model_component),
+                getItemCM('Добавить звук', NodeAction.add_go_audio_component),
             ]
         });
 
@@ -1158,6 +1160,9 @@ function TreeControlCreate() {
         }
         if (action == NodeAction.add_go_animated_model_component) {
             ActionsControl.add_go_animated_model_component({ pid: copyItemDrag?.id, pos: get_position_view() });
+        }
+        if (action == NodeAction.add_go_audio_component) {
+            ActionsControl.add_go_audio_component({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_component_spline) {
             ActionsControl.add_component({ pid: copyItemDrag?.id, pos: get_position_view() }, ComponentType.SPLINE);

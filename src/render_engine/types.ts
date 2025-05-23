@@ -12,6 +12,7 @@ export enum IObjectTypes {
     GO_LABEL_COMPONENT = 'label',
     GO_MODEL_COMPONENT = 'model',
     GO_ANIMATED_MODEL_COMPONENT = 'animated_model',
+    GO_AUDIO_COMPONENT = 'audio',
 
     GUI_CONTAINER = 'gui',
     GUI_BOX = 'box',

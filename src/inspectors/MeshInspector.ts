@@ -18,6 +18,7 @@ import { AnimatedMesh } from "../render_engine/objects/animated_mesh";
 import { WORLD_SCALAR } from "../config";
 import { Model } from "@editor/render_engine/objects/model";
 import { MultipleMaterialMesh } from "@editor/render_engine/objects/multiple_material_mesh";
+import { AudioMesh } from "@editor/render_engine/objects/audio_mesh";
 
 
 declare global {
@@ -56,7 +57,14 @@ export enum MeshProperty {
     GO_TO_ORIGINAL_MATERIAL = 'go_to_original_material',
     FLIP_DIAGONAL = 'flip_diagonal',
     FLIP_VERTICAL = 'flip_vertical',
-    FLIP_HORIZONTAL = 'flip_horizontal'
+    FLIP_HORIZONTAL = 'flip_horizontal',
+    SOUND = 'sound',
+    VOLUME = 'volume',
+    SPEED = 'speed',
+    LOOP = 'loop',
+    PAN = 'pan',
+    PLAY = 'play',
+    STOP = 'stop'
 }
 
 export enum MeshPropertyTitle {
@@ -87,7 +95,14 @@ export enum MeshPropertyTitle {
     GO_TO_ORIGINAL_MATERIAL = 'Перейти к оригиналу',
     FLIP_DIAGONAL = 'Диагональное отражение',
     FLIP_VERTICAL = 'Вертикальное отражение',
-    FLIP_HORIZONTAL = 'Горизонтальное отражение'
+    FLIP_HORIZONTAL = 'Горизонтальное отражение',
+    SOUND = 'Звук',
+    VOLUME = 'Громкость',
+    SPEED = 'Скорость',
+    LOOP = 'Повторять',
+    PAN = 'Панорамирование',
+    PLAY = 'Воспроизвести',
+    STOP = 'Остановить'
 }
 
 export enum ScreenPointPreset {
@@ -172,6 +187,9 @@ function MeshInspectorCreate() {
                     break;
                 case IObjectTypes.GO_ANIMATED_MODEL_COMPONENT:
                     generateAnimatedModelFields(list, fields, mesh as AnimatedMesh);
+                    break;
+                case IObjectTypes.GO_AUDIO_COMPONENT:
+                    generateAudioFields(fields, mesh as AudioMesh);
                     break;
             }
 
@@ -1025,6 +1043,113 @@ function MeshInspectorCreate() {
 
     }
 
+    function generateAudioFields(fields: PropertyData<PropertyType>[], mesh: AudioMesh) {
+        generateTransformFields(fields, mesh);
+
+        const audio_fields: PropertyData<PropertyType>[] = [];
+
+        const soundOptions: { [key: string]: string } = {};
+        ResourceManager.get_all_sounds().forEach(sound => {
+            soundOptions[sound] = sound;
+        });
+
+        audio_fields.push({
+            key: MeshProperty.SOUND,
+            title: MeshPropertyTitle.SOUND,
+            value: mesh.get_sound(),
+            type: PropertyType.LIST_TEXT,
+            params: soundOptions,
+            onBeforeChange: saveSound,
+            onChange: handleSoundChange
+        });
+
+        audio_fields.push({
+            key: MeshProperty.LOOP,
+            title: MeshPropertyTitle.LOOP,
+            value: mesh.get_loop(),
+            type: PropertyType.BOOLEAN,
+            onBeforeChange: saveLoop,
+            onChange: handleLoopChange
+        });
+
+        audio_fields.push({
+            key: MeshProperty.VOLUME,
+            title: MeshPropertyTitle.VOLUME,
+            value: mesh.get_volume(),
+            type: PropertyType.SLIDER,
+            params: {
+                min: 0,
+                max: 10,
+                step: 0.01
+            },
+            onBeforeChange: saveVolume,
+            onChange: handleVolumeChange
+        });
+
+        audio_fields.push({
+            key: MeshProperty.SPEED,
+            title: MeshPropertyTitle.SPEED,
+            value: mesh.get_speed(),
+            type: PropertyType.SLIDER,
+            params: {
+                min: 0,
+                max: 1,
+                step: 0.01
+            },
+            onBeforeChange: saveSpeed,
+            onChange: handleSpeedChange
+        });
+
+        audio_fields.push({
+            key: MeshProperty.PAN,
+            title: MeshPropertyTitle.PAN,
+            value: mesh.get_pan(),
+            type: PropertyType.SLIDER,
+            params: {
+                min: 0,
+                max: 1,
+                step: 0.1
+            },
+            onBeforeChange: savePan,
+            onChange: handlePanChange
+        });
+
+        const is_playing = AudioManager.is_playing(mesh.get_id());
+        audio_fields.push({
+            key: is_playing ? MeshProperty.STOP : MeshProperty.PLAY,
+            title: is_playing ? MeshPropertyTitle.STOP : MeshPropertyTitle.PLAY,
+            value: () => {
+                if (is_playing) AudioManager.stop(mesh.get_id());
+                else {
+                    // NOTE: для того чтобы сменить кнопку по окончанию проигрывания звука
+                    AudioManager.set_end_callback(mesh.get_id(), () => {
+                        set_selected_meshes(_selected_meshes);
+                    });
+
+                    AudioManager.play(
+                        mesh.get_id(),
+                        mesh.get_loop(),
+                        mesh.get_volume(),
+                        mesh.get_speed(),
+                        mesh.get_pan()
+                    );
+                }
+
+                // NOTE: для того чтобы сменить кнопку
+                set_selected_meshes(_selected_meshes);
+            },
+            type: PropertyType.BUTTON,
+        });
+
+        fields.push({
+            key: MeshProperty.SOUND,
+            title: MeshPropertyTitle.SOUND,
+            value: audio_fields,
+            type: PropertyType.FOLDER,
+            params: { expanded: true }
+        });
+    }
+
     function generateGuiBoxFields(list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
         generateTransformFields(fields, mesh);
         generateGuiTransformFields(fields, mesh);
@@ -1333,9 +1458,7 @@ function MeshInspectorCreate() {
             }
         }
 
-        setTimeout(() => {
-            set_selected_meshes(_selected_meshes);
-        });
+        force_refresh();
     }
 
     function saveAnimatedModel(info: BeforeChangeInfo) {
@@ -1410,9 +1533,7 @@ function MeshInspectorCreate() {
             }
         }
 
-        setTimeout(() => {
-            set_selected_meshes(_selected_meshes);
-        });
+        force_refresh();
     }
 
     function saveAnimationList(info: BeforeChangeInfo) {
@@ -1460,9 +1581,7 @@ function MeshInspectorCreate() {
             });
         }
 
-        setTimeout(() => {
-            set_selected_meshes(_selected_meshes);
-        });
+        force_refresh();
     }
 
     function saveActiveModelAnimation(info: BeforeChangeInfo) {
@@ -2271,9 +2390,7 @@ function MeshInspectorCreate() {
             }
         }
 
-        setTimeout(() => {
-            set_selected_meshes(_selected_meshes);
-        });
+        force_refresh();
     }
 
     function saveUV(info: BeforeChangeInfo) {
@@ -2892,6 +3009,153 @@ function MeshInspectorCreate() {
         });
     }
 
+    function saveSound(info: BeforeChangeInfo) {
+        const sounds: MeshPropertyInfo<string>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveSound] Mesh not found for id:', id);
+                return;
+            }
+            sounds.push({ mesh_id: id, value: mesh.get_sound() });
+        });
+        HistoryControl.add('MESH_SOUND', sounds, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleSoundChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        updateSound(data, info.data.event.last);
+    }
+
+    function updateSound(data: MeshPropertyInfo<string>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateSound] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_sound(item.value);
+        }
+
+        force_refresh();
+    }
+
+    function saveLoop(info: BeforeChangeInfo) {
+        const loops: MeshPropertyInfo<boolean>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveLoop] Mesh not found for id:', id);
+                return;
+            }
+            loops.push({ mesh_id: id, value: mesh.get_loop() });
+        });
+        HistoryControl.add('MESH_SOUND_LOOP', loops, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleLoopChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<boolean>(info);
+        updateLoop(data, info.data.event.last);
+    }
+
+    function updateLoop(data: MeshPropertyInfo<boolean>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateLoop] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_loop(item.value);
+        }
+    }
+
+    function saveVolume(info: BeforeChangeInfo) {
+        const volumes: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveVolume] Mesh not found for id:', id);
+                return;
+            }
+            volumes.push({ mesh_id: id, value: mesh.get_volume() });
+        });
+        HistoryControl.add('MESH_SOUND_VOLUME', volumes, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleVolumeChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateVolume(data, info.data.event.last);
+    }
+
+    function updateVolume(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateVolume] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_volume(item.value);
+        }
+    }
+
+    function saveSpeed(info: BeforeChangeInfo) {
+        const speeds: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveSpeed] Mesh not found for id:', id);
+                return;
+            }
+            speeds.push({ mesh_id: id, value: mesh.get_speed() });
+        });
+        HistoryControl.add('MESH_SOUND_SPEED', speeds, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleSpeedChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateSpeed(data, info.data.event.last);
+    }
+
+    function updateSpeed(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateSpeed] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_speed(item.value);
+        }
+    }
+
+    function savePan(info: BeforeChangeInfo) {
+        const pans: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[savePan] Mesh not found for id:', id);
+                return;
+            }
+            pans.push({ mesh_id: id, value: mesh.get_pan() });
+        });
+        HistoryControl.add('MESH_SOUND_PAN', pans, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handlePanChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updatePan(data, info.data.event.last);
+    }
+
+    function updatePan(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updatePan] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_pan(item.value);
+        }
+    }
+
     function undo(event: THistoryUndo) {
         switch (event.type) {
             case 'MESH_NAME':
@@ -3026,6 +3290,26 @@ function MeshInspectorCreate() {
                 const materialColors = event.data as MeshMaterialUniformInfo<string>[];
                 updateUniformColor(materialColors, true);
                 break;
+            case 'MESH_SOUND':
+                const sounds = event.data as MeshPropertyInfo<string>[];
+                updateSound(sounds, true);
+                break;
+            case 'MESH_SOUND_LOOP':
+                const loops = event.data as MeshPropertyInfo<boolean>[];
+                updateLoop(loops, true);
+                break;
+            case 'MESH_SOUND_VOLUME':
+                const volumes = event.data as MeshPropertyInfo<number>[];
+                updateVolume(volumes, true);
+                break;
+            case 'MESH_SOUND_SPEED':
+                const speeds = event.data as MeshPropertyInfo<number>[];
+                updateSpeed(speeds, true);
+                break;
+            case 'MESH_SOUND_PAN':
+                const pans = event.data as MeshPropertyInfo<number>[];
+                updatePan(pans, true);
+                break;
         }
 
         set_selected_meshes(_selected_meshes);
@@ -3053,6 +3337,12 @@ function MeshInspectorCreate() {
             }
             return { mesh_id: id, material_index: info.data.field.data.material_index, uniform_name: info.data.field.key, value };
         }).filter(item => item != null) as MeshMaterialUniformInfo<T>[];
+    }
+
+    function force_refresh() {
+        setTimeout(() => {
+            set_selected_meshes(_selected_meshes);
+        });
     }
 
     init();

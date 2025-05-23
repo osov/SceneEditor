@@ -155,7 +155,7 @@ export function ResourceManagerModule() {
     const texture_loader = new TextureLoader();
     const audio_loader = new AudioLoader();
     const scenes: { [path: string]: SceneInfo } = {};
-    const audio: { [path: string]: AudioBuffer } = {};
+    const audios: { [name: string]: AudioBuffer } = {};
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
     const vertex_programs: { [path: string]: string } = {};
@@ -468,12 +468,18 @@ export function ResourceManagerModule() {
     }
 
     async function preload_audio(path: string) {
+        path = project_path + path;
+        console.log('preload_audio', path);
         const audio_buffer = await audio_loader.loadAsync(path);
-        audio[get_file_name(path)] = audio_buffer;
+        audios[get_file_name(path)] = audio_buffer;
     }
 
-    function get_sound(name: string) {
-        return audio[name];
+    function get_all_sounds() {
+        return Object.keys(audios);
+    }
+
+    function get_sound_buffer(name: string) {
+        return audios[name];
     }
 
     async function preload_scene(path: string) {
@@ -1580,7 +1586,8 @@ export function ResourceManagerModule() {
         write_metadata,
         get_scene_info,
         cache_scene,
-        get_sound,
+        get_all_sounds,
+        get_sound_buffer,
         models,
         animations
     };

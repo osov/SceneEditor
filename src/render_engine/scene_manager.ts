@@ -1,7 +1,7 @@
-import { Mesh, Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
+import { Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
-import { IBaseEntityAndThree, IBaseEntityData, IObjectTypes } from "./types";
+import { IBaseEntity, IBaseEntityAndThree, IBaseEntityData, IBaseMesh, IObjectTypes } from "./types";
 import { TextMesh } from "./objects/text";
 import { deepClone } from "../modules/utils";
 import { GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
@@ -11,6 +11,7 @@ import { Component } from "./components/container_component";
 import { FLOAT_PRECISION } from "../config";
 import { TDictionary } from "../modules_editor/modules_editor_const";
 import { Model } from "./objects/model";
+import { AudioMesh } from "./objects/audio_mesh";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -36,6 +37,8 @@ type IMeshTypes = {
 
     [IObjectTypes.GO_MODEL_COMPONENT]: Model,
     [IObjectTypes.GO_ANIMATED_MODEL_COMPONENT]: AnimatedMesh,
+
+    [IObjectTypes.GO_AUDIO_COMPONENT]: AudioMesh,
 
     [IObjectTypes.COMPONENT]: Component
 }
@@ -101,6 +104,9 @@ export function SceneManagerModule() {
         }
         else if (type == IObjectTypes.GO_ANIMATED_MODEL_COMPONENT) {
             mesh = new AnimatedMesh(check_id_is_available_or_generate_new(id), params.width || default_size, params.height || default_size);
+        }
+        else if (type == IObjectTypes.GO_AUDIO_COMPONENT) {
+            mesh = new AudioMesh(check_id_is_available_or_generate_new(id));
         }
         else if (type == IObjectTypes.COMPONENT)
             mesh = new Component(check_id_is_available_or_generate_new(id), params.type || 0);
@@ -196,9 +202,10 @@ export function SceneManagerModule() {
                 if (m.no_removing)
                     continue;
                 for (let j = m.children.length - 1; j >= 0; j--) {
-                    const c = m.children[j];
-                    if (c instanceof Slice9Mesh)
+                    const c = m.children[j]
+                    if (c instanceof EntityBase) {
                         c.dispose();
+                    }
                 }
                 scene.remove(m);
             }
@@ -381,7 +388,7 @@ export function SceneManagerModule() {
         EventBus.trigger('SYS_MESH_REMOVE_BEFORE', { id: id }, false);
         const mesh = get_mesh_by_id(id);
         if (mesh) {
-            if (mesh instanceof Slice9Mesh)
+            if (mesh instanceof EntityBase)
                 mesh.dispose();
             mesh.parent!.remove(mesh);
             EventBus.trigger('SYS_MESH_REMOVE_AFTER', { id: id }, false);

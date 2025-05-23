@@ -145,4 +145,5 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
     deserialize(_data: any) {
     }
 
+    dispose() { }
 }

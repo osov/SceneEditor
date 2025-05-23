@@ -11,7 +11,7 @@ import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction } from "./ActionsControl";
 import { api } from "../modules_editor/ClientAPI";
-import { IBaseEntityAndThree, IBaseEntityData } from "../render_engine/types";
+import { IBaseEntityData } from "../render_engine/types";
 import { get_file_name } from "../render_engine/helpers/utils";
 import { Quaternion, Vector3 } from "three";
 declare global {

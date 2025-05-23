@@ -31,6 +31,7 @@ export enum NodeAction {
     add_go_label_component,
     add_go_model_component,
     add_go_animated_model_component,
+    add_go_audio_component,
     add_component_spline,
     add_component_mover,
     refresh,
@@ -53,7 +54,9 @@ export const NodeActionGo: number[] = [
     NodeAction.add_go_container,
     NodeAction.add_go_sprite_component,
     NodeAction.add_go_label_component,
-    NodeAction.add_go_animated_model_component
+    NodeAction.add_go_model_component,
+    NodeAction.add_go_animated_model_component,
+    NodeAction.add_go_audio_component
 ];
 
 export const worldGo: string[] = [
@@ -61,14 +64,16 @@ export const worldGo: string[] = [
     IObjectTypes.GO_MODEL_COMPONENT,
     IObjectTypes.GO_ANIMATED_MODEL_COMPONENT,
     IObjectTypes.GO_SPRITE_COMPONENT,
-    IObjectTypes.GO_LABEL_COMPONENT
+    IObjectTypes.GO_LABEL_COMPONENT,
+    IObjectTypes.GO_AUDIO_COMPONENT
 ];
 
 export const componentsGo: string[] = [
     IObjectTypes.GO_MODEL_COMPONENT,
     IObjectTypes.GO_ANIMATED_MODEL_COMPONENT,
     IObjectTypes.GO_SPRITE_COMPONENT,
-    IObjectTypes.GO_LABEL_COMPONENT
+    IObjectTypes.GO_LABEL_COMPONENT,
+    IObjectTypes.GO_AUDIO_COMPONENT
 ];
 
 export const worldGui: string[] = [
@@ -251,6 +256,13 @@ function ActionsControlCreate() {
         if (!model) return;
         model.set_position(data.pos.x, data.pos.y);
         sceneAddItem(model, data.pid);
+    }
+
+    function add_go_audio_component(data: ParamsPidPos) {
+        const audio = SceneManager.create(IObjectTypes.GO_AUDIO_COMPONENT);
+        if (!audio) return;
+        audio.set_position(data.pos.x, data.pos.y);
+        sceneAddItem(audio, data.pid);
     }
 
     function add_component(data: ParamsPidPos, type: ComponentType) {
@@ -460,6 +472,7 @@ function ActionsControlCreate() {
         add_go_label_component,
         add_go_model_component,
         add_go_animated_model_component,
+        add_go_audio_component,
         add_go_with_sprite_component,
         add_component,
     };
