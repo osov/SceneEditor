@@ -52,7 +52,7 @@ function AudioManagerModule() {
         end_callbacks[id] = callback;
     }
 
-    function play(id: number, loop = false, volume = 0.5, speed = 1, pan = 0.5, offset = 0) {
+    function play(id: number, loop = false, volume = 1, speed = 1, pan = 0, offset = 0) {
         const sound = sounds[id];
         if (!sound) {
             Log.error(`[SoundManager.play]: sound ${id} not found`);

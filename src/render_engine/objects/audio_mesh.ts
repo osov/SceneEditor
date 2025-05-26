@@ -15,7 +15,7 @@ export class AudioMesh extends EntityBase {
     private speed: number = 1;
     private volume: number = 1;
     private loop: boolean = false;
-    private pan: number = 0.5;
+    private pan: number = 0;
 
     constructor(id: number) {
         super(id);
@@ -82,10 +82,10 @@ export class AudioMesh extends EntityBase {
             sound: this.sound
         };
 
-        if (this.speed !== 1) data.speed = this.speed;
-        if (this.volume !== 1) data.volume = this.volume;
-        if (this.loop !== false) data.loop = this.loop;
-        if (this.pan !== 0) data.pan = this.pan;
+        if (this.speed != 1) data.speed = this.speed;
+        if (this.volume != 1) data.volume = this.volume;
+        if (this.loop != false) data.loop = this.loop;
+        if (this.pan != 0) data.pan = this.pan;
 
         return data;
     }

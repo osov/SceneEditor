@@ -1079,7 +1079,7 @@ function MeshInspectorCreate() {
             type: PropertyType.SLIDER,
             params: {
                 min: 0,
-                max: 10,
+                max: 2,
                 step: 0.01
             },
             onBeforeChange: saveVolume,
@@ -1093,7 +1093,7 @@ function MeshInspectorCreate() {
             type: PropertyType.SLIDER,
             params: {
                 min: 0,
-                max: 1,
+                max: 2,
                 step: 0.01
             },
             onBeforeChange: saveSpeed,
@@ -1106,7 +1106,7 @@ function MeshInspectorCreate() {
             value: mesh.get_pan(),
             type: PropertyType.SLIDER,
             params: {
-                min: 0,
+                min: -1,
                 max: 1,
                 step: 0.1
             },
