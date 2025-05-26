@@ -1,7 +1,6 @@
 import { Vector2, Vector3 } from "three";
-import { flip_geometry_x, flip_geometry_xy, flip_geometry_y, get_file_name, rotate_point } from "../helpers/utils";
+import { get_file_name, rotate_point } from "../helpers/utils";
 import { IBaseEntityAndThree } from "../types";
-import { Slice9Mesh } from "../objects/slice9";
 import { FlipMode, GoSprite } from "../objects/sub_types";
 
 
@@ -23,6 +22,7 @@ interface Chunk {
 interface Layer {
     layer_name: string;
     chunks: Chunk[];
+    id_order:number;
 }
 
 interface TileData {
@@ -53,10 +53,13 @@ export interface TileObject {
 interface ObjectLayer {
     layer_name: string;
     objects: TileObject[]
+    id_order:number;
 }
 
+export type TileInfo ={ [tile_set: string]: { [id: string]: TileData } }
+
 export interface MapData {
-    tile_info: { [tile_set: string]: { [id: string]: TileData } }
+    tile_info: TileInfo
     layers: Layer[]
     objects: ObjectLayer[]
 }
@@ -71,6 +74,7 @@ export interface RenderTileData {
 interface RenderLayer {
     layer_name: string;
     tiles: RenderTileData[];
+    id_order:number;
 }
 
 export interface RenderTileObject {
@@ -88,6 +92,7 @@ export interface RenderTileObject {
 interface RenderObjectLayer {
     layer_name: string;
     objects: RenderTileObject[]
+    id_order:number;
 }
 
 
@@ -99,7 +104,7 @@ export interface RenderMapData {
 
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
     // return id_layer * 2 - (y - height / 2) * 0.001;
-    return id_layer * 500 - (y - height / 2) * 5;
+    return id_layer * 600 - (y - height / 2) * 5 ;
 }
 
 
@@ -136,14 +141,16 @@ export function parse_tiled(data: MapData) {
     for (const layer of data.layers) {
         render_data.layers.push({
             layer_name: layer.layer_name,
-            tiles: create_layer(layer)
+            tiles: create_layer(layer),
+            id_order: layer.id_order
         });
     }
 
     for (const obj_layer of data.objects) {
         render_data.objects_layers.push({
             layer_name: obj_layer.layer_name,
-            objects: create_objects(obj_layer)
+            objects: create_objects(obj_layer),
+            id_order: obj_layer.id_order
         });
     }
     return render_data;

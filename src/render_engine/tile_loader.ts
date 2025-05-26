@@ -25,10 +25,10 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
     function load(map_data: MapData) {
         const tiles: SpriteTileInfoDict = {};
         const render_data = parse_tiled(map_data);
+       
         // TILES
-        let id_layer = -1;
         for (let layer of render_data.layers) {
-            id_layer++;
+            const id_layer = layer.id_order;
             const container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
             container.name = layer.layer_name;
             world.add(container);
@@ -68,7 +68,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
 
         // OBJECTS
         for (let object_layer of render_data.objects_layers) {
-            id_layer++;
+            const id_layer = object_layer.id_order;
             let id_object = -1;
             const container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
             container.name = object_layer.layer_name;
