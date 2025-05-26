@@ -573,10 +573,10 @@ function MeshInspectorCreate() {
                                     const info = mesh.get_texture(index);
                                     texture_name = info ? info[0] : '';
                                 } else {
-                                    texture_name = get_file_name((texture.value as any).path) || '';
+                                    texture_name = get_file_name((texture.value as any).path || '');
                                 }
                             } else {
-                                texture_name = get_file_name((texture.value as any).path) || '';
+                                texture_name = get_file_name((texture.value as any).path || '');
                             }
 
                             let atlas = '';
@@ -1407,11 +1407,11 @@ function MeshInspectorCreate() {
                 Log.error('[saveModel] Mesh not found for id:', id);
                 return;
             }
-            if (mesh.type != IObjectTypes.GO_ANIMATED_MODEL_COMPONENT) return;
-            const firstChild = (mesh as AnimatedMesh).children[0];
+            if (mesh.type != IObjectTypes.GO_MODEL_COMPONENT) return;
+            const firstChild = (mesh as Model).children[0];
             oldModels.push({
                 mesh_id: mesh.mesh_data.id, value: {
-                    mesh_name: (mesh as AnimatedMesh).get_mesh_name(),
+                    mesh_name: (mesh as Model).get_mesh_name(),
                     scale: firstChild ? Math.max(...firstChild.scale.toArray()) : WORLD_SCALAR,
                 }
             });
@@ -1421,7 +1421,7 @@ function MeshInspectorCreate() {
 
     function handleModelChange(info: ChangeInfo) {
         const data = convertChangeInfoToMeshData<string>(info);
-        const pathedData = data.map(item => {
+        const patchedData = data.map(item => {
             return {
                 mesh_id: item.mesh_id,
                 value: {
@@ -1432,7 +1432,7 @@ function MeshInspectorCreate() {
                 }
             };
         });
-        updateModel(pathedData, info.data.event.last);
+        updateModel(patchedData, info.data.event.last);
     }
 
     function updateModel(data: MeshPropertyInfo<{ mesh_name: string, scale: number }>[], _: boolean) {
@@ -1444,17 +1444,26 @@ function MeshInspectorCreate() {
             }
             const model = item.value;
             if (model) {
-                const info = (mesh as AnimatedMesh).get_texture();
+                const info = (mesh as Model).get_texture();
                 let [texture, atlas] = '';
                 if (info) {
                     [texture, atlas] = info;
                 }
 
+                const prevFirstChild = (mesh as Model).children[0];
+
+                let scale = model.scale;
+                if (prevFirstChild) {
+                    scale = Math.max(...prevFirstChild.scale.toArray());
+                }
+
                 (mesh as Model).set_mesh(model.mesh_name);
+
                 const firstChild = (mesh as Model).children[0];
                 if (firstChild) {
-                    firstChild.scale.setScalar(model.scale);
+                    firstChild.scale.setScalar(scale);
                 }
+
                 if (texture && atlas) {
                     (mesh as Model).set_texture(texture, atlas);
                 }
@@ -1517,10 +1526,17 @@ function MeshInspectorCreate() {
                     [texture, atlas] = info;
                 }
 
+                const prevFirstChild = (mesh as AnimatedMesh).children[0];
+                let scale = model.scale;
+                if (prevFirstChild) {
+                    scale = Math.max(...prevFirstChild.scale.toArray());
+                }
+
                 (mesh as AnimatedMesh).set_mesh(model.mesh_name);
+
                 const firstChild = (mesh as AnimatedMesh).children[0];
                 if (firstChild) {
-                    firstChild.scale.setScalar(model.scale);
+                    firstChild.scale.setScalar(scale);
                     mesh.transform_changed();
                 }
                 if (texture && atlas) {
@@ -1807,7 +1823,7 @@ function MeshInspectorCreate() {
                 Log.error('[saveModelScale] Mesh not found for id:', id);
                 return;
             }
-            if (mesh instanceof AnimatedMesh) {
+            if (mesh instanceof MultipleMaterialMesh) {
                 const scale_factor = Math.max(...mesh.children[0].scale.toArray());
                 oldScales.push({ mesh_id: id, value: scale_factor });
             }
@@ -2321,7 +2337,7 @@ function MeshInspectorCreate() {
                 const material_name = mesh.material.name;
                 materials.push({ mesh_id: id, value: material_name });
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material_name = mesh.get_materials()[info.field.data.material_index].name;
                 materials.push({ mesh_id: id, value: material_name });
             }
@@ -2498,17 +2514,28 @@ function MeshInspectorCreate() {
                     });
                 }
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
                 const uniform = material.uniforms[info.field.key];
                 if (uniform) {
+                    let path = uniform.value?.path || '';
+                    let texture_name = '';
+                    let atlas = '';
+                    const texture_info = mesh.get_texture(info.field.data.material_index);
+                    if (texture_info) {
+                        texture_name = texture_info[0];
+                        atlas = texture_info[1];
+                    }
+                    if (texture_name != '' && atlas != '') {
+                        path = `${atlas}/${texture_name}`;
+                    }
                     sampler2Ds.push({
                         mesh_id: id,
                         material_index: info.field.data.material_index,
                         uniform_name: info.field.key,
-                        value: `${mesh.get_texture(info.field.data.material_index)[1]}/${mesh.get_texture(info.field.data.material_index)[0]}` || uniform.value?.path || ''
+                        value: path
                     });
                 }
             }

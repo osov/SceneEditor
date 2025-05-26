@@ -855,7 +855,7 @@ export function ResourceManagerModule() {
         }
         material_info.mesh_info_to_material_hashes[mesh_id][index] = new_hash;
 
-        const prev_changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
+        const prev_changed_uniforms = material_info.material_hash_to_changed_uniforms[new_hash];
         prev_changed_uniforms.forEach((uniform) => {
             if (!material_info.material_hash_to_changed_uniforms[new_hash].includes(uniform)) {
                 material_info.material_hash_to_changed_uniforms[new_hash].push(uniform);
