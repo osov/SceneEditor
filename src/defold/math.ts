@@ -6,7 +6,7 @@ declare global {
         export function cos(x: number): number;
         export function sin(x: number): number;
         export function rad(x: number): number;
-        export function random(m: number, n: number): number;
+        export function random(m?: number, n?: number): number;
         export function floor(x: number): number;
         export function sqrt(x: number): number;
         export function tan(x: number): number;
@@ -48,6 +48,8 @@ export function math_module() {
     }
 
     function random(m: number = 0, n: number = 1) {
+        if (m == 0 && n == 1)
+            return Math.random();
         const minCeiled = Math.ceil(m);
         const maxFloored = Math.floor(n);
         return Math.floor(Math.random() * (maxFloored - minCeiled + 1) + minCeiled);

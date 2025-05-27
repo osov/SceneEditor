@@ -8,19 +8,19 @@ declare global {
     namespace go {
         export function set_position(position: vmath.vector3, id: string | hash): void
         export function get_position(id: string | hash): vmath.vector3
-        export function set_rotation(rotation: vmath.quat, id: string | hash): void
-        export function get_rotation(id: string | hash): vmath.quat
+        export function set_rotation(rotation: vmath.quaternion, id: string | hash): void
+        export function get_rotation(id: string | hash): vmath.quaternion
         export function set_scale(scale: vmath.vector3, id: string | hash): void
         export function get_scale(id: string | hash): vmath.vector3
         export function set_parent(id: string | hash, parent_id: string | hash): void
         export function get_parent(id: string | hash): hash
         export function get_world_position(id: string | hash): vmath.vector3
-        export function get_world_rotation(id: string | hash): vmath.quat
+        export function get_world_rotation(id: string | hash): vmath.quaternion
         export function get_world_scale(id: string | hash): vmath.vector3
         export function get(url: string | hash, property: string, options?: any): any
         export function set(url: string | hash, property: string, value: any, options?: any): void
         function _delete(id: string | hash, recursive?: boolean): void; export { _delete as delete }
-        export function animate(url: string | hash, property: string, playback: any, to: number | vmath.vector3 | vmath.quat, easing: any, duration: number, delay?: number, complete_function?: (self: IBaseEntityAndThree, url: string | hash, property: string) => void): void
+        export function animate(url: string | hash, property: string, playback: any, to: number | vmath.vector3 | vmath.quaternion, easing: any, duration: number, delay?: number, complete_function?: (self: IBaseEntityAndThree, url: string | hash, property: string) => void): void
         export function cancel_animations(url: string | hash, property?: string): void
 
         export const PLAYBACK_ONCE_FORWARD: any;
@@ -164,7 +164,7 @@ export function go_module() {
         return vmath.vector3(...mesh.position.toArray());
     }
 
-    function set_rotation(rotation: vmath.quat, id: string | hash) {
+    function set_rotation(rotation: vmath.quaternion, id: string | hash) {
         const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
         if (!mesh) {
             Log.error(`Mesh with url ${id} not found`);
@@ -326,8 +326,8 @@ export function go_module() {
             Log.error(`Mesh with url ${url} not found`);
             return;
         }
-        if (mesh.type != IObjectTypes.GO_CONTAINER) {
-            Log.error(`Mesh with id ${url} is not go`);
+        if (['position', 'rotation', 'scale', 'euler.z'].includes(property) && mesh.type != IObjectTypes.GO_CONTAINER){
+            Log.error(`Mesh with id ${url} is not go property:`, property);
             return;
         }
         set_nested_property(mesh, property, value);
@@ -358,12 +358,14 @@ export function go_module() {
         url: string | hash,
         property: string,
         playback: any,
-        to: number | vmath.vector3 | vmath.quat,
+        to: number | vmath.vector3 | vmath.quaternion,
         easing: any,
         duration: number,
         delay: number = 0,
         complete_function?: (self: IBaseEntityAndThree, url: string | hash, property: string) => void
     ) {
+        if (property == 'tint.w')
+            property = 'alpha';
         const mesh_id = uh_to_id(url);
         const mesh = SceneManager.get_mesh_by_id(mesh_id);
         if (!mesh) {

@@ -57,6 +57,24 @@ export function get_nested_property(obj: any, path: string): any {
 }
 
 export function set_nested_property(obj: any, path: string, value: any): void {
+    if (path == 'size') {
+        obj.set_size(value.x, value.y);
+        return;
+    }
+    if (path == 'tint') {
+        obj.set_color(value);
+        if (value.w != undefined)
+            obj.set_alpha(value.w);
+        return;
+    }
+    if (path == 'tint.w') {
+        obj.set_alpha(value);
+        return;
+    }
+    if (path == 'euler.z') {
+        obj.rotation.z = value;
+        return;
+    }
     const parts = path.split('.');
     let current = obj;
     for (let i = 0; i < parts.length - 1; i++) {

@@ -4,7 +4,7 @@ import { id_to_url } from "./utils";
 
 declare global {
     namespace collectionfactory {
-        export function create(url: string, position: vmath.vector3, rotation?: vmath.quat, scale?: vmath.vector3): string[];
+        export function create(url: string, position: vmath.vector3, rotation?: vmath.quaternion, scale?: vmath.vector3): string[];
     }
 }
 
@@ -12,7 +12,7 @@ export function collectionfactory_module() {
     function create(
         url: string,
         position?: vmath.vector3,
-        rotation?: vmath.quat,
+        rotation?: vmath.quaternion,
         properties?: any,
         scale?: vmath.vector3
     ) {

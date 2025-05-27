@@ -6,31 +6,44 @@ declare global {
             z: number
         }
 
-        export type quat = {
+        export type vector4 = {
             x: number,
             y: number,
             z: number,
             w: number
         }
 
+        export type quaternion = number & {
+            x: number,
+            y: number,
+            z: number,
+            w: number,
+        }
+
         export function vector3(): vmath.vector3
         export function vector3(n: number): vmath.vector3
         export function vector3(v1: vmath.vector3): vmath.vector3
         export function vector3(x: number, y: number, z: number): vmath.vector3
+
+        export function vector4(): vmath.vector4
+        export function vector4(n: number): vmath.vector4
+        export function vector4(v1: vmath.vector4): vmath.vector4
+        export function vector4(x: number, y: number, z: number, w: number): vmath.vector4
+
         export function length(v: vmath.vector3): number
         export function normalize(v: vmath.vector3): vmath.vector3
         export function dot(v1: vmath.vector3, v2: vmath.vector3): number
         export function cross(v1: vmath.vector3, v2: vmath.vector3): vmath.vector3
         export function mul_per_element(v1: vmath.vector3, v2: vmath.vector3): vmath.vector3
         export function lerp(t: number, v1: vmath.vector3, v2: vmath.vector3): vmath.vector3
-        export function slerp(t: number, q1: vmath.quat, q2: vmath.quat): vmath.quat
+        export function slerp(t: number, q1: vmath.quaternion, q2: vmath.quaternion): vmath.quaternion
 
-        export function quat(): vmath.quat
-        export function quat(q: vmath.quat): vmath.quat
-        export function quat(x: number, y: number, z: number, w: number): vmath.quat
-        export function quat_from_axis_angle(axis: vmath.vector3, angle: number): vmath.quat
-        export function euler_to_quat(x: number, y: number, z: number): vmath.quat
-        export function rotate(q: vmath.quat, v: vmath.vector3): vmath.vector3
+        export function quat(): vmath.quaternion
+        export function quat(q: vmath.quaternion): vmath.quaternion
+        export function quat(x: number, y: number, z: number, w: number): vmath.quaternion
+        export function quat_from_axis_angle(axis: vmath.vector3, angle: number): vmath.quaternion
+        export function euler_to_quat(x: number, y: number, z: number): vmath.quaternion
+        export function rotate(q: vmath.quaternion, v: vmath.vector3): vmath.vector3
     }
 }
 
@@ -53,7 +66,7 @@ export function vmath_module() {
 
     function vector3(...args: any) {
         if (args.length == 1) {
-            if (Number.isInteger(args[0]))
+            if (Number.isFinite(args[0]))
                 return vector3_1(args[0]);
             else
                 return vector3_2(args[0]);
@@ -62,6 +75,35 @@ export function vmath_module() {
             return vector3_3(args[0], args[1], args[2]);
         }
         return vector3_0();
+    }
+
+    function vector4_0() {
+        return { x: 0, y: 0, z: 0, w: 0 };
+    }
+
+    function vector4_1(n: number) {
+        return { x: n, y: n, z: n, w: n };
+    }
+
+    function vector4_2(v1: vmath.vector4) {
+        return { x: v1.x, y: v1.y, z: v1.z, w: v1.w };
+    }
+
+    function vector4_4(x: number, y: number, z: number, w: number) {
+        return { x, y, z, w };
+    }
+
+    function vector4(...args: any) {
+        if (args.length == 1) {
+            if (Number.isFinite(args[0]))
+                return vector4_1(args[0]);
+            else
+                return vector4_2(args[0]);
+        }
+        if (args.length == 4) {
+            return vector4_4(args[0], args[1], args[2], args[3]);
+        }
+        return vector4_0();
     }
 
     function length(v: vmath.vector3) {
@@ -130,7 +172,7 @@ export function vmath_module() {
         return { x: 0, y: 0, z: 0, w: 0 };
     }
 
-    function quat_1(q: vmath.quat) {
+    function quat_1(q: vmath.quaternion) {
         return { x: q.x, y: q.y, z: q.z, w: q.w };
     }
 
@@ -175,7 +217,7 @@ export function vmath_module() {
         );
     }
 
-    function rotate(q: vmath.quat, v: vmath.vector3) {
+    function rotate(q: vmath.quaternion, v: vmath.vector3) {
         const qx = q.x, qy = q.y, qz = q.z, qw = q.w;
         const vx = v.x, vy = v.y, vz = v.z;
 
@@ -192,7 +234,7 @@ export function vmath_module() {
     }
 
     return {
-        vector3, length, normalize, dot, cross, mul_per_element, lerp, slerp,
+        vector3, vector4, length, normalize, dot, cross, mul_per_element, lerp, slerp,
         quat, quat_from_axis_angle, euler_to_quat, rotate
     };
 }
