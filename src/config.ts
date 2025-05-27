@@ -4,7 +4,7 @@ export const _GAME_CONFIG = {
 };
 
 export const IS_CAMERA_ORTHOGRAPHIC = true;
-export const CAMERA_FAR = 10000;
+export const CAMERA_FAR = 12000;
 export const CAMERA_Z = CAMERA_FAR - 1;
 export const WORLD_SCALAR = new URLSearchParams(document.location.search).get('ws') ? parseInt(new URLSearchParams(document.location.search).get('ws')!) : 1 / 10;
 export const DEFOLD_LIMITS = !true;

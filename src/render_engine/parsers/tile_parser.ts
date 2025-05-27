@@ -56,7 +56,7 @@ interface ObjectLayer {
     id_order:number;
 }
 
-export type TileInfo ={ [tile_set: string]: { [id: string]: TileData } }
+export type TileInfo ={ [tile_set: string]: { [id: string]: TileData } };
 
 export interface MapData {
     tile_info: TileInfo
