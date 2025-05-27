@@ -1,10 +1,9 @@
 import { AnimatedMesh } from '../render_engine/objects/animated_mesh';
 import { get_depth, MapData, parse_tiled } from '../render_engine/parsers/tile_parser';
-import { EQ_0 } from './utils';
+import { EQ_0 } from '../modules/utils';
 import { IObjectTypes } from '../render_engine/types';
-import { WORLD_SCALAR as WS } from '../config';
-import { GoContainer } from '../render_engine/objects/sub_types';
-import { PathFinder } from './PathFinder';
+import { WORLD_SCALAR, WORLD_SCALAR as WS } from '../config';
+import { PathFinder, PathFinderModule } from '../modules/PathFinder';
 import {
     point,
     vector_from_points as vector,
@@ -14,17 +13,25 @@ import {
     Segment,
     vec_angle,
     PointLike,
-} from './Geometry';
-import { LinesDrawer } from './LinesDrawer';
+    Box,
+    Arc,
+    Vector,
+    vector_from_points,
+    POINT_EMPTY,
+} from '../modules/Geometry';
+import { Line as GeomLine, BufferGeometry } from 'three';
+import { LinesDrawer } from '../modules/LinesDrawer';
 
 
 /**
  * JS (JOYSTICK) двигается в направлении, полученном от джойстика   
- * FP (FOLLOW_POINTER) - двигается в направлении курсора, пока не достигнет точки уровня, в которой была отпущена ЛКМ
+ * FP (FOLLOW_POINTER) - двигается в направлении курсора, пока не достигнет точки уровня, в которой была отпущена ЛКМ   
+ * GP (GO_TO_POINT) - ищет путь к позиции где был клик
  */
-export enum PointerControl {
+export enum ControlType {
     JS,
     FP,
+    GP,
     // FOLLOW_DIRECTION,            
 }
 
@@ -36,7 +43,7 @@ export type PlayerMovementSettings = {
     min_awailable_way: number,
     min_idle_time: number,
     min_target_change: number,
-    pointer_control: PointerControl,
+    control_type: ControlType,
     keys_control: boolean,         // TODO: управление через клавиатуру
     model_layer: number,    
     target_stop_distance: number,  // Расстояние остановки игрока от точки target
@@ -53,6 +60,8 @@ export type PlayerMovementSettings = {
     min_stick_dist: number,
     debug?: boolean,
     clear_drawn_lines?: boolean,   // Если false, все рисуемые линии остаются после update
+    obstacles_space_cell_size: number,
+    grid_params: GridParams,
 }
 
 type AnimationNames = {
@@ -66,20 +75,38 @@ type SpeedSettings = {
     RUN?: number,
 }
 
+export type GridParams = {
+    start: PointLike,
+    amount: PointLike, 
+    cell_size: number,
+    origin_offset?: PointLike,
+}
+
+export type SubGridParams = {
+    offset: PointLike,
+    amount: PointLike,
+}
+
+export const default_obstacle_grid: GridParams = {
+    start: {x: 0, y: 0}, 
+    amount: {x: 100, y: 100},
+    cell_size: 10, 
+    origin_offset: {x: 0, y: 0},
+}
 
 export const default_settings: PlayerMovementSettings = {
     max_predicted_way_intervals: 10,
     predicted_way_lenght_mult: 1.5,
-    collision_min_error: 0.001,
+    collision_min_error: 0.05,
     min_required_way: 0.8,
     min_awailable_way: 0.8,
     min_idle_time: 0.7,
     min_target_change: 1.5,
-    pointer_control: PointerControl.FP,
+    control_type: ControlType.FP,
     keys_control: true,
     target_stop_distance: 0.5,
     model_layer: 15, 
-    animation_names: {IDLE: "idle", WALK: "walk"},
+    animation_names: {IDLE: "Unarmed Idle", WALK: "Unarmed Run Forward"},
     update_interval: 2.5,
     min_update_interval: 0.2,
     update_way_angle: 3 * Math.PI / 180,
@@ -91,6 +118,8 @@ export const default_settings: PlayerMovementSettings = {
     blocked_move_min_dist: 0.006,
     clear_drawn_lines: true,
     min_stick_dist: 15,
+    obstacles_space_cell_size: 150 * WORLD_SCALAR,
+    grid_params: default_obstacle_grid,
 }
 
 
@@ -119,7 +148,6 @@ function interpolate_with_wrapping(start: number, end: number, percent: number, 
 export function load_obstacles(map_data: MapData) {
     const obstacles: Segment[] = [];
     const render_data = parse_tiled(map_data);
-    const now = Date.now();
     for (let object_layer of render_data.objects_layers) {
         for (let tile of object_layer.objects) {
             if (tile.polygon || tile.polyline) {
@@ -155,12 +183,12 @@ export function load_obstacles(map_data: MapData) {
             }
         }
     }
-    const total_time = (Date.now() - now) / 1000;
-    log(`Obstacles loading took ${total_time} sec`)
     return obstacles;
 }
 
-export function MovementLogic(settings: PlayerMovementSettings = default_settings) {
+export function MovementControlCreate(settings: PlayerMovementSettings = default_settings) {
+    const LD = LinesDrawer();
+
     let pointer = point(0, 0);
     let target = point(0, 0);
     let last_check_dir = vector(pointer, target);
@@ -168,28 +196,22 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
     let stick_start: Point | undefined = undefined;
     let stick_end: Point | undefined = undefined;
     let current_dir = vector(pointer, target);
-    const obstacles: Segment[] = [];
-    const target_error = settings.target_stop_distance;
-    const layer = settings.model_layer;
-    const animations = settings.animation_names;
-    const pointer_control = settings.pointer_control;
-    const max_blocked_move_time = settings.max_blocked_move_time;
-    const min_required_way = settings.min_required_way;
-    const min_awailable_way = settings.min_awailable_way;
-    const min_idle_time = settings.min_idle_time;
-    const min_target_change = settings.min_target_change;
-    const blocked_max_dist = settings.blocked_move_min_dist;
-    const update_t_interval = settings.update_interval;
-    const min_update_t_interval = settings.min_update_interval;
-    const update_way_angle = settings.update_way_angle;
-    const min_stick_dist = settings.min_stick_dist;
-    const debug =  settings.debug;
-    const clear_drawn_lines =  settings.clear_drawn_lines;
-    const predicted_way_lenght_mult = settings.predicted_way_lenght_mult;
-    const PF = PathFinder(settings, obstacles);
-    const LD = LinesDrawer();
-    const speed = settings.speed;
-    const collision_radius = settings.collision_radius;
+    let target_error = settings.target_stop_distance;
+    let layer = settings.model_layer;
+    let animations = settings.animation_names;
+    let pointer_control = settings.control_type;
+    let max_blocked_move_time = settings.max_blocked_move_time;
+    let min_required_way = settings.min_required_way;
+    let min_awailable_way = settings.min_awailable_way;
+    let min_idle_time = settings.min_idle_time;
+    let min_target_change = settings.min_target_change;
+    let blocked_max_dist = settings.blocked_move_min_dist;
+    let update_t_interval = settings.update_interval;
+    let min_update_t_interval = settings.min_update_interval;
+    let update_way_angle = settings.update_way_angle;
+    let min_stick_dist = settings.min_stick_dist;
+    let predicted_way_lenght_mult = settings.predicted_way_lenght_mult;
+    let speed = settings.speed;
     let current_speed: number = speed.WALK;
     let is_moving = false;
     let is_pointer_down = false;
@@ -198,28 +220,44 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
     let last_upd_time_elapsed = 0;
     let last_stop_time_elapsed = 0;
     let has_target = false;
-    const player_container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
-    player_container.name = 'player collision circle';
-    SceneManager.add(player_container);
-    const way_container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
-    way_container.name = 'way intervals';
-    SceneManager.add(way_container);
-    const marked_obstacles = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
-    marked_obstacles.name = 'marked obstacles';
-    SceneManager.add(marked_obstacles);
+    let PF: PathFinder
+
+    const player_circle: {
+        line: GeomLine;
+        p1: PointLike;
+        p2: PointLike;
+    }[] = [];
 
     const joystick = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     joystick.name = 'joystick';
     SceneManager.add(joystick);
-    
+    const player_geometry = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    player_geometry.name = 'player_geometry';
+    SceneManager.add(player_geometry);
+    const player_way = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    player_way.name = 'player_way';
+    SceneManager.add(player_way);
 
-    function init(init_data: {model: AnimatedMesh, obstacles: Segment[]}) {
+    function init(init_data: {model: AnimatedMesh, path_finder: PathFinder}) {
         const model = init_data.model;
         target = point(model.position.x, model.position.y);
+        PF = init_data.path_finder;
         PF.set_current_pos(target);
-        obstacles.push(...init_data.obstacles);
 
-        if (pointer_control == PointerControl.FP) {
+        if (pointer_control == ControlType.GP) {
+            EventBus.on('SYS_ON_UPDATE', (e) => {
+                last_upd_time_elapsed += e.dt;
+                if (!has_target) return;
+                if (check_target_change()) {  
+                    if (last_upd_time_elapsed >= min_update_t_interval) {
+                        update_predicted_way();
+                        last_upd_time_elapsed = 0;
+                    }
+                }
+            })
+        }
+
+        if (pointer_control == ControlType.FP) {
             EventBus.on('SYS_ON_UPDATE', (e) => {
                 last_upd_time_elapsed += e.dt;
                 if (!has_target) return;
@@ -238,7 +276,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
             })
         }
 
-        if (pointer_control == PointerControl.JS) {
+        if (pointer_control == ControlType.JS) {
             EventBus.on('SYS_ON_UPDATE', (e) => {
                 last_upd_time_elapsed += e.dt;
                 if (!stick_start) return;
@@ -259,7 +297,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
             })
         }
 
-        if (pointer_control == PointerControl.FP) {
+        if (pointer_control == ControlType.FP || pointer_control == ControlType.GP) {
             EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
                 if (e.button != 0)
                     return;
@@ -286,7 +324,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
         }
 
         // Используем мышь вместо реального джойстика
-        else if (pointer_control == PointerControl.JS) {
+        else if (pointer_control == ControlType.JS) {
             EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
                 if (e.button != 0)
                     return;
@@ -302,8 +340,6 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
                     return;
                 stick_start = undefined;
                 current_dir = vector(point(0, 0), point(0, 0));
-                LD.clear_container(joystick);
-                LD.clear_container(way_container);
             });
             
             EventBus.on('SYS_ON_UPDATE', (e) => {
@@ -311,7 +347,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
                     const start = Camera.screen_to_world(stick_start.x, stick_start.y);
                     const end = Camera.screen_to_world(stick_end.x, stick_end.y);
                     LD.clear_container(joystick);
-                    if (debug) {
+                    if (settings.debug) {
                         LD.add_arc(arc(point(start.x, start.y), 3, 0, Math.PI * 2), joystick, 0xffffff);
                         LD.add_arc(arc(point(end.x, end.y), 3, 0, Math.PI * 2), joystick, 0xff0000);
                     }
@@ -333,20 +369,31 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
             }
             last_check_dir = current_dir.clone();
             last_check_target = target.clone();
-            PF.update_way(way_required, pointer_control);
+            const way = PF.update_way(way_required, pointer_control);
+            LD.clear_container(player_way);
+            for (const entry of way) {
+                if (entry.name == 'segment') {
+                    const segment = entry as Segment;
+                    LD.add_line(segment.start, segment.end, player_way, 0x8844ff);
+                }
+                else {
+                    const arc = entry as Arc;
+                    LD.add_arc(arc, player_way, 0x8844ff);
+                }
+            }
         }
 
         function get_required_way(dt: number) {
             const cp = point(model.position.x, model.position.y);
             let lenght_remains = dt * current_speed * predicted_way_lenght_mult;
             let way_required = segment(cp.x, cp.y, target.x, target.y);
-            if (pointer_control == PointerControl.FP) {
+            if (pointer_control == ControlType.FP) {
                 if (lenght_remains < way_required.length()) {
                     const _segment = way_required.splitAtLength(lenght_remains)[0];
                     way_required = (_segment) ? _segment : segment(cp.x, cp.y, cp.x, cp.y);
                 }
             }
-            if (pointer_control == PointerControl.JS) {
+            if (pointer_control == ControlType.JS) {
                 if (!EQ_0(current_dir.length())) {
                     const ep = cp.translate(current_dir.normalize().multiply(lenght_remains));
                     way_required = segment(cp.x, cp.y, ep.x, ep.y);
@@ -424,7 +471,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
 
         function update_position(dt: number) {
             const current_pos = point(model.position.x, model.position.y);
-            const end_pos = PF.get_next_pos(current_pos, dt, current_speed); 
+            const end_pos = PF.get_next_pos(current_pos, dt, current_speed);
             if (!end_pos || (end_pos.equalTo(current_pos))) {
                 stop_movement();
                 return;
@@ -433,9 +480,6 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
                 model.position.x = end_pos.x;
                 model.position.y = end_pos.y;
                 PF.set_current_pos(end_pos);
-                if (clear_drawn_lines) LD.clear_container(player_container);
-                if (debug) LD.add_arc(arc(current_pos, collision_radius, 0, 2 * Math.PI), player_container, 0x66ffff);
-                model.position.z = get_depth(model.position.x, model.position.y, layer, model.get_size().x, model.get_size().y);
                 CameraControl.set_position(model.position.x, model.position.y, true);
             }
             else {
@@ -448,9 +492,15 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
             const dir = vector(current_pos, end_pos);
             model.rotation.y = interpolate_with_wrapping(model.rotation.y, Math.atan2(dir.y, dir.x) + Math.PI / 2, 0.1, 0, 2 * Math.PI);
             model.transform_changed();
+            if (player_geometry.children.length == 0) {
+                LD.add_arc(Arc(POINT_EMPTY, settings.collision_radius, 0, Math.PI * 2), player_geometry, 0xff0000);
+            }
+            for (const line of player_geometry.children) {
+                line.position.x = current_pos.x;
+                line.position.y = current_pos.y;
+            }
         }
     }
-
 
     function update_pointer_position(pos: PointLike) {
         if (is_pointer_down) {
@@ -468,21 +518,7 @@ export function MovementLogic(settings: PlayerMovementSettings = default_setting
         current_dir = vector(stick_start, stick_end);
     }
 
-    function enable_obstacles(enable = true) {
-        PF.enable_obstacles(enable)
-    }
-
-    function check_obstacles_enabled() {
-        return PF.check_obstacles_enabled();
-    }
-
-    function mark_obstacles(_obstacles: Segment[]) {
-        for (const obstacle of _obstacles) {
-            LD.add_line(obstacle.start, obstacle.end, marked_obstacles, 0xffff00);
-        }
-    }
-
-    return {init, enable_obstacles, check_obstacles_enabled, mark_obstacles}
+    return {init}
 }
 
 

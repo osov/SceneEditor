@@ -1991,7 +1991,7 @@ export function vec_angle(v1: Vector, v2: Vector) {
 }
 
 
-enum ShapeNames {
+export enum ShapeNames {
     // Edge shapes
     Segment = 'segment',
     Arc = 'arc',
@@ -2009,11 +2009,11 @@ const ORIGIN_POINT: PointLike = {
     x: NaN,
     y: NaN,
 }
-const MATRIX_INDENTITY = Matrix(1, 0, 0, 1, 0, 0);
-const MATRIX_EMPTY = Matrix(0, 0, 0, 0, 0, 0);
-const POINT_EMPTY = Point(0, 0);
-const CIRCLE_EMPTY = Circle(POINT_EMPTY, 0);
-const VOID_BOX = Box(Infinity, Infinity, -Infinity, -Infinity);
+export const MATRIX_INDENTITY = Matrix(1, 0, 0, 1, 0, 0);
+export const MATRIX_EMPTY = Matrix(0, 0, 0, 0, 0, 0);
+export const POINT_EMPTY = Point(0, 0);
+export const CIRCLE_EMPTY = Circle(POINT_EMPTY, 0);
+export const VOID_BOX = Box(Infinity, Infinity, -Infinity, -Infinity);
 ORIGIN_POINT.x = 0;
 ORIGIN_POINT.y = 0;
 
