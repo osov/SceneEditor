@@ -1080,7 +1080,8 @@ function MeshInspectorCreate() {
             params: {
                 min: 0,
                 max: 2,
-                step: 0.01
+                step: 0.01,
+                format: (value: number) => value.toFixed(2)
             },
             onBeforeChange: saveVolume,
             onChange: handleVolumeChange
@@ -1094,7 +1095,8 @@ function MeshInspectorCreate() {
             params: {
                 min: 0,
                 max: 2,
-                step: 0.01
+                step: 0.01,
+                format: (value: number) => value.toFixed(2)
             },
             onBeforeChange: saveSpeed,
             onChange: handleSpeedChange
@@ -1108,7 +1110,8 @@ function MeshInspectorCreate() {
             params: {
                 min: -1,
                 max: 1,
-                step: 0.1
+                step: 0.1,
+                format: (value: number) => value.toFixed(1)
             },
             onBeforeChange: savePan,
             onChange: handlePanChange
@@ -3124,6 +3127,7 @@ function MeshInspectorCreate() {
                 Log.error('[updateVolume] Mesh not found for id:', item.mesh_id);
                 continue;
             }
+            if (!Number.isFinite(item.value)) continue;
             mesh.set_volume(item.value);
         }
     }
@@ -3153,6 +3157,7 @@ function MeshInspectorCreate() {
                 Log.error('[updateSpeed] Mesh not found for id:', item.mesh_id);
                 continue;
             }
+            if (!Number.isFinite(item.value)) continue;
             mesh.set_speed(item.value);
         }
     }
@@ -3182,6 +3187,7 @@ function MeshInspectorCreate() {
                 Log.error('[updatePan] Mesh not found for id:', item.mesh_id);
                 continue;
             }
+            if (!Number.isFinite(item.value)) continue;
             mesh.set_pan(item.value);
         }
     }

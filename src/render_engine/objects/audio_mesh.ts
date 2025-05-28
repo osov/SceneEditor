@@ -33,7 +33,7 @@ export class AudioMesh extends EntityBase {
         }
 
         this.sound = name;
-        AudioManager.create_audio(this.get_id(), name);
+        AudioManager.create_audio(name, this.get_id());
     }
 
     get_sound() {
@@ -93,7 +93,7 @@ export class AudioMesh extends EntityBase {
     deserialize(data: AudioSerializeData) {
         super.deserialize(data);
         this.sound = data.sound;
-        AudioManager.create_audio(this.get_id(), this.sound);
+        AudioManager.create_audio(this.sound, this.get_id());
 
         if (data.speed) {
             this.speed = data.speed;

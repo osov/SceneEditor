@@ -19,7 +19,7 @@ function AudioManagerModule() {
         Camera.set_listener(listener);
     }
 
-    function create_audio(id: number, name: string) {
+    function create_audio(name: string, id = SceneManager.get_unique_id()) {
         const sound = new Audio(listener);
         const panner = listener.context.createStereoPanner();
         const buffer = ResourceManager.get_sound_buffer(name);
@@ -118,10 +118,9 @@ function AudioManagerModule() {
             Log.error(`[SoundManager.set_volume]: sound ${id} not found`);
             return;
         }
-
-        // NOTE/HACK: не устанавливаем громкость если звук не играет, потому что если менять громкость в момент когда звук закончит проигрываться, выдает ошибку
-        if (!sound.isPlaying) return;
-        sound.setVolume(volume);
+        if (!sound.isPlaying || sound.source) {
+            sound.setVolume(volume);
+        }
 
         // NOTE/HACK: для того чтобы полностью отключить звук если громкость 0
         if (volume == 0) sound.source?.disconnect();
@@ -161,7 +160,11 @@ function AudioManagerModule() {
             Log.error(`[SoundManager.set_speed]: sound ${id} not found`);
             return;
         }
-        sound.setPlaybackRate(speed);
+
+
+        if (!sound.isPlaying || sound.source) {
+            sound.setPlaybackRate(speed);
+        }
     }
 
     function get_speed(id: number) {
@@ -180,7 +183,15 @@ function AudioManagerModule() {
             return;
         }
 
-        panner.pan.value = pan;
+        const sound = sounds[id];
+        if (!sound) {
+            Log.error(`[SoundManager.set_pan]: sound ${id} not found`);
+            return;
+        }
+
+        if (!sound.isPlaying || sound.source) {
+            panner.pan.value = pan;
+        }
     }
 
     function get_pan(id: number) {
