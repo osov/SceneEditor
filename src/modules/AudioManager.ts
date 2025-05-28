@@ -26,6 +26,7 @@ function AudioManagerModule() {
         sound.setBuffer(buffer);
         sounds[id] = sound;
         panners[id] = panner;
+        return id;
     }
 
     function free_audio(id: number) {

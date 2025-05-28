@@ -1,5 +1,5 @@
 import { Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
-import { filter_list_base_mesh, is_base_mesh } from "./helpers/utils";
+import { filter_list_base_mesh, is_base_mesh, is_label, is_sprite, is_text } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
 import { IBaseEntity, IBaseEntityAndThree, IBaseEntityData, IBaseMesh, IObjectTypes } from "./types";
 import { TextMesh } from "./objects/text";
@@ -46,7 +46,8 @@ type IMeshTypes = {
 export function SceneManagerModule() {
     const scene = RenderEngine.scene;
 
-    const mesh_name_to_mesh_id: TDictionary<number> = {};
+    const mesh_url_to_mesh_id: TDictionary<number> = {};
+    const mesh_id_to_url: TDictionary<string> = {};
 
     let id_counter = 0;
 
@@ -122,12 +123,37 @@ export function SceneManagerModule() {
     }
 
     function set_mesh_name(mesh: IBaseEntityAndThree, name: string) {
-        mesh_name_to_mesh_id[name] = mesh.mesh_data.id;
+        let fullPath = '';
+        if (is_text(mesh) || is_label(mesh) || is_sprite(mesh)) fullPath = '#' + name;
+        else fullPath = name;
+        let parent = mesh.parent;
+        while (parent && is_base_mesh(parent)) {
+            fullPath = parent.name + (fullPath.startsWith('#') ? '' : '/') + fullPath;
+            parent = parent.parent;
+        }
+        fullPath = ":/" + fullPath;
+        // NOTE: удаляем старый путь, если он существует
+        if (mesh_id_to_url[mesh.mesh_data.id] != undefined) {
+            delete mesh_url_to_mesh_id[mesh_id_to_url[mesh.mesh_data.id]];
+        }
+        mesh_url_to_mesh_id[fullPath] = mesh.mesh_data.id;
+        mesh_id_to_url[mesh.mesh_data.id] = fullPath;
         mesh.name = name;
+        // NOTE: рекурсивно обновляем пути для всех детей
+        mesh.children.forEach(child => {
+            if (is_base_mesh(child)) {
+                const childMesh = child as IBaseEntityAndThree;
+                set_mesh_name(childMesh, childMesh.name);
+            }
+        });
     }
 
-    function get_mesh_id_by_name(name: string) {
-        return mesh_name_to_mesh_id[name];
+    function get_mesh_url_by_id(id: number) {
+        return mesh_id_to_url[id];
+    }
+
+    function get_mesh_id_by_url(url: string) {
+        return mesh_url_to_mesh_id[url];
     }
 
     function check_id_is_available_or_generate_new(id: number) {
@@ -449,6 +475,8 @@ export function SceneManagerModule() {
         load_scene,
         get_scene_list,
         set_mesh_name,
-        get_mesh_id_by_name,
+        get_mesh_id_by_url,
+        get_mesh_url_by_id,
+        mesh_url_to_mesh_id,
     };
 }

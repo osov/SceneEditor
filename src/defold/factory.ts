@@ -1,9 +1,8 @@
 import { Vector3, Quaternion } from "three";
-import { id_to_url } from "./utils";
 
 declare global {
     namespace factory {
-        export function create(url: string, position?: vmath.vector3, rotation?: vmath.quaternion, scale?:  number | vmath.vector3): hash;
+        export function create(url: string, position?: vmath.vector3, rotation?: vmath.quaternion, scale?: number | vmath.vector3): hash;
     }
 }
 
@@ -22,7 +21,7 @@ export function factory_module() {
             scale ? new Vector3().copy(typeof scale === "number" ? new Vector3(scale, scale, scale) : scale) : undefined
         );
         if (result == null) return null;
-        return id_to_url(result.mesh_data.id);
+        return SceneManager.get_mesh_url_by_id(result.mesh_data.id);
     }
 
     return { create };

@@ -1,7 +1,7 @@
 import * as TWEEN from '@tweenjs/tween.js';
 import { IBaseEntityAndThree, IObjectTypes } from "@editor/render_engine/types";
 import { Quaternion, Vector3 } from "three";
-import { get_nested_property, id_to_url, set_nested_property, uh_to_id } from "./utils";
+import { get_nested_property, set_nested_property, uh_to_id } from "./utils";
 import { Slice9Mesh } from '@editor/render_engine/objects/slice9';
 
 declare global {
@@ -249,7 +249,7 @@ export function go_module() {
             Log.error(`Mesh with id ${id} is not go`);
             return null;
         }
-        return mesh.parent ? id_to_url(mesh.parent.id) : null;
+        return mesh.parent ? SceneManager.get_mesh_url_by_id(mesh.parent.id) : null;
     }
 
     function get_world_position(id: string | hash) {

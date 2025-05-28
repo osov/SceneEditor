@@ -1133,11 +1133,12 @@ function AssetControlCreate() {
         const baseName = obj_data.name;
         let counter = 1;
         let uniqueName = baseName;
-        while (SceneManager.get_mesh_id_by_name(uniqueName)) {
+        while (SceneManager.get_mesh_id_by_url(':/' + uniqueName)) {
             uniqueName = `${baseName}_${counter}`;
             counter++;
         }
         SceneManager.set_mesh_name(root, uniqueName);
+
         if (position) root.set_position(position.x, position.y, position.z);
         // TODO: set_rotation нету в EntityBase
         // if (rotation) obj.set_rotation(rotation);

@@ -1,6 +1,5 @@
 import { IBaseEntityAndThree } from "@editor/render_engine/types";
 import { Vector3, Quaternion } from "three";
-import { id_to_url } from "./utils";
 
 declare global {
     namespace collectionfactory {

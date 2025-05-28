@@ -1,4 +1,3 @@
-import { url_to_id } from "./utils";
 import { math_module } from "./math";
 import { vmath_module } from "./vmath";
 import { json_module } from "./json";
@@ -21,7 +20,7 @@ declare global {
 export function register_lua_core() {
     (window as any).tonumber = Number;
     (window as any).hash = function (url: string) {
-        const id = url_to_id(url);
+        const id = SceneManager.get_mesh_id_by_url(url);
         return { id } as hash;
     };
 

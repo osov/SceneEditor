@@ -1873,8 +1873,6 @@ function MeshInspectorCreate() {
         const [isChangedX, isChangedY] = getChangedInfo(info);
         const size = info.data.event.value as Vector2;
 
-        log('SIZE CHANGE:', size);
-
         const data = info.ids.map((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
