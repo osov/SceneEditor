@@ -36,6 +36,7 @@ export type _SystemMessagesEditor = {
     NEW_FOLDER_CMD: { name: string, path: string },
     SYS_ASSETS_SELECTED_TEXTURES: { paths: string[] },
     SYS_ASSETS_SELECTED_MATERIALS: { paths: string[] },
+    SYS_ASSETS_SELECTED_AUDIOS: { paths: string[] },
     SYS_ASSETS_CLEAR_SELECTED: {},
     SYS_CHANGED_ATLAS_DATA: {},
     SYS_MATERIAL_CHANGED: TMaterialChanged,
@@ -128,7 +129,7 @@ export type DataFormatType = "string" | "base64";
 
 export type FSObjectType = "folder" | "file" | "null";
 
-export type AssetType = "folder" | "material" | "texture" | "scene_graph" | "other";
+export type AssetType = "folder" | "material" | "texture" | "scene_graph" | "audio" | "other";
 
 export type FSEventType = WatchEventType | "remove";
 
@@ -137,6 +138,7 @@ export interface FSObject { name: string, type: FSObjectType, size: number, path
 export const ASSET_TEXTURE: AssetType = "texture";
 export const ASSET_SCENE_GRAPH: AssetType = "scene_graph";
 export const ASSET_MATERIAL: AssetType = "material";
+export const ASSET_AUDIO: AssetType = "audio";
 export const GET_SERVER_DATA_CMD = '/server_data';
 export const SET_CURRENT_SCENE_CMD = '/set_current_scene';
 export const GET_PROJECTS_CMD = '/get_projects';

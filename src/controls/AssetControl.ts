@@ -2,9 +2,9 @@
 
 import { SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
 import {
-    ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, AssetType, DataFormatType, FILE_UPLOAD_CMD,
+    ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, ASSET_AUDIO, AssetType, DataFormatType, FILE_UPLOAD_CMD,
     FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses,
-    TDictionary, texture_ext, URL_PATHS
+    TDictionary, texture_ext, URL_PATHS, AUDIO_EXT
 } from "../modules_editor/modules_editor_const";
 import { span_elem, json_parsable, get_keys } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
@@ -294,6 +294,9 @@ function AssetControlCreate() {
                     icon_elem.setAttribute("src", src_url.toString());
                     icon_elem.setAttribute("draggable", "false");
                     icon_elem.classList.add("icon", "img", "drag");
+                }
+                else if (AUDIO_EXT.includes(ext)) {
+                    asset_type = ASSET_AUDIO;
                 }
                 file_elem.setAttribute("data-type", asset_type);
                 file_elem.setAttribute("data-name", name);
@@ -911,6 +914,11 @@ function AssetControlCreate() {
             const materials_paths = get_selected_materials();
             EventBus.trigger("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
         }
+
+        if (elem.getAttribute('data-type') == ASSET_AUDIO) {
+            const audios_paths = get_selected_audios();
+            EventBus.trigger("SYS_ASSETS_SELECTED_AUDIOS", { paths: audios_paths });
+        }
     }
 
     function get_selected_textures() {
@@ -923,6 +931,12 @@ function AssetControlCreate() {
         const materials = selected_assets.filter(asset => asset.getAttribute('data-type') === ASSET_MATERIAL);
         const materials_paths = materials.map(asset => asset.getAttribute('data-path') || '');
         return materials_paths;
+    }
+
+    function get_selected_audios() {
+        const audios = selected_assets.filter(asset => asset.getAttribute('data-type') === ASSET_AUDIO);
+        const audios_paths = audios.map(asset => asset.getAttribute('data-path') || '');
+        return audios_paths;
     }
 
     function set_active(elem: HTMLSpanElement) {
@@ -944,6 +958,9 @@ function AssetControlCreate() {
 
         const materials_paths = get_selected_materials();
         EventBus.trigger("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
+
+        const audios_paths = get_selected_audios();
+        EventBus.trigger("SYS_ASSETS_SELECTED_AUDIOS", { paths: audios_paths });
     }
 
     function on_mouse_move(event: any) {

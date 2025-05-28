@@ -27,3 +27,9 @@ export interface AssetMaterialInfo<T> {
     name: string;
     value: T;
 }
+
+export interface AssetAudioInfo<T> {
+    audio_path: string;
+    audio_id: number;
+    value: T;
+}

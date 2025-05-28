@@ -5,8 +5,8 @@ import { Vector2, Vector3, Vector4, Color, IUniform, Texture, MagnificationTextu
 import { get_file_name } from "../render_engine/helpers/utils";
 import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
 import { IObjectTypes, IBaseMesh } from "../render_engine/types";
-import { PropertyData, PropertyType, ChangeInfo, BeforeChangeInfo } from "../modules_editor/Inspector";
-import { AssetTextureInfo, AssetMaterialInfo } from "../controls/types";
+import { PropertyData, PropertyType, ChangeInfo, BeforeChangeInfo, ObjectData } from "../modules_editor/Inspector";
+import { AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo } from "../controls/types";
 import { hexToRGB, rgbToHex } from "../modules/utils";
 import { convertFilterModeToThreeJS, convertThreeJSFilterToFilterMode, generateAtlasOptions, generateFragmentProgramOptions, generateTextureOptions, generateVertexProgramOptions } from "./helpers";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
@@ -27,7 +27,15 @@ export enum AssetProperty {
     MAG_FILTER = 'mag_filter',
     VERTEX_PROGRAM = 'vertex_program',
     FRAGMENT_PROGRAM = 'fragment_program',
-    TRANSPARENT = 'transparent'
+    TRANSPARENT = 'transparent',
+    SOUND = 'sound',
+    DURATION = 'duration',
+    LOOP = 'loop',
+    VOLUME = 'volume',
+    SPEED = 'speed',
+    PAN = 'pan',
+    SOUND_PLAY_BUTTON = 'sound_play_button',
+    SOUND_STOP_BUTTON = 'sound_stop_button'
 }
 
 export enum AssetPropertyTitle {
@@ -37,7 +45,15 @@ export enum AssetPropertyTitle {
     MAG_FILTER = 'Максимальный фильтр',
     VERTEX_PROGRAM = 'Вершинный шейдер',
     FRAGMENT_PROGRAM = 'Фрагментный шейдер',
-    TRANSPARENT = 'Прозрачность'
+    TRANSPARENT = 'Прозрачность',
+    SOUND = 'Звук',
+    DURATION = 'Длительность',
+    LOOP = 'Повторять',
+    VOLUME = 'Громкость',
+    SPEED = 'Скорость',
+    PAN = 'Панорамирование',
+    SOUND_PLAY_BUTTON = 'Воспроизвести',
+    SOUND_STOP_BUTTON = 'Остановить'
 }
 
 export enum FilterMode {
@@ -48,6 +64,7 @@ export enum FilterMode {
 function AssetInspectorCreate() {
     let _selected_textures: string[] = [];
     let _selected_materials: string[] = [];
+    let _selected_audios: { path: string, id?: number }[] = [];
 
     function init() {
         subscribe();
@@ -62,7 +79,24 @@ function AssetInspectorCreate() {
             set_selected_materials(data.paths);
         });
 
+        EventBus.on('SYS_ASSETS_SELECTED_AUDIOS', (data: { paths: string[] }) => {
+            _selected_audios.forEach(audio => {
+                if (audio.id != undefined) {
+                    AudioManager.stop(audio.id);
+                }
+            });
+            set_selected_audios(data.paths.map(path => ({ path })));
+        });
+
         EventBus.on('SYS_ASSETS_CLEAR_SELECTED', () => {
+            _selected_audios.forEach(audio => {
+                if (audio.id != undefined) {
+                    AudioManager.stop(audio.id);
+                }
+            });
+            _selected_textures = [];
+            _selected_materials = [];
+            _selected_audios = [];
             Inspector.clear();
         });
 
@@ -347,6 +381,122 @@ function AssetInspectorCreate() {
 
             return result;
         });
+
+        Inspector.clear();
+        Inspector.setData(data);
+    }
+
+    function set_selected_audios(audio_paths: { path: string, id?: number }[]) {
+        _selected_audios = audio_paths;
+
+        const data = _selected_audios.map(({ path, id }, idx) => {
+            const result = { id: idx, fields: [] as PropertyData<PropertyType>[] };
+
+            const audio_name = get_file_name(path);
+            const audio_buffer = ResourceManager.get_sound_buffer(audio_name);
+
+            if (!audio_buffer) return null;
+
+            if (id == undefined) {
+                id = AudioManager.create_audio(audio_name);
+                _selected_audios[idx] = { path, id };
+            }
+
+            const audio_id = id;
+
+            result.fields.push({
+                key: AssetProperty.SOUND,
+                title: AssetPropertyTitle.SOUND,
+                value: audio_name,
+                type: PropertyType.STRING,
+                readonly: true
+            });
+
+            result.fields.push({
+                key: AssetProperty.DURATION,
+                title: AssetPropertyTitle.DURATION,
+                value: audio_buffer.duration.toFixed(2) + ' сек',
+                type: PropertyType.STRING,
+                readonly: true
+            });
+
+            result.fields.push({
+                key: AssetProperty.LOOP,
+                title: AssetPropertyTitle.LOOP,
+                value: AudioManager.get_loop(audio_id),
+                type: PropertyType.BOOLEAN,
+                onBeforeChange: saveAudioLoop,
+                onChange: handleAudioLoopChange
+            });
+
+            result.fields.push({
+                key: AssetProperty.VOLUME,
+                title: AssetPropertyTitle.VOLUME,
+                value: AudioManager.get_volume(audio_id),
+                type: PropertyType.SLIDER,
+                params: {
+                    min: 0,
+                    max: 2,
+                    step: 0.01,
+                    format: (value: number) => value.toFixed(2)
+                },
+                onBeforeChange: saveAudioVolume,
+                onChange: handleAudioVolumeChange
+            });
+
+            result.fields.push({
+                key: AssetProperty.SPEED,
+                title: AssetPropertyTitle.SPEED,
+                value: AudioManager.get_speed(audio_id),
+                type: PropertyType.SLIDER,
+                params: {
+                    min: 0,
+                    max: 2,
+                    step: 0.01,
+                    format: (value: number) => value.toFixed(2)
+                },
+                onBeforeChange: saveAudioSpeed,
+                onChange: handleAudioSpeedChange
+            });
+
+            result.fields.push({
+                key: AssetProperty.PAN,
+                title: AssetPropertyTitle.PAN,
+                value: AudioManager.get_pan(audio_id),
+                type: PropertyType.SLIDER,
+                params: {
+                    min: -1,
+                    max: 1,
+                    step: 0.01,
+                    format: (value: number) => value.toFixed(2)
+                },
+                onBeforeChange: saveAudioPan,
+                onChange: handleAudioPanChange
+            });
+
+            const is_playing = AudioManager.is_playing(audio_id);
+            result.fields.push({
+                key: is_playing ? AssetProperty.SOUND_STOP_BUTTON : AssetProperty.SOUND_PLAY_BUTTON,
+                title: is_playing ? AssetPropertyTitle.SOUND_STOP_BUTTON : AssetPropertyTitle.SOUND_PLAY_BUTTON,
+                value: () => {
+                    if (is_playing) AudioManager.stop(audio_id);
+                    else {
+
+                        // NOTE: для того чтобы сменить кнопку по окончанию проигрывания звука
+                        AudioManager.set_end_callback(audio_id, () => {
+                            set_selected_audios(_selected_audios);
+                        });
+
+                        AudioManager.play(audio_id);
+                    }
+
+                    // NOTE: для того чтобы сменить кнопку
+                    set_selected_audios(_selected_audios);
+                },
+                type: PropertyType.BUTTON,
+            });
+            return result;
+        }).filter(item => item != null) as ObjectData[];
 
         Inspector.clear();
         Inspector.setData(data);
@@ -756,6 +906,107 @@ function AssetInspectorCreate() {
         HistoryControl.add('MATERIAL_VEC4', vec4s, HistoryOwner.ASSET_INSPECTOR);
     }
 
+    function saveAudioLoop(info: BeforeChangeInfo) {
+        const loops: AssetAudioInfo<boolean>[] = [];
+        info.ids.forEach((id) => {
+            const audio = _selected_audios[id];
+            if (audio == null) return;
+            if (audio.id == undefined) return;
+            loops.push({ audio_path: audio.path, audio_id: audio.id, value: AudioManager.get_loop(audio.id) });
+        });
+        HistoryControl.add('AUDIO_LOOP', loops, HistoryOwner.ASSET_INSPECTOR);
+    }
+
+    function handleAudioLoopChange(info: ChangeInfo) {
+        const data = convertChangeInfoToAudioData<boolean>(info);
+        updateAudioLoop(data, info.data.event.last);
+    }
+
+    function updateAudioLoop(data: AssetAudioInfo<boolean>[], _: boolean) {
+        for (const item of data) {
+            AudioManager.set_loop(item.audio_id, item.value);
+        }
+    }
+
+    function saveAudioVolume(info: BeforeChangeInfo) {
+        const volumes: AssetAudioInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const audio = _selected_audios[id];
+            if (audio == null) return;
+            if (audio.id == undefined) return;
+            volumes.push({ audio_path: audio.path, audio_id: audio.id, value: AudioManager.get_volume(audio.id) });
+        });
+        HistoryControl.add('AUDIO_VOLUME', volumes, HistoryOwner.ASSET_INSPECTOR);
+    }
+
+    function handleAudioVolumeChange(info: ChangeInfo) {
+        const data = convertChangeInfoToAudioData<number>(info);
+        updateAudioVolume(data, info.data.event.last);
+    }
+
+    function updateAudioVolume(data: AssetAudioInfo<number>[], _: boolean) {
+        for (const item of data) {
+            AudioManager.set_volume(item.audio_id, item.value);
+        }
+    }
+
+    function saveAudioSpeed(info: BeforeChangeInfo) {
+        const speeds: AssetAudioInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const audio = _selected_audios[id];
+            if (audio == null) return;
+            if (audio.id == undefined) return;
+            speeds.push({ audio_path: audio.path, audio_id: audio.id, value: AudioManager.get_speed(audio.id) });
+        });
+        HistoryControl.add('AUDIO_SPEED', speeds, HistoryOwner.ASSET_INSPECTOR);
+    }
+
+    function handleAudioSpeedChange(info: ChangeInfo) {
+        const data = convertChangeInfoToAudioData<number>(info);
+        updateAudioSpeed(data, info.data.event.last);
+    }
+
+    function updateAudioSpeed(data: AssetAudioInfo<number>[], _: boolean) {
+        for (const item of data) {
+            AudioManager.set_speed(item.audio_id, item.value);
+        }
+    }
+
+    function saveAudioPan(info: BeforeChangeInfo) {
+        const pans: AssetAudioInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const audio = _selected_audios[id];
+            if (audio == null) return;
+            if (audio.id == undefined) return;
+            pans.push({ audio_path: audio.path, audio_id: audio.id, value: AudioManager.get_pan(audio.id) });
+        });
+        HistoryControl.add('AUDIO_PAN', pans, HistoryOwner.ASSET_INSPECTOR);
+    }
+
+    function handleAudioPanChange(info: ChangeInfo) {
+        const data = convertChangeInfoToAudioData<number>(info);
+        updateAudioPan(data, info.data.event.last);
+    }
+
+    function updateAudioPan(data: AssetAudioInfo<number>[], _: boolean) {
+        for (const item of data) {
+            AudioManager.set_pan(item.audio_id, item.value);
+        }
+    }
+
+    function convertChangeInfoToAudioData<T>(info: ChangeInfo): AssetAudioInfo<T>[] {
+        const value = info.data.event.value as T;
+        return info.ids.map(id => {
+            const audio = _selected_audios[id];
+            if (audio == null) return null;
+            return {
+                audio_path: audio.path,
+                audio_id: audio.id,
+                value
+            };
+        }).filter(item => item != null) as AssetAudioInfo<T>[];
+    }
+
     function convertChangeInfoToMaterialData<T>(info: ChangeInfo): AssetMaterialInfo<T>[] {
         const value = info.data.event.value as T;
         return info.ids.map(id => {
@@ -860,9 +1111,33 @@ function AssetInspectorCreate() {
                 await updateUniform(colors, true);
                 set_selected_materials(_selected_materials);
                 break;
+
+            case 'AUDIO_LOOP':
+                const loops = event.data as AssetAudioInfo<boolean>[];
+                updateAudioLoop(loops, true);
+                set_selected_audios(_selected_audios);
+                break;
+
+            case 'AUDIO_VOLUME':
+                const volumes = event.data as AssetAudioInfo<number>[];
+                updateAudioVolume(volumes, true);
+                set_selected_audios(_selected_audios);
+                break;
+
+            case 'AUDIO_SPEED':
+                const speeds = event.data as AssetAudioInfo<number>[];
+                updateAudioSpeed(speeds, true);
+                set_selected_audios(_selected_audios);
+                break;
+
+            case 'AUDIO_PAN':
+                const pans = event.data as AssetAudioInfo<number>[];
+                updateAudioPan(pans, true);
+                set_selected_audios(_selected_audios);
+                break;
         }
     }
 
     init();
-    return { set_selected_textures, set_selected_materials };
+    return { set_selected_textures, set_selected_materials, set_selected_audios };
 }

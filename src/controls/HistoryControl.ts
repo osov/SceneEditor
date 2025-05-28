@@ -1,6 +1,6 @@
 import { Euler, MagnificationTextureFilter, MinificationTextureFilter, Vector2, Vector3, Vector4 } from "three";
 import { get_keys } from "../modules/utils";
-import { MeshMoveEventData, MeshMaterialUniformInfo, MeshPropertyInfo, AssetTextureInfo, AssetMaterialInfo } from "./types";
+import { MeshMoveEventData, MeshMaterialUniformInfo, MeshPropertyInfo, AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo } from "./types";
 import { BlendMode } from "../inspectors/MeshInspector";
 
 
@@ -68,6 +68,10 @@ export type HistoryData = {
     MESH_SOUND_VOLUME: MeshPropertyInfo<number>
     MESH_SOUND_SPEED: MeshPropertyInfo<number>
     MESH_SOUND_PAN: MeshPropertyInfo<number>
+    AUDIO_LOOP: AssetAudioInfo<boolean>
+    AUDIO_VOLUME: AssetAudioInfo<number>
+    AUDIO_SPEED: AssetAudioInfo<number>
+    AUDIO_PAN: AssetAudioInfo<number>
 }
 
 export type HistoryDataKeys = keyof HistoryData;
