@@ -31,7 +31,7 @@ export function TweenManagerModule() {
             return;
         }
         if (!properties[property]) {
-            Log.error(`Tween for property ${property} not found`);
+            Log.warn(`Tween for property ${property} not found`);
             return;
         }
         properties[property].remove();

@@ -1,3 +1,5 @@
+import { vec_to_hex } from "../../../SceneEditor_Digg_Scan/src/utils";
+
 export function get_nested_property(obj: any, path: string): any {
     const parts = path.split('.');
     let current = obj;
@@ -14,7 +16,7 @@ export function set_nested_property(obj: any, path: string, value: any): void {
         return;
     }
     if (path == 'tint') {
-        obj.set_color(value);
+        obj.set_color(vec_to_hex(value));
         if (value.w != undefined)
             obj.set_alpha(value.w);
         return;

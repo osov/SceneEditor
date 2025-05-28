@@ -22,7 +22,7 @@ interface Chunk {
 interface Layer {
     layer_name: string;
     chunks: Chunk[];
-    id_order:number;
+    id_order: number;
 }
 
 interface TileData {
@@ -53,13 +53,13 @@ export interface TileObject {
 interface ObjectLayer {
     layer_name: string;
     objects: TileObject[]
-    id_order:number;
+    id_order: number;
 }
 
-export type TileInfo ={ [tile_set: string]: { [id: string]: TileData } };
-
+export type TileInfo = { [tile_set: string]: { [id: string]: TileData } };
+export type TileSets = { [tile_set: string]: number };
 export interface MapData {
-    tile_info: TileInfo
+    tilesets: TileSets;
     layers: Layer[]
     objects: ObjectLayer[]
 }
@@ -74,7 +74,7 @@ export interface RenderTileData {
 interface RenderLayer {
     layer_name: string;
     tiles: RenderTileData[];
-    id_order:number;
+    id_order: number;
 }
 
 export interface RenderTileObject {
@@ -92,7 +92,7 @@ export interface RenderTileObject {
 interface RenderObjectLayer {
     layer_name: string;
     objects: RenderTileObject[]
-    id_order:number;
+    id_order: number;
 }
 
 
@@ -104,14 +104,20 @@ export interface RenderMapData {
 
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
     // return id_layer * 2 - (y - height / 2) * 0.001;
-    return id_layer * 600 - (y - height / 2) * 5 ;
+    return id_layer * 600 - (y - height / 2) * 5;
 }
 
 
 const tiled_textures_data: { [k: string]: LoadedTileInfo } = {};
-function preload_tile_texture(id: string, path: string, atlas: string, w: number, h: number) {
-    tiled_textures_data[id] = { name: get_file_name(path), atlas: get_file_name(atlas), w, h };
+function preload_tile_texture(id: string, path: string, atlas: string, w: number, h: number, tilesets:TileSets) {
+    atlas = get_file_name(atlas);
+    // в карте нет этого тайл сета значит текстуры не грузим
+    if (!tilesets[atlas]) 
+        return;
+    const global_id = (tonumber(id)! + tilesets[atlas]) + '';
+    tiled_textures_data[global_id] = { name: get_file_name(path), atlas, w, h };
 }
+
 export function get_tile_texture(id: number) {
     const data = tiled_textures_data[id + ''];
     return data;
@@ -122,12 +128,12 @@ export function get_all_tiled_textures() {
 }
 
 
-export function preload_tiled_textures(map_data: MapData) {
-    for (const id_tileset in map_data.tile_info) {
-        const tile_set = map_data.tile_info[id_tileset];
+export function preload_tiled_textures(tile_info:TileInfo, map_data: MapData) {
+    for (const id_tileset in tile_info) {
+        const tile_set = tile_info[id_tileset];
         for (const id in tile_set) {
             const tex = tile_set[id];
-            preload_tile_texture(id, tex.url, id_tileset, tex.w, tex.h);
+            preload_tile_texture(id, tex.url, id_tileset, tex.w, tex.h, map_data.tilesets);
         }
     }
 }

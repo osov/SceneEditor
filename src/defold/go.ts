@@ -415,10 +415,8 @@ export function go_module() {
             Log.error(`Mesh with url ${url} not found`);
             return;
         }
-        if (mesh.type != IObjectTypes.GO_CONTAINER) {
-            Log.error(`Mesh with url ${url} is not go`);
-            return;
-        }
+        if (property == 'tint.w')
+            property = 'alpha';
         if (property) TweenManager.remove_mesh_property_tween(mesh_id, property);
         else TweenManager.remove_all_mesh_properties_tweens(mesh_id);
     }

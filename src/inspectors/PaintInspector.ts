@@ -271,8 +271,8 @@ function PaintInspectorCreate() {
 
 
     async function load_shader() {
-        shader_fp = (await AssetControl.get_file_data(fp_path)).data!;
-        shader_vp = (await AssetControl.get_file_data(vp_path)).data!;
+        shader_fp = (await AssetControl.get_file_data(fp_path))!;
+        shader_vp = (await AssetControl.get_file_data(vp_path))!;
         EventBus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {
             let is_change = false;
             for (let i = 0; i < e.events.length; i++) {
@@ -281,8 +281,8 @@ function PaintInspectorCreate() {
                     is_change = true;
             }
             if (is_change) {
-                shader_fp = (await AssetControl.get_file_data(fp_path)).data!;
-                shader_vp = (await AssetControl.get_file_data(vp_path)).data!;
+                shader_fp = (await AssetControl.get_file_data(fp_path))!;
+                shader_vp = (await AssetControl.get_file_data(vp_path))!;
                 for (const key in mesh_list) {
                     const { material, draw_canvas } = mesh_list[key];
                     material.fragmentShader = shader_fp;

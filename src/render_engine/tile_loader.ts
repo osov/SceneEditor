@@ -1,7 +1,7 @@
 import { Vector3, Vector2, Line, BufferGeometry, LineBasicMaterial } from "three";
 import { CAMERA_Z, WORLD_SCALAR } from "../config";
 import { rotate_point } from "./helpers/utils";
-import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo } from "./parsers/tile_parser";
+import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo, preload_tiled_textures, TileInfo } from "./parsers/tile_parser";
 import { IObjectTypes } from "./types";
 import { GoContainer, GoSprite } from "./objects/sub_types";
 
@@ -22,10 +22,38 @@ export function get_id_by_tile(tile: RenderTileData | RenderTileObject, id_layer
 
 export function TileLoader(world: GoContainer, tileSize = 256) {
 
-    function load(map_data: MapData) {
+    function calc_offset_y(map_data: MapData){
+        const render_data = parse_tiled(map_data);
+        let max_y = -10000;
+        for (let layer of render_data.layers) {
+            for (let tile of layer.tiles) {
+                const tile_id = tile.id & TILE_FLIP_MASK;
+                const tile_info = get_tile_texture(tile_id);
+                if (tile_info.h < tileSize) {
+                    tile_info.h = tileSize;
+                    Log.warn('fix tile_info.h', tile_info);
+                }
+
+                // Вычисляем коррекцию
+                const tile_w = tile_info.w * WORLD_SCALAR;
+                const tile_h = tile_info.h * WORLD_SCALAR;
+                let x = tile.x * tileSize * WORLD_SCALAR;
+                let y = tile.y * tileSize * WORLD_SCALAR - tileSize * WORLD_SCALAR;
+                const new_pos = rotate_point(new Vector3(x, y, 0), new Vector2(tile_w, tile_h), 0);
+                x = new_pos.x + tile_w / 2;
+                y = new_pos.y + tile_h ;
+                if (y > max_y)
+                    max_y = y;
+            }
+        }
+        return max_y;
+    }
+
+    function load(map_data: MapData, tiles_data:TileInfo) {
         const tiles: SpriteTileInfoDict = {};
         const render_data = parse_tiled(map_data);
-       
+        preload_tiled_textures(tiles_data, map_data);
+        //log("offset Y:", calc_offset_y(map_data));
         // TILES
         for (let layer of render_data.layers) {
             const id_layer = layer.id_order;
