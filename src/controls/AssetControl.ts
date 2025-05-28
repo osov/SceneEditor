@@ -1132,25 +1132,12 @@ function AssetControlCreate() {
         // NOTE: ищем уникальное имя для root и всех его детей
         const baseName = obj_data.name;
         let counter = 1;
-        let uniqueName = baseName; //`${baseName}_${Date.now()}`;
+        let uniqueName = baseName;
         while (SceneManager.get_mesh_id_by_name(uniqueName)) {
             uniqueName = `${baseName}_${counter}`;
             counter++;
         }
         SceneManager.set_mesh_name(root, uniqueName);
-        root.traverse((child) => {
-            if (child !== root && child.name) {
-                const childBaseName = child.name;
-                let childCounter = 1;
-                let childUniqueName = childBaseName;
-                while (SceneManager.get_mesh_id_by_name(childUniqueName)) {
-                    childUniqueName = `${childBaseName}_${childCounter}`;
-                    childCounter++;
-                }
-                SceneManager.set_mesh_name(child as any, childUniqueName);
-            }
-        });
-
         if (position) root.set_position(position.x, position.y, position.z);
         // TODO: set_rotation нету в EntityBase
         // if (rotation) obj.set_rotation(rotation);
