@@ -326,7 +326,7 @@ export function go_module() {
             Log.error(`Mesh with url ${url} not found`);
             return;
         }
-        if (['position', 'rotation', 'scale', 'euler.z'].includes(property) && mesh.type != IObjectTypes.GO_CONTAINER){
+        if (['position', 'rotation', 'scale', 'euler.z'].includes(property) && mesh.type != IObjectTypes.GO_CONTAINER) {
             Log.error(`Mesh with id ${url} is not go property:`, property);
             return;
         }
@@ -366,6 +366,7 @@ export function go_module() {
     ) {
         if (property == 'tint.w')
             property = 'alpha';
+
         const mesh_id = uh_to_id(url);
         const mesh = SceneManager.get_mesh_by_id(mesh_id);
         if (!mesh) {
@@ -388,7 +389,7 @@ export function go_module() {
         const is_backward = playback == go.PLAYBACK_ONCE_BACKWARD || playback == go.PLAYBACK_LOOP_BACKWARD;
         const obj = { value: is_backward ? to : currentValue };
         const tween = new TWEEN.Tween(obj)
-            .to({ value: is_backward ? currentValue : to }, duration)
+            .to({ value: is_backward ? currentValue : to }, duration * 1000)
             .onUpdate(() => {
                 if (is_material_property) {
                     ResourceManager.set_material_uniform_for_mesh(mesh as Slice9Mesh, property, obj.value);
@@ -396,7 +397,7 @@ export function go_module() {
                 }
                 set_nested_property(mesh, property, obj.value);
             })
-            .delay(delay)
+            .delay(delay * 1000)
             .easing(EASING_MAP[easing] ?? TWEEN.Easing.Linear.None)
             .onComplete((_: { [key: string]: any }) => {
                 TweenManager.remove_mesh_property_tween(mesh_id, property);

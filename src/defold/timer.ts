@@ -16,7 +16,7 @@ export function timer_module() {
                 const timeElapsed = Date.now() - startTime;
                 callback(null, handle, timeElapsed);
                 startTime = Date.now();
-            }, delay);
+            }, delay * 1000);
             intervalHandles.push(handle);
             return handle;
         }
@@ -25,7 +25,7 @@ export function timer_module() {
         const handle = setTimeout(() => {
             const timeElapsed = Date.now() - startTime;
             callback(null, handle, timeElapsed);
-        }, delay);
+        }, delay * 1000);
         timeoutHandles.push(handle);
         return handle;
     }
