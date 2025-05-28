@@ -82,8 +82,8 @@ function MoverInspectorCreate() {
             if (cmp) {
                 if (cmp.sub_type == ComponentType.MOVER)
                     show(cmp);
-                else
-                    Inspector.clear();
+               // else
+                //    Inspector.clear();
             }
         });
     }

@@ -73,7 +73,7 @@ export enum MeshPropertyTitle {
     ACTIVE = 'Aктивный',
     POSITION = 'Позиция',
     ROTATION = 'Вращение',
-    SCALE = 'Маштаб',
+    SCALE = 'Масштаб',
     SIZE = 'Размер',
     PIVOT = 'Точка опоры',
     ANCHOR = 'Anchor',
@@ -168,6 +168,7 @@ function MeshInspectorCreate() {
 
             switch (mesh.type) {
                 case IObjectTypes.GO_CONTAINER:
+                case IObjectTypes.COMPONENT:
                     generateTransformFields(fields, mesh);
                     break;
                 case IObjectTypes.GUI_BOX:
