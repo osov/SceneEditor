@@ -41,11 +41,15 @@ export class MultipleMaterialMesh extends EntityPlane {
         return this.textures[index];
     }
 
+    // NOTE: при сериализации и десериализации цвета может не быть материалов
+
     set_color(color: string, index = 0) {
+        if (this.materials.length == 0 || this.materials.length < index) return;
         ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, 'u_color', color);
     }
 
     get_color(index = 0) {
+        if (this.materials.length == 0 || this.materials.length < index) return "#fff";
         return this.materials[index].uniforms['u_color'].value;
     }
 
@@ -92,7 +96,7 @@ export class MultipleMaterialMesh extends EntityPlane {
                 child.material = new_material;
             }
         });
-        m.scale.setScalar(WORLD_SCALAR);
+        m.scale.setScalar(1 * WORLD_SCALAR);
         if (this.children.length > 0)
             this.remove(this.children[0]);
         this.add(m);
@@ -105,6 +109,7 @@ export class MultipleMaterialMesh extends EntityPlane {
     }
 
     serialize() {
+        // NOTE: есть нюанс как минимум с сериализацией цвета, потому что может не быть материала
         const data = super.serialize();
         data.materials = [];
         data.mesh_name = this.mesh_name;
@@ -149,8 +154,6 @@ export class MultipleMaterialMesh extends EntityPlane {
     }
 
     deserialize(data: MultipleMaterialMeshSerializeData) {
-        super.deserialize(data);
-
         if (data.mesh_name) {
             this.set_mesh(data.mesh_name);
         }
@@ -186,5 +189,8 @@ export class MultipleMaterialMesh extends EntityPlane {
                 }
             }
         }
+
+        // NOTE: сериализуем в конце, так как внутри есть методы обращающиеся к материалам которые создаются тут
+        super.deserialize(data);
     }
 } 

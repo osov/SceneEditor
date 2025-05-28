@@ -30,6 +30,10 @@ export function TweenManagerModule() {
         if (!properties) {
             return;
         }
+        if (!properties[property]) {
+            Log.error(`Tween for property ${property} not found`);
+            return;
+        }
         properties[property].remove();
         group.remove(properties[property]);
         delete properties[property];
@@ -41,6 +45,10 @@ export function TweenManagerModule() {
             return;
         }
         Object.keys(properties).forEach((property) => {
+            if (!properties[property]) {
+                Log.error(`Tween for property ${property} not found`);
+                return;
+            }
             properties[property].remove();
             group.remove(properties[property]);
             delete properties[property]

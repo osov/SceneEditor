@@ -162,21 +162,21 @@ export function circle_line_intersect(circle: Circle, line: Segment) {
 export function GT(x: number, y: number) {
     return x - y > DP_TOL
 }
-  
+
 export function GE(x: number, y: number) {
     return x - y > -DP_TOL
 }
 
 export function LT(x: number, y: number) {
     return x - y < -DP_TOL;
-  }
+}
 
 export function LE(x: number, y: number) {
     return x - y < DP_TOL;
 }
 
 export function EQ_0(x: number) {
-  return x < DP_TOL && x > -DP_TOL;
+    return x < DP_TOL && x > -DP_TOL;
 }
 
 export function EQ(x: number, y: number) {
@@ -196,14 +196,11 @@ export function vector_slope(x: number, y: number) {
 }
 
 export function getObjectHash<T>(obj: T): string {
-    // Сначала отсортируем ключи объекта, чтобы порядок полей не влиял на хэш
     const sortedObj = sortObjectDeep(obj);
-    // Преобразуем объект в строку и создадим хэш
     const str = JSON.stringify(sortedObj);
     return stringToHash(str);
 }
 
-// Рекурсивная сортировка всех вложенных объектов
 function sortObjectDeep(obj: any): any {
     if (obj === null || typeof obj !== 'object') {
         return obj;
@@ -213,11 +210,9 @@ function sortObjectDeep(obj: any): any {
         return obj.map(sortObjectDeep);
     }
 
-    // Получаем все ключи и сортируем их
     const sortedKeys = Object.keys(obj).sort();
     const result: any = {};
 
-    // Создаем новый объект с отсортированными ключами
     for (const key of sortedKeys) {
         result[key] = sortObjectDeep(obj[key]);
     }
@@ -230,9 +225,9 @@ export function stringToHash(str: string): string {
     for (let i = 0; i < str.length; i++) {
         const char = str.charCodeAt(i);
         hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32-bit integer
+        hash = hash & hash;
     }
-    return hash.toString(16); // Преобразуем в hex строку
+    return hash.toString(16);
 }
 
 export function getObjectDifferences<T>(obj1: T, obj2: T): { [key: string]: { old: any, new: any } } {

@@ -1429,7 +1429,7 @@ function MeshInspectorCreate() {
                 mesh_id: item.mesh_id,
                 value: {
                     mesh_name: item.value,
-                    scale: WORLD_SCALAR,
+                    scale: 1 * WORLD_SCALAR,
                     animations: [],
                     current_animation: ''
                 }
@@ -1806,7 +1806,7 @@ function MeshInspectorCreate() {
             else if (mesh instanceof MultipleMaterialMesh) {
                 const first_child = mesh.children[0];
                 if (first_child) {
-                    first_child.scale.setScalar(Math.max(item.value.x, item.value.y));
+                    first_child.scale.setScalar(Math.max(item.value.x, item.value.y) * WORLD_SCALAR);
                 }
                 mesh.transform_changed();
             }

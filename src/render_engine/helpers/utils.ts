@@ -175,18 +175,17 @@ export function copy_material(material: ShaderMaterial) {
         defines: deepClone(material.defines || {})
     });
 
-    // Properly clone uniforms
     for (const [key, uniform] of Object.entries(material.uniforms)) {
         if (uniform.value instanceof Texture) {
             const texture = new Texture();
             texture.copy(uniform.value);
             (texture as any).path = (uniform.value as any).path;
             copy.uniforms[key] = { value: texture };
-        } else if (uniform.value instanceof Vector2) {
-            copy.uniforms[key] = { value: uniform.value.clone() };
-        } else if (uniform.value instanceof Vector3) {
-            copy.uniforms[key] = { value: uniform.value.clone() };
-        } else if (uniform.value instanceof Vector4) {
+        } else if (
+            uniform.value instanceof Vector2 ||
+            uniform.value instanceof Vector3 ||
+            uniform.value instanceof Vector4
+        ) {
             copy.uniforms[key] = { value: uniform.value.clone() };
         } else {
             copy.uniforms[key] = { value: deepClone(uniform.value) };
