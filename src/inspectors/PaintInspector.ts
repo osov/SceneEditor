@@ -64,7 +64,7 @@ function PaintInspectorCreate() {
 
     let selected_mesh: IBaseMeshAndThree | undefined;
     const mesh_list: { [k: string]: { material: ShaderMaterial, draw_canvas: IDrawCanvas } } = {};
-    const dir_path = '/map/';
+    const dir_path = '/data/map/';
     const fp_path = 'shaders/map.fp';
     const vp_path = 'shaders/map.vp';
     let shader_fp = '';

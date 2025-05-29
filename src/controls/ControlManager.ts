@@ -1,12 +1,12 @@
 import { is_base_mesh } from "../render_engine/helpers/utils";
-import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
+import { IBaseMeshAndThree } from "../render_engine/types";
 import { TreeItem } from "./TreeControl";
 import { componentsGo } from "./ActionsControl";
 import { HistoryData } from "./HistoryControl";
 import { cbDataItem, Action } from "../modules_editor/Popups";
 import Stats from 'stats.js';
 import { DEFOLD_LIMITS } from "../config";
-import { HistoryOwner, THistoryUndo, TMaterialChanged } from "../modules_editor/modules_editor_const";
+import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 
 declare global {
     const ControlManager: ReturnType<typeof ControlManagerCreate>;

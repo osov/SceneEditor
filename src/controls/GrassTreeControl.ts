@@ -27,7 +27,7 @@ type FileData = { [id: string]: GrassTreeInfo };
 function GrassTreeControlCreate() {
     const gm = createGrassManager();
     const mesh_list: { [k: string]: boolean } = {};
-    const dir_path = '/tree/';
+    const dir_path = '/data/tree/';
     let selected_mesh: Slice9Mesh | undefined;
 
     async function load_data() {

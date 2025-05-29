@@ -31,7 +31,7 @@ type FileData = { [id: string]: FlowInfo };
 function FlowMapControlCreate() {
     let normals: Texture | undefined;
     const mesh_list: { [k: string]: IDrawCanvas } = {};
-    const dir_path = '/water/';
+    const dir_path = '/data/water/';
     const last_pos = new Vector2(0, 0);
     let selected_mesh: Slice9Mesh | undefined;
 
@@ -62,7 +62,7 @@ function FlowMapControlCreate() {
             }
         });
 
-        EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
+        EventBus.on('SYS_SELECTED_MESH_LIST', (_e) => {
             if (Input.is_shift())
                 return;
             selected_mesh = get_selected_one_mesh();

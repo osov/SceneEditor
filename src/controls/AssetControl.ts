@@ -1121,7 +1121,7 @@ function AssetControlCreate() {
     async function load_scene(path: string) {
         const resp = await ClientAPI.get_data(path);
         if (!resp || resp.result === 0 || !resp.data)
-            return Popups.toast.error(`Не удалось получить данные сцены: ${resp.message}`);
+            return Popups.toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
         const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
         SceneManager.load_scene(data.scene_data);
         ControlManager.update_graph(true, current_scene.name);
@@ -1134,6 +1134,8 @@ function AssetControlCreate() {
         scale?: Vector3,
         with_check = false
     ) {
+        if (pathToScene.substring(0, 1) != "/")
+            pathToScene = `/${pathToScene}`;
         const info = ResourceManager.get_scene_info(pathToScene);
         if (!info) {
             return Log.error(`Не удалось получить данные сцены: ${pathToScene}`);
@@ -1309,8 +1311,8 @@ export async function run_debug_filemanager(project_to_load: string) {
         // Достаём данные о последнем открытом проекте
         const current_project = localStorage.getItem("current_project");
         const current_dir = localStorage.getItem("current_dir");
-        const current_scene_name = localStorage.getItem("current_scene_name");
-        const current_scene_path = localStorage.getItem("current_scene_path");
+        //const current_scene_name = localStorage.getItem("current_scene_name");
+        //const current_scene_path = localStorage.getItem("current_scene_path");
         // Если проект project_to_load существует, пробуем загрузить
         if (names.includes(project_to_load)) {
             const r = await ClientAPI.load_project(project_to_load);

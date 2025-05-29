@@ -63,7 +63,7 @@ export function SceneManagerModule() {
         let mesh: IBaseEntityAndThree;
         params = params || {};
         const default_size = 32;
-
+        id = -1; // всегда новый генерить
         // base
         if (type == IObjectTypes.ENTITY) {
             mesh = new EntityBase(check_id_is_available_or_generate_new(id));
@@ -182,7 +182,7 @@ export function SceneManagerModule() {
             pid,
             type: m.type,
             name: m.name,
-            visible: m.get_visible(),
+            visible: m.get_active(),
             position: wp.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as Vector3Tuple,
             rotation: wr.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as Vector4Tuple,
             scale: ws.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as Vector3Tuple,
@@ -210,7 +210,7 @@ export function SceneManagerModule() {
         if (data.scale)
             mesh.scale.set(data.scale[0], data.scale[1], data.scale[2]);
         mesh.name = data.name;
-        mesh.set_visible(data.visible);
+        mesh.set_active(data.visible);
 
         mesh.deserialize(data.other_data);
         if (data.children) {
@@ -455,6 +455,18 @@ export function SceneManagerModule() {
         id_counter = data.id_counter;
     }
 
+    function get_mesh_by_name(name: string) {
+        let mesh:IBaseEntityAndThree|undefined;
+        scene.traverse((child) => {
+            if (is_base_mesh(child)) {
+                const it = child as any as IBaseEntityAndThree;
+                if (it.name == name)
+                    mesh = it;
+            }
+        });
+        return mesh;
+    }
+
     return {
         get_unique_id,
         create,
@@ -478,5 +490,6 @@ export function SceneManagerModule() {
         get_mesh_id_by_url,
         get_mesh_url_by_id,
         mesh_url_to_mesh_id,
+        get_mesh_by_name
     };
 }

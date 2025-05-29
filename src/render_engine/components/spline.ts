@@ -76,19 +76,19 @@ export function CmpSpline(cmp_mesh: EntityBase) {
         const mesh = SceneManager.create(IObjectTypes.ENTITY);
         mesh.ignore_history = ['MESH_ADD'];
         mesh.no_saving = true;
-        // mesh.set_scale(0.3, 0.3);
         (mesh as any).material = spline_mat_helper;
         mesh.on_transform_changed = () => {
             update_spline();
             remake_spline(false);
         };
-        mesh.position.copy(point);
+        const lp = cmp_mesh.worldToLocal(point);
+        lp.z = 0;
+        mesh.position.copy(lp);
         return mesh;
     }
 
     function add_point(x: number, y: number, select = false) {
-        let lp = cmp_mesh.worldToLocal(new Vector3(x, y, 0));
-        spline_data.push(new Vector2(lp.x, lp.y));
+        spline_data.push(new Vector2(x, y));
         return make_spline(select);
     }
 
@@ -97,7 +97,6 @@ export function CmpSpline(cmp_mesh: EntityBase) {
         if (!curve || spline_data.length == 0)
             return;
         let point = new Vector3();
-        let spline = curve;
         if (!spline_mesh) {
             Log.error("spline_mesh is null");
             return;
@@ -105,7 +104,7 @@ export function CmpSpline(cmp_mesh: EntityBase) {
         let position = spline_mesh.geometry.attributes.position;
         for (let i = 0; i < spline_arc_segments; i++) {
             let t = i / (spline_arc_segments - 1);
-            spline.getPoint(t, point);
+            curve.getPoint(t, point);
             position.setXYZ(i, point.x, point.y, point.z);
         }
         position.needsUpdate = true;
@@ -116,9 +115,11 @@ export function CmpSpline(cmp_mesh: EntityBase) {
             return console.warn("Remake fail");
         spline_data = [];
         for (let i = 0; i < cmp_mesh.children.length; i++) {
-            if (is_base_mesh(cmp_mesh.children[i])){
-                const pos = cmp_mesh.children[i].position;
-                spline_data.push(new Vector2(pos.x, pos.y));
+            if (is_base_mesh(cmp_mesh.children[i])) {
+                const m = cmp_mesh.children[i];
+                const wp = new Vector3();
+                m.getWorldPosition(wp);
+                spline_data.push(new Vector2(wp.x, wp.y));
             }
         }
         if (is_make)
@@ -130,10 +131,9 @@ export function CmpSpline(cmp_mesh: EntityBase) {
             cmp_mesh.remove(cmp_mesh.children[i]);
         let helper;
         let positions = [new Vector3()];
-        let pos = new Vector3();
         let cnt = spline_data.length;
         for (let i = 0; i < cnt; i++) {
-            pos = new Vector3(spline_data[i].x, spline_data[i].y, 0);
+          const  pos = new Vector3(spline_data[i].x, spline_data[i].y, 0);
             var first = 0;
             if (i == 0)
                 first = 1;
@@ -148,7 +148,6 @@ export function CmpSpline(cmp_mesh: EntityBase) {
             SelectControl.set_selected_list([helper]);
         curve = new CatmullRomCurve3(positions);
         curve.curveType = 'catmullrom';
-        curve = curve;
         let geometry = new BufferGeometry();
         geometry.setAttribute('position', new BufferAttribute(new Float32Array(spline_arc_segments * 3), 3));
         spline_mesh = new Line(geometry, spline_mat);
@@ -165,12 +164,15 @@ export function CmpSpline(cmp_mesh: EntityBase) {
             spline_data = [];
             for (let i = 0; i < cmp_mesh.children.length; i++) {
                 if (is_base_mesh(cmp_mesh.children[i])) {
+                    const m = cmp_mesh.children[i];
+                    const wp = new Vector3();
+                    m.getWorldPosition(wp);
+                    wp.z = 0;
                     if (with_id)
-                        tmp.push({ mesh_id: (cmp_mesh.children[i] as IBaseEntityAndThree).mesh_data.id, value: cmp_mesh.children[i].position.clone() });
+                        tmp.push({ mesh_id: (cmp_mesh.children[i] as IBaseEntityAndThree).mesh_data.id, value: wp });
                     else
-                        tmp.push({ mesh_id: -1, value: cmp_mesh.children[i].position.clone() });
-                    const pos = tmp[tmp.length - 1].value;
-                    spline_data.push(new Vector2(pos.x, pos.y));
+                        tmp.push({ mesh_id: -1, value: wp });
+                    spline_data.push(new Vector2(wp.x, wp.y));
                 }
             }
         }
