@@ -1,4 +1,4 @@
-import { vec_to_hex } from "../../../SceneEditor_Digg_Scan/src/utils";
+import { vec_to_hex } from "../render_engine/helpers/utils";
 
 export function get_nested_property(obj: any, path: string): any {
     const parts = path.split('.');
