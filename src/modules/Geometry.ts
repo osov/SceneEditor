@@ -1858,12 +1858,12 @@ export function intersectCircle2Circle(circle1: Circle, circle2: Circle): Point[
     if (!circle1.box().intersect(circle2.box())) {
       return ips;
     }
-    const vx = circle2.pc.x - circle1.pc.x;
-    const vy = circle2.pc.y - circle1.pc.y;
-    let vec = Vector(vx, vy);
+    let vec = vector_from_points(circle1.pc, circle2.pc);
     let r1 = circle1.r;
     let r2 = circle2.r;
+    
     if (EQ_0(r1) || EQ_0(r2)) return ips;
+    
     if (EQ_0(vec.x) && EQ_0(vec.y) && EQ(r1, r2)) {
         const v = Vector(-r1, 0);
         ips.push(circle1.pc.translate(v));
@@ -1871,13 +1871,15 @@ export function intersectCircle2Circle(circle1: Circle, circle2: Circle): Point[
     }
   
     let dist = circle1.pc.distanceTo(circle2.pc)[0];
+
     if (GT(dist, r1 + r2))
         return ips;
   
     if (LT(dist, Math.abs(r1 - r2)))
         return ips;
-    vec.x /= dist;
-    vec.y /= dist;
+
+    // Normalize vector.
+    vec = vec.normalize();
     let pt: Point;
     if (EQ(dist, r1 + r2) || EQ(dist, Math.abs(r1 - r2))) {
         const v = Vector(r1 * vec.x, r1 * vec.y);
@@ -1886,6 +1888,8 @@ export function intersectCircle2Circle(circle1: Circle, circle2: Circle): Point[
         return ips;
     }
 
+    // Distance from first center to center of common chord:
+    //   a = (r1^2 - r2^2 + d^2) / 2d
     let a = (r1 * r1) / (2 * dist) - (r2 * r2) / (2 * dist) + dist / 2;
     const v = Vector(a * vec.x, a * vec.y);
     let mid_pt = circle1.pc.translate(v);

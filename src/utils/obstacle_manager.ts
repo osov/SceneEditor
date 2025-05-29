@@ -1,10 +1,12 @@
-import { Box, Point, PointLike, Segment } from "@editor/modules/Geometry";
+import { Arc, Box, Point, PointLike, Segment } from "@editor/modules/Geometry";
 import { Aabb, createSpatialHash } from "./spatial_hash";
 import { default_obstacle_grid, GridParams, SubGridParams } from "@editor/modules_editor/PlayerMovement";
 
 
 
 export type ObstaclesGrid = ReturnType<typeof ObstaclesGridCreate>;
+
+type OffsetBuildOption = "all" | "arc" | "segment";
 
 function ObstaclesGridCreate(grid: number[][], pos_to_coord_grid: PointLike[][], params: GridParams) {
     if (
@@ -81,6 +83,7 @@ function ObstaclesGridCreate(grid: number[][], pos_to_coord_grid: PointLike[][],
 }
 
 export function ObstaclesManager(hash_cell_size: number) {
+    const all_obstacles: Segment[] = [];
     const logger = Log.get_with_prefix('ObstaclesManager');
     const sp = createSpatialHash(hash_cell_size);
     let id_obstacle = 0;
@@ -132,6 +135,7 @@ export function ObstaclesManager(hash_cell_size: number) {
 
 
     function add_obstacle(obstacle: Segment) {
+        all_obstacles.push(obstacle);
         const center = obstacle.center();
         const x = center.x;
         const width = Math.abs(obstacle.end.x - obstacle.start.x);
@@ -178,19 +182,36 @@ export function ObstaclesManager(hash_cell_size: number) {
         return list;
     }
 
+    function build_offsets(obstacle: Segment, offset: number, build_option: OffsetBuildOption = "all") {
+        const result: (Segment | Arc)[] = [];
+        const tangent = obstacle.vector().normalize();
+        const normal = tangent.rotate90CW();
+        if (build_option == "all" || build_option == "segment") {
+            result.push(obstacle.translate(normal.multiply(offset)));
+            result.push(obstacle.translate(normal.multiply(-offset)));
+        }
+        
+        if (build_option == "all" || build_option == "arc") {
+            const slope = obstacle.slope;
+            result.push(Arc(obstacle.start, offset, slope() - Math.PI / 2, slope() + Math.PI / 2, false));
+            result.push(Arc(obstacle.end, offset, slope() + Math.PI / 2, slope() - Math.PI / 2, false));
+        }
+        return result;
+    }
+
     function get_grid() {
         if (grid) return grid;
         logger.warn('Сетка препятствий не инициализирована!')
-        return false
+        return false;
     }
 
-    return { add_obstacle, remove_obstacle, set_obstacles, clear_obstacles, get_obstacles, get_grid, init_grid }
+    return { add_obstacle, remove_obstacle, set_obstacles, clear_obstacles, get_obstacles, get_grid, init_grid, build_offsets, all_obstacles }
 }
 
 export function test_grid() {
-    const params = {...default_obstacle_grid, cell_size: 1, amount: {x: 100, y: 100},}
+    const params = {...default_obstacle_grid, cell_size: 1, amount: {x: 16, y: 16},}
     const subgrid_offset = {x: 1, y: 1};
-    const obst_A1 = Segment(Point(0.1, 0), Point(9.1, 9));
+    const obst_A1 = Segment(Point(5.1, 0), Point(18.1, 11));
     const obst_B1 = Segment(Point(3, 1), Point(3, 5));
     const ob = ObstaclesManager(1);
     ob.set_obstacles([
@@ -199,8 +220,8 @@ export function test_grid() {
         ]);
     ob.init_grid(params);
     const grid = ob.get_grid() as ObstaclesGrid;
-    const subgrid = grid.get_subgrid({offset: subgrid_offset, amount: {x: 10, y: 10}}) as ObstaclesGrid;
-    const orig_coord = {x: 3.2, y: 5.7};
+    let subgrid = grid.get_subgrid({offset: subgrid_offset, amount: {x: 5, y: 5}}) as ObstaclesGrid;
+    const orig_coord = {x: 3.2, y: 4.7};
     const pos = grid.coord_to_grid_pos(orig_coord) as PointLike;
     const coord = grid.grid_pos_to_coord(pos);
     const pos1 = subgrid.coord_to_grid_pos(orig_coord) as PointLike;

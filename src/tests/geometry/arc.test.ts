@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { Arc, CCW, circle, Circle, CW, Line, Matrix, Point, point, Segment, vector } from "../../modules/Geometry"
+import { Arc, Box, CCW, circle, Circle, CW, Line, Matrix, Point, point, Segment, vector } from "../../modules/Geometry"
 import { DP_TOL, EQ, TAU } from "../../modules/utils"
 
 describe('Arc', function () {
@@ -207,6 +207,12 @@ describe('Arc', function () {
       let ip = arc1.intersect(arc2)
       expect(ip.length).toEqual(2)
     })
+    it('Intersect arc with box', function () {
+      let arc1 = Arc(Point(), 1, 0, Math.PI, true)
+      let box = Box(-1, 0.2, 1, 2)
+      let ip = arc1.intersect(box)
+      expect(ip.length).toEqual(2)
+    })
     it('Intersect arc with arc, case of touching', function () {
       let arc1 = Arc(Point(), 1, 0, Math.PI, true)
       let arc2 = Arc(Point(0, 2), 1, -Math.PI / 4, -3 * Math.PI * 4, false)
@@ -226,6 +232,12 @@ describe('Arc', function () {
       let arc2 = Arc(Point(), 1, Math.PI / 4, (3 * Math.PI) / 4, false)
       let ip = arc1.intersect(arc2)
       expect(ip.length).toEqual(4)
+    })
+    it('Intersect arc with arc, custom', function () {
+      let arc1 = Arc(Point(0, 2), 2, -Math.PI / 2, Math.PI / 2, true)
+      let arc2 = Arc(Point(3,2), 2, -Math.PI / 2, Math.PI / 2, false)
+      let ip = arc1.intersect(arc2)
+      expect(ip.length).toEqual(2)
     })
   })
   it('It can calculate tangent vector in start point, CW case', function () {

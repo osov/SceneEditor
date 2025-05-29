@@ -3,7 +3,7 @@ import { get_depth, MapData, parse_tiled } from '../render_engine/parsers/tile_p
 import { EQ_0 } from '../modules/utils';
 import { IObjectTypes } from '../render_engine/types';
 import { WORLD_SCALAR, WORLD_SCALAR as WS } from '../config';
-import { PathFinder, PathFinderModule } from '../modules/PathFinder';
+import { PathFinder } from '../modules/PathFinder';
 import {
     point,
     vector_from_points as vector,
@@ -13,13 +13,10 @@ import {
     Segment,
     vec_angle,
     PointLike,
-    Box,
     Arc,
-    Vector,
-    vector_from_points,
     POINT_EMPTY,
 } from '../modules/Geometry';
-import { Line as GeomLine, BufferGeometry } from 'three';
+import { Line as GeomLine } from 'three';
 import { LinesDrawer } from '../modules/LinesDrawer';
 
 
@@ -36,6 +33,8 @@ export enum ControlType {
 }
 
 export type PlayerMovementSettings = {
+    width: number, 
+    heigth: number,
     max_predicted_way_intervals: number,  // Макс. количество отрезков прогнозируемого пути, на котором цикл построения пути завершится преждевременно
     predicted_way_lenght_mult: number,    // Множитель длины пути для построения пути с запасом
     collision_min_error: number,          // Минимальное расстояние сближения с припятствиями, для предотвращения соприкосновений геометрий 
@@ -61,6 +60,8 @@ export type PlayerMovementSettings = {
     debug?: boolean,
     clear_drawn_lines?: boolean,   // Если false, все рисуемые линии остаются после update
     obstacles_space_cell_size: number,
+    max_subgrid_size: number,
+    min_subgrid_size: number,
     grid_params: GridParams,
 }
 
@@ -95,9 +96,11 @@ export const default_obstacle_grid: GridParams = {
 }
 
 export const default_settings: PlayerMovementSettings = {
+    width: 50 * WORLD_SCALAR, 
+    heigth: 50 * WORLD_SCALAR,
     max_predicted_way_intervals: 10,
     predicted_way_lenght_mult: 1.5,
-    collision_min_error: 0.05,
+    collision_min_error: 0.01,
     min_required_way: 0.8,
     min_awailable_way: 0.8,
     min_idle_time: 0.7,
@@ -119,6 +122,8 @@ export const default_settings: PlayerMovementSettings = {
     clear_drawn_lines: true,
     min_stick_dist: 15,
     obstacles_space_cell_size: 150 * WORLD_SCALAR,
+    max_subgrid_size: 100,
+    min_subgrid_size: 70,
     grid_params: default_obstacle_grid,
 }
 
@@ -189,6 +194,8 @@ export function load_obstacles(map_data: MapData) {
 export function MovementControlCreate(settings: PlayerMovementSettings = default_settings) {
     const LD = LinesDrawer();
 
+    const width = settings.width;
+    const height = settings.heigth;
     let pointer = point(0, 0);
     let target = point(0, 0);
     let last_check_dir = vector(pointer, target);
@@ -479,6 +486,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             if (current_pos.distanceTo(end_pos)[0] > blocked_max_dist) {
                 model.position.x = end_pos.x;
                 model.position.y = end_pos.y;
+                model.position.z = get_depth(end_pos.x, end_pos.y, 9, width, height);
                 PF.set_current_pos(end_pos);
                 CameraControl.set_position(model.position.x, model.position.y, true);
             }
