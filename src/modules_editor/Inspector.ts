@@ -205,6 +205,7 @@ function InspectorModule() {
         if (tp_to) tp_to.classList.add('my_scroll');
 
         // Find all texture preview thumbnails and add click handlers
+        // TODO: перенести в плагин как колбэк
         const thumbnails = document.querySelectorAll('.tp-thumbv_sopt .tp-thumbv_sthmb .tp-thumbv_img');
         thumbnails.forEach(thumb => {
             const img = thumb as HTMLElement;
@@ -212,10 +213,8 @@ function InspectorModule() {
                 img.style.cursor = 'pointer';
                 img.addEventListener('click', () => {
                     const path = img.style.backgroundImage
-                        .replace('url("', '')
-                        .replace('")', '')
-                        .replace(/^https?:\/\/[^\/]+/, '')
-                        .replace(/assets\//, '');
+                        .replace(/^url\(".*?\/assets\//, '')
+                        .replace('")', '');
                     AssetControl.select_file(path);
                 });
             }

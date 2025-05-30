@@ -959,7 +959,8 @@ function MeshInspectorCreate() {
                 value: async () => {
                     const material_info = ResourceManager.get_material_info(selected_meshes_material);
                     if (material_info) {
-                        await AssetControl.select_file(material_info.path);
+                        const path = material_info.path.replace(/^\/+/, '');
+                        await AssetControl.select_file(path);
                     }
                 }
             });
