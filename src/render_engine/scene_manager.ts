@@ -63,7 +63,6 @@ export function SceneManagerModule() {
         let mesh: IBaseEntityAndThree;
         params = params || {};
         const default_size = 32;
-        id = -1; // всегда новый генерить
         // base
         if (type == IObjectTypes.ENTITY) {
             mesh = new EntityBase(check_id_is_available_or_generate_new(id));
@@ -169,7 +168,7 @@ export function SceneManagerModule() {
         return get_unique_id();
     }
 
-    function serialize_mesh(m: IBaseEntityAndThree) {
+    function serialize_mesh(m: IBaseEntityAndThree, clean_id_pid = false) {
         const wp = new Vector3();
         const ws = new Vector3();
         const wr = new Quaternion();
@@ -188,6 +187,10 @@ export function SceneManagerModule() {
             scale: ws.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as Vector3Tuple,
             other_data: m.serialize(),
         };
+        if (clean_id_pid) {
+            delete (data as any).id;
+            delete (data as any).pid;
+        }
         if (m.children.length > 0) {
             data.children = [];
             for (let i = 0; i < m.children.length; i++)
@@ -195,7 +198,7 @@ export function SceneManagerModule() {
                     const bm = m.children[i] as IBaseEntityAndThree;
                     if (bm.no_saving)
                         continue;
-                    data.children.push(serialize_mesh(bm));
+                    data.children.push(serialize_mesh(bm, clean_id_pid));
                 }
         }
         return data;
@@ -246,7 +249,7 @@ export function SceneManagerModule() {
                 const m = (_m as any as IBaseEntityAndThree);
                 if (m.no_saving)
                     continue;
-                list.push(serialize_mesh(m));
+                list.push(serialize_mesh(m, true));
             }
         }
         return list;
@@ -257,51 +260,22 @@ export function SceneManagerModule() {
             clear_scene();
             for (let i = 0; i < data.length; i++) {
                 const it = data[i];
-                const mesh = deserialize_mesh(it, true, scene);
+                const mesh = deserialize_mesh(it, false, scene);
                 scene.add(mesh);
             }
         }
         else {
             const container = create(IObjectTypes.GO_CONTAINER, {});
             container.name = sub_name;
-            const max = find_max_id(data, 0);
-            if (id_counter <= max)
-                id_counter = max + 1;
-            const inc = get_unique_id();
             const tmp = deepClone(data);
-            modify_id_pid_list(tmp, inc);
             for (let i = 0; i < tmp.length; i++) {
                 const it = tmp[i];
-                const mesh = deserialize_mesh(it, true, container);
+                const mesh = deserialize_mesh(it, false, container);
                 container.add(mesh);
             }
             scene.add(container);
         }
     }
-
-    function find_max_id(list: IBaseEntityData[], max = 0) {
-        for (let i = 0; i < list.length; i++) {
-            const it = list[i];
-            if (it.id > max)
-                max = it.id;
-            if (it.children)
-                max = find_max_id(it.children, max);
-        }
-        return max;
-    }
-
-    function modify_id_pid_list(list: IBaseEntityData[], inc: number) {
-        for (let i = 0; i < list.length; i++) {
-            const it = list[i];
-            if (it.id != -1)
-                it.id += inc;
-            if (it.pid != -1)
-                it.pid += inc;
-            if (it.children)
-                modify_id_pid_list(it.children, inc);
-        }
-    }
-
 
     function get_mesh_list(mesh: Object3D) {
         const tmp: Object3D[] = [];

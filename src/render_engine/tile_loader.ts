@@ -147,6 +147,8 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                         plane.userData = { tile, id_layer };
                         tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
                     }
+                    else
+                    Log.warn('tile not found', tile);
 
                 }
             }
