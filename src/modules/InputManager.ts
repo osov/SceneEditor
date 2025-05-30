@@ -16,7 +16,7 @@ function InputModule() {
     const mouse_pos = new Vector2();
     const mouse_pos_normalized = new Vector2();
 
-    function update_state_ext_keys(e:KeyboardEvent|MouseEvent) {
+    function update_state_ext_keys(e: KeyboardEvent | MouseEvent) {
         _is_control = e.ctrlKey;
         _is_shift = e.shiftKey;
         _is_alt = e.altKey;
@@ -50,18 +50,21 @@ function InputModule() {
             if (e.ctrlKey && (e.key == 's' || e.key == 'ы')) {
                 EventBus.trigger('SYS_INPUT_SAVE');
             }
+            if (e.ctrlKey && (e.key == 't' || e.key == 'т')) {
+                EventBus.trigger('SYS_INPUT_SAVE_TILES');
+            }
         });
 
         body.addEventListener('pointermove', (e) => {
             update_state_ext_keys(e);
             mouse_pos.set(e.pageX, e.pageY);
             mouse_pos_normalized.set((e.pageX / canvas.clientWidth) * 2 - 1, - (e.pageY / canvas.clientHeight) * 2 + 1);
-            EventBus.trigger('SYS_INPUT_POINTER_MOVE', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, target: e.target  }, false);
+            EventBus.trigger('SYS_INPUT_POINTER_MOVE', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, target: e.target }, false);
         });
 
         body.addEventListener('mousedown', (e) => {
             update_state_ext_keys(e);
-            EventBus.trigger('SYS_INPUT_POINTER_DOWN', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, button: e.button, target: e.target  }, false);
+            EventBus.trigger('SYS_INPUT_POINTER_DOWN', { x: mouse_pos_normalized.x, y: mouse_pos_normalized.y, offset_x: mouse_pos.x, offset_y: mouse_pos.y, button: e.button, target: e.target }, false);
         });
 
         body.addEventListener('mouseup', (e) => {

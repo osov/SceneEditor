@@ -12,7 +12,7 @@ import { IUniform, Texture } from "three";
 import { Color } from "three";
 import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
 import { rgbToHex } from "../modules/utils";
-import { get_file_name, is_base_mesh } from "../render_engine/helpers/utils";
+import { get_file_name, is_base_mesh, is_tile } from "../render_engine/helpers/utils";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 import { AnimatedMesh } from "../render_engine/objects/animated_mesh";
 import { WORLD_SCALAR } from "../config";
@@ -64,7 +64,8 @@ export enum MeshProperty {
     LOOP = 'loop',
     PAN = 'pan',
     PLAY = 'play',
-    STOP = 'stop'
+    STOP = 'stop',
+    TILE_LAYER = 'tile_layer',
 }
 
 export enum MeshPropertyTitle {
@@ -102,7 +103,8 @@ export enum MeshPropertyTitle {
     LOOP = 'Повторять',
     PAN = 'Панорамирование',
     PLAY = 'Воспроизвести',
-    STOP = 'Остановить'
+    STOP = 'Остановить',
+    TILE_LAYER = 'Слой',
 }
 
 export enum ScreenPointPreset {
@@ -156,6 +158,10 @@ function MeshInspectorCreate() {
             if (event.owner != HistoryOwner.MESH_INSPECTOR) return;
             undo(event);
         });
+
+        EventBus.on('SYS_CHANGED_LAYER_DATA', () => {
+            set_selected_meshes(_selected_meshes);
+        });
     }
 
     function set_selected_meshes(mesh_ids: number[]) {
@@ -165,6 +171,29 @@ function MeshInspectorCreate() {
         const data = list.map((mesh) => {
             const fields: PropertyData<PropertyType>[] = [];
             generateBaseFields(fields, mesh);
+
+            if (is_tile(mesh)) {
+                fields.push({
+                    key: MeshProperty.TILE_LAYER,
+                    title: MeshPropertyTitle.TILE_LAYER,
+                    value: ResourceManager.get_layers_names_by_mask(mesh.layers.mask),
+                    type: PropertyType.ITEM_LIST,
+                    params: {
+                        pickText: 'Выберите слой',
+                        emptyText: 'Нет добавленных слоев',
+                        options: [...ResourceManager.get_layers(), 'Добавить/Удалить'],
+                        onOptionClick: (option: string) => {
+                            if (option == 'Добавить/Удалить') {
+                                ControlManager.open_layer_manager();
+                                return false;
+                            }
+                            return true;
+                        }
+                    },
+                    onBeforeChange: saveLayer,
+                    onChange: handleLayerChange
+                });
+            }
 
             switch (mesh.type) {
                 case IObjectTypes.GO_CONTAINER:
@@ -1007,7 +1036,11 @@ function MeshInspectorCreate() {
             title: MeshPropertyTitle.ANIMATION_LIST,
             value: Object.keys((mesh as AnimatedMesh).get_animation_list()),
             type: PropertyType.ITEM_LIST,
-            params: ResourceManager.get_all_model_animations(model),
+            params: {
+                pickText: 'Выберите анимацию',
+                emptyText: 'Нет добавленных анимаций',
+                options: ResourceManager.get_all_model_animations(model)
+            },
             onBeforeChange: saveAnimationList,
             onChange: handleAnimationListChange
         });
@@ -3190,6 +3223,35 @@ function MeshInspectorCreate() {
         }
     }
 
+    function saveLayer(info: BeforeChangeInfo) {
+        const layers: MeshPropertyInfo<string[]>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[saveTileLayer] Mesh not found for id:', id);
+                return;
+            }
+            layers.push({ mesh_id: id, value: ResourceManager.get_layers_names_by_mask(mesh.layers.mask) });
+        });
+        HistoryControl.add('MESH_LAYER', layers, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleLayerChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string[]>(info);
+        updateLayer(data, info.data.event.last);
+    }
+
+    function updateLayer(data: MeshPropertyInfo<string[]>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (mesh == undefined) {
+                Log.error('[updateTileLayer] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.layers.mask = ResourceManager.get_layers_mask_by_names(item.value);
+        }
+    }
+
     function undo(event: THistoryUndo) {
         switch (event.type) {
             case 'MESH_NAME':
@@ -3199,6 +3261,10 @@ function MeshInspectorCreate() {
             case 'MESH_ACTIVE':
                 const actives = event.data as MeshPropertyInfo<boolean>[];
                 updateActive(actives, true);
+                break;
+            case 'MESH_LAYER':
+                const layers = event.data as MeshPropertyInfo<string[]>[];
+                updateLayer(layers, true);
                 break;
             case 'MESH_TRANSLATE':
                 const positions = event.data as MeshPropertyInfo<Vector3>[];

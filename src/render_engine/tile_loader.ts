@@ -91,7 +91,9 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                 container.add(plane);
                 plane.name = tile_info.name + '' + plane.mesh_data.id;
                 plane.userData = { tile, id_layer };
-                tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
+                const id = get_id_by_tile(tile, id_layer);
+                tiles[id] = { tile_info, tile, _hash: plane };
+                ResourceManager.tiles_info[id] = `${tile_info.atlas}/${tile_info.name}`;
             }
         }
 
@@ -145,11 +147,13 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                         container.add(plane);
                         plane.name = tile_info.name + '' + plane.mesh_data.id;
                         plane.userData = { tile, id_layer };
-                        tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
+                        const id = get_id_by_tile(tile, id_layer);
+                        tiles[id] = { tile_info, tile, _hash: plane };
+                        ResourceManager.tiles_info[id] = `${tile_info.atlas}/${tile_info.name}`;
                     }
-                    else
-                    Log.warn('tile not found', tile);
-
+                    else {
+                        Log.warn('tile not found', tile);
+                    }
                 }
             }
         }

@@ -221,6 +221,10 @@ export function lerp(a: number, b: number, t: number) {
     return a + (b - a) * t;
 }
 
+export function is_tile(mesh: Object3D) {
+    return (mesh.userData.tile != undefined) && (mesh.userData.id_layer != undefined);
+}
+
 export function is_text(mesh: Object3D) {
     return mesh instanceof TextMesh;
 }
@@ -258,7 +262,7 @@ export function vec_to_hex(vec: vmath.vector3): string {
     const b = Math.round(vec.z * 255);
     const toHex = (v: number) => v.toString(16).padStart(2, "0");
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  }
+}
 
 
 export function rand_int(a: number, b: number) {

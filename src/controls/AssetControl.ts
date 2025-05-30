@@ -4,16 +4,21 @@ import { SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
 import {
     ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, ASSET_AUDIO, AssetType, DataFormatType, FILE_UPLOAD_CMD,
     FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses,
-    TDictionary, texture_ext, URL_PATHS, AUDIO_EXT
+    TDictionary, texture_ext, URL_PATHS, AUDIO_EXT,
+    TILES_INFO_EXT,
 } from "../modules_editor/modules_editor_const";
-import { span_elem, json_parsable, get_keys } from "../modules/utils";
+import { span_elem, json_parsable, get_keys, hexToRGB } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction } from "./ActionsControl";
 import { api } from "../modules_editor/ClientAPI";
 import { IBaseEntityData } from "../render_engine/types";
-import { get_file_name } from "../render_engine/helpers/utils";
-import { Quaternion, Vector3 } from "three";
+import { get_file_name, is_tile } from "../render_engine/helpers/utils";
+import { Blending, Quaternion, Vector3 } from "three";
+import { get_hash_by_mesh } from "@editor/inspectors/ui_utils";
+import { Slice9Mesh } from "@editor/render_engine/objects/slice9";
+import { BlendMode } from "@editor/inspectors/MeshInspector";
+import { convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode } from "@editor/inspectors/helpers";
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
 }
@@ -54,6 +59,7 @@ function AssetControlCreate() {
         EventBus.on('SYS_INPUT_POINTER_UP', on_mouse_up);
         EventBus.on('SYS_INPUT_DBL_CLICK', on_dbl_click);
         EventBus.on('SYS_INPUT_SAVE', save_current_scene);
+        EventBus.on('SYS_INPUT_SAVE_TILES', save_tilesinfo_popup);
         EventBus.on('SYS_GRAPH_DROP_IN_ASSETS', on_graph_drop);
 
         EventBus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
@@ -1166,7 +1172,7 @@ function AssetControlCreate() {
         return root;
     }
 
-    async function save_current_scene(event?: any) {
+    async function save_current_scene() {
         if (!current_scene.name && current_dir != undefined) {
             // Если у AssetControl нет данных о текущем открытом файле сцены, создаём новый файл сцены, указаем его 
             // как текущую сцену и сохраняем туда данные из SceneManager
@@ -1181,8 +1187,98 @@ function AssetControlCreate() {
             history_length_cache[path] = HistoryControl.get_history(current_scene.path).length;
             return Popups.toast.success(`Сцена ${name} сохранена, путь: ${path}`);
         }
-        else
-            return Popups.toast.error(`Не удалось сохранить сцену ${name}, путь: ${path}: ${r.message}`);
+        else return Popups.toast.error(`Не удалось сохранить сцену ${name}, путь: ${path}: ${r.message}`);
+    }
+
+    function save_tilesinfo_popup() {
+        // NOTE: если нет директории, то сохраняем в корневую папку
+        if (!current_dir) current_dir = '/';
+        Popups.open({
+            type: "Rename",
+            params: { title: "Имя файла:", button: "Ok", auto_close: true, currentName: 'tiles' },
+            callback: async (success, name) => {
+                if (success && name) {
+                    const path = await new_tilesinfo(current_dir!, name);
+                    if (path) {
+                        save_tilesinfo(path);
+                    }
+                }
+            }
+        });
+    }
+
+    async function new_tilesinfo(path: string, name: string) {
+        const tilesinfo_path = `${path}/${name}.${TILES_INFO_EXT}`
+        const r = await ClientAPI.save_data(tilesinfo_path, JSON.stringify({}));
+        if (r.result === 0) {
+            error_popup(`Не удалось создать tilesinfo, ответ сервера: ${r.message}`);
+            return;
+        }
+        if (r.result && r.data) {
+            await go_to_dir(path, true);
+        }
+
+        return tilesinfo_path;
+    }
+
+    async function save_tilesinfo(path: string) {
+        const tiles_data: TDictionary<{ texture?: string, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }> = {};
+        SceneManager.get_scene_list().forEach(mesh => {
+            if (!is_tile(mesh)) return;
+
+            const hash = get_hash_by_mesh(mesh);
+            const current_texture = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
+
+            if (ResourceManager.tiles_info[hash] != current_texture) {
+                tiles_data[hash] = {
+                    texture: current_texture
+                };
+            }
+
+            const material = (mesh as Slice9Mesh).material;
+            if (!material) {
+                Log.warn(`Material not found for tile ${mesh.name}`);
+                return;
+            }
+
+            const default_material_name = 'slice9';
+            if (material.name != default_material_name) {
+                if (!tiles_data[hash]) tiles_data[hash] = {};
+                tiles_data[hash].material_name = material.name;
+            }
+
+            const default_blend_mode = BlendMode.NORMAL;
+            const current_blend_mode = convertThreeJSBlendingToBlendMode(material.blending);
+            const is_not_equal_blend_mode = current_blend_mode != default_blend_mode;
+            if (is_not_equal_blend_mode) {
+                if (!tiles_data[hash]) tiles_data[hash] = {};
+                tiles_data[hash].blending = convertBlendModeToThreeJS(current_blend_mode);
+            }
+
+            const default_color = '#fff';
+            const current_color = mesh.get_color();
+            const is_not_equal_color = current_color != default_color;
+            if (is_not_equal_color) {
+                if (!tiles_data[hash]) tiles_data[hash] = {};
+                tiles_data[hash].color = current_color;
+            }
+
+            const changed_uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh as Slice9Mesh);
+            if (changed_uniforms) {
+                Object.keys(changed_uniforms).forEach((key) => {
+                    if (key != 'u_texture') return;
+                    delete changed_uniforms[key];
+                });
+                if (Object.keys(changed_uniforms).length > 0) {
+                    if (!tiles_data[hash]) tiles_data[hash] = {};
+                    tiles_data[hash].uniforms = changed_uniforms;
+                }
+            }
+        });
+
+        const r = await ClientAPI.save_data(path, JSON.stringify(tiles_data));
+        if (r && r.result) return Popups.toast.success(`Тайлы сохранены, путь: ${path}`);
+        else return Popups.toast.error(`Не удалось сохранить тайлы, путь: ${path}: ${r.message}`);
     }
 
     function get_current_scene() {

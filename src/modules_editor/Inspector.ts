@@ -48,7 +48,7 @@ export type PropertyParams = {
     [PropertyType.SLIDER]: { min: number, max: number, step: number };
     [PropertyType.LIST_TEXT]: { [key in string]: string };
     [PropertyType.LIST_TEXTURES]: { value: string, src: string }[];
-    [PropertyType.ITEM_LIST]: string[];
+    [PropertyType.ITEM_LIST]: { pickText?: string, emptyText?: string, options: string[], onOptionClick?: (option: string) => boolean };
     [PropertyType.BUTTON]: {};
     [PropertyType.POINT_2D]: { x: { min: number, max: number, step?: number, format?: (value: number) => string, disabled?: boolean }, y: { min: number, max: number, step?: number, format?: (value: number) => string, disabled?: boolean } };
     [PropertyType.LOG_DATA]: {};
@@ -523,11 +523,13 @@ function InspectorModule() {
                     expanded: false
                 });
             case PropertyType.ITEM_LIST:
+                const item_list_params = field?.params as PropertyParams[PropertyType.ITEM_LIST];
                 return createEntity(ids, field, {
                     view: 'item-list',
-                    options: field?.params,
-                    pickText: 'Выберите анимацию',
-                    emptyText: 'Нет добавленных анимаций'
+                    options: item_list_params?.options,
+                    pickText: item_list_params?.pickText,
+                    emptyText: item_list_params?.emptyText,
+                    onOptionClick: item_list_params?.onOptionClick
                 });
             case PropertyType.LIST_TEXTURES:
                 return createEntity(ids, field, {

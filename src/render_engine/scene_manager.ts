@@ -430,7 +430,7 @@ export function SceneManagerModule() {
     }
 
     function get_mesh_by_name(name: string) {
-        let mesh:IBaseEntityAndThree|undefined;
+        let mesh: IBaseEntityAndThree | undefined;
         scene.traverse((child) => {
             if (is_base_mesh(child)) {
                 const it = child as any as IBaseEntityAndThree;
@@ -463,7 +463,6 @@ export function SceneManagerModule() {
         set_mesh_name,
         get_mesh_id_by_url,
         get_mesh_url_by_id,
-        mesh_url_to_mesh_id,
         get_mesh_by_name
     };
 }

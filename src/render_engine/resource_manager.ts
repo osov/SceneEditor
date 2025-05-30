@@ -158,6 +158,8 @@ export function ResourceManagerModule() {
     const audios: { [name: string]: AudioBuffer } = {};
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
+    const layers: string[] = [];
+    const tiles_info: TDictionary<string> = {};
     const vertex_programs: { [path: string]: string } = {};
     const fragment_programs: { [path: string]: string } = {};
     const materials: { [name: string]: MaterialInfo } = {};
@@ -1194,6 +1196,20 @@ export function ResourceManagerModule() {
         return unique_materials;
     }
 
+    function get_changed_uniforms_for_mesh(mesh: Slice9Mesh) {
+        const mesh_id = mesh.mesh_data.id;
+        const material_name = mesh.material.name;
+        const material_info = get_material_info(material_name);
+        if (!material_info) return;
+        const hash = material_info.mesh_info_to_material_hashes[mesh_id][0];
+        const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
+        const changed_uniforms_data: { [key: string]: any } = {};
+        for (const uniform_name of changed_uniforms) {
+            changed_uniforms_data[uniform_name] = material_info.instances[hash].uniforms[uniform_name].value;
+        }
+        return changed_uniforms_data;
+    }
+
     function get_all_fonts() {
         return fonts;
     }
@@ -1461,6 +1477,7 @@ export function ResourceManagerModule() {
     // NOTE: записываем всю информацию из ресурсов в metadata
     async function write_metadata() {
         try {
+            // Write atlases metadata
             const metadata = await ClientAPI.get_info('atlases');
             if (!metadata.result) {
                 if (metadata.data != undefined) {
@@ -1487,6 +1504,20 @@ export function ResourceManagerModule() {
             if (!save_result.result) {
                 throw new Error('Failed on save atlases metadata!');
             }
+
+            // Write layers metadata
+            const layers_metadata = await ClientAPI.get_info('layers');
+            if (!layers_metadata.result && layers_metadata.data != undefined) {
+                throw new Error('Failed on get layers metadata!');
+            }
+            const layers_dict: TRecursiveDict = {};
+            layers.forEach((layer, index) => {
+                layers_dict[index.toString()] = layer;
+            });
+            const save_layers_result = await ClientAPI.save_info('layers', layers_dict);
+            if (!save_layers_result.result) {
+                throw new Error('Failed on save layers metadata!');
+            }
         } catch (error) {
             Log.error('Error writing metadata:', error);
         }
@@ -1495,6 +1526,7 @@ export function ResourceManagerModule() {
     // NOTE: считываем всю информацию из metadata и обновляем ресурсы
     async function update_from_metadata() {
         try {
+            // Update atlases from metadata
             const metadata = await ClientAPI.get_info('atlases');
             if (!metadata.result) {
                 if (metadata.data == undefined) {
@@ -1527,9 +1559,74 @@ export function ResourceManagerModule() {
                     }
                 }
             }
+
+            // Update layers from metadata
+            const layers_metadata = await ClientAPI.get_info('layers');
+            if (!layers_metadata.result) {
+                if (layers_metadata.data == undefined) {
+                    Log.log('Update resource manager from metadata: layers not found!');
+                    return;
+                }
+                Log.warn('Update resource manager from metadata: failed on get layers!');
+                return;
+            }
+            const metadata_layers = layers_metadata.data as TRecursiveDict;
+            layers.length = 0; // Clear existing layers
+            Object.keys(metadata_layers).forEach(key => {
+                const layer = metadata_layers[key];
+                if (typeof layer === 'string') {
+                    layers.push(layer);
+                }
+            });
         } catch (error) {
             Log.error('Error updating resource manager:', error);
         }
+    }
+
+    function add_layer(layer: string) {
+        if (!layers.includes(layer)) {
+            layers.push(layer);
+        }
+    }
+
+    function remove_layer(layer: string) {
+        const index = layers.indexOf(layer);
+        if (index !== -1) {
+            layers.splice(index, 1);
+        }
+    }
+
+    function get_layers() {
+        return layers;
+    }
+
+    function has_layer(layer: string) {
+        return layers.includes(layer);
+    }
+
+    function get_layers_mask_by_names(layers_names: string[]) {
+        return layers_names.map(layer => {
+            const index = layers.indexOf(layer);
+            if (index === -1) {
+                Log.warn(`Layer "${layer}" not found in layers array`);
+                return 0;
+            }
+            if (index > 31) {
+                Log.warn(`Layer "${layer}" index ${index} exceeds maximum allowed value of 31`);
+                return 0;
+            }
+            return 1 << index;
+        }).reduce((acc, curr) => acc | curr, 0);
+    }
+
+    function get_layers_names_by_mask(mask: number) {
+        const result: string[] = [];
+        for (let i = 0; i < Math.min(32, layers.length); i++) {
+            if (mask & (1 << i)) {
+                result.push(layers[i]);
+            }
+        }
+        return result;
     }
 
     init();
@@ -1560,6 +1657,7 @@ export function ResourceManagerModule() {
         unlink_material_for_mesh,
         unlink_material_for_multiple_material_mesh,
         get_info_about_unique_materials,
+        get_changed_uniforms_for_mesh,
         get_font,
         get_texture,
         free_texture,
@@ -1588,6 +1686,13 @@ export function ResourceManagerModule() {
         cache_scene,
         get_all_sounds,
         get_sound_buffer,
+        add_layer,
+        remove_layer,
+        get_layers,
+        has_layer,
+        get_layers_mask_by_names,
+        get_layers_names_by_mask,
+        tiles_info,
         models,
         animations
     };

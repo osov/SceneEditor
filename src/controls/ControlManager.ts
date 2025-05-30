@@ -276,6 +276,41 @@ function ControlManagerCreate() {
         });
     }
 
+    function open_layer_manager() {
+        const list = ResourceManager.get_layers().map((title, id) => {
+            return { id: id.toString(), title, can_delete: true };
+        });
+
+        Popups.open({
+            type: "Layers",
+            params: {
+                title: "Layer",
+                button: "Add",
+                list
+            },
+            callback: (success: boolean, data?: cbDataItem) => {
+                if (!success) {
+                    return;
+                }
+
+                switch (data?.action) {
+                    case Action.ADD:
+                        const added_item = data.item;
+                        ResourceManager.add_layer(added_item.title);
+                        ResourceManager.write_metadata();
+                        break;
+                    case Action.DELETE:
+                        const deleted_item = data.item;
+                        ResourceManager.remove_layer(deleted_item.title);
+                        ResourceManager.write_metadata();
+                        break;
+                }
+
+                EventBus.trigger('SYS_CHANGED_LAYER_DATA');
+            }
+        });
+    }
+
     function undo(event: THistoryUndo) {
         const mesh_list: IBaseMeshAndThree[] = [];
         switch (event.type) {
@@ -299,6 +334,6 @@ function ControlManagerCreate() {
     }
 
     init();
-    return { clear_all_controls, set_active_control, get_tree_graph, update_graph, get_current_scene_name, open_atlas_manager, inc_draw_calls, clear_draw_calls };
+    return { clear_all_controls, set_active_control, get_tree_graph, update_graph, get_current_scene_name, open_atlas_manager, open_layer_manager, inc_draw_calls, clear_draw_calls };
 }
 

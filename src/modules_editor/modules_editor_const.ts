@@ -9,6 +9,7 @@ export type CommandId = keyof ServerCommands;
 export type _SystemMessagesEditor = {
     SYS_INPUT_UNDO: {},
     SYS_INPUT_SAVE: {},
+    SYS_INPUT_SAVE_TILES: {},
     SYS_INPUT_DBL_CLICK: {},
     SYS_SELECTED_MESH: { mesh: IBaseMeshAndThree },
     SYS_SELECTED_MESH_LIST: { list: IBaseMeshAndThree[] },
@@ -39,6 +40,7 @@ export type _SystemMessagesEditor = {
     SYS_ASSETS_SELECTED_AUDIOS: { paths: string[] },
     SYS_ASSETS_CLEAR_SELECTED: {},
     SYS_CHANGED_ATLAS_DATA: {},
+    SYS_CHANGED_LAYER_DATA: {},
     SYS_MATERIAL_CHANGED: TMaterialChanged,
     SYS_MESH_MATERIAL_CHANGED: TMeshMaterialChanged,
     SYS_HISTORY_UNDO: THistoryUndo,
@@ -162,6 +164,7 @@ export const PUBLIC = '/public'  // Путь к папке с ассетами �
 export const METADATA = '/metadata.json'  // Путь к файлу с метаинфо проекта
 export const CACHE = '/server_cache.json';
 export const SCENE_EXT = `scn`;
+export const TILES_INFO_EXT = `tilesinfo`;
 export const AUDIO_EXT = ['ogg', 'mp3'];
 export const ATLAS_EXT = `tpsheet`;
 export const MATERIAL_EXT = `mtr`;
@@ -190,7 +193,7 @@ export const CMD_NAME = [
     OPEN_EXPLORER_CMD,
 ]
 
-export const allowed_ext = ['mtr', 'prt', 'pss', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'gltf', 'glb', 'obj', 'smpl', 'prt', 'fbx', 'mp3', 'ogg', 'tpsheet', 'fbx', 'ttf', 'scn'];
+export const allowed_ext = ['mtr', 'prt', 'pss', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'gltf', 'glb', 'obj', 'smpl', 'prt', 'fbx', 'mp3', 'ogg', 'tpsheet', 'fbx', 'ttf', 'scn', 'tilesinfo'];
 export const texture_ext = ['jpg', 'jpeg', 'png'];
 export const model_ext = ['gltf', 'glb', `fbx`,];
 

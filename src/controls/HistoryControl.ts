@@ -72,6 +72,7 @@ export type HistoryData = {
     AUDIO_VOLUME: AssetAudioInfo<number>
     AUDIO_SPEED: AssetAudioInfo<number>
     AUDIO_PAN: AssetAudioInfo<number>
+    MESH_LAYER: MeshPropertyInfo<string[]>
 }
 
 export type HistoryDataKeys = keyof HistoryData;
