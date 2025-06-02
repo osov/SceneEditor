@@ -178,6 +178,11 @@ export function CmpSpline(cmp_mesh: EntityBase) {
         }
         if (with_id)
             return tmp;
+        for (let i = 0; i < spline_data.length; i++) {
+            const it = spline_data[i];
+            it.x = Number(it.x.toFixed(2));
+            it.y = Number(it.y.toFixed(2));
+        }
         return spline_data;
     }
 
