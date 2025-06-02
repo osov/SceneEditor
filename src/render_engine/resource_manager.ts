@@ -27,7 +27,6 @@ import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWr
 import { copy_material, get_file_name, get_material_hash } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
-import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
@@ -169,7 +168,6 @@ export function ResourceManagerModule() {
     const manager = new LoadingManager();
     let bad_texture: CanvasTexture;
     let project_path = '';
-    const ktx2Loader = new KTX2Loader().setTranscoderPath('./libs/basis/').detectSupport(RenderEngine.renderer);
 
     function init() {
         gen_textures();
@@ -460,11 +458,7 @@ export function ResourceManagerModule() {
 
     async function load_texture(path: string) {
         path = project_path + path;
-        let texture: Texture;
-        if (path.endsWith('.ktx2'))
-            texture = await ktx2Loader.loadAsync(path);
-        else
-            texture = await texture_loader.loadAsync(path);
+        const texture = await texture_loader.loadAsync(path);
         // TODO: лучше добавить в Texture.userData
         (texture as any).path = path;
         return texture;
@@ -561,6 +555,7 @@ export function ResourceManagerModule() {
                 size: new Vector2(texture.image.width, texture.image.height)
             }
         };
+        (texture as any).path = path;
 
         return atlases[atlas][name].data;
     }
