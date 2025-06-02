@@ -2,9 +2,10 @@
     Модуль для работы с камерой и преобразованиями
 */
 
-import { OrthographicCamera, PerspectiveCamera, AudioListener, Vector3 } from "three";
+import { OrthographicCamera, PerspectiveCamera, AudioListener, Vector3, Box3, Frustum, Matrix4 } from "three";
 import { get_window_size } from "../render_engine/helpers/window_utils";
 import { IS_CAMERA_ORTHOGRAPHIC } from "../config";
+import { IBaseEntityAndThree } from "@editor/render_engine/types";
 
 declare global {
     const Camera: ReturnType<typeof CameraModule>;
@@ -202,6 +203,27 @@ function CameraModule() {
         camera_gui.updateProjectionMatrix();
     }
 
+    function is_visible(mesh:any){
+        if (!mesh.geometry){
+            Log.warn('mesh.geometry not found', mesh);
+            return false;
+        }
+        const camera = RenderEngine.camera as OrthographicCamera;
+        if (!mesh.geometry.boundingBox) {
+            mesh.geometry.computeBoundingBox();
+          }
+          const boundingBox = mesh.geometry.boundingBox.clone();
+          boundingBox.applyMatrix4(mesh.matrixWorld);
+        
+          const frustum = new Frustum();
+          const cameraViewProjectionMatrix = new Matrix4();
+          camera.updateMatrixWorld();
+          cameraViewProjectionMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+          frustum.setFromProjectionMatrix(cameraViewProjectionMatrix);
+        
+          return frustum.intersectsBox(boundingBox);
+    }
+
     init();
-    return { set_width_prjection, get_zoom, set_zoom, set_auto_zoom, is_dynamic_orientation, set_dynamic_orientation, screen_to_world, set_listener };
+    return { set_width_prjection, get_zoom, set_zoom, set_auto_zoom, is_dynamic_orientation, set_dynamic_orientation, screen_to_world, set_listener, is_visible };
 }

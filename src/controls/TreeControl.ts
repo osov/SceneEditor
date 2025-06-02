@@ -1175,6 +1175,20 @@ function TreeControlCreate() {
     }
 
     function get_position_view() {
+        const list = SelectControl.get_selected_list();
+        const cx = (0.5) * 2 - 1;
+        const cy = - 0.5 * 2 + 1;
+        if (list.length == 0) {
+            const wp = Camera.screen_to_world(cx, cy);
+            return new Vector2(wp.x, wp.y);
+        }
+        if (list.length == 1) {
+            if (!Camera.is_visible(list[0])) {
+                const wp = Camera.screen_to_world(cx, cy);
+                const lp = list[0].worldToLocal(wp);
+                return new Vector2(lp.x, lp.y);
+            }
+        }
         return new Vector2();
     }
 
