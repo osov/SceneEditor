@@ -49,7 +49,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
         return max_y;
     }
 
-    function load(map_name: string, map_data: MapData, tiles_data: TileInfo) {
+    function load(map_data: MapData, tiles_data: TileInfo) {
         const tiles: SpriteTileInfoDict = {};
         const render_data = parse_tiled(map_data);
         preload_tiled_textures(tiles_data, map_data);
