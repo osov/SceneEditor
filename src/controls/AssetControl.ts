@@ -1191,14 +1191,14 @@ function AssetControlCreate() {
     }
 
     function save_tilesinfo_popup() {
-        // NOTE: если нет директории, то сохраняем в корневую папку
-        if (!current_dir) current_dir = '/';
         Popups.open({
-            type: "Rename",
-            params: { title: "Имя файла:", button: "Ok", auto_close: true, currentName: 'tiles' },
-            callback: async (success, name) => {
-                if (success && name) {
-                    const path = await new_tilesinfo(current_dir!, name);
+            type: "Select",
+            params: { title: "Tilemap:", button: "Ok", auto_close: true, list: ResourceManager.get_all_loaded_tilemaps().map((tilemap) => { return { id: tilemap, title: tilemap } }) },
+            callback: async (success, data) => {
+                if (success && data) {
+                    const tilemap_name = data.itemId as string;
+                    const dir = ResourceManager.get_tilemap_path(tilemap_name).replace(/^\//, '').replace(new RegExp(`${tilemap_name}.*$`), '');
+                    const path = await new_tilesinfo(dir, tilemap_name);
                     if (path) {
                         save_tilesinfo(path);
                     }
@@ -1222,6 +1222,7 @@ function AssetControlCreate() {
     }
 
     async function save_tilesinfo(path: string) {
+        const filename = get_file_name(path);
         const tiles_data: TDictionary<{ texture?: string, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }> = {};
         SceneManager.get_scene_list().forEach(mesh => {
             if (!is_tile(mesh)) return;
@@ -1229,7 +1230,7 @@ function AssetControlCreate() {
             const hash = get_hash_by_mesh(mesh);
             const current_texture = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
 
-            if (ResourceManager.tiles_info[hash] != current_texture) {
+            if (ResourceManager.get_tile_info(filename, hash) != current_texture) {
                 tiles_data[hash] = {
                     texture: current_texture
                 };

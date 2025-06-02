@@ -102,7 +102,7 @@ export interface RenderMapData {
 }
 
 let y_correction = 0;
-export function set_y_correction(val:number){
+export function set_y_correction(val: number) {
     y_correction = val;
 }
 
@@ -113,10 +113,10 @@ export function get_depth(x: number, y: number, id_layer: number, width = 0, hei
 
 
 const tiled_textures_data: { [k: string]: LoadedTileInfo } = {};
-function preload_tile_texture(id: string, path: string, atlas: string, w: number, h: number, tilesets:TileSets) {
+function preload_tile_texture(id: string, path: string, atlas: string, w: number, h: number, tilesets: TileSets) {
     atlas = get_file_name(atlas);
     // в карте нет этого тайл сета значит текстуры не грузим
-    if (!tilesets[atlas]) 
+    if (!tilesets[atlas])
         return;
     const global_id = (tonumber(id)! + tilesets[atlas]) + '';
     tiled_textures_data[global_id] = { name: get_file_name(path), atlas, w, h };
@@ -132,7 +132,7 @@ export function get_all_tiled_textures() {
 }
 
 
-export function preload_tiled_textures(tile_info:TileInfo, map_data: MapData) {
+export function preload_tiled_textures(tile_info: TileInfo, map_data: MapData) {
     for (const id_tileset in tile_info) {
         const tile_set = tile_info[id_tileset];
         for (const id in tile_set) {

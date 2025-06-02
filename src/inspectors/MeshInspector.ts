@@ -13,7 +13,7 @@ import { Color } from "three";
 import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
 import { rgbToHex } from "../modules/utils";
 import { get_file_name, is_base_mesh, is_tile } from "../render_engine/helpers/utils";
-import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
+import { HistoryOwner, TDictionary, THistoryUndo } from "../modules_editor/modules_editor_const";
 import { AnimatedMesh } from "../render_engine/objects/animated_mesh";
 import { WORLD_SCALAR } from "../config";
 import { Model } from "@editor/render_engine/objects/model";
@@ -2361,7 +2361,7 @@ function MeshInspectorCreate() {
     }
 
     function saveMaterial(info: BeforeChangeInfo) {
-        const materials: MeshPropertyInfo<string>[] = [];
+        const materials: MeshPropertyInfo<{ name: string, uniforms?: TDictionary<any> }>[] = [];
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
@@ -2370,11 +2370,13 @@ function MeshInspectorCreate() {
             }
             if (mesh instanceof Slice9Mesh) {
                 const material_name = mesh.material.name;
-                materials.push({ mesh_id: id, value: material_name });
+                const changed_uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh);
+                materials.push({ mesh_id: id, value: { name: material_name, uniforms: changed_uniforms } });
             }
             else if (mesh instanceof MultipleMaterialMesh) {
                 const material_name = mesh.get_materials()[info.field.data.material_index].name;
-                materials.push({ mesh_id: id, value: material_name });
+                const changed_uniforms = ResourceManager.get_changed_uniforms_for_multiple_material_mesh(mesh, info.field.data.material_index);
+                materials.push({ mesh_id: id, value: { name: material_name, uniforms: changed_uniforms } });
             }
         });
         HistoryControl.add('MESH_MATERIAL', materials, HistoryOwner.MESH_INSPECTOR);
@@ -2382,10 +2384,18 @@ function MeshInspectorCreate() {
 
     function handleMaterialChange(info: ChangeInfo) {
         const data = convertChangeInfoToMeshData<string>(info);
-        updateMaterial(data, info.data.event.last);
+        const patchedData = data.map(item => {
+            return {
+                mesh_id: item.mesh_id,
+                value: {
+                    name: item.value
+                }
+            };
+        });
+        updateMaterial(patchedData, info.data.event.last);
     }
 
-    function updateMaterial(data: MeshPropertyInfo<string>[], _: boolean) {
+    function updateMaterial(data: MeshPropertyInfo<{ name: string, uniforms?: TDictionary<any> }>[], _: boolean) {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
@@ -2394,12 +2404,13 @@ function MeshInspectorCreate() {
             }
 
             if (mesh instanceof Slice9Mesh) {
+                // NOTE: запоминаем текстуру перед сменой материала если она есть
                 const texture_info = mesh.get_texture();
                 const texture_name = texture_info[0];
                 const atlas = texture_info[1];
                 const has_texture = texture_name != '';
 
-                const material_name = item.value as string;
+                const material_name = item.value.name;
                 mesh.set_material(material_name);
 
                 if (has_texture) {
@@ -2415,21 +2426,27 @@ function MeshInspectorCreate() {
                         }
                     }
                 }
+
+                if (item.value.uniforms) {
+                    for (const [uniform_name, value] of Object.entries(item.value.uniforms)) {
+                        ResourceManager.set_material_uniform_for_mesh(mesh, uniform_name, value);
+                    }
+                }
             }
             else if (mesh instanceof MultipleMaterialMesh) {
                 let texture_name = '';
                 let atlas = '';
-                const texture_info = mesh.get_texture();
+                const texture_info = mesh.get_texture(item.index);
                 if (texture_info) {
                     texture_name = texture_info[0];
                     atlas = texture_info[1];
                 }
                 const has_texture = texture_name != '';
-                const material_name = item.value as string;
+                const material_name = item.value.name;
                 mesh.set_material(material_name, item.index);
 
                 if (has_texture) {
-                    mesh.set_texture(texture_name, atlas);
+                    mesh.set_texture(texture_name, atlas, item.index);
                 }
                 else {
                     const material = ResourceManager.get_material_by_mesh_id(material_name, item.mesh_id, item.index);
@@ -2437,8 +2454,14 @@ function MeshInspectorCreate() {
                         if (material.uniforms['u_texture'].value != null) {
                             const texture_name = material.uniforms['u_texture'].value.name;
                             const atlas = material.uniforms['u_texture'].value.atlas;
-                            mesh.set_texture(texture_name, atlas);
+                            mesh.set_texture(texture_name, atlas, item.index);
                         }
+                    }
+                }
+
+                if (item.value.uniforms) {
+                    for (const [uniform_name, value] of Object.entries(item.value.uniforms)) {
+                        ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.index ?? 0, uniform_name, value);
                     }
                 }
             }
@@ -3360,7 +3383,7 @@ function MeshInspectorCreate() {
                 updateBlendMode(blendModes, true);
                 break;
             case 'MESH_MATERIAL':
-                const materials = event.data as MeshPropertyInfo<string>[];
+                const materials = event.data as MeshPropertyInfo<{ name: string, uniforms?: TDictionary<any> }>[];
                 updateMaterial(materials, true);
                 break;
             case 'MESH_MATERIAL_SAMPLER2D':

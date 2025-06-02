@@ -33,7 +33,7 @@ export enum ControlType {
 }
 
 export type PlayerMovementSettings = {
-    width: number, 
+    width: number,
     heigth: number,
     max_predicted_way_intervals: number,  // Макс. количество отрезков прогнозируемого пути, на котором цикл построения пути завершится преждевременно
     predicted_way_lenght_mult: number,    // Множитель длины пути для построения пути с запасом
@@ -44,9 +44,9 @@ export type PlayerMovementSettings = {
     min_target_change: number,
     control_type: ControlType,
     keys_control: boolean,         // TODO: управление через клавиатуру
-    model_layer: number,    
+    model_layer: number,
     target_stop_distance: number,  // Расстояние остановки игрока от точки target
-    animation_names: AnimationNames, 
+    animation_names: AnimationNames,
     update_interval: number,       // Интервал между обновлениями прогнозируемого пути по умолчанию 
     min_update_interval: number,   // Минимальный интервал между обновлениями прогнозируемого пути
     update_way_angle: number,      // Минимальный угол изменения направления движения, при котором произойдёт обновление прогнозируемого пути
@@ -78,7 +78,7 @@ type SpeedSettings = {
 
 export type GridParams = {
     start: PointLike,
-    amount: PointLike, 
+    amount: PointLike,
     cell_size: number,
     origin_offset?: PointLike,
 }
@@ -89,14 +89,14 @@ export type SubGridParams = {
 }
 
 export const default_obstacle_grid: GridParams = {
-    start: {x: 0, y: 0}, 
-    amount: {x: 100, y: 100},
-    cell_size: 10, 
-    origin_offset: {x: 0, y: 0},
+    start: { x: 0, y: 0 },
+    amount: { x: 100, y: 100 },
+    cell_size: 10,
+    origin_offset: { x: 0, y: 0 },
 }
 
 export const default_settings: PlayerMovementSettings = {
-    width: 50 * WORLD_SCALAR, 
+    width: 50 * WORLD_SCALAR,
     heigth: 50 * WORLD_SCALAR,
     max_predicted_way_intervals: 10,
     predicted_way_lenght_mult: 1.5,
@@ -108,13 +108,13 @@ export const default_settings: PlayerMovementSettings = {
     control_type: ControlType.FP,
     keys_control: true,
     target_stop_distance: 0.5,
-    model_layer: 15, 
-    animation_names: {IDLE: "Unarmed Idle", WALK: "Unarmed Run Forward"},
+    model_layer: 15,
+    animation_names: { IDLE: "Unarmed Idle", WALK: "Unarmed Run Forward" },
     update_interval: 2.5,
     min_update_interval: 0.2,
     update_way_angle: 3 * Math.PI / 180,
     block_move_min_angle: 15 * Math.PI / 180,
-    speed: {WALK: 26},
+    speed: { WALK: 26 },
     collision_radius: 4,
     max_try_dist: 0.2,
     max_blocked_move_time: 5,
@@ -159,7 +159,7 @@ export function load_obstacles(map_data: MapData) {
                 const cx = tile.x * WS;
                 const cy = tile.y * WS;
                 if (tile.polygon) {
-                    for (let i = 0; i < tile.polygon.length - 1; i ++) {
+                    for (let i = 0; i < tile.polygon.length - 1; i++) {
                         const s_x = tile.polygon[i].x;
                         const s_y = tile.polygon[i].y;
                         const e_x = tile.polygon[i + 1].x;
@@ -167,7 +167,7 @@ export function load_obstacles(map_data: MapData) {
                         const seg = segment(cx + s_x * WS, cy - s_y * WS, cx + e_x * WS, cy - e_y * WS);
                         obstacles.push(seg);
                     }
-                    
+
                     const s_x = tile.polygon[tile.polygon.length - 1].x;
                     const s_y = tile.polygon[tile.polygon.length - 1].y;
                     const e_x = tile.polygon[0].x;
@@ -176,7 +176,7 @@ export function load_obstacles(map_data: MapData) {
                     obstacles.push(seg);
                 }
                 if (tile.polyline) {
-                    for (let i = 0; i < tile.polyline.length - 1; i ++) {
+                    for (let i = 0; i < tile.polyline.length - 1; i++) {
                         const s_x = tile.polyline[i].x;
                         const s_y = tile.polyline[i].y;
                         const e_x = tile.polyline[i + 1].x;
@@ -245,7 +245,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
     player_way.name = 'player_way';
     SceneManager.add(player_way);
 
-    function init(init_data: {model: AnimatedMesh, path_finder: PathFinder}) {
+    function init(init_data: { model: AnimatedMesh, path_finder: PathFinder }) {
         const model = init_data.model;
         target = point(model.position.x, model.position.y);
         PF = init_data.path_finder;
@@ -255,7 +255,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             EventBus.on('SYS_ON_UPDATE', (e) => {
                 last_upd_time_elapsed += e.dt;
                 if (!has_target) return;
-                if (check_target_change()) {  
+                if (check_target_change()) {
                     if (last_upd_time_elapsed >= min_update_t_interval) {
                         update_predicted_way();
                         last_upd_time_elapsed = 0;
@@ -268,7 +268,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             EventBus.on('SYS_ON_UPDATE', (e) => {
                 last_upd_time_elapsed += e.dt;
                 if (!has_target) return;
-                if (is_pointer_down && check_target_change()) {  
+                if (is_pointer_down && check_target_change()) {
                     if (last_upd_time_elapsed >= min_update_t_interval) {
                         update_predicted_way();
                         last_upd_time_elapsed = 0;
@@ -337,18 +337,18 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                     return;
                 stick_start = point(e.x, e.y);
             });
-            
+
             EventBus.on('SYS_INPUT_POINTER_MOVE', (e) => {
                 update_stick_direction(e);
             });
-    
+
             EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
                 if (!stick_start)
                     return;
                 stick_start = undefined;
                 current_dir = vector(point(0, 0), point(0, 0));
             });
-            
+
             EventBus.on('SYS_ON_UPDATE', (e) => {
                 if (stick_start && stick_end) {
                     const start = Camera.screen_to_world(stick_start.x, stick_start.y);
@@ -367,7 +367,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
         EventBus.on('SYS_ON_UPDATE', (e) => {
             last_stop_time_elapsed += e.dt;
         })
-    
+
         function update_predicted_way() {
             let way_required = get_required_way(update_t_interval);
             if (way_required.length() < min_required_way) {
@@ -405,7 +405,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                     const ep = cp.translate(current_dir.normalize().multiply(lenght_remains));
                     way_required = segment(cp.x, cp.y, ep.x, ep.y);
                 }
-                else 
+                else
                     way_required = segment(cp.x, cp.y, cp.x, cp.y);
             }
             return way_required;
@@ -430,7 +430,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             return result;
         }
 
-        function handle_update_follow_pointer( dt: number ) {
+        function handle_update_follow_pointer(dt: number) {
             if (!has_target) return;
             const available_way = PF.get_way_length();
             if (available_way < min_awailable_way) {
@@ -455,14 +455,14 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             }
         }
 
-        function handle_update_follow_direction( dt: number ) {
+        function handle_update_follow_direction(dt: number) {
             if (current_dir.length() == 0) {
                 if (is_moving) stop_movement();
-            }   
+            }
             else {
                 update_position(dt);
             }
-        }        
+        }
 
         function stop_movement() {
             is_moving = false;
@@ -523,10 +523,10 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             return;
         stick_end = point(e.x, e.y);
         if (stick_end.distanceTo(stick_start)[0] < min_stick_dist)
-        current_dir = vector(stick_start, stick_end);
+            current_dir = vector(stick_start, stick_end);
     }
 
-    return {init}
+    return { init }
 }
 
 

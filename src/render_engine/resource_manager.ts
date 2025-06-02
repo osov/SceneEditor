@@ -159,7 +159,8 @@ export function ResourceManagerModule() {
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
     const layers: string[] = [];
-    const tiles_info: TDictionary<string> = {};
+    const tilemap_paths: TDictionary<string> = {};
+    const tilemap_info: TDictionary<TDictionary<string>> = {};
     const vertex_programs: { [path: string]: string } = {};
     const fragment_programs: { [path: string]: string } = {};
     const materials: { [name: string]: MaterialInfo } = {};
@@ -1201,11 +1202,30 @@ export function ResourceManagerModule() {
         const material_name = mesh.material.name;
         const material_info = get_material_info(material_name);
         if (!material_info) return;
-        const hash = material_info.mesh_info_to_material_hashes[mesh_id][0];
+        return get_changed_uniforms(material_info, mesh_id, 0);
+    }
+
+    function get_changed_uniforms_for_multiple_material_mesh(mesh: MultipleMaterialMesh, index: number) {
+        const mesh_id = mesh.mesh_data.id;
+        const material_name = mesh.get_materials()[index].name;
+        const material_info = get_material_info(material_name);
+        if (!material_info) return;
+        return get_changed_uniforms(material_info, mesh_id, index);
+    }
+
+    function get_changed_uniforms(material_info: MaterialInfo, mesh_id: number, index: number) {
+        const hash = material_info.mesh_info_to_material_hashes[mesh_id][index];
         const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
         const changed_uniforms_data: { [key: string]: any } = {};
         for (const uniform_name of changed_uniforms) {
-            changed_uniforms_data[uniform_name] = material_info.instances[hash].uniforms[uniform_name].value;
+            const value = material_info.instances[hash].uniforms[uniform_name].value;
+            if (value instanceof Texture) {
+                const texture_name = get_file_name((value as any).path || '');
+                const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+                changed_uniforms_data[uniform_name] = `${atlas}/${texture_name}`;
+            } else {
+                changed_uniforms_data[uniform_name] = value;
+            }
         }
         return changed_uniforms_data;
     }
@@ -1629,6 +1649,31 @@ export function ResourceManagerModule() {
         return result;
     }
 
+    // NOTE: скорее всего вся логика со списком загруженных tilemap перебор, так как будет загружега только одна tilemap в открытой сцене, получается текущую загруженную tilemap-у можно просто менять и не хранить список ?
+
+    function set_tilemap_path(tilemap: string, path: string) {
+        tilemap_paths[tilemap] = path;
+    }
+
+    function get_tilemap_path(tilemap: string) {
+        return tilemap_paths[tilemap];
+    }
+
+    function set_tile_info(tilemap: string, tile_id: string, value: string) {
+        if (!tilemap_info[tilemap]) {
+            tilemap_info[tilemap] = {};
+        }
+        tilemap_info[tilemap][tile_id] = value;
+    }
+
+    function get_tile_info(tilemap: string, tile_id: string) {
+        return tilemap_info[tilemap][tile_id];
+    }
+
+    function get_all_loaded_tilemaps() {
+        return Object.keys(tilemap_info);
+    }
+
     init();
     return {
         load_asset,
@@ -1658,6 +1703,7 @@ export function ResourceManagerModule() {
         unlink_material_for_multiple_material_mesh,
         get_info_about_unique_materials,
         get_changed_uniforms_for_mesh,
+        get_changed_uniforms_for_multiple_material_mesh,
         get_font,
         get_texture,
         free_texture,
@@ -1692,7 +1738,11 @@ export function ResourceManagerModule() {
         has_layer,
         get_layers_mask_by_names,
         get_layers_names_by_mask,
-        tiles_info,
+        set_tilemap_path,
+        get_tilemap_path,
+        set_tile_info,
+        get_tile_info,
+        get_all_loaded_tilemaps,
         models,
         animations
     };

@@ -49,7 +49,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
         return max_y;
     }
 
-    function load(map_data: MapData, tiles_data: TileInfo) {
+    function load(map_name: string, map_data: MapData, tiles_data: TileInfo) {
         const tiles: SpriteTileInfoDict = {};
         const render_data = parse_tiled(map_data);
         preload_tiled_textures(tiles_data, map_data);
@@ -91,9 +91,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                 container.add(plane);
                 plane.name = tile_info.name + '' + plane.mesh_data.id;
                 plane.userData = { tile, id_layer };
-                const id = get_id_by_tile(tile, id_layer);
-                tiles[id] = { tile_info, tile, _hash: plane };
-                ResourceManager.tiles_info[id] = `${tile_info.atlas}/${tile_info.name}`;
+                tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
             }
         }
 
@@ -147,9 +145,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                         container.add(plane);
                         plane.name = tile_info.name + '' + plane.mesh_data.id;
                         plane.userData = { tile, id_layer };
-                        const id = get_id_by_tile(tile, id_layer);
-                        tiles[id] = { tile_info, tile, _hash: plane };
-                        ResourceManager.tiles_info[id] = `${tile_info.atlas}/${tile_info.name}`;
+                        tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
                     }
                     else {
                         Log.warn('tile not found', tile);
@@ -157,7 +153,6 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                 }
             }
         }
-
 
         return tiles;
     }

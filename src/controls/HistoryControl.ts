@@ -2,6 +2,7 @@ import { Euler, MagnificationTextureFilter, MinificationTextureFilter, Vector2, 
 import { get_keys } from "../modules/utils";
 import { MeshMoveEventData, MeshMaterialUniformInfo, MeshPropertyInfo, AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo } from "./types";
 import { BlendMode } from "../inspectors/MeshInspector";
+import { TDictionary } from "@editor/modules_editor/modules_editor_const";
 
 
 declare global {
@@ -40,7 +41,7 @@ export type HistoryData = {
     MESH_ACTIVE_MODEL_ANIMATION: MeshPropertyInfo<string>
     MESH_BLEND_MODE: MeshPropertyInfo<BlendMode>
     MESH_UV: MeshPropertyInfo<Float32Array>
-    MESH_MATERIAL: MeshPropertyInfo<string>
+    MESH_MATERIAL: MeshPropertyInfo<{ name: string, uniforms?: TDictionary<any> }>
     MESH_MATERIAL_SAMPLER2D: MeshMaterialUniformInfo<string>
     MESH_MATERIAL_FLOAT: MeshMaterialUniformInfo<number>
     MESH_MATERIAL_RANGE: MeshMaterialUniformInfo<number>
