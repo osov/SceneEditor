@@ -214,6 +214,7 @@ function sortObjectDeep(obj: any): any {
     const result: any = {};
 
     for (const key of sortedKeys) {
+        if (key != 'renderTarget')
         result[key] = sortObjectDeep(obj[key]);
     }
 
