@@ -1,4 +1,3 @@
-
 import path from "path";
 import { PATH_PARAM_NAME, ERROR_TEXT, NAME_PARAM_NAME, PROJECT_PARAM_NAME, DATA_PARAM_NAME, NEW_PATH_PARAM_NAME } from "./const";
 import {
@@ -351,9 +350,7 @@ export function Logic(use_queues: boolean) {
         }
 
         async function on_save_info(cmd: ServerCommands[typeof SAVE_INFO_CMD]): Promise<ServerResponses[typeof SAVE_INFO_CMD]> {
-            const current = await read_metadata(project, cmd.path);
-            const updated = { ...current, ...cmd.data };
-            await write_metadata(project, cmd.path, updated);
+            await write_metadata(project, cmd.path, cmd.data);
             return { result: 1, data: {} };
         }
 

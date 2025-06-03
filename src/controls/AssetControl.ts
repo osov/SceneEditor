@@ -1223,17 +1223,23 @@ function AssetControlCreate() {
 
     async function save_tilesinfo(path: string) {
         const filename = get_file_name(path);
-        const tiles_data: TDictionary<{ texture?: string, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }> = {};
+        const tiles_data: TDictionary<{ texture?: string, layers?: string[], material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }> = {};
         SceneManager.get_scene_list().forEach(mesh => {
             if (!is_tile(mesh)) return;
 
             const hash = get_hash_by_mesh(mesh);
-            const current_texture = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
 
+            const current_texture = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
             if (ResourceManager.get_tile_info(filename, hash) != current_texture) {
                 tiles_data[hash] = {
                     texture: current_texture
                 };
+            }
+
+            const current_layers = ResourceManager.get_layers_names_by_mask(mesh.layers.mask);
+            if ((current_layers.length == 1 && current_layers[0] != 'default') || current_layers.length > 1 || current_layers.length == 0) {
+                if (!tiles_data[hash]) tiles_data[hash] = {};
+                tiles_data[hash].layers = current_layers;
             }
 
             const material = (mesh as Slice9Mesh).material;

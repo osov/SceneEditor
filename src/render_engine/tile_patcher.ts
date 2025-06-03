@@ -6,7 +6,7 @@ import { GoSprite } from "./objects/sub_types";
 import { Slice9Mesh } from "./objects/slice9";
 
 export type TilesInfo =
-    TDictionary<{ texture?: string, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }>;
+    TDictionary<{ texture?: string, layers?: string[], material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }>;
 
 export function TilePatcher(tilemap_path: string) {
     const tilemap_name = get_file_name(tilemap_path);
@@ -19,7 +19,7 @@ export function TilePatcher(tilemap_path: string) {
 
         // TODO: patch tiles from tilesinfo file by tilemap if exist and check if tile exsist
         const dir = tilemap_path.replace(new RegExp(`${tilemap_name}.*$`), '');
-        const tilesinfo_path = `${dir}/${tilemap_name}.tilesinfo`;
+        const tilesinfo_path = `${dir}${tilemap_name}.tilesinfo`;
         const tilesinfo = await ResourceManager.load_asset(tilesinfo_path) as TilesInfo;
         if (!tilesinfo) {
             Log.log(`No tilesinfo file found for tilemap ${tilemap_name}`);
@@ -49,6 +49,10 @@ export function TilePatcher(tilemap_path: string) {
 
             if (info.texture) {
                 sprite.set_texture(info.texture);
+            }
+
+            if (info.layers) {
+                sprite.layers.mask = ResourceManager.get_layers_mask_by_names(info.layers);
             }
 
             if (info.uniforms) {

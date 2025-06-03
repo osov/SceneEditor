@@ -277,7 +277,7 @@ function ControlManagerCreate() {
     }
 
     function open_layer_manager() {
-        const list = ResourceManager.get_layers().map((title, id) => {
+        const list = ResourceManager.get_layers().filter(l => l != 'default').map((title, id) => {
             return { id: id.toString(), title, can_delete: true };
         });
 

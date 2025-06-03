@@ -157,7 +157,7 @@ export function ResourceManagerModule() {
     const audios: { [name: string]: AudioBuffer } = {};
     const atlases: { [name: string]: AssetData<TextureData> } = { '': {} };
     const fonts: { [name: string]: string } = {};
-    const layers: string[] = [];
+    const layers: string[] = ['default'];
     const tilemap_paths: TDictionary<string> = {};
     const tilemap_info: TDictionary<TDictionary<string>> = {};
     const vertex_programs: { [path: string]: string } = {};
@@ -1527,6 +1527,7 @@ export function ResourceManagerModule() {
             }
             const layers_dict: TRecursiveDict = {};
             layers.forEach((layer, index) => {
+                if (index == 0) return;
                 layers_dict[index.toString()] = layer;
             });
             const save_layers_result = await ClientAPI.save_info('layers', layers_dict);
@@ -1586,7 +1587,6 @@ export function ResourceManagerModule() {
                 return;
             }
             const metadata_layers = layers_metadata.data as TRecursiveDict;
-            layers.length = 0; // Clear existing layers
             Object.keys(metadata_layers).forEach(key => {
                 const layer = metadata_layers[key];
                 if (typeof layer === 'string') {
@@ -1620,14 +1620,17 @@ export function ResourceManagerModule() {
     }
 
     function get_layers_mask_by_names(layers_names: string[]) {
+        if (layers_names.length == 0) {
+            return 0;
+        }
         return layers_names.map(layer => {
             const index = layers.indexOf(layer);
             if (index === -1) {
                 Log.warn(`Layer "${layer}" not found in layers array`);
                 return 0;
             }
-            if (index > 31) {
-                Log.warn(`Layer "${layer}" index ${index} exceeds maximum allowed value of 31`);
+            if (index > 10) {
+                Log.warn(`Layer "${layer}" index ${index} exceeds maximum allowed value of 10`);
                 return 0;
             }
             return 1 << index;
@@ -1636,7 +1639,7 @@ export function ResourceManagerModule() {
 
     function get_layers_names_by_mask(mask: number) {
         const result: string[] = [];
-        for (let i = 0; i < Math.min(32, layers.length); i++) {
+        for (let i = 0; i < Math.min(10, layers.length); i++) {
             if (mask & (1 << i)) {
                 result.push(layers[i]);
             }
