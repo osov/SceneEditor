@@ -982,7 +982,7 @@ function AssetControlCreate() {
         const folder_elem = event.target.closest('.folder.asset');
         const file_elem = event.target.closest('.file.asset');
         const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
-        if (event.button === 0 || event.button === 2) {
+        if (event.button === 0 || (asset_elem && event.button === 2)) {
             if (asset_elem) {
                 mouse_down_on_asset = true;
             }
