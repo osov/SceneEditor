@@ -2418,7 +2418,7 @@ function MeshInspectorCreate() {
                 }
                 else {
                     const material = ResourceManager.get_material_by_mesh_id(material_name, item.mesh_id);
-                    if (material) {
+                    if (material && material.uniforms['u_texture'] != undefined) {
                         if (material.uniforms['u_texture'].value != null) {
                             const texture_name = material.uniforms['u_texture'].value.name;
                             const atlas = material.uniforms['u_texture'].value.atlas;
@@ -2429,7 +2429,12 @@ function MeshInspectorCreate() {
 
                 if (item.value.uniforms) {
                     for (const [uniform_name, value] of Object.entries(item.value.uniforms)) {
-                        ResourceManager.set_material_uniform_for_mesh(mesh, uniform_name, value);
+                        const material_info = ResourceManager.get_material_info(material_name);
+                        if (material_info && material_info.uniforms[uniform_name].type == MaterialUniformType.SAMPLER2D) {
+                            const texture_info = value.split('/');
+                            const converted_value = ResourceManager.get_texture(texture_info[1], texture_info[0]).texture;
+                            ResourceManager.set_material_uniform_for_mesh(mesh, uniform_name, converted_value);
+                        } else ResourceManager.set_material_uniform_for_mesh(mesh, uniform_name, value);
                     }
                 }
             }
@@ -2450,7 +2455,7 @@ function MeshInspectorCreate() {
                 }
                 else {
                     const material = ResourceManager.get_material_by_mesh_id(material_name, item.mesh_id, item.index);
-                    if (material) {
+                    if (material && material.uniforms['u_texture'] != undefined) {
                         if (material.uniforms['u_texture'].value != null) {
                             const texture_name = material.uniforms['u_texture'].value.name;
                             const atlas = material.uniforms['u_texture'].value.atlas;
