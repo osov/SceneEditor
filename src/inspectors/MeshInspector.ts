@@ -2569,11 +2569,12 @@ function MeshInspectorCreate() {
 
                 const uniform = material.uniforms[info.field.key];
                 if (uniform) {
+                    const path = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
                     sampler2Ds.push({
                         mesh_id: id,
                         material_index: 0,
                         uniform_name: info.field.key,
-                        value: `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}` || uniform.value?.path || ''
+                        value: path != '/' ? path : `/${get_file_name(uniform.value?.path || '')}`
                     });
                 }
             }
@@ -2592,7 +2593,7 @@ function MeshInspectorCreate() {
                         atlas = texture_info[1];
                     }
                     if (texture_name != '' && atlas != '') {
-                        path = `${atlas}/${texture_name}`;
+                        path = `${atlas} / ${texture_name}`;
                     }
                     sampler2Ds.push({
                         mesh_id: id,
@@ -2624,8 +2625,7 @@ function MeshInspectorCreate() {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (!mesh) return;
 
-            const r = item.value.split('/');
-            const [atlas, texture_name] = r;
+            const [atlas, texture_name] = item.value.split('/');
             const texture = ResourceManager.get_texture(texture_name, atlas).texture;
             if (!texture) return;
 
