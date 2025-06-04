@@ -177,10 +177,7 @@ export function copy_material(material: ShaderMaterial) {
 
     for (const [key, uniform] of Object.entries(material.uniforms)) {
         if (uniform.value instanceof Texture) {
-            const texture = new Texture();
-            texture.copy(uniform.value);
-            (texture as any).path = (uniform.value as any).path;
-            copy.uniforms[key] = { value: texture };
+            copy.uniforms[key] = { value: uniform.value };
         } else if (
             uniform.value instanceof Vector2 ||
             uniform.value instanceof Vector3 ||
