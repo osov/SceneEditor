@@ -3,6 +3,7 @@ import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
 import { deepClone, getObjectHash } from "../../modules/utils";
 import { TextMesh } from "../objects/text";
 import { GoText, GoSprite } from "../objects/sub_types";
+import { MaterialUniformType } from "../resource_manager";
 
 
 export function get_basename(path: string) {
@@ -212,6 +213,22 @@ export function get_material_hash(material: ShaderMaterial) {
     });
 
     return hash;
+}
+
+export function updateEachMaterialsWhichHasTexture(texture: Texture) {
+    let i = 0;
+    const materials = ResourceManager.get_all_materials();
+    materials.forEach((material) => {
+        const material_info = ResourceManager.get_material_info(material);
+        if (!material_info) return;
+        Object.entries(material_info.uniforms).forEach(([uniform_name, uniform]) => {
+            if (uniform.type != MaterialUniformType.SAMPLER2D) return;
+            Object.values(material_info.instances).forEach((inst) => {
+                if ((inst.uniforms[uniform_name] as IUniform<Texture>).value.uuid != texture.uuid) return;
+                inst.needsUpdate = true;
+            });
+        });
+    });
 }
 
 export function lerp(a: number, b: number, t: number) {
