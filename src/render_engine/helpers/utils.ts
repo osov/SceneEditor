@@ -215,8 +215,7 @@ export function get_material_hash(material: ShaderMaterial) {
     return hash;
 }
 
-export function updateEachMaterialsWhichHasTexture(texture: Texture) {
-    let i = 0;
+export function updateEachMaterialWhichHasTexture(texture: Texture) {
     const materials = ResourceManager.get_all_materials();
     materials.forEach((material) => {
         const material_info = ResourceManager.get_material_info(material);
@@ -225,7 +224,7 @@ export function updateEachMaterialsWhichHasTexture(texture: Texture) {
             if (uniform.type != MaterialUniformType.SAMPLER2D) return;
             Object.values(material_info.instances).forEach((inst) => {
                 if ((inst.uniforms[uniform_name] as IUniform<Texture>).value.uuid != texture.uuid) return;
-                inst.needsUpdate = true;
+                inst.uniforms[uniform_name].value.needsUpdate = true;
             });
         });
     });

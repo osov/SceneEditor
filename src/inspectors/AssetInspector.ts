@@ -2,7 +2,7 @@
 
 
 import { Vector2, Vector3, Vector4, Color, IUniform, Texture, MagnificationTextureFilter, MinificationTextureFilter } from "three";
-import { get_file_name, updateEachMaterialsWhichHasTexture } from "../render_engine/helpers/utils";
+import { get_file_name, updateEachMaterialWhichHasTexture } from "../render_engine/helpers/utils";
 import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
 import { IObjectTypes, IBaseMesh } from "../render_engine/types";
 import { PropertyData, PropertyType, ChangeInfo, BeforeChangeInfo, ObjectData } from "../modules_editor/Inspector";
@@ -596,7 +596,7 @@ function AssetInspectorCreate() {
             if (atlas == null) continue;
             const texture_data = ResourceManager.get_texture(texture_name, atlas);
             texture_data.texture.minFilter = item.value;
-            updateEachMaterialsWhichHasTexture(texture_data.texture);
+            updateEachMaterialWhichHasTexture(texture_data.texture);
 
         }
         if (last) {
@@ -647,7 +647,7 @@ function AssetInspectorCreate() {
             if (atlas == null) continue;
             const texture_data = ResourceManager.get_texture(texture_name, atlas);
             texture_data.texture.magFilter = item.value;
-            updateEachMaterialsWhichHasTexture(texture_data.texture);
+            updateEachMaterialWhichHasTexture(texture_data.texture);
         }
         if (last) {
             await ResourceManager.write_metadata();
