@@ -36,6 +36,7 @@
     "src",
     "../SceneEditor_ExampleProject/src",
     "../SceneEditor_Stereo/src",
-    "../SceneEditor_Digg_Scan/src"
+    "../SceneEditor_Digg_Scan/src",
+    "../SceneEditor_TicTac"
   ]
 }

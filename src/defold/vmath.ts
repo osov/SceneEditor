@@ -44,6 +44,7 @@ declare global {
         export function quat_from_axis_angle(axis: vmath.vector3, angle: number): vmath.quaternion
         export function euler_to_quat(x: number, y: number, z: number): vmath.quaternion
         export function rotate(q: vmath.quaternion, v: vmath.vector3): vmath.vector3
+        export function quat_rotation_z(angle: number): vmath.quaternion
     }
 }
 
@@ -233,8 +234,14 @@ export function vmath_module() {
         );
     }
 
+    function quat_rotation_z(angle: number) {
+        const halfAngle = angle * 0.5;
+        const s = Math.sin(halfAngle);
+        return quat(0, 0, s, Math.cos(halfAngle));
+    }
+
     return {
         vector3, vector4, length, normalize, dot, cross, mul_per_element, lerp, slerp,
-        quat, quat_from_axis_angle, euler_to_quat, rotate
+        quat, quat_from_axis_angle, euler_to_quat, rotate,quat_rotation_z
     };
 }

@@ -283,9 +283,9 @@ function MeshInspectorCreate() {
             value: rotation,
             type: PropertyType.VECTOR_3,
             params: {
-                x: { step: 0.1, format: (v: number) => v.toFixed(1) },
-                y: { step: 0.1, format: (v: number) => v.toFixed(1) },
-                z: { step: 0.1, format: (v: number) => v.toFixed(1) }
+                x: { step: 1, format: (v: number) => v.toFixed(1) },
+                y: { step: 1, format: (v: number) => v.toFixed(1) },
+                z: { step: 1, format: (v: number) => v.toFixed(1) }
             },
             onBeforeChange: saveRotation,
             onChange: handleRotationChange,

@@ -1,7 +1,5 @@
-export const _GAME_CONFIG = {
-    DISPLAY_WIDTH: 960,
-    DISPLAY_HEIGHT: 540
-};
+export const TARGET_DISPLAY_WIDTH = 960;
+export const TARGET_DISPLAY_HEIGHT = 540;
 
 export const IS_CAMERA_ORTHOGRAPHIC = true;
 export const CAMERA_FAR = 12000;
@@ -17,6 +15,6 @@ export const WS_RECONNECT_INTERVAL = 10;
 export const FLOAT_PRECISION = 4;
 
 export type _UserMessages = {
-    REGION_ENTER: {id_mesh:string, id_region:string}
-    REGION_LEAVE: {id_mesh:string, id_region:string}
+    REGION_ENTER: { id_mesh: string, id_region: string }
+    REGION_LEAVE: { id_mesh: string, id_region: string }
 };

@@ -69,6 +69,7 @@ async function run_selected_scene() {
             main_file.main();
         }
         catch (e) {
+            console.error(e);
             Log.error('Проект не загружен:', PROJECT_NAME);
         }
     }

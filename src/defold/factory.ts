@@ -14,6 +14,13 @@ export function factory_module() {
         properties?: any,
         scale?: number | vmath.vector3
     ) {
+        if (url.includes('#')) {
+            if (url[0] != '/')
+                url = '/' + url;
+            url = url.split('#').join('/');
+            if (!url.includes('.scn'))
+                url += '.scn';
+        }
         const result = AssetControl.loadPartOfSceneInPos(
             url,
             position ? new Vector3().copy(position) : undefined,

@@ -4,7 +4,7 @@
 
 import { OrthographicCamera, PerspectiveCamera, AudioListener, Vector3, Box3, Frustum, Matrix4 } from "three";
 import { get_window_size } from "../render_engine/helpers/window_utils";
-import { IS_CAMERA_ORTHOGRAPHIC } from "../config";
+import { IS_CAMERA_ORTHOGRAPHIC, TARGET_DISPLAY_HEIGHT, TARGET_DISPLAY_WIDTH } from "../config";
 import { IBaseEntityAndThree } from "@editor/render_engine/types";
 
 declare global {
@@ -16,8 +16,8 @@ export function register_camera() {
 }
 
 function CameraModule() {
-    const DISPLAY_WIDTH = GAME_CONFIG.DISPLAY_WIDTH;
-    const DISPLAY_HEIGHT = GAME_CONFIG.DISPLAY_HEIGHT;
+    const DISPLAY_WIDTH = TARGET_DISPLAY_WIDTH;
+    const DISPLAY_HEIGHT = TARGET_DISPLAY_HEIGHT;
     let WINDOW_WIDTH = DISPLAY_WIDTH;
     let WINDOW_HEIGHT = DISPLAY_HEIGHT;
     let anchor_x = 0;

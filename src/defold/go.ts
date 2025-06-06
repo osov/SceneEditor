@@ -10,7 +10,7 @@ declare global {
         export function get_position(id: string | hash): vmath.vector3
         export function set_rotation(rotation: vmath.quaternion, id: string | hash): void
         export function get_rotation(id: string | hash): vmath.quaternion
-        export function set_scale(scale: vmath.vector3, id: string | hash): void
+        export function set_scale(scale: vmath.vector3|number, id: string | hash): void
         export function get_scale(id: string | hash): vmath.vector3
         export function set_parent(id: string | hash, parent_id: string | hash): void
         export function get_parent(id: string | hash): hash
@@ -191,7 +191,7 @@ export function go_module() {
         return vmath.euler_to_quat(euler.x, euler.y, euler.z);
     }
 
-    function set_scale(scale: vmath.vector3, id: string | hash) {
+    function set_scale(scale: vmath.vector3|number, id: string | hash) {
         const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
         if (!mesh) {
             Log.error(`Mesh with url ${id} not found`);
@@ -200,6 +200,9 @@ export function go_module() {
         if (mesh.type != IObjectTypes.GO_CONTAINER) {
             Log.error(`Mesh with id ${id} is not go`);
             return;
+        }
+        if ( typeof scale === 'number') {
+            scale = vmath.vector3(scale, scale, scale);
         }
         mesh.scale.copy(scale);
     }
@@ -311,10 +314,6 @@ export function go_module() {
         const mesh = SceneManager.get_mesh_by_id(uh_to_id(url));
         if (!mesh) {
             Log.error(`Mesh with url ${url} not found`);
-            return null;
-        }
-        if (mesh.type != IObjectTypes.GO_CONTAINER) {
-            Log.error(`Mesh with id ${url} is not go`);
             return null;
         }
         return get_nested_property(mesh, property);

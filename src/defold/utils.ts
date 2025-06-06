@@ -3,10 +3,21 @@ import { vec_to_hex } from "../render_engine/helpers/utils";
 export function get_nested_property(obj: any, path: string): any {
     const parts = path.split('.');
     let current = obj;
+    if (path == 'size'){
+        return obj.get_size();
+    }
+    if (path == 'euler.z'){
+        return obj.rotation.z;
+    }
     for (const part of parts) {
-        if (current === undefined || current === null) return undefined;
+        if (current === undefined || current === null) {
+             Log.error(`get_nested_property: ${path} not found`, obj);
+            return undefined;
+        }
         current = current[part];
     }
+    if (current == undefined)
+        Log.error(`get_nested_property: ${path} not found`, obj);
     return current;
 }
 

@@ -11,7 +11,7 @@ import { xmath_module } from "./extension/xmath";
 
 declare global {
     function tonumber(e: any, base?: number): number | undefined;
-
+    function pprint(obj:any):void;
     type hash = {};
     function hash(s: string): hash;
 }
@@ -19,6 +19,10 @@ declare global {
 
 export function register_lua_core() {
     (window as any).tonumber = Number;
+    (window as any).pprint = function (obj: any) {
+        console.log(obj);
+    };
+
     (window as any).hash = function (url: string) {
         const id = SceneManager.get_mesh_id_by_url(url);
         return { id } as hash;
