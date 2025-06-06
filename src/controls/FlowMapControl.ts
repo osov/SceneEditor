@@ -24,24 +24,11 @@ interface FlowInfo {
     u_padding_bottom: number
 }
 
-type FileData = { [id: string]: FlowInfo };
-
-
-
 function FlowMapControlCreate() {
-    let normals: Texture | undefined;
     const mesh_list: { [k: string]: IDrawCanvas } = {};
     const dir_path = '/data/water/';
     const last_pos = new Vector2(0, 0);
     let selected_mesh: Slice9Mesh | undefined;
-
-    async function load_data() {
-        const data = await ClientAPI.get_data(dir_path + 'data.txt');
-        let flows: FileData = {};
-        if (data.result == 1 && data.data)
-            flows = JSON.parse(data.data) as FileData;
-        return flows;
-    }
 
     function init() {
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
@@ -62,10 +49,13 @@ function FlowMapControlCreate() {
             }
         });
 
-        EventBus.on('SYS_SELECTED_MESH_LIST', (_e) => {
+        EventBus.on('SYS_SELECTED_MESH_LIST', async (_e) => {
             if (Input.is_shift())
                 return;
             selected_mesh = get_selected_one_mesh();
+            if (!selected_mesh)
+                return;
+            await foo(selected_mesh);
         });
 
         let is_pointer_down = false;
@@ -114,52 +104,22 @@ function FlowMapControlCreate() {
         });
     }
 
-    async function load_saved() {
-        normals = ResourceManager.get_texture('waternormals').texture;
-        normals.wrapS = normals.wrapT = RepeatWrapping;
-        ResourceManager.set_material_uniform_for_original('water', 'u_normal', normals);
-        ResourceManager.set_material_uniform_for_original('water_simple', 'u_normal', normals);
-        ResourceManager.set_material_uniform_for_original('water_sea', 'u_normal', normals);
-        const data = await load_data();
-        for (const id in data) {
-            const flow_info = data[id];
-            const mesh = get_mesh_by_hash(id);
-            if (mesh) {
-                await activate(mesh, flow_info.material_name);
-                const material = mesh.material;
-                // flow map
-                if (material.uniforms.u_flowMap) {
-                    const draw_canvas = mesh_list[id];
-                    const texture_data = ResourceManager.get_texture(id);
-                    draw_canvas.loadTexture(texture_data.texture, () => {
-                        // именно mesh.material, а не material, тк ниже set_material_uniform_for_mesh создает копию материала и нам нужно у актуального именно изменить
-                        mesh.material.uniforms.u_flowMap.value.needsUpdate = true; 
-                    });
-                }
-                for (const k in flow_info) {
-                    if (material.uniforms[k] && !['u_time', 'u_flowMap'].includes(k) )
-                        ResourceManager.set_material_uniform_for_mesh(mesh, k, flow_info[k as keyof FlowInfo]);
-                }
-            }
-            else {
-                //Log.error('[Карта потока] меш не найден:' + id);
-            }
+    async function foo(mesh: Slice9Mesh) {
+        await activate(mesh);
+        const id = get_hash_by_mesh(mesh);
+        const material = mesh.material;
+        // flow map
+        if (material.uniforms.u_flowMap) {
+            const draw_canvas = mesh_list[id];
+            const texture_data = ResourceManager.get_texture(id);
+            draw_canvas.loadTexture(texture_data.texture, () => {
+                // именно mesh.material, а не material, тк ниже set_material_uniform_for_mesh создает копию материала и нам нужно у актуального именно изменить
+                mesh.material.uniforms.u_flowMap.value.needsUpdate = true;
+            });
         }
     }
 
-
-    async function setup_shader(mesh: Slice9Mesh, material_name = ''): Promise<IDrawCanvas | null> {
-        if (material_name == '') {
-            if (mesh.material.name.indexOf('water') == -1) {
-                Popups.toast.error('Ошибка: задайте материал воды');
-                return null;
-            }
-        }
-        else {
-            const tex_atlas = mesh.get_texture();
-            mesh.set_material(material_name);
-            mesh.set_texture(tex_atlas[0], tex_atlas[1]);
-        }
+    async function setup_draw_canvas(mesh: Slice9Mesh): Promise<IDrawCanvas | null> {
         const draw_canvas = CreateDrawCanvas(256, 256, 40, 'rgb(128, 128, 0)');
         const flow = new Texture(draw_canvas.getCanvas());
         flow.needsUpdate = true;
@@ -168,12 +128,12 @@ function FlowMapControlCreate() {
         return draw_canvas;
     }
 
-    async function activate(mesh: Slice9Mesh, material_name = '') {
+    async function activate(mesh: Slice9Mesh) {
         const key = get_hash_by_mesh(mesh);
         selected_mesh = mesh;
         if (mesh_list[key])
             return;
-        const draw_canvas = await setup_shader(mesh, material_name);
+        const draw_canvas = await setup_draw_canvas(mesh);
         if (!draw_canvas)
             return;
         mesh_list[key] = draw_canvas;
@@ -189,10 +149,6 @@ function FlowMapControlCreate() {
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         selected_mesh = undefined;
         delete mesh_list[key];
-        // save flow data
-        const flow_data = await load_data();
-        delete flow_data[key];
-        await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(flow_data));
         await ClientAPI.remove(dir_path + key + '.png');
         //log('deactivated water', key)
     }
@@ -209,18 +165,9 @@ function FlowMapControlCreate() {
             if (answer.result != 1)
                 Popups.toast.error('Ошибка сохранения карты потока:' + key);
         }
-        const data = await load_data();
-        (data as any)[key] = { material_name: mesh.material.name };
-        for (const k in mesh.material.uniforms) {
-            if (typeof mesh.material.uniforms[k as keyof FlowInfo].value == 'number' && !['u_time'].includes(k))
-                (data[key] as any)[k] = mesh.material.uniforms[k].value as number;
-        }
-        await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(data));
         Popups.toast.success('Карта потока сохранена:' + key);
 
     }
 
-
-    return { init, load_saved }
+    return { init }
 }
-

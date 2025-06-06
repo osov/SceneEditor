@@ -2,7 +2,7 @@ import { Vector3, Quaternion } from "three";
 
 declare global {
     namespace factory {
-        export function create(url: string, position?: vmath.vector3, rotation?: vmath.quaternion, scale?: number | vmath.vector3): hash;
+        export function create(url: string, position?: vmath.vector3, rotation?: vmath.quaternion, scale?: number | vmath.vector3): string;
     }
 }
 

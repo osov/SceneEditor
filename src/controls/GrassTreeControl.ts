@@ -1,5 +1,4 @@
-import { IBaseMeshAndThree } from "../render_engine/types";
-import { get_selected_one_mesh, get_hash_by_mesh, get_mesh_by_hash } from "../inspectors/ui_utils";
+import { get_selected_one_mesh, get_hash_by_mesh } from "../inspectors/ui_utils";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { Vector2 } from "three";
 import { filter_intersect_list } from "../render_engine/helpers/utils";
@@ -13,30 +12,11 @@ export function register_grass_tree_control() {
     (window as any).GrassTreeControl = GrassTreeControlCreate();
 }
 
-interface GrassTreeInfo {
-    u_amplitude: number;
-    u_frequency: number;
-    u_add_strength: number;
-    u_inv_strength: number;
-}
-
-type FileData = { [id: string]: GrassTreeInfo };
-
-
-
 function GrassTreeControlCreate() {
     const gm = createGrassManager();
     const mesh_list: { [k: string]: boolean } = {};
-    const dir_path = '/data/tree/';
+    // const dir_path = '/data/tree/';
     let selected_mesh: Slice9Mesh | undefined;
-
-    async function load_data() {
-        const data = await ClientAPI.get_data(dir_path + 'data.txt');
-        let flows: FileData = {};
-        if (data.result == 1 && data.data)
-            flows = JSON.parse(data.data) as FileData;
-        return flows;
-    }
 
     function init() {
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
@@ -50,10 +30,11 @@ function GrassTreeControlCreate() {
                     if (selected_mesh)
                         deactivate(selected_mesh);
                 }
-                else if (e.key == 'H' || e.key == 'Р') {
-                    if (selected_mesh)
-                        save_map(selected_mesh);
-                }
+                // NOTE: нужно ли здесь сохранять tilesinfo ?
+                // else if (e.key == 'H' || e.key == 'Р') {
+                //     if (selected_mesh)
+                //         save_map(selected_mesh);
+                // }
             }
         });
 
@@ -80,7 +61,7 @@ function GrassTreeControlCreate() {
         EventBus.on('SYS_INPUT_POINTER_MOVE', (e) => {
             if (Input.is_shift()) {
                 const tmp = filter_intersect_list(RenderEngine.raycast_scene(new Vector2(e.x, e.y)));
-                const list = tmp.filter((m) => (['Flowers_1', 'Flowers_2', 'Flowers_3', 'Flowers_4',  'Daisies_1', 'Daisies'].includes(m.get_texture()[0])));
+                const list = tmp.filter((m) => (['Flowers_1', 'Flowers_2', 'Flowers_3', 'Flowers_4', 'Daisies_1', 'Daisies'].includes(m.get_texture()[0])));
                 for (const mesh of list) {
                     gm.activate(mesh as any);
                 }
@@ -96,25 +77,6 @@ function GrassTreeControlCreate() {
         });
         EventBus.on('SYS_ON_UPDATE', (e) => gm.update(e.dt));
 
-    }
-
-    async function load_saved() {
-        const data = await load_data();
-        for (const id in data) {
-            const info = data[id];
-            const mesh = get_mesh_by_hash(id);
-            if (mesh) {
-                await activate(mesh);
-                const material = mesh.material;
-                for (const k in info) {
-                    if (material.uniforms[k] && !['u_time'].includes(k))
-                        ResourceManager.set_material_uniform_for_mesh(mesh, k, info[k as keyof GrassTreeInfo]);
-                }
-            }
-            else {
-                //Log.error('[Карта дерева] меш не найден:' + id);
-            }
-        }
     }
 
     async function activate(mesh: Slice9Mesh) {
@@ -138,32 +100,11 @@ function GrassTreeControlCreate() {
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         selected_mesh = undefined;
         delete mesh_list[key];
-        // save data
-        const flow_data = await load_data();
-        delete flow_data[key];
-        await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(flow_data));
+        // NOTE: нужно ли здесь сохранять tilesinfo ?
         //log('deactivated', key)
     }
 
-    async function save_map(mesh: Slice9Mesh) {
-        const key = get_hash_by_mesh(mesh);
-        if (!mesh_list[key])
-            return;
-        const mat = mesh.material;
-        if (mat.name != 'tree')
-            return;
-        const data = await load_data();
-        (data as any)[key] = {  };
-        for (const k in mesh.material.uniforms) {
-            if (typeof mesh.material.uniforms[k as keyof GrassTreeInfo].value == 'number' && !['u_time'].includes(k))
-                (data[key] as any)[k] = mesh.material.uniforms[k].value as number;
-        }
-        await ClientAPI.save_data(dir_path + 'data.txt', JSON.stringify(data));
-        Popups.toast.success('Карта дерева сохранена:' + key);
-    }
-
-
-    return { init, load_saved }
+    return { init }
 }
 
 

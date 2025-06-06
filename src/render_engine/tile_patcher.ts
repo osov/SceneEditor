@@ -4,6 +4,7 @@ import { SpriteTileInfoDict } from "./tile_loader";
 import { Blending } from "three";
 import { GoSprite } from "./objects/sub_types";
 import { Slice9Mesh } from "./objects/slice9";
+import { MaterialUniformType } from "./resource_manager";
 
 export type TilesInfo =
     TDictionary<{ texture?: string, layers?: string[], material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }>;
@@ -32,7 +33,9 @@ export function TilePatcher(tilemap_path: string) {
             const sprite = tile._hash as GoSprite;
 
             if (info.material_name) {
+                const texture_data = sprite.get_texture();
                 sprite.set_material(info.material_name);
+                sprite.set_texture(texture_data[0], texture_data[1]);
             }
 
             if (info.blending != undefined) {
@@ -56,9 +59,16 @@ export function TilePatcher(tilemap_path: string) {
             }
 
             if (info.uniforms) {
-                Object.entries(info.uniforms).forEach(([uniform_name, uniform_value]) => {
-                    ResourceManager.set_material_uniform_for_mesh(sprite as Slice9Mesh, uniform_name, uniform_value);
-                });
+                const material_info = ResourceManager.get_material_info(sprite.material.name);
+                if (material_info) {
+                    Object.entries(info.uniforms).forEach(([uniform_name, uniform_value]) => {
+                        if (material_info.uniforms[uniform_name].type == MaterialUniformType.SAMPLER2D) {
+                            const texture_data = ResourceManager.get_texture(uniform_value.split('/')[1]);
+                            uniform_value = texture_data.texture;
+                        }
+                        ResourceManager.set_material_uniform_for_mesh(sprite as Slice9Mesh, uniform_name, uniform_value);
+                    });
+                }
             }
         });
     }

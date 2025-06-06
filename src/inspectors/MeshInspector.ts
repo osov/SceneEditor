@@ -2638,6 +2638,7 @@ function MeshInspectorCreate() {
                 }
                 else {
                     ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, texture);
+                    // NOTE: не уверен что это тут нужно, это же толко в slice9 материале, и только для u_texture ?
                     ResourceManager.set_material_define_for_mesh(mesh, 'USE_TEXTURE', '');
                 }
             }
@@ -2656,6 +2657,7 @@ function MeshInspectorCreate() {
                 }
                 else {
                     ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, texture);
+                    // NOTE: не уверен что это тут нужно, это же толко в slice9 материале, и только для u_texture ?
                     ResourceManager.set_material_define_for_multiple_material_mesh(mesh, item.material_index, 'USE_TEXTURE', '');
                 }
             }

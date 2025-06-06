@@ -14,7 +14,7 @@ import { NodeAction } from "./ActionsControl";
 import { api } from "../modules_editor/ClientAPI";
 import { IBaseEntityData } from "../render_engine/types";
 import { get_file_name, is_tile } from "../render_engine/helpers/utils";
-import { Blending, Quaternion, Vector3 } from "three";
+import { Blending, Quaternion, Texture, Vector3 } from "three";
 import { get_hash_by_mesh } from "@editor/inspectors/ui_utils";
 import { Slice9Mesh } from "@editor/render_engine/objects/slice9";
 import { BlendMode } from "@editor/inspectors/MeshInspector";
@@ -1221,6 +1221,7 @@ function AssetControlCreate() {
         return tilesinfo_path;
     }
 
+    // TODO: вынести в TilePatcher ?
     async function save_tilesinfo(path: string) {
         const filename = get_file_name(path);
         const tiles_data: TDictionary<{ texture?: string, layers?: string[], material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }> = {};
@@ -1278,6 +1279,11 @@ function AssetControlCreate() {
                 });
                 if (Object.keys(changed_uniforms).length > 0) {
                     if (!tiles_data[hash]) tiles_data[hash] = {};
+                    Object.entries(changed_uniforms).forEach(([key, value]) => {
+                        if (value instanceof Texture) {
+                            changed_uniforms[key] = `/${hash}`;
+                        }
+                    });
                     tiles_data[hash].uniforms = changed_uniforms;
                 }
             }

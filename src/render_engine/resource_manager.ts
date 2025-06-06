@@ -24,7 +24,7 @@ NOTE: API для материалов:
 */
 
 import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4, AudioLoader } from 'three';
-import { copy_material, get_file_name, get_material_hash } from './helpers/utils';
+import { copy_material, get_file_name, get_material_hash, is_tile } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
@@ -36,6 +36,7 @@ import { deepClone, getObjectHash, hexToRGB, rgbToHex } from '../modules/utils';
 import { Slice9Mesh } from './objects/slice9';
 import { IBaseEntityData } from './types';
 import { MultipleMaterialMesh } from './objects/multiple_material_mesh';
+import { get_hash_by_mesh } from '@editor/inspectors/ui_utils';
 
 
 declare global {
@@ -1214,13 +1215,7 @@ export function ResourceManagerModule() {
         const changed_uniforms_data: { [key: string]: any } = {};
         for (const uniform_name of changed_uniforms) {
             const value = material_info.instances[hash].uniforms[uniform_name].value;
-            if (value instanceof Texture) {
-                const texture_name = get_file_name((value as any).path || '');
-                const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
-                changed_uniforms_data[uniform_name] = `${atlas}/${texture_name}`;
-            } else {
-                changed_uniforms_data[uniform_name] = value;
-            }
+            changed_uniforms_data[uniform_name] = value;
         }
         return changed_uniforms_data;
     }

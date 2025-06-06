@@ -3,7 +3,7 @@ import { Vector3, Quaternion } from "three";
 
 declare global {
     namespace collectionfactory {
-        export function create(url: string, position: vmath.vector3, rotation?: vmath.quaternion, scale?: vmath.vector3): string[];
+        export function create(url: string, position: vmath.vector3, rotation?: vmath.quaternion, scale?: vmath.vector3): { [key: string]: hash };
     }
 }
 
