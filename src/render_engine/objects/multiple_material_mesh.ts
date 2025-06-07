@@ -1,4 +1,4 @@
-import { MeshBasicMaterial, ShaderMaterial, Texture, Vector3 } from "three";
+import { MeshBasicMaterial, ShaderMaterial, Texture } from "three";
 import { EntityPlane } from "./entity_plane";
 import { MaterialUniformType } from "../resource_manager";
 import { get_file_name } from "../helpers/utils";

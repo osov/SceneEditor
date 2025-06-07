@@ -3,7 +3,6 @@ import { Slice9Mesh } from "./slice9";
 import { TextMesh } from "./text";
 import { EntityBase } from "./entity_base";
 import { flip_geometry_x, flip_geometry_y, flip_geometry_xy } from "../helpers/utils";
-import { deepClone } from "../../modules/utils";
 
 
 export class GuiContainer extends EntityBase {
@@ -33,10 +32,84 @@ export class GoContainer extends EntityBase {
 
 export class GuiBox extends Slice9Mesh {
     public type = IObjectTypes.GUI_BOX;
+
+    // NOTE: если у родителя сбросить alpha в 0, то все дочерние боксы уйдут в 0 не сохранив свое состояние, и потом если этого же родителя вернуть в 1, то дочерние так и останутся в 0, и им нужно заново выставлять относительное значение 
+
+    get_alpha(): number {
+        let inheredAlpha = 1;
+        if (this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
+            const parent = this.parent as GuiBox | GuiText;
+            inheredAlpha = parent.get_alpha();
+        }
+        return inheredAlpha > 0.001 ? this.material.uniforms.alpha.value / inheredAlpha : this.material.uniforms.alpha.value;
+    }
+
+    set_alpha(value: number) {
+        let inheredAlpha = 1;
+        if (this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
+            const parent = this.parent as GuiBox | GuiText;
+            inheredAlpha = parent.get_alpha();
+        }
+        value *= inheredAlpha;
+        const previousAlpha = this.material.uniforms.alpha.value;
+        ResourceManager.set_material_uniform_for_mesh(this, 'alpha', value);
+        this.children.forEach(child => {
+            if (child instanceof GuiBox) {
+                let v = child.material.uniforms.alpha.value;
+                if (previousAlpha > 0.001 && value > 0.001) {
+                    v = child.material.uniforms.alpha.value / previousAlpha;
+                }
+                ResourceManager.set_material_uniform_for_mesh(child, 'alpha', v * value);
+            }
+            else if (child instanceof GuiText) {
+                let v = child.fillOpacity
+                if (previousAlpha > 0.001 && value > 0.001) {
+                    v = child.fillOpacity / previousAlpha;
+                }
+                child.fillOpacity = v * value;
+            }
+        });
+    }
 }
 
 export class GuiText extends TextMesh {
     public type = IObjectTypes.GUI_TEXT;
+
+    get_alpha(): number {
+        let inheredAlpha = 1;
+        if (this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
+            const parent = this.parent as GuiBox | GuiText;
+            inheredAlpha = parent.get_alpha();
+        }
+        return inheredAlpha > 0.001 ? this.fillOpacity / inheredAlpha : this.fillOpacity;
+    }
+
+    set_alpha(value: number) {
+        let inheredAlpha = 1;
+        if (this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
+            const parent = this.parent as GuiBox | GuiText;
+            inheredAlpha = parent.get_alpha();
+        }
+        value *= inheredAlpha;
+        const previousAlpha = this.fillOpacity;
+        this.fillOpacity = value;
+        this.children.forEach(child => {
+            if (child instanceof GuiBox) {
+                let v = child.material.uniforms.alpha.value;
+                if (previousAlpha > 0.001 && value > 0.001) {
+                    v = child.material.uniforms.alpha.value / previousAlpha;
+                }
+                ResourceManager.set_material_uniform_for_mesh(child, 'alpha', v * value);
+            }
+            else if (child instanceof GuiText) {
+                let v = child.fillOpacity;
+                if (previousAlpha > 0.001 && value > 0.001) {
+                    v = child.fillOpacity / previousAlpha;
+                }
+                child.fillOpacity = v * value;
+            }
+        });
+    }
 }
 
 export enum FlipMode {

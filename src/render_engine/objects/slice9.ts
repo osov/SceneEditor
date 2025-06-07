@@ -210,10 +210,6 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         geometry.attributes['color'].needsUpdate = true;
     }
 
-    function set_alpha(value: number) {
-        ResourceManager.set_material_uniform_for_mesh(mesh, 'alpha', value);
-    }
-
     function get_bounds(wp: Vector3, ws: Vector3) {
         const bb = convert_width_height_to_pivot_bb(parameters.width, parameters.height, parameters.pivot_x, parameters.pivot_y);
         // left top right bottom
@@ -313,7 +309,7 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         update_parameters();
     }
 
-    return { set_size, set_slice, set_color, set_alpha, set_material, set_texture, get_bounds, set_pivot, set_anchor, serialize, deserialize, geometry, parameters };
+    return { set_size, set_slice, set_color, set_material, set_texture, get_bounds, set_pivot, set_anchor, serialize, deserialize, geometry, parameters };
 }
 
 
@@ -332,14 +328,6 @@ export class Slice9Mesh extends EntityPlane {
         this.geometry = this.template.geometry;
         this.set_size(width, height);
         // this.set_alpha(1.0);
-    }
-
-    get_alpha(): number {
-        return this.material.uniforms.alpha.value;
-    }
-
-    set_alpha(value: number) {
-        this.template.set_alpha(value);
     }
 
     set_size(w: number, h: number) {

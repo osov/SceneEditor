@@ -1,7 +1,7 @@
 import { Euler, ShaderMaterial, Vector2, Vector3, Vector4 } from "three";
 import { degToRad, radToDeg } from "three/src/math/MathUtils";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
-import { GoSprite, FlipMode } from "../render_engine/objects/sub_types";
+import { GoSprite, FlipMode, GuiBox, GuiText } from "../render_engine/objects/sub_types";
 import { TextMesh } from "../render_engine/objects/text";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { ChangeInfo, PropertyType, BeforeChangeInfo, PropertyData } from "../modules_editor/Inspector";
@@ -80,7 +80,7 @@ export enum MeshPropertyTitle {
     ANCHOR = 'Anchor',
     ANCHOR_PRESET = 'Anchor Preset',
     COLOR = 'Цвет',
-    TEXT_ALPHA = 'Текст Альфа',
+    TEXT_ALPHA = 'Прозрачность',
     SLICE9 = 'Slice9',
     TEXT = 'Текст',
     FONT = 'Шрифт',
@@ -147,7 +147,7 @@ function MeshInspectorCreate() {
 
     function subscribe() {
         EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
-            set_selected_meshes(e.list.map((value) => value.mesh_data.id));
+            set_selected_meshes(e.list.map((value: IBaseMeshAndThree) => value.mesh_data.id));
         });
 
         EventBus.on('SYS_UNSELECTED_MESH_LIST', () => {
@@ -448,7 +448,13 @@ function MeshInspectorCreate() {
             key: MeshProperty.TEXT_ALPHA,
             title: MeshPropertyTitle.TEXT_ALPHA,
             value: (mesh as TextMesh).fillOpacity,
-            type: PropertyType.NUMBER,
+            type: PropertyType.SLIDER,
+            params: {
+                min: 0,
+                max: 1,
+                step: 0.01,
+                format: (v: number) => v.toFixed(2)
+            },
             onBeforeChange: saveTextAlpha,
             onChange: handleTextAlphaChange
         });
@@ -651,9 +657,20 @@ function MeshInspectorCreate() {
                         case MaterialUniformType.RANGE:
                             const range = uniform as IUniform<number>;
                             const range_params = uniformInfo.params as MaterialUniformParams[MaterialUniformType.RANGE];
+                            let value = range.value;
+                            let onBeforeChange = saveUniformRange;
+                            let onChange = handleUniformRangeChange;
+                            let onRefresh = undefined;
+                            // NOTE: для ui нужны свои обработчики
+                            if (key == 'alpha' && (mesh instanceof GuiBox || mesh instanceof GuiText)) {
+                                value = mesh.get_alpha();
+                                onBeforeChange = saveUIAlpha;
+                                onChange = handleUIAlphaChange;
+                                onRefresh = refreshUIAlpha;
+                            }
                             material_fields.push({
                                 key,
-                                value: range.value,
+                                value,
                                 type: PropertyType.SLIDER,
                                 readonly: uniformInfo.readonly,
                                 params: {
@@ -662,8 +679,9 @@ function MeshInspectorCreate() {
                                     step: range_params.step ?? 0.01
                                 },
                                 data: { material_index: index },
-                                onBeforeChange: saveUniformRange,
-                                onChange: handleUniformRangeChange
+                                onBeforeChange,
+                                onChange,
+                                onRefresh
                             });
                             break;
                         case MaterialUniformType.VEC2:
@@ -2814,6 +2832,58 @@ function MeshInspectorCreate() {
         });
     }
 
+    function saveUIAlpha(info: BeforeChangeInfo) {
+        const alphas: MeshMaterialUniformInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (!mesh || !(mesh instanceof GuiBox)) return;
+
+            const uniform = mesh.material.uniforms[info.field.key];
+            if (uniform) {
+                alphas.push({
+                    mesh_id: id,
+                    material_index: 0,
+                    uniform_name: info.field.key,
+                    value: uniform.value
+                });
+            }
+        });
+        HistoryControl.add('MESH_UI_ALPHA', alphas, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleUIAlphaChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshMaterialData<number>(info);
+        updateUIAlpha(data, info.data.event.last);
+    }
+
+    function updateUIAlpha(data: MeshMaterialUniformInfo<number>[], _: boolean) {
+        data.forEach((item) => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (!mesh || !(mesh instanceof GuiBox)) return;
+
+            mesh.set_alpha(item.value);
+
+            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+                mesh_id: item.mesh_id,
+                material_index: item.material_index,
+                is_uniform: true,
+                property: item.uniform_name,
+                value: item.value
+            }, false);
+        });
+
+        Inspector.refresh(['alpha']);
+    }
+
+    function refreshUIAlpha(ids: number[]) {
+        const mesh = SceneManager.get_mesh_by_id(ids[0]);
+        if (mesh == undefined || !(mesh instanceof GuiBox)) {
+            Log.error('[refreshUIAlpha] Mesh not found for id:', ids);
+            return 1;
+        }
+        return mesh.get_alpha();
+    }
+
     function saveUniformVec2(info: BeforeChangeInfo) {
         const vec2s: MeshMaterialUniformInfo<Vector2>[] = [];
         info.ids.forEach((id) => {
@@ -3404,6 +3474,10 @@ function MeshInspectorCreate() {
             case 'MESH_MATERIAL_RANGE':
                 const ranges = event.data as MeshMaterialUniformInfo<number>[];
                 updateUniformRange(ranges, true);
+                break;
+            case 'MESH_UI_ALPHA':
+                const uiAlphas = event.data as MeshMaterialUniformInfo<number>[];
+                updateUIAlpha(uiAlphas, true);
                 break;
             case 'MESH_MATERIAL_VEC2':
                 const vec2s = event.data as MeshMaterialUniformInfo<Vector2>[];
