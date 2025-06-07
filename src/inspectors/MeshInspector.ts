@@ -258,20 +258,23 @@ function MeshInspectorCreate() {
         });
     }
 
-    function generateTransformFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+    function generateTransformFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree, isGui = false) {
         const transform_fields: PropertyData<PropertyType>[] = [];
         transform_fields.push({
             key: MeshProperty.POSITION,
             title: MeshPropertyTitle.POSITION,
-            value: mesh.get_position(),
-            type: PropertyType.VECTOR_3,
-            params: {
+            value: isGui ? new Vector2(mesh.position.x, mesh.position.y) : mesh.get_position(),
+            type: isGui ? PropertyType.VECTOR_2 : PropertyType.VECTOR_3,
+            params: isGui ? {
+                x: { step: 0.1, format: (v: number) => v.toFixed(1) },
+                y: { step: 0.1, format: (v: number) => v.toFixed(1) }
+            } : {
                 x: { step: 0.1, format: (v: number) => v.toFixed(1) },
                 y: { step: 0.1, format: (v: number) => v.toFixed(1) },
-                z: { step: 0.1, format: (v: number) => v.toFixed(1) },
+                z: { step: 0.1, format: (v: number) => v.toFixed(1) }
             },
             onBeforeChange: savePosition,
-            onChange: handlePositionChange,
+            onChange: isGui ? handleGuiPositionChange : handlePositionChange,
             onRefresh: refreshPosition
         });
 
@@ -1209,13 +1212,13 @@ function MeshInspectorCreate() {
     }
 
     function generateGuiBoxFields(list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
-        generateTransformFields(fields, mesh);
+        generateTransformFields(fields, mesh, true);
         generateGuiTransformFields(fields, mesh);
         generateMaterialFields('Материал', list, fields, mesh, (mesh as Slice9Mesh).material, true, true, false);
     }
 
     function generateGuiTextFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
-        generateTransformFields(fields, mesh);
+        generateTransformFields(fields, mesh, true);
         generateGuiTransformFields(fields, mesh);
         generateTextFields(fields, mesh);
     }
@@ -1755,6 +1758,24 @@ function MeshInspectorCreate() {
         const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
         TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
+    }
+
+    function handleGuiPositionChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<Vector2>(info);
+        updateGuiPosition(data, info.data.event.last);
+    }
+
+    function updateGuiPosition(data: { mesh_id: number, value: Vector2 }[], last: boolean) {
+        data.forEach(({ mesh_id, value }) => {
+            const mesh = SceneManager.get_mesh_by_id(mesh_id);
+            if (mesh) {
+                mesh.position.x = value.x;
+                mesh.position.y = value.y;
+            }
+        });
+        if (last) {
+            force_refresh();
+        }
     }
 
     function saveRotation(info: BeforeChangeInfo) {
