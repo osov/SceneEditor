@@ -2014,6 +2014,7 @@ const ORIGIN_POINT: PointLike = {
     y: NaN,
 }
 export const MATRIX_INDENTITY = Matrix(1, 0, 0, 1, 0, 0);
+export const MATRIX_REFLECTION = Matrix(-1, 0, 0, 1, 0, 0);
 export const MATRIX_EMPTY = Matrix(0, 0, 0, 0, 0, 0);
 export const POINT_EMPTY = Point(0, 0);
 export const CIRCLE_EMPTY = Circle(POINT_EMPTY, 0);

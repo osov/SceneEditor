@@ -18,114 +18,20 @@ import {
 } from '../modules/Geometry';
 import { Line as GeomLine } from 'three';
 import { LinesDrawer } from '../modules/LinesDrawer';
+import { PlayerMovementSettings, default_settings, ControlType } from '@editor/modules/types';
 
 
-/**
- * JS (JOYSTICK) двигается в направлении, полученном от джойстика   
- * FP (FOLLOW_POINTER) - двигается в направлении курсора, пока не достигнет точки уровня, в которой была отпущена ЛКМ   
- * GP (GO_TO_POINT) - ищет путь к позиции где был клик
- */
-export enum ControlType {
-    JS,
-    FP,
-    GP,
-    // FOLLOW_DIRECTION,            
-}
-
-export type PlayerMovementSettings = {
-    width: number,
-    heigth: number,
-    max_predicted_way_intervals: number,  // Макс. количество отрезков прогнозируемого пути, на котором цикл построения пути завершится преждевременно
-    predicted_way_lenght_mult: number,    // Множитель длины пути для построения пути с запасом
-    collision_min_error: number,          // Минимальное расстояние сближения с припятствиями, для предотвращения соприкосновений геометрий 
-    min_required_way: number,
-    min_awailable_way: number,
-    min_idle_time: number,
-    min_target_change: number,
-    control_type: ControlType,
-    keys_control: boolean,         // TODO: управление через клавиатуру
-    model_layer: number,
-    target_stop_distance: number,  // Расстояние остановки игрока от точки target
-    animation_names: AnimationNames,
-    update_interval: number,       // Интервал между обновлениями прогнозируемого пути по умолчанию 
-    min_update_interval: number,   // Минимальный интервал между обновлениями прогнозируемого пути
-    update_way_angle: number,      // Минимальный угол изменения направления движения, при котором произойдёт обновление прогнозируемого пути
-    block_move_min_angle: number,  // Минимальный угол между нормалью к препятствию и направлением движения, при котором возможно движение вдоль препятствия
-    speed: SpeedSettings,
-    collision_radius: number,      // Радиус столкновения управляемого персонажа с препятствиями
-    max_try_dist: number,          // Только для BASIC режима расчёта пути, шаг проверки столкновений с препятствиями
-    max_blocked_move_time: number, // Время нахождения застрявшего игрока в одной позиции, после которого движение приостановится
-    blocked_move_min_dist: number, // Минимальное расстояние для перемещения, меньше него позиция остаётся прежней.
-    min_stick_dist: number,
-    debug?: boolean,
-    clear_drawn_lines?: boolean,   // Если false, все рисуемые линии остаются после update
-    obstacles_space_cell_size: number,
-    max_subgrid_size: number,
-    min_subgrid_size: number,
-    grid_params: GridParams,
-}
-
-type AnimationNames = {
-    IDLE: string,
-    WALK: string,
-    RUN?: string,
-}
-
-type SpeedSettings = {
-    WALK: number,
-    RUN?: number,
-}
-
-export type GridParams = {
-    start: PointLike,
-    amount: PointLike,
-    cell_size: number,
-    origin_offset?: PointLike,
-}
-
-export type SubGridParams = {
-    offset: PointLike,
-    amount: PointLike,
-}
-
-export const default_obstacle_grid: GridParams = {
-    start: { x: 0, y: 0 },
-    amount: { x: 100, y: 100 },
-    cell_size: 10,
-    origin_offset: { x: 0, y: 0 },
-}
-
-export const default_settings: PlayerMovementSettings = {
-    width: 50 * WORLD_SCALAR,
-    heigth: 50 * WORLD_SCALAR,
-    max_predicted_way_intervals: 10,
-    predicted_way_lenght_mult: 1.5,
-    collision_min_error: 0.01,
-    min_required_way: 0.8,
-    min_awailable_way: 0.8,
-    min_idle_time: 0.7,
-    min_target_change: 1.5,
-    control_type: ControlType.FP,
-    keys_control: true,
-    target_stop_distance: 0.5,
-    model_layer: 15,
-    animation_names: { IDLE: "Unarmed Idle", WALK: "Unarmed Run Forward" },
-    update_interval: 2.5,
-    min_update_interval: 0.2,
-    update_way_angle: 3 * Math.PI / 180,
-    block_move_min_angle: 15 * Math.PI / 180,
-    speed: { WALK: 26 },
-    collision_radius: 4,
-    max_try_dist: 0.2,
-    max_blocked_move_time: 5,
-    blocked_move_min_dist: 0.006,
-    clear_drawn_lines: true,
-    min_stick_dist: 15,
-    obstacles_space_cell_size: 150 * WORLD_SCALAR,
-    max_subgrid_size: 100,
-    min_subgrid_size: 70,
-    grid_params: default_obstacle_grid,
-}
+const RED = 0xff0000;
+const LIGHT_RED = 0xff3333
+const DARK_RED = 0xaa0000;
+const BLUE = 0x2233ff;
+const LIGHT_BLUE = 0x6677ff;
+const PURPLE = 0xee44ff;
+const YELLOW = 0xffff00;
+const ORANGE = 0xff6600;
+const GREEN = 0x00ff00;
+const GRAY = 0x333333;
+const WHITE = 0xffffff;
 
 
 function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
@@ -193,9 +99,8 @@ export function load_obstacles(map_data: MapData) {
 
 export function MovementControlCreate(settings: PlayerMovementSettings = default_settings) {
     const LD = LinesDrawer();
-
-    const width = settings.width;
-    const height = settings.heigth;
+    const width = 50 * WORLD_SCALAR;
+    const height = 50 * WORLD_SCALAR;
     let pointer = point(0, 0);
     let target = point(0, 0);
     let last_check_dir = vector(pointer, target);
@@ -215,6 +120,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
     let blocked_max_dist = settings.blocked_move_min_dist;
     let update_t_interval = settings.update_interval;
     let min_update_t_interval = settings.min_update_interval;
+    let min_find_path_interval = settings.min_find_path_interval;
     let update_way_angle = settings.update_way_angle;
     let min_stick_dist = settings.min_stick_dist;
     let predicted_way_lenght_mult = settings.predicted_way_lenght_mult;
@@ -256,7 +162,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                 last_upd_time_elapsed += e.dt;
                 if (!has_target) return;
                 if (check_target_change()) {
-                    if (last_upd_time_elapsed >= min_update_t_interval) {
+                    if (last_upd_time_elapsed >= min_find_path_interval) {
                         update_predicted_way();
                         last_upd_time_elapsed = 0;
                     }
@@ -288,8 +194,6 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                 last_upd_time_elapsed += e.dt;
                 if (!stick_start) return;
                 if (check_dir_change()) {
-                    // TODO: Возможно стоит сделать зависимость min_update_t_interval от величины изменения 
-                    // направления, чем сильнее изменилось направление, там меньше интервал времени до следующего update_predicted_way()
                     if (last_upd_time_elapsed >= min_update_t_interval) {
                         update_predicted_way();
                         last_upd_time_elapsed = 0;
@@ -355,8 +259,8 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                     const end = Camera.screen_to_world(stick_end.x, stick_end.y);
                     LD.clear_container(joystick);
                     if (settings.debug) {
-                        LD.add_arc(arc(point(start.x, start.y), 3, 0, Math.PI * 2), joystick, 0xffffff);
-                        LD.add_arc(arc(point(end.x, end.y), 3, 0, Math.PI * 2), joystick, 0xff0000);
+                        LD.draw_arc(arc(point(start.x, start.y), 3, 0, Math.PI * 2), joystick, RED);
+                        LD.draw_arc(arc(point(end.x, end.y), 3, 0, Math.PI * 2), joystick, RED);
                     }
 
                 }
@@ -377,16 +281,25 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             last_check_dir = current_dir.clone();
             last_check_target = target.clone();
             const way = PF.update_way(way_required, pointer_control);
+            const {clear_ways, blocked_ways, way_tree} = PF.get_path_tree();
             LD.clear_container(player_way);
-            for (const entry of way) {
-                if (entry.name == 'segment') {
-                    const segment = entry as Segment;
-                    LD.add_line(segment.start, segment.end, player_way, 0x8844ff);
-                }
-                else {
-                    const arc = entry as Arc;
-                    LD.add_arc(arc, player_way, 0x8844ff);
-                }
+            for (const way of blocked_ways) {
+                if (way.arc) 
+                    LD.draw_arc(way.arc, player_way, ORANGE);
+                if (way.segment) 
+                    LD.draw_line(way.segment, player_way, ORANGE);
+            }
+            for (const way of clear_ways) {
+                if (way.arc) 
+                    LD.draw_arc(way.arc, player_way, LIGHT_BLUE);
+                if (way.segment) 
+                    LD.draw_line(way.segment, player_way, LIGHT_BLUE);
+            }
+            for (const interval of way) {
+                if (interval.name == 'arc') 
+                    LD.draw_arc(interval as Arc, player_way, PURPLE);
+                else 
+                    LD.draw_line(interval as Segment, player_way, PURPLE);
             }
         }
 
@@ -394,7 +307,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             const cp = point(model.position.x, model.position.y);
             let lenght_remains = dt * current_speed * predicted_way_lenght_mult;
             let way_required = segment(cp.x, cp.y, target.x, target.y);
-            if (pointer_control == ControlType.FP) {
+            if (pointer_control == ControlType.FP || pointer_control == ControlType.GP) {
                 if (lenght_remains < way_required.length()) {
                     const _segment = way_required.splitAtLength(lenght_remains)[0];
                     way_required = (_segment) ? _segment : segment(cp.x, cp.y, cp.x, cp.y);
@@ -501,7 +414,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             model.rotation.y = interpolate_with_wrapping(model.rotation.y, Math.atan2(dir.y, dir.x) + Math.PI / 2, 0.1, 0, 2 * Math.PI);
             model.transform_changed();
             if (player_geometry.children.length == 0) {
-                LD.add_arc(Arc(POINT_EMPTY, settings.collision_radius, 0, Math.PI * 2), player_geometry, 0xff0000);
+                LD.draw_arc(Arc(POINT_EMPTY, settings.collision_radius, 0, Math.PI * 2), player_geometry, RED);
             }
             for (const line of player_geometry.children) {
                 line.position.x = current_pos.x;

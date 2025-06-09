@@ -1,51 +1,25 @@
-import { Arc, CCW, CW, Point, Segment, Vector, point, vector_from_points as vector, segment, arc, vec_angle, PointLike } from "./Geometry";
-import { PlayerMovementSettings, ControlType, SubGridParams, default_obstacle_grid, default_settings } from "../modules_editor/PlayerMovement";
-import { EQ_0 } from "./utils";
+import { Arc, CCW, CW, Point, Segment, Vector, vector_from_points as vector, segment, arc, vec_angle, PointLike, vector_from_points, POINT_EMPTY } from "./Geometry";
+import { DP_TOL, EQ, EQ_0 } from "./utils";
 import { ObstaclesGrid, ObstaclesManager } from "@editor/utils/obstacle_manager";
 import { AStarFinder } from 'astar-typescript';
+import { ClosestObstacleData, ControlType, default_obstacle_grid, default_settings, NextMoveType, PlayerMovementSettings, PredictNextMoveData, SubGridParams, WayNode } from "./types";
 
 
 export type PathFinder = ReturnType<typeof PathFinderModule>;
 
-type PredictNextMoveData = {
-    next_do: NextMoveType, 
-    way_required: Segment,
-    lenght_remains: number,
-    vertice_to_bypass?: Point,
-    prev_vertice?: Point,
-    obstacle_to_slide?: Segment,
-    prev_obstacle?: Segment,
-    control_type: ControlType,
-}
-
-type ClosestObstacleData = {
-    obstacle?: Segment,
-    distance: number,
-    point?: Point,
-    way?: Segment | Arc,
-    is_vertice: boolean,
-}
-
-type WayTreeNode = {
-    interval: Arc | Segment,
-    total_length: number,
-    depth: number,
-    children: WayTreeNode[],
-    parent?: WayTreeNode,
-}
-
-enum NextMoveType {
-    STRAIGHT_LINE,
-    SLIDE_OBSTACLE,
-    BYPASS_ANGLE,
-    STOP,
-}
-
-const point_zero = point(0, 0);
-
 
 export function PathFinderModule(settings: PlayerMovementSettings, obstacles_manager: ReturnType<typeof ObstaclesManager>) {
     const logger = Log.get_with_prefix('pathfinder')
+    const way: (Segment | Arc)[] = [];
+    const way_tree_root: WayNode = {
+        children: [], 
+        depth: 0, 
+        total_length: 0
+    };
+    const end_nodes: WayNode[] = []; 
+    const clear_way_nodes: WayNode[] = [];
+    const blocked_way_nodes: WayNode[] = [];
+
     const max_intervals =  settings.max_predicted_way_intervals;
     const collision_min_error = settings.collision_min_error;
     const blocked_move_min_dist = settings.blocked_move_min_dist;
@@ -53,14 +27,22 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
     const max_try_dist = settings.max_try_dist;
     const collision_radius = settings.collision_radius;
     const debug =  settings.debug;
-    const way: (Segment | Arc)[] = [];
+
+    // Настройки поиска пути на сетке
     const max_subgrid_size = settings.max_subgrid_size;
     const min_subgrid_size = settings.min_subgrid_size;
     const max_grid_pathway = 300;
-    let _way_tree: WayTreeNode | undefined = undefined;
+
+    // Настройки геометрического поиска пути
+    const max_checks = settings.max_checks_number;
+    const max_checks_one_dir = settings.max_checks_one_dir;
+    const max_depth = settings.max_depth;
+    const max_way_length = settings.max_way_length;
+    const max_update_time = settings.max_update_time;
+
     let _way_total_length = 0;
-    let current_pos = point_zero;
-    let current_target = point_zero;
+    let current_pos = POINT_EMPTY;
+    let current_target = POINT_EMPTY;
     let checking_obstacles = true;
 
     function enable_obstacles(enable = true) {
@@ -71,85 +53,640 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
         return checking_obstacles;
     }
 
-    function update_way_tree(way_required: Segment, pointer_control: ControlType) {
-        clear_way();
-        const start_length_remains = way_required.length();
-
-    }
-
-    function _next_nove(data: PredictNextMoveData, parent?: WayTreeNode) {
-        if (parent && max_intervals == parent.depth) return;
-        if (debug)  {
-            logger.log(`Next move in predicted way:`, NextMoveType[data.next_do]);   
-        }
-        let interval: Arc | Segment | null;
-        const depth = parent ? parent.depth + 1 : 1;
-        let total_length = parent ? parent.total_length : 0;
-        if (data.next_do == NextMoveType.STRAIGHT_LINE) {
-            interval = linear_move_recursive(data, parent);
-        }
-        // else if (data.next_do == NextMoveType.BYPASS_ANGLE) {
-        //     interval = bypass_vertice_recursive(data, parent);
-        // }
-        // if (interval) {
-        //     total_length += interval.length();
-        //     const child: WayTreeNode = {interval, total_length, depth, children: [], parent};
-        //     if (parent) parent.children.push(child);
-        // }
-    }
-
-    function linear_move_recursive(data: PredictNextMoveData, parent?: WayTreeNode): Segment | null {
-        const closest = find_closest_obstacle(data.way_required);
-        let allowed_way = undefined;
-        let next_do = NextMoveType.STOP;
-        let way_required = data.way_required;
-        let lenght_remains = data.lenght_remains;
-        let obstacle_to_slide: Segment | undefined = undefined;
-        if (!closest.obstacle) { 
-            lenght_remains = 0; 
-            allowed_way = data.way_required;
-        }
-        else {
-            let distance_before_collision = closest.distance;
-            if (distance_before_collision < 0) {
-                distance_before_collision = 0;
-            }
-            const way_segments = data.way_required.splitAtLength(distance_before_collision);
-            allowed_way = way_segments[0];
-            way_required = way_segments[1] as Segment;
-            obstacle_to_slide = closest.obstacle;
-            lenght_remains -= distance_before_collision;
-            if (closest.is_vertice) {
-                data.vertice_to_bypass = closest.point;
-                next_do = NextMoveType.BYPASS_ANGLE; 
-            } 
-            else {
-                next_do = NextMoveType.SLIDE_OBSTACLE;
-            }
-        }
-        const next_move_data: PredictNextMoveData = {next_do, way_required, lenght_remains, obstacle_to_slide, control_type: data.control_type}
-        _next_nove(next_move_data, parent)
-        return allowed_way;
-    }
-
-
     function update_way(way_required: Segment, control_type: ControlType) {
         clear_way();
         const now = Date.now();
+
         if (control_type == ControlType.JS || control_type == ControlType.FP)
             way.push(...predict_way(way_required, control_type));
-        if (control_type == ControlType.GP)
-            way.push(...find_way_aStar(way_required));
+
+        if (control_type == ControlType.GP) {
+            way.push(...find_way(way_required));
+            // Если не удалось определить путь через find_way, строим обычным способом
+            if (way.length == 0)
+                way.push(...default_update_way(way_required, ControlType.FP));
+        }
+
         log('Update_way took time: ', Date.now() - now, ' ms');
         return way;
     }
 
     function default_update_way(way_required: Segment, control_type: ControlType) {
-        return [];
+        return predict_way(way_required, control_type);
+    }
+
+    function find_way(way_required: Segment) {
+        log(`Start find_way`);
+        const way: (Segment | Arc)[] = [];
+        const target = way_required.end;
+        const start = way_required.start;
+        const R = collision_radius + collision_min_error
+        
+        // Сначала проверим, что зона возле target позиции свободна от препятствий
+        // TODO: Можно сделать варианет, что если в пределах collision_radius с target есть 
+        // препятствие, искать свободную позицию в заданном радиусе от target.
+        const obstacles_close_to_target = obstacles_manager.get_obstacles(target.x, target.y, 2 * R, 2 * R);
+        if (obstacles_close_to_target.length > 0) {
+            for (const obstacle of obstacles_close_to_target) {
+                const dist = target.distanceTo(obstacle)[0];
+                if (dist < R) {
+                    if (debug) 
+                        logger.log('Слишком близко к препятствию!')
+                    return way;
+                }
+            }
+        }
+
+        // Строим дерево путей и получаем его конечные ноды.
+        const {end_nodes} = build_path_tree(way_required, max_checks);
+        let min_length = Infinity;
+        let min_length_node: WayNode | undefined = undefined;
+
+        // Ищем ноду с минимальной полной длиной пути и восстанавливаем полный путь до start.
+        if (end_nodes.length > 0) {
+            for (const node of end_nodes) {
+                if (node.total_length < min_length) {
+                    min_length = node.total_length;
+                    min_length_node = node;
+                }
+            }
+        }
+        if (min_length_node != undefined) {
+            let node: WayNode | undefined = min_length_node;
+            while (node) {
+                if (node.segment) way.push(node.segment as Segment);
+                if (node.arc) way.push(node.arc);
+                node = node.parent;
+            }
+        }
+        for (const interval of way) 
+            _way_total_length += interval.length();
+        way.reverse()
+
+        return way;
+    }
+
+    function build_path_tree(way_required: Segment, max_checks: number) {
+        const target = way_required.end;
+        const checked_obstacles: {obstacles: Segment[], start_pos: Point}[] = [];
+        const ways_to_check: WayNode[] = [];
+        const way_required_node: WayNode = {
+            segment: way_required, 
+            children: [], 
+            parent: way_tree_root,
+            depth: 1, 
+            total_length: way_required.length()
+        };
+        way_tree_root.children.push(way_required_node);
+
+        ways_to_check.push(way_required_node);
+        let checks_number = 0;
+        const time = Date.now();
+        let time_elapsed = 0;
+
+        // Пока есть пути, которые нужно проверить, при этом не превысили ограничений по числу проверок:
+        while (ways_to_check.length > 0 && checks_number <= max_checks && time_elapsed <= max_update_time) {
+            const way_to_check = ways_to_check.splice(0, 1)[0] as WayNode;
+            const result = check_way_node(way_to_check, target, checked_obstacles);
+            ways_to_check.push(...result.ways_to_check);
+            end_nodes.push(...result.end_nodes);
+            clear_way_nodes.push(...result.clear_way_nodes);
+            blocked_way_nodes.push(...result.blocked_way_nodes);
+            checks_number ++;
+            time_elapsed = Date.now() - time;
+        }
+        return {end_nodes, clear_way_nodes, blocked_way_nodes};
+    }
+
+    /**
+     * Для поиска пути: достаёт массив препятствий, к которым уже были построены обходные пути из указанной start_pos, создаёт новый массив, если он не был найден
+     */
+    function get_checked_obstacles(checked_obstacles: {obstacles: Segment[], start_pos: Point}[], start_pos: Point): Segment[] {
+        let found_entry: Segment[] | undefined;
+        let result: Segment[];
+        for (const entry of checked_obstacles) {
+            if (entry.start_pos.equalTo(start_pos)) {
+                found_entry = entry.obstacles;
+            }
+        }
+        if (!found_entry) {
+            const new_entry = {obstacles: [], start_pos}
+            checked_obstacles.push(new_entry);
+            result = new_entry.obstacles;
+        }
+        else result = found_entry;
+        return result;
+    }
+
+    function check_way_node(way: WayNode, target: Point, checked_obstacles: {obstacles: Segment[], start_pos: Point}[]) {
+        const ways_to_check: WayNode[] = [];
+        const end_nodes: WayNode[] = [];
+        const clear_way_nodes: WayNode[] = [];
+        const blocked_way_nodes: WayNode[] = [];
+
+        // Если глубина либо длина полного пути данной ноды больше максимальной, пропускаем проверку, саму ноду нигде не учитываем. 
+        // TODO: можно добавлять её в список blocked_way_nodes или отдельный для отображения
+        if (way.total_length > max_way_length || way.depth > max_depth) {
+            return {ways_to_check, end_nodes, clear_way_nodes, blocked_way_nodes}
+        } 
+
+        const arc = way.arc;
+        const segment = way.segment;
+        const previous_vertice = way.previous_vertice;
+        const previous_clockwise = way.previous_clockwise;
+        const next_vertice = way.next_vertice;
+        const next_clockwise = way.next_clockwise;
+        let arc_collision = false;
+        let segment_collision = false;
+
+        // Стартовая позиция ноды - начало дуги обхода вершины препятствия, либо, если её нет, начало сегмента пути.
+        let start = (arc) ? arc.start() : segment!.start;
+        let end = segment!.end;
+
+        // Если у данной ноды есть дуга пути обхода предыдущей вершины, проверяем наличие её пересечений с препятствиями
+        if (arc) {
+            const obstacle = find_closest_obstacle(arc).obstacle;
+            if (obstacle) {
+                arc_collision = true;
+                const checked = get_checked_obstacles(checked_obstacles, arc.start());
+
+                // Если есть пересечение с препятствием и к данному препятствию еще не строили обходных путей из стартовой позиции этой ноды:
+                if (!checked.includes(obstacle)) {
+                    let sideways: WayNode[];
+
+                    // Если не указана вершина предыдущего препятствия, создаём ноды с обходными путями к препятствию напрямую их стартовой позиции этой ноды:
+                    // TODO: Раз имеем дело с дугой обхода вершины, previous_vertice никогда не будет undefined? Возможно стоит убрать make_sideways 
+                    if (!(previous_vertice && previous_clockwise != undefined)) {
+                        sideways = make_sideways(
+                            start,
+                            end,
+                            obstacle, 
+                            way.parent,
+                            collision_radius + collision_min_error,
+                        );
+                    }
+
+                    // Если указана, создаём ноды с обходными путями к препятствию с обходом вершины предыдущего препятствия:
+                    else {
+                        sideways = make_sideways_bypass_vertice(
+                            start,
+                            end,
+                            obstacle, 
+                            previous_vertice, 
+                            previous_clockwise,
+                            way.parent,
+                            collision_radius + collision_min_error
+                        );
+                    }
+                    checked.push(obstacle);
+
+                    // Добавляем новые ноды в список для проверки
+                    for (const sideway of sideways) {
+                        ways_to_check.push(sideway);
+                    }
+                }
+            }
+        }
+        
+        // Если у данной ноды есть сегмент (прямой отрезок) пути и не было пересечений с дугой пути, проверяем наличие пересечений сегмента с препятствиями
+        if (segment && !arc_collision) {
+            const obstacle = find_closest_obstacle(segment).obstacle;
+            if (obstacle) {
+                segment_collision = true;
+                const checked = get_checked_obstacles(checked_obstacles, segment.start);
+
+                // Если есть пересечение с препятствием и к данному препятствию еще не строили обходных путей из стартовой позиции этой ноды:
+                if (!checked.includes(obstacle)) {
+                    let sideways: WayNode[];
+                    if (!(previous_vertice && previous_clockwise != undefined)) {
+                        sideways = make_sideways(
+                            start, 
+                            end,
+                            obstacle,
+                            way.parent,
+                            collision_radius + collision_min_error,
+                        );
+                    }
+
+                    // Если указана, создаём ноды с обходными путями к препятствию с обходом вершины предыдущего препятствия:
+                    else {
+                        sideways = make_sideways_bypass_vertice(
+                            start, 
+                            end,
+                            obstacle, 
+                            previous_vertice,
+                            previous_clockwise, 
+                            way.parent,
+                            collision_radius + collision_min_error
+                        );
+                    }
+                    checked.push(obstacle);
+
+                    // Добавляем новые ноды в список для проверки
+                    for (const sideway of sideways) {
+                        ways_to_check.push(sideway);
+                    }
+                }
+            }
+        }
+
+        // Если пересечений элементов пути этой ноды с препятствиями не было, и конечная точка ноды совпадает с target, добавляем её в список конечных нод
+        // Иначе создаём новую ноду с началом пути в конечной точки этой ноды и добавляем её в список для проверки. 
+        if (!(arc_collision || segment_collision) && segment) {
+            clear_way_nodes.push(way);
+            if (segment.end == target) {
+                end_nodes.push(way);
+            }
+            else if (next_vertice && next_clockwise != undefined) {
+                const next_way: WayNode = make_way_bypass_vertice(
+                    segment.end, 
+                    target, 
+                    next_vertice, 
+                    next_clockwise,
+                    way
+                )
+                ways_to_check.push(next_way);
+            }
+        }
+
+        // Если было пересечение, добавляем в список блокированных путей, 
+        else
+            blocked_way_nodes.push(way);
+
+        return {ways_to_check, end_nodes, clear_way_nodes, blocked_way_nodes};
+    }
+
+    /**
+     * Построение пути WayNode для обхода препятствия, из одного сегмента (отрезка), начало в точке start, конец в точке касания с 
+     * окружностью радиусом collision_radius и центром в target_vertice. Направление обхода передаётся в clockwise.
+     * @param start стартовая точка
+     * @param target_vertice вершина, к которой строим путь
+     * @param collision_radius расстоянение столкновения
+     * @param clockwise направление обхода
+     * @param parent_node
+     * @returns WayNode
+     */
+    function make_way(start: Point, target_vertice: Point, collision_radius: number, clockwise: boolean, parent_node?: WayNode) {
+        let temp_segment = Segment(start, target_vertice);
+        let angle = Math.asin(collision_radius / temp_segment.length()) + Math.PI / 2;
+        angle = (clockwise) ? angle : -angle;
+        let temp_vec = temp_segment.vector().rotate(angle).normalize().multiply(collision_radius);
+        const way_end = target_vertice.translate(temp_vec);
+        const segment = Segment(start, way_end);
+        const node: WayNode = {
+            segment, 
+            parent: parent_node,
+            children: [],
+            depth: (parent_node) ? parent_node.depth + 1 : 0,
+            total_length: (parent_node) ? parent_node.total_length + segment.length() : segment.length(),
+            previous_vertice: parent_node?.previous_vertice, 
+            previous_clockwise: parent_node?.previous_clockwise,
+            next_vertice: target_vertice, 
+            next_clockwise: clockwise,
+        };
+        if (parent_node)
+            parent_node.children.push(node);
+        return node;
+    }
+
+    /**
+     * Построение двух вариантов обхода препятствия из стартовой точки. В отличие от make_all_sideways строит только два необходимых отрезка вместо четырёх
+     * @param start стартовая точка
+     * @param target цель к которой пытались построить путь без учёта этого препятствия
+     * @param obstacle препятствие, к которому строим обходные пути
+     * @param parent_node
+     * @param collision_radius 
+     * @returns [WayNode, WayNode]
+     */
+    function make_sideways(start: Point, target: Point, obstacle: Segment, parent_node: WayNode | undefined, collision_radius: number) {
+        const target_vec = vector_from_points(start, target);
+        const vec_l = vector_from_points(start, obstacle.start);
+        const vec_r = vector_from_points(start, obstacle.end);
+        const result: WayNode[] = [];
+        let angle_l = (!EQ_0(vec_l.length())) ? vec_angle(target_vec, vec_l) : 0;
+        let angle_r = (!EQ_0(vec_r.length())) ? vec_angle(target_vec, vec_r) : 0;
+        let clockwise_l: boolean;
+        let clockwise_r: boolean;
+
+        // В зависимости положения вершин препятствия относительно вектора направления желаемого движения target_vec, определяем направление обхода этих вершин
+        if (angle_l < 0 && angle_r < 0) {
+            clockwise_l = true;
+            clockwise_r = true;
+        }
+        else if (angle_l > 0 && angle_r > 0) {
+            clockwise_l = false;
+            clockwise_r = false;
+        }
+        else if (angle_l > angle_r) {
+            clockwise_l = true;
+            clockwise_r = false;
+        }
+        else {
+            clockwise_l = false;
+            clockwise_r = true;
+        }
+
+        // Проверяем, на каком расстоянии от вершины препятствия находится start
+        if (vec_l.length() > collision_radius - collision_min_error) {
+            // Если расстояние больше радиуса столкновения, строим отрезок
+            if (vec_l.length() > collision_radius) {
+                result.push(make_way(
+                    start,
+                    obstacle.start,
+                    collision_radius,
+                    clockwise_l,
+                    parent_node
+                ));
+            }
+            // Если расстояние до вершины меньше радиуса столкновения, но в пределах погрешности collision_min_error,
+            // значит, start уже находится возле данной вершины. Пробуем строить путь дальше, от вершины к цели движения
+            else {
+                result.push(make_way_bypass_vertice(
+                    start, 
+                    target, 
+                    obstacle.start, 
+                    clockwise_l,
+                    parent_node
+                ))
+            }
+        }
+        
+        if (vec_r.length() > collision_radius - collision_min_error) {
+            if (vec_r.length() > collision_radius) {
+                result.push(make_way(
+                    start,
+                    obstacle.end,
+                    collision_radius,
+                    clockwise_r, 
+                    parent_node
+                ));
+            }
+            else {
+                result.push(make_way_bypass_vertice(
+                    start, 
+                    target, 
+                    obstacle.end, 
+                    clockwise_r,
+                    parent_node
+                ))
+            }
+        }
+
+        return result;
+    }
+    
+
+    /**
+     * Строит все варианты путей с касательными отрезками из точки start к окуружностям с collision_radius на вершинах сегмента препятствия
+     */
+    function make_all_sideways(start: Point, target: Point, obstacle: Segment, parent_node: WayNode | undefined, collision_radius: number) {
+        const result: WayNode[] = [];
+        for (const dir of [CCW, CW]) {
+            for (const vertice of [obstacle.start, obstacle.end]) {
+                const dist = vector_from_points(start, vertice).length();
+                // Проверяем, на каком расстоянии от вершины препятствия находится start
+                if (dist > collision_radius - collision_min_error) {
+                    let node: WayNode;
+                    // Если расстояние больше радиуса столкновения, строим отрезок
+                    if (dist > collision_radius) {
+                        node = make_way(
+                            start, 
+                            vertice, 
+                            collision_radius, 
+                            dir, 
+                            parent_node
+                        );
+                    }
+                    // Если расстояние меньше радиуса столкновения, но в пределах погрешности collision_min_error,
+                    // значит, start уже находится возле данной вершины. Пробуем строить путь дальше, от вершины к цели движения
+                    else {
+                        node = make_way_bypass_vertice(
+                            start, 
+                            target, 
+                            vertice, 
+                            dir,
+                            parent_node
+                        )
+                    }
+                    result.push(node);
+                }
+                else {
+                    // Error, start уже слишком близко к препятствию
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Построение двух вариантов обхода препятствия с определением дуги пути для обхода вершины загораживающей путь
+     */
+    function make_sideways_bypass_vertice(start: Point, target: Point, obstacle: Segment, vertice: Point, clockwise = CW, parent_node?: WayNode, collision_radius?: number) {
+        const result: WayNode[] = [];
+        const R = (collision_radius) ? collision_radius : start.distanceTo(vertice)[0];
+        const arc_start_vec = vector_from_points(vertice, start);
+        const vertice_l = obstacle.start;
+        const vertice_r = obstacle.end;
+        let vec_l = vector_from_points(vertice, vertice_l);
+        let vec_r = vector_from_points(vertice, vertice_r);
+        const target_vec = vector_from_points(start, target);
+        
+        // В зависимости положения вершин препятствия относительно вектора направления желаемого движения target_vec, определяем направление обхода этих вершин
+        let same_side_touch_vertice: Point;
+        let diff_side_touch_vertice: Point;
+        if (vec_l.length() != 0 && vec_r.length() != 0) {
+            let angle_l = vec_angle(target_vec, vec_l);
+            let angle_r = vec_angle(target_vec, vec_r);
+            if (!clockwise) {
+                same_side_touch_vertice = (angle_l < angle_r) ? vertice_l : vertice_r;
+                diff_side_touch_vertice = (angle_l < angle_r) ? vertice_r : vertice_l;
+            }
+            else {
+                same_side_touch_vertice = (angle_l < angle_r) ? vertice_r : vertice_l;
+                diff_side_touch_vertice = (angle_l < angle_r) ? vertice_l : vertice_r;
+            }
+        }
+        else if (vec_l.length() == 0) {
+            same_side_touch_vertice = vertice_r;
+            diff_side_touch_vertice = vertice_l;
+        }
+        else {
+            same_side_touch_vertice = vertice_l;
+            diff_side_touch_vertice = vertice_r;
+        }
+
+        //  Далее работаем с вариантом пути, обходящим обе вершин с одной стороны
+        let vert_to_vert = Segment(vertice, same_side_touch_vertice);
+
+        // Проверяем что расстояние между вершинами не равно нулю, иначе это одна и та же вершина и строить путь не нужно
+        if (!EQ_0(vert_to_vert.length())) {
+            let prev_vertice = parent_node?.previous_vertice;
+            let prev_segment = parent_node?.segment;
+            let prev_arc = parent_node?.arc;
+            let way_diff_angle = 0;
+            
+            // Проверяем, отклоняется ли путь на больший угол от желаемого направления, чем путь ноды-родителя. 
+            // Если да, нужно определить, как строить этот путь. Присоединять его будем к родителю полученной ноды-родителя
+            if (prev_segment && !EQ_0(prev_segment.length())) {
+                way_diff_angle = vec_angle(vert_to_vert.vector(), prev_segment.vector());
+            }
+            if (prev_segment && ((way_diff_angle < 0 && clockwise) || (way_diff_angle > 0 && !clockwise))) {
+                const dist = vector_from_points(prev_segment.start, same_side_touch_vertice).length();
+                if (dist > R - collision_min_error) {
+                    let nodes: WayNode[] = [];
+                    // Если у родителя указана предыдущая вершина, будем перестраивать новый путь с помощью данной функцией от начала дуги родителя.
+                    if (prev_vertice) {
+                        nodes = make_sideways_bypass_vertice(
+                            prev_arc!.start(),
+                            target, 
+                            obstacle,
+                            prev_vertice,
+                            clockwise,
+                            parent_node?.parent,
+                            R
+                        )
+                        result.push(...nodes);
+                    }
+                    // Если нет, значит, предыдущий путь состоял из одного сегмента. Определяем вариант построения 
+                    // в зависимости от расстояния от prev_segment.start до следующей вершины.
+                    // Если расстояние больше R, строим прямой путь.
+                    else if (dist > R) {
+                        result.push(make_way(
+                            prev_segment.start, 
+                            same_side_touch_vertice, 
+                            R, 
+                            clockwise, 
+                            parent_node?.parent
+                        ));
+                    }
+                    // Иначе начало предыдущего пути уже находится возле следующей вершины, просто строим путь, обходящий её из prev_arc.start
+                    // TODO: Проверить, возможен ли такой вариант вообще
+                    if (dist < R) {
+                        result.push(make_way_bypass_vertice(
+                            prev_arc!.start(), 
+                            target, 
+                            same_side_touch_vertice,
+                            clockwise,
+                            parent_node?.parent
+                        ))
+                    }
+                }
+            }
+
+            // Если путь не будет отклоняться сильнее предыдущего пути, строим дугу для обхода вершины
+            else {
+                const obstacle_vec = vector_from_points(same_side_touch_vertice, diff_side_touch_vertice);
+                const obstacle_norm = (!clockwise) ? obstacle_vec.rotate90CCW() : obstacle_vec.rotate90CW();
+
+                const vec_S = vert_to_vert.vector().normalize().multiply(R);
+                const vec_S_norm = (!clockwise) ? vec_S.rotate90CCW() : vec_S.rotate90CW();
+
+                // Конец пути в точке:
+                const end_S_point = same_side_touch_vertice.translate(vec_S_norm);
+                const start_angle = arc_start_vec.slope();
+                let end_angle = vec_S_norm.slope();
+
+                // TODO: Возможно стоит останавливаться до столкновения с самим обходимым препятствием
+                // end_angle = (obstacle_block_angle < end_angle && end_angle < obstacle_block_angle + Math.PI) ? obstacle_block_angle : end_angle;
+                const arc_clockwise = ((start_angle > end_angle && !clockwise) || (start_angle < end_angle && clockwise)) ? !clockwise : !clockwise;
+                const way_S_arc = Arc(vertice, arc_start_vec.length(), start_angle, end_angle, arc_clockwise);
+                const way_S_segment = Segment(way_S_arc.end(), end_S_point);
+                const length_S = way_S_arc.length() + way_S_segment.length();
+                const node_S: WayNode = {
+                    segment: way_S_segment,
+                    arc: way_S_arc,
+                    parent: parent_node,
+                    children: [],
+                    depth: (parent_node) ? parent_node.depth + 1 : 0,
+                    total_length: (parent_node) ? parent_node.total_length + length_S : length_S,
+                    previous_vertice: vertice, 
+                    previous_clockwise: clockwise,
+                    next_vertice: same_side_touch_vertice, 
+                    next_clockwise: clockwise,
+                };
+                if (parent_node)
+                    parent_node.children.push(node_S);
+                result.push(node_S);
+            }
+        }
+
+        //  Далее работаем с вариантом пути, обходящим вершин с разных сторон
+        vert_to_vert = Segment(vertice, diff_side_touch_vertice);
+
+        // Путь пролегает между этими вершинами. Проверяем что расстояние между ними больше двух радиусов столкновения, иначе строить путь нет смысла.
+        if (vert_to_vert.length() > 2 * R) {
+            const obstacle_vec = vector_from_points(diff_side_touch_vertice, same_side_touch_vertice);
+            const obstacle_norm = (!clockwise) ? obstacle_vec.rotate90CW() : obstacle_vec.rotate90CCW();
+            const obstacle_block_angle = obstacle_norm.slope();
+            
+            let angle = Math.acos(2 * R / vert_to_vert.length());
+            const vec_D = vert_to_vert.vector().normalize().multiply(R); 
+            const vec_D_norm = (!clockwise) ? vec_D.rotate(-angle) : vec_D.rotate(angle);
+
+            // Конец пути в точке:
+            const end_D_point = diff_side_touch_vertice.translate(vec_D_norm.invert());
+            const start_angle = arc_start_vec.slope();
+            let end_angle = vec_D_norm.slope();
+            // end_angle = (obstacle_block_angle < end_angle && end_angle < obstacle_block_angle + Math.PI) ? obstacle_block_angle : end_angle;
+            const arc_clockwise = !clockwise;
+            const way_D_arc = Arc(vertice, arc_start_vec.length(), start_angle, end_angle, arc_clockwise);
+            const way_D_segment = Segment(way_D_arc.end(), end_D_point);
+            const length_D = way_D_arc.length() + way_D_segment.length();
+            const node_D: WayNode = {
+                segment: way_D_segment,
+                arc: way_D_arc,
+                parent: parent_node,
+                children: [],
+                depth: (parent_node) ? parent_node.depth + 1 : 0,
+                total_length: (parent_node) ? parent_node.total_length + length_D : length_D,
+                previous_vertice: vertice, 
+                previous_clockwise: clockwise, 
+                next_vertice: diff_side_touch_vertice,
+                next_clockwise: !clockwise,
+            };
+            if (parent_node)
+                parent_node.children.push(node_D);
+            result.push(node_D);
+        }
+        return result;
+    }
+
+    /**
+     * Строит путь с дугой обходящей вершину препятствия в указанном направлении и прямым отрезком из конца этой дуги до точки target
+     */
+    function make_way_bypass_vertice(start: Point, target: Point, vertice: Point, clockwise = CW, parent_node?: WayNode, collision_radius?: number) {
+        const R = (collision_radius) ? collision_radius : start.distanceTo(vertice)[0];
+        const arc_start_vec = vector_from_points(vertice, start);
+        const vert_to_target = Segment(vertice, target);
+        const angle = Math.acos(R / vert_to_target.length()) + DP_TOL;
+        const vec = vert_to_target.vector().normalize().multiply(R); 
+        const vec_norm = (clockwise) ? vec.rotate(angle) : vec.rotate(-angle);
+        const start_angle = arc_start_vec.slope();
+        const end_angle = vec_norm.slope();
+        const arc_clockwise = !clockwise;
+        
+        const arc = Arc(vertice, arc_start_vec.length(), start_angle, end_angle, arc_clockwise);
+        const segment = Segment(arc.end(), target);
+        const length = arc.length() + segment.length();
+        const node: WayNode = {
+            segment: segment,
+            arc: arc, 
+            parent: parent_node,
+            children: [],
+            depth: (parent_node) ? parent_node.depth + 1 : 0,
+            total_length: (parent_node) ? parent_node.total_length + length : length,
+            previous_vertice: vertice, 
+            previous_clockwise: clockwise, 
+            next_vertice: undefined,
+            next_clockwise: undefined,
+        };
+        if (parent_node)
+            parent_node.children.push(node);
+        return node;
     }
 
     function find_way_aStar(way_required: Segment) {
-        log(`Start find_way_aStar`)
+        log(`Start find_way_aStar`);
         const way: (Segment | Arc)[] = [];
         const grid = obstacles_manager.get_grid();
         if (!grid) {
@@ -252,8 +789,12 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
     }
 
     function clear_way() {
-        _way_tree = undefined;
         way.splice(0, way.length);
+        clear_way_nodes.splice(0, clear_way_nodes.length);
+        blocked_way_nodes.splice(0, blocked_way_nodes.length);
+        end_nodes.splice(0, end_nodes.length);
+        way.splice(0, way.length);
+        way_tree_root.children.splice(0, way_tree_root.children.length);
         _way_total_length = 0;
     }
 
@@ -664,13 +1205,17 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
         return way;
     }
 
+    function get_path_tree() {
+        return {clear_ways: clear_way_nodes, blocked_ways: blocked_way_nodes, way_tree: way_tree_root};
+    }
+
     function get_way_length() {
         return _way_total_length;
     }
 
-    return { update_way, get_way, clear_way, get_way_length,
+    return { update_way, get_way, clear_way, get_way_length, get_path_tree,
         set_current_pos, get_current_pos, get_next_pos,
-        enable_obstacles, check_obstacles_enabled
+        enable_obstacles, check_obstacles_enabled, build_path_tree
     }
 }
 

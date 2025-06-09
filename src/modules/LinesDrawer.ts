@@ -2,15 +2,17 @@ import { LineBasicMaterial, Vector2, Line as GeomLine, BufferGeometry, Vector2Li
 
 import { CAMERA_Z } from "../config";
 import { GoContainer } from "../render_engine/objects/sub_types";
-import { Point, PointLike, Vector } from "./Geometry";
+import { Point, PointLike, Segment } from "./Geometry";
 import { Arc } from './Geometry';
-import { GridParams } from '../modules_editor/PlayerMovement';
+import { GridParams } from './types';
 
 
 export function LinesDrawer() {
     const DRAWN_ARC_EDGES_AMOUNT = 60;
 
-    function add_line(a: PointLike, b: PointLike, container: GoContainer, color = 0x22ff77) {
+    function draw_line(segment: Segment, container: GoContainer, color = 0x22ff77) {
+        const a = segment.start;
+        const b = segment.end;
         const point_a = new Vector2(a.x,  a.y);
         const point_b = new Vector2(b.x,  b.y);
         const points: Vector2[] = [point_a, point_b];
@@ -22,7 +24,7 @@ export function LinesDrawer() {
         return line;
     }
 
-    function add_arc(arc: Arc, container: GoContainer, color = 0x22ff77) {
+    function draw_arc(arc: Arc, container: GoContainer, color = 0x22ff77) {
         const step = 2 * Math.PI * arc.r / DRAWN_ARC_EDGES_AMOUNT;
         const list = [];
         let lenght_remains = arc.length();
@@ -35,7 +37,7 @@ export function LinesDrawer() {
             _allowed_way = sub_arcs[1] as Arc;
             const p1 = move_arc.start();
             const p2 = move_arc.end();
-            const line = add_line(p1, p2, container, color);
+            const line = draw_line(Segment(p1, p2), container, color);
             list.push({line, p1, p2});
         }
         return list;
@@ -77,10 +79,10 @@ export function LinesDrawer() {
                     const box_xmax = box_xmin + params.cell_size;
                     const box_ymin = params.start.y + params.cell_size * y;
                     const box_ymax = box_ymin + params.cell_size;
-                    add_line({x: box_xmax, y: box_ymax}, {x: box_xmax, y: box_ymin}, container, color);
-                    add_line({x: box_xmax, y: box_ymax}, {x: box_xmin, y: box_ymax}, container, color);
-                    add_line({x: box_xmin, y: box_ymax}, {x: box_xmin, y: box_ymin}, container, color);
-                    add_line({x: box_xmax, y: box_ymin}, {x: box_xmin, y: box_ymin}, container, color);                    
+                    draw_line(Segment(Point(box_xmax, box_ymax), Point(box_xmax, box_ymin)), container, color);
+                    draw_line(Segment(Point(box_xmax, box_ymax), Point(box_xmin, box_ymax)), container, color);
+                    draw_line(Segment(Point(box_xmin, box_ymax), Point(box_xmin, box_ymin)), container, color);
+                    draw_line(Segment(Point(box_xmax, box_ymin), Point(box_xmin, box_ymin)), container, color);                 
                 }
             }
         }
@@ -97,5 +99,5 @@ export function LinesDrawer() {
         container.clear()
     }
 
-    return { add_line, add_arc, clear_container, draw_grid, move_lines, clear_lines, translate_lines }
+    return { draw_line, draw_arc, clear_container, draw_grid, move_lines, clear_lines, translate_lines }
 }

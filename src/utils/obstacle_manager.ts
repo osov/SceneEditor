@@ -1,12 +1,13 @@
 import { Arc, Box, Point, PointLike, Segment } from "@editor/modules/Geometry";
 import { Aabb, createSpatialHash } from "./spatial_hash";
-import { default_obstacle_grid, GridParams, SubGridParams } from "@editor/modules_editor/PlayerMovement";
+import { default_obstacle_grid, GridParams, SubGridParams } from "@editor/modules/types";
 
 
 
 export type ObstaclesGrid = ReturnType<typeof ObstaclesGridCreate>;
 
 type OffsetBuildOption = "all" | "arc" | "segment";
+
 
 function ObstaclesGridCreate(grid: number[][], pos_to_coord_grid: PointLike[][], params: GridParams) {
     if (
@@ -81,6 +82,7 @@ function ObstaclesGridCreate(grid: number[][], pos_to_coord_grid: PointLike[][],
 
     return { get_grid, get_coords_grid, grid_pos_to_coord, coord_to_grid_pos, get_subgrid, cell_size, start, amount, offset }
 }
+
 
 export function ObstaclesManager(hash_cell_size: number) {
     const all_obstacles: Segment[] = [];
