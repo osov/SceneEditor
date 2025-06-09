@@ -1,7 +1,7 @@
 import { Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import { filter_list_base_mesh, is_base_mesh, is_label, is_sprite, is_text } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
-import { IBaseEntityAndThree, IBaseEntityData, IObjectTypes } from "./types";
+import { IBaseEntity, IBaseEntityAndThree, IBaseEntityData, IBaseMesh, IObjectTypes } from "./types";
 import { TextMesh } from "./objects/text";
 import { deepClone } from "../modules/utils";
 import { GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
@@ -329,6 +329,39 @@ export function SceneManagerModule() {
         return get_next_base_mesh_id(mesh);
     }
 
+    function find_nearest_gui_container(mesh: IBaseEntityAndThree): GuiContainer | null {
+        let current = mesh.parent;
+        while (current) {
+            if (is_base_mesh(current) && (current as IBaseEntityAndThree).type == IObjectTypes.GUI_CONTAINER) {
+                return current as GuiContainer;
+            }
+            current = current.parent;
+        }
+        return null;
+    }
+
+    function update_gui_container_children_z(container: GuiContainer) {
+        let z_index = container.position.z;
+
+        function update_z_recursive(parent: IBaseEntityAndThree) {
+            parent.children.forEach((child) => {
+                if (child instanceof GuiBox || child instanceof GuiText) {
+                    z_index++;
+                    const world_pos = new Vector3();
+                    child.getWorldPosition(world_pos);
+                    world_pos.z = z_index;
+                    const local_pos = parent.worldToLocal(world_pos);
+                    child.position.copy(local_pos);
+                    child.transform_changed();
+                    update_z_recursive(child as IBaseEntityAndThree);
+                }
+            });
+        }
+
+        update_z_recursive(container);
+        container.transform_changed();
+    }
+
     function move_mesh(mesh: IBaseEntityAndThree, pid = -1, next_id = -1) {
         let pid_is_child = false;
         mesh.traverse((child) => {
@@ -372,6 +405,10 @@ export function SceneManagerModule() {
             old_scale.divide(parent_scale);
             mesh.scale.copy(old_scale);
         }
+        const gui_container = find_nearest_gui_container(mesh);
+        if (gui_container) {
+            update_gui_container_children_z(gui_container);
+        }
         EventBus.trigger('SYS_MESH_MOVED_TO', { id: mesh.mesh_data.id, pid }, false);
     }
 
@@ -382,6 +419,10 @@ export function SceneManagerModule() {
     function add_to_mesh(mesh: IBaseEntityAndThree, parent_mesh: IBaseEntityAndThree) {
         const id_parent = parent_mesh.mesh_data.id;
         move_mesh(mesh, id_parent);
+        const gui_container = find_nearest_gui_container(mesh);
+        if (gui_container) {
+            update_gui_container_children_z(gui_container);
+        }
     }
 
     function remove(id: number) {
@@ -405,6 +446,11 @@ export function SceneManagerModule() {
                     pid = (it.parent as any as IBaseEntityAndThree).mesh_data.id;
                 list.push({ id: it.mesh_data.id, pid: pid, name: it.name, visible: it.visible, type: it.type });
             }
+        });
+        list.filter(item => item.type == IObjectTypes.GUI_CONTAINER).forEach((info) => {
+            const container = get_mesh_by_id(info.id);
+            if (!container) return;
+            update_gui_container_children_z(container as GuiContainer);
         });
         return list;
     }
