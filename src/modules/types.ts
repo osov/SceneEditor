@@ -40,6 +40,13 @@ export type ClosestObstacleData = {
     is_vertice: boolean,
 }
 
+export type PathData = {
+    path: (Segment | Arc)[],
+    length: number,
+    blocked_way_nodes?: WayNode[],
+    clear_way_nodes?: WayNode[],
+}
+
 export type WayNode = {
     arc?: Arc,                          // Дуга пути обхода предыдущей вершины, если она была
     segment?: Segment,                  // Сегмент пути
@@ -81,7 +88,6 @@ export type PlayerMovementSettings = {
     obstacles_space_cell_size: number,
     max_subgrid_size: number,
     min_subgrid_size: number,
-    grid_params: GridParams,
 
 
     // Настройки геометрического поиска пути
@@ -116,11 +122,11 @@ export type SubGridParams = {
     amount: PointLike,
 }
 
-export const default_obstacle_grid: GridParams = {
-    start: { x: 0, y: 0 },
-    amount: { x: 100, y: 100 },
-    cell_size: 10,
-    origin_offset: { x: 0, y: 0 },
+export type ObstacleTileData = {
+    x: number;
+    y: number;
+    polygon?: PointLike[],
+    polyline?: PointLike[],
 }
 
 export const default_settings: PlayerMovementSettings = {
@@ -149,12 +155,25 @@ export const default_settings: PlayerMovementSettings = {
     obstacles_space_cell_size: 150 * WORLD_SCALAR,
     max_subgrid_size: 100,
     min_subgrid_size: 70,
-    grid_params: default_obstacle_grid,
 
     min_find_path_interval: 0.5,
-    max_checks_number: 55,
+    max_checks_number: 60,
     max_checks_one_dir: 30,
-    max_depth: 9,
-    max_way_length: 2000 * WORLD_SCALAR,
+    max_depth: 13,
+    max_way_length: 2100 * WORLD_SCALAR,
     max_update_time: 80
+}
+
+export const COLORS = {
+    RED: 0xff0000,
+    LIGHT_RED: 0xff3333,
+    DARK_RED: 0xaa0000,
+    BLUE: 0x2233ff,
+    LIGHT_BLUE: 0x6677ff,
+    PURPLE: 0xee44ff,
+    YELLOW: 0xffff00,
+    ORANGE: 0xff6600,
+    GREEN: 0x00ff00,
+    GRAY: 0x333333,
+    WHITE: 0xffffff,
 }

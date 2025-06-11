@@ -1,8 +1,7 @@
-import { Arc, CCW, CW, Point, Segment, Vector, vector_from_points as vector, segment, arc, vec_angle, PointLike, vector_from_points, POINT_EMPTY } from "./Geometry";
-import { DP_TOL, EQ, EQ_0 } from "./utils";
-import { ObstaclesGrid, ObstaclesManager } from "@editor/utils/obstacle_manager";
-import { AStarFinder } from 'astar-typescript';
-import { ClosestObstacleData, ControlType, default_obstacle_grid, default_settings, NextMoveType, PlayerMovementSettings, PredictNextMoveData, SubGridParams, WayNode } from "./types";
+import { Arc, CCW, CW, Point, Segment, Vector, vector_from_points as vector, segment, arc, vec_angle, vector_from_points } from "./Geometry";
+import { DP_TOL, EQ_0 } from "./utils";
+import { ObstaclesManager } from "@editor/utils/obstacle_manager";
+import { ClosestObstacleData, ControlType, NextMoveType, PlayerMovementSettings, PredictNextMoveData, PathData as PathData, WayNode } from "./types";
 
 
 export type PathFinder = ReturnType<typeof PathFinderModule>;
@@ -10,28 +9,12 @@ export type PathFinder = ReturnType<typeof PathFinderModule>;
 
 export function PathFinderModule(settings: PlayerMovementSettings, obstacles_manager: ReturnType<typeof ObstaclesManager>) {
     const logger = Log.get_with_prefix('pathfinder')
-    const way: (Segment | Arc)[] = [];
-    const way_tree_root: WayNode = {
-        children: [], 
-        depth: 0, 
-        total_length: 0
-    };
-    const end_nodes: WayNode[] = []; 
-    const clear_way_nodes: WayNode[] = [];
-    const blocked_way_nodes: WayNode[] = [];
 
     const max_intervals =  settings.max_predicted_way_intervals;
     const collision_min_error = settings.collision_min_error;
-    const blocked_move_min_dist = settings.blocked_move_min_dist;
     const move_min_angle = settings.block_move_min_angle;
-    const max_try_dist = settings.max_try_dist;
     const collision_radius = settings.collision_radius;
     const debug =  settings.debug;
-
-    // Настройки поиска пути на сетке
-    const max_subgrid_size = settings.max_subgrid_size;
-    const min_subgrid_size = settings.min_subgrid_size;
-    const max_grid_pathway = 300;
 
     // Настройки геометрического поиска пути
     const max_checks = settings.max_checks_number;
@@ -40,9 +23,6 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
     const max_way_length = settings.max_way_length;
     const max_update_time = settings.max_update_time;
 
-    let _way_total_length = 0;
-    let current_pos = POINT_EMPTY;
-    let current_target = POINT_EMPTY;
     let checking_obstacles = true;
 
     function enable_obstacles(enable = true) {
@@ -53,22 +33,25 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
         return checking_obstacles;
     }
 
-    function update_way(way_required: Segment, control_type: ControlType) {
-        clear_way();
+    function update_path(way_required: Segment, control_type: ControlType) {
         const now = Date.now();
-
+        const path_data: PathData = {path: [], length: 0};
         if (control_type == ControlType.JS || control_type == ControlType.FP)
-            way.push(...predict_way(way_required, control_type));
+            path_data.path.push(...predict_way(way_required, control_type));
 
         if (control_type == ControlType.GP) {
-            way.push(...find_way(way_required));
+            const data = find_way(way_required);
+            path_data.path = data.path;
+            path_data.clear_way_nodes = data.clear_way_nodes;
+            path_data.blocked_way_nodes = data.blocked_way_nodes;
             // Если не удалось определить путь через find_way, строим обычным способом
-            if (way.length == 0)
-                way.push(...default_update_way(way_required, ControlType.FP));
+            if (path_data.path.length == 0)
+                path_data.path.push(...default_update_way(way_required, ControlType.FP));
         }
-
-        log('Update_way took time: ', Date.now() - now, ' ms');
-        return way;
+        for (const elem of path_data.path)
+            path_data.length += elem.length();
+        log('update_path took time: ', Date.now() - now, ' ms');
+        return path_data;
     }
 
     function default_update_way(way_required: Segment, control_type: ControlType) {
@@ -77,7 +60,7 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
 
     function find_way(way_required: Segment) {
         log(`Start find_way`);
-        const way: (Segment | Arc)[] = [];
+        const path: (Segment | Arc)[] = [];
         const target = way_required.end;
         const start = way_required.start;
         const R = collision_radius + collision_min_error
@@ -92,13 +75,13 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
                 if (dist < R) {
                     if (debug) 
                         logger.log('Слишком близко к препятствию!')
-                    return way;
+                    return {path, blocked_way_nodes: [], clear_way_nodes: []};
                 }
             }
         }
 
         // Строим дерево путей и получаем его конечные ноды.
-        const {end_nodes} = build_path_tree(way_required, max_checks);
+        const {end_nodes, blocked_way_nodes, clear_way_nodes} = build_path_tree(way_required, max_checks);
         let min_length = Infinity;
         let min_length_node: WayNode | undefined = undefined;
 
@@ -114,22 +97,27 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
         if (min_length_node != undefined) {
             let node: WayNode | undefined = min_length_node;
             while (node) {
-                if (node.segment) way.push(node.segment as Segment);
-                if (node.arc) way.push(node.arc);
+                if (node.segment) path.push(node.segment as Segment);
+                if (node.arc) path.push(node.arc);
                 node = node.parent;
             }
         }
-        for (const interval of way) 
-            _way_total_length += interval.length();
-        way.reverse()
-
-        return way;
+        path.reverse();
+        return {path, blocked_way_nodes, clear_way_nodes};
     }
 
     function build_path_tree(way_required: Segment, max_checks: number) {
         const target = way_required.end;
         const checked_obstacles: {obstacles: Segment[], start_pos: Point}[] = [];
         const ways_to_check: WayNode[] = [];
+        const way_tree_root: WayNode = {
+            children: [], 
+            depth: 0, 
+            total_length: 0
+        };
+        const end_nodes: WayNode[] = []; 
+        const clear_way_nodes: WayNode[] = [];
+        const blocked_way_nodes: WayNode[] = [];
         const way_required_node: WayNode = {
             segment: way_required, 
             children: [], 
@@ -217,7 +205,7 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
                     // Если не указана вершина предыдущего препятствия, создаём ноды с обходными путями к препятствию напрямую их стартовой позиции этой ноды:
                     // TODO: Раз имеем дело с дугой обхода вершины, previous_vertice никогда не будет undefined? Возможно стоит убрать make_sideways 
                     if (!(previous_vertice && previous_clockwise != undefined)) {
-                        sideways = make_sideways(
+                        sideways = make_all_sideways(
                             start,
                             end,
                             obstacle, 
@@ -685,84 +673,6 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
         return node;
     }
 
-    function find_way_aStar(way_required: Segment) {
-        log(`Start find_way_aStar`);
-        const way: (Segment | Arc)[] = [];
-        const grid = obstacles_manager.get_grid();
-        if (!grid) {
-            // Не была инициализирована сетка для поиска пути
-            return default_update_way(way_required, ControlType.FP);
-        }
-        const start = grid.coord_to_grid_pos(way_required.start);
-        const end = grid.coord_to_grid_pos(way_required.end);
-        if (!(start && end)) {
-            // Текущая позиция либо цель вне сетки для поиска пути
-            return default_update_way(way_required, ControlType.FP);
-        }
-        if (start.x == end.x && start.y == end.y) {
-            // Текущая позиция и цель в одной ячейке, искать путь не нужно
-            return default_update_way(way_required, ControlType.FP);
-        }
-        const dimension = Math.floor(Math.max(Math.abs(start.x - end.x ), Math.abs(start.y - end.y), min_subgrid_size));
-        if (dimension > max_subgrid_size) {
-            // Цель слишком далеко, размеры подсетки будут больше допустимых
-            return default_update_way(way_required, ControlType.FP);
-        }
-        const amount = {
-            x: dimension * 2 + 1, 
-            y: dimension * 2 + 1
-        };
-        const offset_x = Math.abs(start.x - Math.floor(amount.x / 2));
-        const offset_y = Math.abs(start.y - Math.floor(amount.y / 2));
-        const offset = {
-            x: Math.min(grid.amount.x - 1, Math.max(0, offset_x)), 
-            y: Math.min(grid.amount.y - 1, Math.max(0, offset_y)), 
-        };
-        const subgrid_params: SubGridParams = {offset, amount};
-        const subgrid = grid.get_subgrid(subgrid_params) as ObstaclesGrid;
-        const matrix = subgrid.get_grid();
-        const aStarInstance = new AStarFinder({
-            grid: {
-              matrix
-            },
-        });
-        const subgrid_start = subgrid.coord_to_grid_pos(way_required.start);
-        const subgrid_end = subgrid.coord_to_grid_pos(way_required.end);
-        if (!(subgrid_start && subgrid_end)) {
-            // Текущая позиция либо цель вне сетки для поиска пути
-            return default_update_way(way_required, ControlType.FP);
-        }
-        const grid_pathway = aStarInstance.findPath(subgrid_start, subgrid_end);
-        if (!grid_pathway) 
-            return default_update_way(way_required, ControlType.FP);
-        if (grid_pathway.length > max_grid_pathway || grid_pathway.length * grid.cell_size > way_required.length() * 4) {
-            // Длина пути на сетке превышает допустимое значение
-            return default_update_way(way_required, ControlType.FP);
-        }
-        if (grid_pathway.length == 0) {
-            // Длина пути равна нулю
-            return default_update_way(way_required, ControlType.FP);
-        }
-        let i = 0;
-        const p2 = grid_pathway[i];
-        const c2 = subgrid.grid_pos_to_coord({x: p2[0], y: p2[1]}) as PointLike;
-        const segment = Segment(way_required.start, Point(c2.x, c2.y));
-        way.push(segment);
-        while (i < grid_pathway.length - 1) {
-            const p1 = grid_pathway[i];
-            const p2 = grid_pathway[i + 1];
-            const c1 = subgrid.grid_pos_to_coord({x: p1[0], y: p1[1]}) as PointLike;
-            const c2 = subgrid.grid_pos_to_coord({x: p2[0], y: p2[1]}) as PointLike;
-            const start = Point(c1.x, c1.y);
-            const end = Point(c2.x, c2.y);
-            const segment = Segment(start, end);
-            way.push(segment);
-            _way_total_length += segment.length();
-            i++;
-        }
-        return way;
-    }
-
     function predict_way(way_required: Segment, control_type: ControlType) {
         const way: (Segment | Arc)[] = [];
         let lenght_remains = way_required.length();
@@ -786,16 +696,6 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
             counter ++;
         }
         return way;
-    }
-
-    function clear_way() {
-        way.splice(0, way.length);
-        clear_way_nodes.splice(0, clear_way_nodes.length);
-        blocked_way_nodes.splice(0, blocked_way_nodes.length);
-        end_nodes.splice(0, end_nodes.length);
-        way.splice(0, way.length);
-        way_tree_root.children.splice(0, way_tree_root.children.length);
-        _way_total_length = 0;
     }
 
     function _get_correction_angle(pos: Point, vertice: Point, way_req: Segment) {
@@ -914,23 +814,7 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
                 const new_target =  data.way_required.end;
                 data.way_required = segment(allowed_way.end().x, allowed_way.end().y, new_target.x, new_target.y);
             }
-            _way_total_length += allowed_way.length();
             way.push(allowed_way);
-        }
-
-        if (debug) {
-            // log('point of vertice', vertice);
-            // log('points of obstacle', obstacle.start, obstacle.end);
-            // log('dir_diff_start_angle', radToDeg(dir_diff_start_angle));
-            // log('way_required.vector.slope', radToDeg(data.way_required.vector().slope()));
-            // log('direction.slope', radToDeg(data.way_required.vector().slope()));
-            // log('obstacle_angle', radToDeg(obstacle_limit_vec.slope()));
-            // log('rotation dir', (rotate_dir) ? 'CW' : 'CCW');
-            // log('start_angle',  radToDeg(start_angle));
-            // log('_end_angle',  radToDeg(_end_angle));
-            // log('excess_rotation_angle',  radToDeg(excess_rotation_angle));
-            // log('final_end_angle',  radToDeg(end_angle));
-            // log('blocked_by_current_obstacle',  blocked_by_current_obstacle);
         }
     }
 
@@ -1007,7 +891,6 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
                 const new_target =  data.way_required.end;
                 data.way_required = segment(allowed_way.end.x, allowed_way.end.y, new_target.x, new_target.y);
             }
-            _way_total_length += allowed_way.length();
             way.push(allowed_way);
         }
     }
@@ -1041,7 +924,6 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
             allowed_way = data.way_required;
         }
         if (allowed_way) {
-            _way_total_length += allowed_way.length();
             way.push(allowed_way);
         }
     }
@@ -1124,20 +1006,6 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
     }
 
     function get_waypoint_on_interval(interval: Segment | Arc, dt: number, current_speed: number) {
-        let angle = Math.PI / 2;
-        if (interval.name == "segment") {
-            const segment = interval as Segment;
-            const disired_dir = vector(current_pos, current_target);
-            // angle = disired_dir.angleTo(segment.vector);
-        }
-        else if (interval.name == "arc") {
-            const arc = interval as Arc;
-            const disired_dir = vector(current_pos, current_target);
-            const actual_dir = arc.tangentInStart();
-            // angle = disired_dir.angleTo(actual_dir);
-        }
-        // TODO: угол можно использовать для корректировки скорости при движении вдоль препятствий
-        // const cosA = Math.cos(angle);
         const cosA = 1;
         const dist = cosA * dt * current_speed;
         const point = interval.pointAtLength(dist);
@@ -1152,85 +1020,76 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
         }
     }
 
-    function find_current_interval(current_pos: Point) {
-        for (let i = 0; i < way.length; i++) {
-            if (way[i].contains(current_pos)) 
+    function get_pos_at_ratio(path_data: PathData, _ratio: number) {
+        if (path_data.path.length == 0) {
+            logger.warn("No path to get the next waypoint!");
+            return undefined;
+        };
+        let ratio = (_ratio > 1) ? 1 : _ratio;
+        ratio = (_ratio < 0) ? 0 : _ratio;
+        let length_remains = path_data.length * ratio;
+        for (const interval of path_data.path) {
+            if (length_remains < interval.length()) {
+                return interval.pointAtLength(length_remains);
+            }
+            else {
+                length_remains -= interval.length();
+            }
+        }
+        let interval = path_data.path[0];
+        let start = (interval.name == 'segment') ? (interval as Segment).start : (interval as Arc).start();
+        return start;
+    }
+
+    function find_current_interval(path: (Segment | Arc)[], current_pos: Point) {
+        for (let i = 0; i < path.length; i++) {
+            if (path[i].contains(current_pos)) 
                 return i;
         }
         return -1;
     }
     
-    function get_next_pos(current_pos: Point, dt: number, speed: number) {
+    function get_next_pos(path_data: PathData, current_pos: Point, dt: number, speed: number) {
         let _current_pos = current_pos;
         let _time_remains = dt;
-        if (way.length == 0) {
-            logger.error("No calculated way to get the next waypoint!");
+        if (path_data.path.length == 0) {
+            logger.warn("No path to get the next waypoint!");
             return _current_pos;
         };
-        const id = find_current_interval(current_pos);
+        const id = find_current_interval(path_data.path, current_pos);
         if (id == -1) {
-            logger.error("current_pos doesn't belong to any way interval");
+            logger.warn("current_pos doesn't belong to any path interval");
             return _current_pos;
         }
-        const _way_intervals: (Segment | Arc)[] = [];
-        const current_interval_remains = way[id].split(_current_pos)[1];
+        const _path_intervals: (Segment | Arc)[] = [];
+        const current_interval_remains = path_data.path[id].split(_current_pos)[1];
         if (current_interval_remains)
-            _way_intervals.push(current_interval_remains);
-        _way_intervals.push(...way.slice(id + 1));
+            _path_intervals.push(current_interval_remains);
+        _path_intervals.push(...path_data.path.slice(id + 1));
 
         let i = 0;
-        while (_time_remains > 0 && i < _way_intervals.length) {
-            let interval = _way_intervals[i];
+        while (_time_remains > 0 && i < _path_intervals.length) {
+            let interval = _path_intervals[i];
             const {point, time_remains} = get_waypoint_on_interval(interval, _time_remains, speed);
             _current_pos = point as Point;
             _time_remains = time_remains;
             if (!time_remains) {
-                // Log.error("Calculated way ended before the remaining time for the move!");
                 break;
             }
             i ++;
         }
         return _current_pos;
     }
+
+    function get_way_from_angle(cp: Point, angle: number, length: number) {
+        const dir = Vector(1, 0).rotate(angle);
+        const ep = cp.translate(dir.multiply(length));
+        return Segment(Point(cp.x, cp.y), Point(ep.x, ep.y));
+    }
     
-    function set_current_pos(_current_pos: Point) {
-        current_pos = _current_pos;
-    }
-
-    function get_current_pos() {
-        return current_pos;
-    }
-
-    function get_way() {
-        return way;
-    }
-
-    function get_path_tree() {
-        return {clear_ways: clear_way_nodes, blocked_ways: blocked_way_nodes, way_tree: way_tree_root};
-    }
-
-    function get_way_length() {
-        return _way_total_length;
-    }
-
-    return { update_way, get_way, clear_way, get_way_length, get_path_tree,
-        set_current_pos, get_current_pos, get_next_pos,
-        enable_obstacles, check_obstacles_enabled, build_path_tree
+    return { update_path, get_next_pos, get_pos_at_ratio,
+        enable_obstacles, check_obstacles_enabled,
+        build_path_tree, get_way_from_angle
     }
 }
 
-
-export function test_pathfinder() {
-    const params = {...default_obstacle_grid, cell_size: 1, amount: {x: 100, y: 100},}
-    const obst_A1 = Segment(Point(0.1, 0), Point(9.1, 9));
-    const obst_B1 = Segment(Point(13, -12), Point(-12, 13));
-    const ob = ObstaclesManager(1);
-    ob.set_obstacles([
-        obst_A1,
-        obst_B1
-        ]);
-    ob.init_grid({...params});
-    const PF = PathFinderModule({...default_settings}, ob);
-    const req_way: Segment = Segment(Point(5, 5), Point(14, 14));
-    PF.update_way(req_way, ControlType.GP);
-}

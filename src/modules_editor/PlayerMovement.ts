@@ -1,8 +1,8 @@
 import { AnimatedMesh } from '../render_engine/objects/animated_mesh';
-import { get_depth, MapData, parse_tiled } from '../render_engine/parsers/tile_parser';
+import { get_depth } from '../render_engine/parsers/tile_parser';
 import { EQ_0 } from '../modules/utils';
 import { IObjectTypes } from '../render_engine/types';
-import { WORLD_SCALAR, WORLD_SCALAR as WS } from '../config';
+import { WORLD_SCALAR } from '../config';
 import { PathFinder } from '../modules/PathFinder';
 import {
     point,
@@ -15,23 +15,11 @@ import {
     PointLike,
     Arc,
     POINT_EMPTY,
+    Vector,
 } from '../modules/Geometry';
 import { Line as GeomLine } from 'three';
 import { LinesDrawer } from '../modules/LinesDrawer';
-import { PlayerMovementSettings, default_settings, ControlType } from '@editor/modules/types';
-
-
-const RED = 0xff0000;
-const LIGHT_RED = 0xff3333
-const DARK_RED = 0xaa0000;
-const BLUE = 0x2233ff;
-const LIGHT_BLUE = 0x6677ff;
-const PURPLE = 0xee44ff;
-const YELLOW = 0xffff00;
-const ORANGE = 0xff6600;
-const GREEN = 0x00ff00;
-const GRAY = 0x333333;
-const WHITE = 0xffffff;
+import { PlayerMovementSettings, default_settings, ControlType, PathData, COLORS } from '@editor/modules/types';
 
 
 function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
@@ -56,48 +44,8 @@ function interpolate_with_wrapping(start: number, end: number, percent: number, 
     return interpolated_val;
 }
 
-export function load_obstacles(map_data: MapData) {
-    const obstacles: Segment[] = [];
-    const render_data = parse_tiled(map_data);
-    for (let object_layer of render_data.objects_layers) {
-        for (let tile of object_layer.objects) {
-            if (tile.polygon || tile.polyline) {
-                const cx = tile.x * WS;
-                const cy = tile.y * WS;
-                if (tile.polygon) {
-                    for (let i = 0; i < tile.polygon.length - 1; i++) {
-                        const s_x = tile.polygon[i].x;
-                        const s_y = tile.polygon[i].y;
-                        const e_x = tile.polygon[i + 1].x;
-                        const e_y = tile.polygon[i + 1].y;
-                        const seg = segment(cx + s_x * WS, cy - s_y * WS, cx + e_x * WS, cy - e_y * WS);
-                        obstacles.push(seg);
-                    }
-
-                    const s_x = tile.polygon[tile.polygon.length - 1].x;
-                    const s_y = tile.polygon[tile.polygon.length - 1].y;
-                    const e_x = tile.polygon[0].x;
-                    const e_y = tile.polygon[0].y;
-                    const seg = segment(cx + s_x * WS, cy - s_y * WS, cx + e_x * WS, cy - e_y * WS);
-                    obstacles.push(seg);
-                }
-                if (tile.polyline) {
-                    for (let i = 0; i < tile.polyline.length - 1; i++) {
-                        const s_x = tile.polyline[i].x;
-                        const s_y = tile.polyline[i].y;
-                        const e_x = tile.polyline[i + 1].x;
-                        const e_y = tile.polyline[i + 1].y;
-                        const seg = segment(cx + s_x * WS, cy - s_y * WS, cx + e_x * WS, cy - e_y * WS);
-                        obstacles.push(seg);
-                    }
-                }
-            }
-        }
-    }
-    return obstacles;
-}
-
 export function MovementControlCreate(settings: PlayerMovementSettings = default_settings) {
+    let path_data: PathData = {length: 0, path: []};
     const LD = LinesDrawer();
     const width = 50 * WORLD_SCALAR;
     const height = 50 * WORLD_SCALAR;
@@ -125,6 +73,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
     let min_stick_dist = settings.min_stick_dist;
     let predicted_way_lenght_mult = settings.predicted_way_lenght_mult;
     let speed = settings.speed;
+    let debug =  settings.debug;
     let current_speed: number = speed.WALK;
     let is_moving = false;
     let is_pointer_down = false;
@@ -155,7 +104,6 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
         const model = init_data.model;
         target = point(model.position.x, model.position.y);
         PF = init_data.path_finder;
-        PF.set_current_pos(target);
 
         if (pointer_control == ControlType.GP) {
             EventBus.on('SYS_ON_UPDATE', (e) => {
@@ -250,17 +198,18 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                 if (!stick_start)
                     return;
                 stick_start = undefined;
+                stick_end = undefined;
                 current_dir = vector(point(0, 0), point(0, 0));
             });
 
             EventBus.on('SYS_ON_UPDATE', (e) => {
+                LD.clear_container(joystick);
                 if (stick_start && stick_end) {
                     const start = Camera.screen_to_world(stick_start.x, stick_start.y);
                     const end = Camera.screen_to_world(stick_end.x, stick_end.y);
-                    LD.clear_container(joystick);
                     if (settings.debug) {
-                        LD.draw_arc(arc(point(start.x, start.y), 3, 0, Math.PI * 2), joystick, RED);
-                        LD.draw_arc(arc(point(end.x, end.y), 3, 0, Math.PI * 2), joystick, RED);
+                        LD.draw_arc(arc(point(start.x, start.y), 3, 0, Math.PI * 2), joystick, COLORS.RED);
+                        LD.draw_arc(arc(point(end.x, end.y), 3, 0, Math.PI * 2), joystick, COLORS.RED);
                     }
 
                 }
@@ -275,31 +224,35 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
         function update_predicted_way() {
             let way_required = get_required_way(update_t_interval);
             if (way_required.length() < min_required_way) {
-                PF.clear_way();
+                clear_way()
                 return;
             }
             last_check_dir = current_dir.clone();
             last_check_target = target.clone();
-            const way = PF.update_way(way_required, pointer_control);
-            const {clear_ways, blocked_ways, way_tree} = PF.get_path_tree();
+            path_data = PF.update_path(way_required, pointer_control);
+            
             LD.clear_container(player_way);
-            for (const way of blocked_ways) {
-                if (way.arc) 
-                    LD.draw_arc(way.arc, player_way, ORANGE);
-                if (way.segment) 
-                    LD.draw_line(way.segment, player_way, ORANGE);
-            }
-            for (const way of clear_ways) {
-                if (way.arc) 
-                    LD.draw_arc(way.arc, player_way, LIGHT_BLUE);
-                if (way.segment) 
-                    LD.draw_line(way.segment, player_way, LIGHT_BLUE);
-            }
-            for (const interval of way) {
-                if (interval.name == 'arc') 
-                    LD.draw_arc(interval as Arc, player_way, PURPLE);
-                else 
-                    LD.draw_line(interval as Segment, player_way, PURPLE);
+            if (debug) {
+                if (path_data.clear_way_nodes && path_data.blocked_way_nodes) {
+                    for (const way of path_data.blocked_way_nodes) {
+                        if (way.arc) 
+                            LD.draw_arc(way.arc, player_way, COLORS.ORANGE);
+                        if (way.segment) 
+                            LD.draw_line(way.segment, player_way, COLORS.ORANGE);
+                    }
+                    for (const way of path_data.clear_way_nodes) {
+                        if (way.arc) 
+                            LD.draw_arc(way.arc, player_way, COLORS.LIGHT_BLUE);
+                        if (way.segment) 
+                            LD.draw_line(way.segment, player_way, COLORS.LIGHT_BLUE);
+                    }
+                }
+                for (const interval of path_data.path) {
+                    if (interval.name == 'arc') 
+                        LD.draw_arc(interval as Arc, player_way, COLORS.GREEN);
+                    else 
+                        LD.draw_line(interval as Segment, player_way, COLORS.GREEN);
+                }
             }
         }
 
@@ -315,8 +268,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             }
             if (pointer_control == ControlType.JS) {
                 if (!EQ_0(current_dir.length())) {
-                    const ep = cp.translate(current_dir.normalize().multiply(lenght_remains));
-                    way_required = segment(cp.x, cp.y, ep.x, ep.y);
+                    way_required = PF.get_way_from_angle(cp, current_dir.slope(), lenght_remains);
                 }
                 else
                     way_required = segment(cp.x, cp.y, cp.x, cp.y);
@@ -345,7 +297,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
 
         function handle_update_follow_pointer(dt: number) {
             if (!has_target) return;
-            const available_way = PF.get_way_length();
+            const available_way = path_data.length;
             if (available_way < min_awailable_way) {
                 stop_movement();
                 return;
@@ -373,14 +325,19 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                 if (is_moving) stop_movement();
             }
             else {
+                if (!is_moving) start_movement();
                 update_position(dt);
             }
+        }
+
+        function clear_way() {
+            path_data = {length: 0, path: []};
         }
 
         function stop_movement() {
             is_moving = false;
             model.set_animation(animations.IDLE);
-            PF.clear_way();
+            clear_way();
             has_target = false;
         }
 
@@ -391,7 +348,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
 
         function update_position(dt: number) {
             const current_pos = point(model.position.x, model.position.y);
-            const end_pos = PF.get_next_pos(current_pos, dt, current_speed);
+            const end_pos = PF.get_next_pos(path_data, current_pos, dt, current_speed);
             if (!end_pos || (end_pos.equalTo(current_pos))) {
                 stop_movement();
                 return;
@@ -400,7 +357,6 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                 model.position.x = end_pos.x;
                 model.position.y = end_pos.y;
                 model.position.z = get_depth(end_pos.x, end_pos.y, 9, width, height);
-                PF.set_current_pos(end_pos);
                 CameraControl.set_position(model.position.x, model.position.y, true);
             }
             else {
@@ -414,7 +370,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             model.rotation.y = interpolate_with_wrapping(model.rotation.y, Math.atan2(dir.y, dir.x) + Math.PI / 2, 0.1, 0, 2 * Math.PI);
             model.transform_changed();
             if (player_geometry.children.length == 0) {
-                LD.draw_arc(Arc(POINT_EMPTY, settings.collision_radius, 0, Math.PI * 2), player_geometry, RED);
+                LD.draw_arc(Arc(POINT_EMPTY, settings.collision_radius, 0, Math.PI * 2), player_geometry, COLORS.RED);
             }
             for (const line of player_geometry.children) {
                 line.position.x = current_pos.x;

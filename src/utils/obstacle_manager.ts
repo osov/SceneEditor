@@ -1,6 +1,6 @@
 import { Arc, Box, Point, PointLike, Segment } from "@editor/modules/Geometry";
 import { Aabb, createSpatialHash } from "./spatial_hash";
-import { default_obstacle_grid, GridParams, SubGridParams } from "@editor/modules/types";
+import { GridParams, ObstacleTileData, SubGridParams } from "@editor/modules/types";
 
 
 
@@ -207,27 +207,43 @@ export function ObstaclesManager(hash_cell_size: number) {
         return false;
     }
 
-    return { add_obstacle, remove_obstacle, set_obstacles, clear_obstacles, get_obstacles, get_grid, init_grid, build_offsets, all_obstacles }
-}
+    function load_obstacles_from_data(obstacles_data: ObstacleTileData[], world_scalar: number) {
+        for (let tile of obstacles_data) {
+            if (tile.polygon || tile.polyline) {
+                const cx = tile.x * world_scalar;
+                const cy = tile.y * world_scalar;
+                if (tile.polygon) {
+                    for (let i = 0; i < tile.polygon.length - 1; i++) {
+                        const s_x = tile.polygon[i].x;
+                        const s_y = tile.polygon[i].y;
+                        const e_x = tile.polygon[i + 1].x;
+                        const e_y = tile.polygon[i + 1].y;
+                        const seg = Segment(Point(cx + s_x * world_scalar, cy - s_y * world_scalar), Point(cx + e_x * world_scalar, cy - e_y * world_scalar));
+                        add_obstacle(seg);
+                    }
 
-export function test_grid() {
-    const params = {...default_obstacle_grid, cell_size: 1, amount: {x: 16, y: 16},}
-    const subgrid_offset = {x: 1, y: 1};
-    const obst_A1 = Segment(Point(5.1, 0), Point(18.1, 11));
-    const obst_B1 = Segment(Point(3, 1), Point(3, 5));
-    const ob = ObstaclesManager(1);
-    ob.set_obstacles([
-        obst_A1,
-        // obst_B1
-        ]);
-    ob.init_grid(params);
-    const grid = ob.get_grid() as ObstaclesGrid;
-    let subgrid = grid.get_subgrid({offset: subgrid_offset, amount: {x: 5, y: 5}}) as ObstaclesGrid;
-    const orig_coord = {x: 3.2, y: 4.7};
-    const pos = grid.coord_to_grid_pos(orig_coord) as PointLike;
-    const coord = grid.grid_pos_to_coord(pos);
-    const pos1 = subgrid.coord_to_grid_pos(orig_coord) as PointLike;
-    const coord1 = subgrid.grid_pos_to_coord(pos1);
-    log(orig_coord, pos, coord)
-    log(orig_coord, pos1, coord1)
+                    const s_x = tile.polygon[tile.polygon.length - 1].x;
+                    const s_y = tile.polygon[tile.polygon.length - 1].y;
+                    const e_x = tile.polygon[0].x;
+                    const e_y = tile.polygon[0].y;
+                    const seg = Segment(Point(cx + s_x * world_scalar, cy - s_y * world_scalar), Point(cx + e_x * world_scalar, cy - e_y * world_scalar));
+                    add_obstacle(seg);
+                }
+                if (tile.polyline) {
+                    for (let i = 0; i < tile.polyline.length - 1; i++) {
+                        const s_x = tile.polyline[i].x;
+                        const s_y = tile.polyline[i].y;
+                        const e_x = tile.polyline[i + 1].x;
+                        const e_y = tile.polyline[i + 1].y;
+                        const seg = Segment(Point(cx + s_x * world_scalar, cy - s_y * world_scalar), Point(cx + e_x * world_scalar, cy - e_y * world_scalar));
+                        add_obstacle(seg);
+                    }
+                }
+            }
+        }
+    }
+
+    return { add_obstacle, remove_obstacle, set_obstacles, clear_obstacles, 
+        get_obstacles, get_grid, init_grid, build_offsets, 
+        load_obstacles_from_data, all_obstacles }
 }
