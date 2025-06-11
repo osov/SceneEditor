@@ -37,6 +37,7 @@
     "../SceneEditor_ExampleProject/src",
     "../SceneEditor_Stereo/src",
     "../SceneEditor_Digg_Scan/src",
-    "../SceneEditor_TicTac"
+    "../SceneEditor_TicTac/src",
+    "../SceneEditor_Kopateli/src",
   ]
 }

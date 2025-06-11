@@ -487,7 +487,8 @@ export function ResourceManagerModule() {
         }
 
         const data = JSON.parse(response) as TDictionary<IBaseEntityData[]>;
-        cache_scene(path, data.scene_data[0]);
+        if (data.scene_data.length > 0)
+            cache_scene(path, data.scene_data[0]);
     }
 
     function cache_scene(path: string, data: IBaseEntityData) {
