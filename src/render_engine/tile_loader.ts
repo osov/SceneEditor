@@ -49,7 +49,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
         return max_y;
     }
 
-    function load(map_data: MapData, tiles_data: TileInfo) {
+    function load(map_data: MapData, tiles_data: TileInfo, debug_lines = true) {
         const tiles: SpriteTileInfoDict = {};
         const render_data = parse_tiled(map_data);
         preload_tiled_textures(tiles_data, map_data);
@@ -97,6 +97,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
 
 
         // OBJECTS
+        const material = new LineBasicMaterial({ color: 0xff0000 });
         for (let object_layer of render_data.objects_layers) {
             const id_layer = object_layer.id_order;
             let id_object = -1;
@@ -120,12 +121,12 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                             points.push(new Vector2(cx + point.x * WORLD_SCALAR, cy - point.y * WORLD_SCALAR));
                         }
                     }
-                    const geometry = new BufferGeometry().setFromPoints(points);
-                    const material = new LineBasicMaterial({ color: 0xff0000 });
-
-                    const line = new Line(geometry, material);
-                    line.position.z = CAMERA_Z - 5;
-                    container.add(line);
+                    if (debug_lines) {
+                        const geometry = new BufferGeometry().setFromPoints(points);
+                        const line = new Line(geometry, material);
+                        line.position.z = CAMERA_Z - 5;
+                        container.add(line);
+                    }
                 }
                 else {
                     const tile_id = tile.tile_id & TILE_FLIP_MASK;

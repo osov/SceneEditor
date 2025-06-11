@@ -166,27 +166,30 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         material = new_material;
     }
 
-    function set_texture(name: string, atlas = '') {
+    function set_texture(name: string, atlas = '', uniform_key = 'u_texture') {
         parameters.texture = name;
         parameters.atlas = atlas;
 
         if (name != '') {
             const texture_data = ResourceManager.get_texture(name, atlas);
-            ResourceManager.set_material_uniform_for_mesh(mesh, 'u_texture', texture_data.texture);
-
-            parameters.clip_width = texture_data.size.x;
-            parameters.clip_height = texture_data.size.y;
-            for (let i = 0; i < 4; i++) {
-                geometry.attributes['uvData'].array[4 * i] = texture_data.uvOffset.x;
-                geometry.attributes['uvData'].array[4 * i + 1] = texture_data.uvOffset.y;
-                geometry.attributes['uvData'].array[4 * i + 2] = texture_data.uvScale.x;
-                geometry.attributes['uvData'].array[4 * i + 3] = texture_data.uvScale.y;
+            ResourceManager.set_material_uniform_for_mesh(mesh, uniform_key, texture_data.texture);
+            if (uniform_key == 'u_texture') {
+                parameters.clip_width = texture_data.size.x;
+                parameters.clip_height = texture_data.size.y;
+                for (let i = 0; i < 4; i++) {
+                    geometry.attributes['uvData'].array[4 * i] = texture_data.uvOffset.x;
+                    geometry.attributes['uvData'].array[4 * i + 1] = texture_data.uvOffset.y;
+                    geometry.attributes['uvData'].array[4 * i + 2] = texture_data.uvScale.x;
+                    geometry.attributes['uvData'].array[4 * i + 3] = texture_data.uvScale.y;
+                }
+                geometry.attributes['uvData'].needsUpdate = true;
             }
-            geometry.attributes['uvData'].needsUpdate = true;
         }
         else {
-            ResourceManager.set_material_uniform_for_mesh(mesh, 'u_texture', null);
-
+            const material_name = mesh.material.name;
+            const material_info = ResourceManager.get_material_info(material_name);
+            if (material_info && material_info.uniforms[uniform_key])
+                ResourceManager.set_material_uniform_for_mesh(mesh, uniform_key, null);
             parameters.clip_width = 1;
             parameters.clip_height = 1;
         }
@@ -300,10 +303,9 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
 
                 const uniform_info = material_info.uniforms[key];
                 if (!uniform_info) continue;
-
                 if (uniform_info.type == MaterialUniformType.SAMPLER2D && typeof value === 'string') {
                     const [atlas, texture_name] = value.split('/');
-                    set_texture(texture_name, atlas);
+                    set_texture(texture_name, atlas, key);
                 } else {
                     ResourceManager.set_material_uniform_for_mesh(mesh, key, value);
                 }
