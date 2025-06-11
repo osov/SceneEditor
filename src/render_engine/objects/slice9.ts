@@ -77,6 +77,7 @@ interface SerializeData {
     slice_height?: number;
     material_name?: string;
     material_uniforms?: { [key: string]: any };
+    layers?:number;
 }
 
 export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width = 1, height = 1, slice_width = 0, slice_height = 0) {
@@ -279,6 +280,11 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
             data.material_uniforms = modifiedUniforms;
         }
 
+        // 0, 31, 32
+        if (mesh.layers.mask != -2147483647)
+            data.layers = mesh.layers.mask;
+        
+
         return data;
     }
 
@@ -311,9 +317,13 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
                 }
             }
         }
-
+        if (data.layers != undefined)
+            mesh.layers.mask = data.layers;
+        
         update_parameters();
     }
+
+ 
 
     return { set_size, set_slice, set_color, set_alpha, set_material, set_texture, get_bounds, set_pivot, set_anchor, serialize, deserialize, geometry, parameters };
 }
