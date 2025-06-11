@@ -1081,15 +1081,43 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
         return _current_pos;
     }
 
-    function get_way_from_angle(cp: Point, angle: number, length: number) {
+    function way_from_angle(cp: Point, angle: number, length: number) {
         const dir = Vector(1, 0).rotate(angle);
         const ep = cp.translate(dir.multiply(length));
         return Segment(Point(cp.x, cp.y), Point(ep.x, ep.y));
     }
+
+    function path_to_points(path: (Segment | Arc)[], step: number) {
+        let length_left = 0;
+        const result: Point[] = [];
+        if (path.length == 0) return result;
+        const first = path[0];
+        result.push(first.pointAtLength(0) as Point)
+        for (let interval of path) {
+            const length = interval.length();
+            if (length < step) {
+                length_left += length;
+            }
+            else if (length >= step) {
+                const point = interval.pointAtLength(step - length_left) as Point;
+                result.push(point);
+                let total_length = step - length_left + step;
+                while (total_length < length) {
+                    const point = interval.pointAtLength(total_length) as Point;
+                    result.push(point);
+                    total_length += step;
+                }
+                length_left = length - total_length + step;
+            }
+        }
+        const last = path[path.length-1];
+        result.push(last.pointAtLength(last.length()) as Point)
+        return result;
+    }
     
     return { update_path, get_next_pos, get_pos_at_ratio,
         enable_obstacles, check_obstacles_enabled,
-        build_path_tree, get_way_from_angle
+        build_path_tree, way_from_angle, path_to_points
     }
 }
 

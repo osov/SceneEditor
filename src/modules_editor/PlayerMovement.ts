@@ -268,7 +268,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             }
             if (pointer_control == ControlType.JS) {
                 if (!EQ_0(current_dir.length())) {
-                    way_required = PF.get_way_from_angle(cp, current_dir.slope(), lenght_remains);
+                    way_required = PF.way_from_angle(cp, current_dir.slope(), lenght_remains);
                 }
                 else
                     way_required = segment(cp.x, cp.y, cp.x, cp.y);
