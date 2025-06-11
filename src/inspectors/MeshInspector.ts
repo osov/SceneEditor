@@ -332,8 +332,7 @@ function MeshInspectorCreate() {
         }
 
         fields.push({
-            key: MeshProperty.TRANSFORM,
-            title: MeshPropertyTitle.TRANSFORM,
+            key: MeshPropertyTitle.TRANSFORM,
             value: transform_fields,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -529,8 +528,7 @@ function MeshInspectorCreate() {
             });
         }
         fields.push({
-            key: MeshProperty.TEXT,
-            title: MeshPropertyTitle.TEXT,
+            key: MeshPropertyTitle.TEXT,
             value: text_fields,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -1006,8 +1004,7 @@ function MeshInspectorCreate() {
         });
 
         fields.push({
-            key: MeshProperty.MODEL,
-            title: MeshPropertyTitle.MODEL,
+            key: MeshPropertyTitle.MODEL,
             value: model_fields,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -1020,8 +1017,7 @@ function MeshInspectorCreate() {
         });
 
         fields.push({
-            key: MeshProperty.MATERIAL,
-            title: MeshPropertyTitle.MATERIAL,
+            key: MeshPropertyTitle.MATERIAL,
             value: material_folders,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -1046,8 +1042,7 @@ function MeshInspectorCreate() {
         });
 
         fields.push({
-            key: MeshProperty.MODEL,
-            title: MeshPropertyTitle.MODEL,
+            key: MeshPropertyTitle.MODEL,
             value: model_fields,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -1089,8 +1084,7 @@ function MeshInspectorCreate() {
         });
 
         fields.push({
-            key: MeshProperty.MATERIAL,
-            title: MeshPropertyTitle.MATERIAL,
+            key: MeshPropertyTitle.MATERIAL,
             value: material_folders,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -1203,8 +1197,7 @@ function MeshInspectorCreate() {
         }
 
         fields.push({
-            key: MeshProperty.SOUND,
-            title: MeshPropertyTitle.SOUND,
+            key: MeshPropertyTitle.SOUND,
             value: audio_fields,
             type: PropertyType.FOLDER,
             params: { expanded: true }
@@ -3346,31 +3339,39 @@ function MeshInspectorCreate() {
     }
 
     function saveLayer(info: BeforeChangeInfo) {
-        const layers: MeshPropertyInfo<string[]>[] = [];
+        const layers: MeshPropertyInfo<number>[] = [];
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveTileLayer] Mesh not found for id:', id);
                 return;
             }
-            layers.push({ mesh_id: id, value: ResourceManager.get_layers_names_by_mask(mesh.layers.mask) });
+            layers.push({ mesh_id: id, value: mesh.layers.mask });
         });
-        HistoryControl.add('MESH_LAYER', layers, HistoryOwner.MESH_INSPECTOR);
+        HistoryControl.add('MESH_LAYERS', layers, HistoryOwner.MESH_INSPECTOR);
     }
 
     function handleLayerChange(info: ChangeInfo) {
         const data = convertChangeInfoToMeshData<string[]>(info);
-        updateLayer(data, info.data.event.last);
+        const patched_data = data.map(item => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (!mesh) {
+                Log.error('[handleLayerChange] Mesh not found for id:', item.mesh_id);
+                return;
+            }
+            return { mesh_id: item.mesh_id, value: mesh.layers.mask | ResourceManager.get_layers_mask_by_names(item.value) };
+        }).filter(item => item != undefined) as MeshPropertyInfo<number>[];
+        updateLayer(patched_data, info.data.event.last);
     }
 
-    function updateLayer(data: MeshPropertyInfo<string[]>[], _: boolean) {
+    function updateLayer(data: MeshPropertyInfo<number>[], _: boolean) {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
                 Log.error('[updateTileLayer] Mesh not found for id:', item.mesh_id);
                 continue;
             }
-            mesh.layers.mask = ResourceManager.get_layers_mask_by_names(item.value);
+            mesh.layers.mask = item.value;
         }
     }
 
@@ -3384,8 +3385,8 @@ function MeshInspectorCreate() {
                 const actives = event.data as MeshPropertyInfo<boolean>[];
                 updateActive(actives, true);
                 break;
-            case 'MESH_LAYER':
-                const layers = event.data as MeshPropertyInfo<string[]>[];
+            case 'MESH_LAYERS':
+                const layers = event.data as MeshPropertyInfo<number>[];
                 updateLayer(layers, true);
                 break;
             case 'MESH_TRANSLATE':

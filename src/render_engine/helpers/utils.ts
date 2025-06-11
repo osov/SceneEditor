@@ -365,3 +365,11 @@ export function getUniformPoint(u: number, points: Point[], arcTable: { arcLengt
     const t = findTForUniformT(u, arcTable.arcLengths, arcTable.tValues);
     return getPointCurve(t, points, point);
 }
+
+export function error_popup(message: string) {
+    Popups.open({
+        type: "Notify",
+        params: { title: "Ошибка", text: message, button: "Ok", auto_close: true },
+        callback: () => { }   // (success: boolean) => void
+    });
+}

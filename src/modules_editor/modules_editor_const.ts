@@ -9,7 +9,6 @@ export type CommandId = keyof ServerCommands;
 export type _SystemMessagesEditor = {
     SYS_INPUT_UNDO: {},
     SYS_INPUT_SAVE: {},
-    SYS_INPUT_SAVE_TILES: {},
     SYS_INPUT_DBL_CLICK: {},
     SYS_SELECTED_MESH: { mesh: IBaseMeshAndThree },
     SYS_SELECTED_MESH_LIST: { list: IBaseMeshAndThree[] },

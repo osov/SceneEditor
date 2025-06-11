@@ -6,6 +6,7 @@ import {
     FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses,
     TDictionary, texture_ext, URL_PATHS, AUDIO_EXT,
     TILES_INFO_EXT,
+    FSEvent,
 } from "../modules_editor/modules_editor_const";
 import { span_elem, json_parsable, get_keys, hexToRGB } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
@@ -13,7 +14,7 @@ import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction } from "./ActionsControl";
 import { api } from "../modules_editor/ClientAPI";
 import { IBaseEntityData } from "../render_engine/types";
-import { get_file_name, is_tile } from "../render_engine/helpers/utils";
+import { error_popup, get_file_name, is_tile } from "../render_engine/helpers/utils";
 import { Blending, Quaternion, Texture, Vector3 } from "three";
 import { get_hash_by_mesh } from "@editor/inspectors/ui_utils";
 import { Slice9Mesh } from "@editor/render_engine/objects/slice9";
@@ -59,7 +60,6 @@ function AssetControlCreate() {
         EventBus.on('SYS_INPUT_POINTER_UP', on_mouse_up);
         EventBus.on('SYS_INPUT_DBL_CLICK', on_dbl_click);
         EventBus.on('SYS_INPUT_SAVE', save_current_scene);
-        EventBus.on('SYS_INPUT_SAVE_TILES', save_tilesinfo_popup);
         EventBus.on('SYS_GRAPH_DROP_IN_ASSETS', on_graph_drop);
 
         EventBus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
@@ -732,14 +732,6 @@ function AssetControlCreate() {
         }
     }
 
-    function error_popup(message: string) {
-        Popups.open({
-            type: "Notify",
-            params: { title: "Ошибка", text: message, button: "Ok", auto_close: true },
-            callback: () => { }   // (success: boolean) => void
-        });
-    }
-
     async function download_asset(path: string, name: string) {
         const resp = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
         if (!resp) return;
@@ -840,7 +832,7 @@ function AssetControlCreate() {
         const events = message.events;
         let renew_required = false;
         if (events && events.length != 0) {
-            events.forEach(async event => {
+            events.forEach(async (event: FSEvent) => {
                 if (event.project === current_project) {
                     if (event.folder_path === current_dir) {
                         renew_required = true;
@@ -1190,110 +1182,6 @@ function AssetControlCreate() {
         else return Popups.toast.error(`Не удалось сохранить сцену ${name}, путь: ${path}: ${r.message}`);
     }
 
-    function save_tilesinfo_popup() {
-        Popups.open({
-            type: "Select",
-            params: { title: "Tilemap:", button: "Ok", auto_close: true, list: ResourceManager.get_all_loaded_tilemaps().map((tilemap) => { return { id: tilemap, title: tilemap } }) },
-            callback: async (success, data) => {
-                if (success && data) {
-                    const tilemap_name = data.itemId as string;
-                    const dir = ResourceManager.get_tilemap_path(tilemap_name).replace(/^\//, '').replace(new RegExp(`${tilemap_name}.*$`), '');
-                    const path = await new_tilesinfo(dir, tilemap_name);
-                    if (path) {
-                        save_tilesinfo(path);
-                    }
-                }
-            }
-        });
-    }
-
-    async function new_tilesinfo(path: string, name: string) {
-        const tilesinfo_path = `${path}/${name}.${TILES_INFO_EXT}`
-        const r = await ClientAPI.save_data(tilesinfo_path, JSON.stringify({}));
-        if (r.result === 0) {
-            error_popup(`Не удалось создать tilesinfo, ответ сервера: ${r.message}`);
-            return;
-        }
-        if (r.result && r.data) {
-            await go_to_dir(path, true);
-        }
-
-        return tilesinfo_path;
-    }
-
-    // TODO: вынести в TilePatcher ?
-    async function save_tilesinfo(path: string) {
-        const filename = get_file_name(path);
-        const tiles_data: TDictionary<{ texture?: string, layers?: string[], material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }> = {};
-        SceneManager.get_scene_list().forEach(mesh => {
-            if (!is_tile(mesh)) return;
-
-            const hash = get_hash_by_mesh(mesh);
-
-            const current_texture = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
-            if (ResourceManager.get_tile_info(filename, hash) != current_texture) {
-                tiles_data[hash] = {
-                    texture: current_texture
-                };
-            }
-
-            const current_layers = ResourceManager.get_layers_names_by_mask(mesh.layers.mask);
-            if ((current_layers.length == 1 && current_layers[0] != 'default') || current_layers.length > 1 || current_layers.length == 0) {
-                if (!tiles_data[hash]) tiles_data[hash] = {};
-                tiles_data[hash].layers = current_layers;
-            }
-
-            const material = (mesh as Slice9Mesh).material;
-            if (!material) {
-                Log.warn(`Material not found for tile ${mesh.name}`);
-                return;
-            }
-
-            const default_material_name = 'slice9';
-            if (material.name != default_material_name) {
-                if (!tiles_data[hash]) tiles_data[hash] = {};
-                tiles_data[hash].material_name = material.name;
-            }
-
-            const default_blend_mode = BlendMode.NORMAL;
-            const current_blend_mode = convertThreeJSBlendingToBlendMode(material.blending);
-            const is_not_equal_blend_mode = current_blend_mode != default_blend_mode;
-            if (is_not_equal_blend_mode) {
-                if (!tiles_data[hash]) tiles_data[hash] = {};
-                tiles_data[hash].blending = convertBlendModeToThreeJS(current_blend_mode);
-            }
-
-            const default_color = '#fff';
-            const current_color = mesh.get_color();
-            const is_not_equal_color = current_color != default_color;
-            if (is_not_equal_color) {
-                if (!tiles_data[hash]) tiles_data[hash] = {};
-                tiles_data[hash].color = current_color;
-            }
-
-            const changed_uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh as Slice9Mesh);
-            if (changed_uniforms) {
-                Object.keys(changed_uniforms).forEach((key) => {
-                    if (key != 'u_texture') return;
-                    delete changed_uniforms[key];
-                });
-                if (Object.keys(changed_uniforms).length > 0) {
-                    if (!tiles_data[hash]) tiles_data[hash] = {};
-                    Object.entries(changed_uniforms).forEach(([key, value]) => {
-                        if (value instanceof Texture) {
-                            changed_uniforms[key] = `/${hash}`;
-                        }
-                    });
-                    tiles_data[hash].uniforms = changed_uniforms;
-                }
-            }
-        });
-
-        const r = await ClientAPI.save_data(path, JSON.stringify(tiles_data));
-        if (r && r.result) return Popups.toast.success(`Тайлы сохранены, путь: ${path}`);
-        else return Popups.toast.error(`Не удалось сохранить тайлы, путь: ${path}: ${r.message}`);
-    }
-
     function get_current_scene() {
         return current_scene;
     }
@@ -1372,7 +1260,7 @@ function AssetControlCreate() {
 
     init();
     return {
-        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene, select_file, loadPartOfSceneInPos
+        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene, select_file, loadPartOfSceneInPos, go_to_dir
     };
 }
 

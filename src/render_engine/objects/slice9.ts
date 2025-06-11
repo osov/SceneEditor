@@ -72,12 +72,12 @@ export const shader = {
         }`
 };
 
-interface SerializeData {
+export interface Slice9SerializeData {
     slice_width?: number;
     slice_height?: number;
     material_name?: string;
     material_uniforms?: { [key: string]: any };
-    layers?:number;
+    layers?: number;
 }
 
 export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width = 1, height = 1, slice_width = 0, slice_height = 0) {
@@ -239,8 +239,8 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         parameters.anchor_y = y;
     }
 
-    function serialize(): SerializeData {
-        const data: SerializeData = {};
+    function serialize(): Slice9SerializeData {
+        const data: Slice9SerializeData = {};
 
         if (material.name != 'default') {
             data.material_name = material.name;
@@ -283,12 +283,12 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         // 0, 31, 32
         if (mesh.layers.mask != -2147483647)
             data.layers = mesh.layers.mask;
-        
+
 
         return data;
     }
 
-    function deserialize(data: SerializeData) {
+    function deserialize(data: Slice9SerializeData) {
         // NOTE: сначала устанавливаем значения по умолчанию
         set_slice(0, 0);
         set_texture('', '');
@@ -319,11 +319,11 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         }
         if (data.layers != undefined)
             mesh.layers.mask = data.layers;
-        
+
         update_parameters();
     }
 
- 
+
 
     return { set_size, set_slice, set_color, set_alpha, set_material, set_texture, get_bounds, set_pivot, set_anchor, serialize, deserialize, geometry, parameters };
 }
@@ -383,8 +383,9 @@ export class Slice9Mesh extends EntityPlane {
         return [this.template.parameters.texture, this.template.parameters.atlas];
     }
 
-    set_texture(name: string, atlas = '') {
-        this.template.set_texture(name, atlas);
+    // NOTE: через uniform_key можно установливать и другие сэмплер2д юниформы
+    set_texture(name: string, atlas = '', uniform_key = 'u_texture') {
+        this.template.set_texture(name, atlas, uniform_key);
     }
 
     set_material(material_name: string) {
@@ -434,7 +435,7 @@ export class Slice9Mesh extends EntityPlane {
         return { ...super.serialize(), ...this.template.serialize() };
     }
 
-    deserialize(data: SerializeData) {
+    deserialize(data: Slice9SerializeData) {
         if (data.material_name != undefined) {
             this.set_material(data.material_name);
         }

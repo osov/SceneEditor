@@ -16,7 +16,7 @@ interface IParameters {
     font: string;
 }
 
-interface SerializeData {
+export interface TextSerializeData {
     text?: string
     font?: string
     font_size?: number
@@ -198,8 +198,8 @@ export class TextMesh extends Text implements IBaseMesh {
         return this.fillOpacity;
     }
 
-    serialize(): SerializeData {
-        const data: SerializeData = {};
+    serialize(): TextSerializeData {
+        const data: TextSerializeData = {};
 
         if (this.text != '') {
             data.text = this.text;
@@ -223,7 +223,7 @@ export class TextMesh extends Text implements IBaseMesh {
         return data;
     }
 
-    deserialize(data: SerializeData) {
+    deserialize(data: TextSerializeData) {
         // NOTE: сначала устанавливаем значения по умолчанию
         this.fontSize = 32;
         this.set_font('', false);

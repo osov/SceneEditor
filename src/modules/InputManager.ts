@@ -50,9 +50,6 @@ function InputModule() {
             if (e.ctrlKey && (e.key == 's' || e.key == 'ы')) {
                 EventBus.trigger('SYS_INPUT_SAVE');
             }
-            if (e.ctrlKey && (e.key == 't' || e.key == 'е')) {
-                EventBus.trigger('SYS_INPUT_SAVE_TILES');
-            }
         });
 
         body.addEventListener('pointermove', (e) => {
