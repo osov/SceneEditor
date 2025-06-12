@@ -12,7 +12,7 @@ import { IUniform, Texture } from "three";
 import { Color } from "three";
 import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
 import { rgbToHex } from "../modules/utils";
-import { get_file_name, is_base_mesh, is_tile } from "../render_engine/helpers/utils";
+import { get_file_name, is_base_mesh } from "../render_engine/helpers/utils";
 import { HistoryOwner, TDictionary, THistoryUndo } from "../modules_editor/modules_editor_const";
 import { AnimatedMesh } from "../render_engine/objects/animated_mesh";
 import { WORLD_SCALAR } from "../config";
@@ -66,6 +66,9 @@ export enum MeshProperty {
     PLAY = 'play',
     STOP = 'stop',
     TILE_LAYER = 'tile_layer',
+    CLIPPING_MODE = 'clipping_mode',
+    INVERTED_CLIPPING = 'inverted_clipping',
+    CLIPPING_VISIBLE = 'clipping_visible',
 }
 
 export enum MeshPropertyTitle {
@@ -105,6 +108,10 @@ export enum MeshPropertyTitle {
     PLAY = 'Воспроизвести',
     STOP = 'Остановить',
     TILE_LAYER = 'Слой',
+    CLIPPING_FOLDER = 'Обрезка',
+    CLIPPING_MODE = 'Режим',
+    INVERTED_CLIPPING = 'Инвертированный',
+    CLIPPING_VISIBLE = 'Видимый',
 }
 
 export enum ScreenPointPreset {
@@ -398,6 +405,49 @@ function MeshInspectorCreate() {
             onChange: handleAnchorChange,
             onRefresh: refreshAnchor
         });
+
+        if (mesh instanceof GuiBox && !SceneManager.find_nearest_clipping_parent(mesh)) {
+            const clipping_fields: PropertyData<PropertyType>[] = [];
+            clipping_fields.push({
+                key: MeshProperty.CLIPPING_MODE,
+                title: MeshPropertyTitle.CLIPPING_MODE,
+                value: mesh.isClippingEnabled() ? 'Stencil' : 'None',
+                type: PropertyType.LIST_TEXT,
+                params: {
+                    'None': 'None',
+                    'Stencil': 'Stencil'
+                },
+                onBeforeChange: saveUIClipping,
+                onChange: handleUIClippingChange
+            });
+
+            if (mesh.isClippingEnabled()) {
+                clipping_fields.push({
+                    key: MeshProperty.INVERTED_CLIPPING,
+                    title: MeshPropertyTitle.INVERTED_CLIPPING,
+                    value: mesh.isInvertedClipping(),
+                    type: PropertyType.BOOLEAN,
+                    onBeforeChange: saveUIInvertedClipping,
+                    onChange: handleUIInvertedClippingChange
+                });
+
+                clipping_fields.push({
+                    key: MeshProperty.CLIPPING_VISIBLE,
+                    title: MeshPropertyTitle.CLIPPING_VISIBLE,
+                    value: mesh.isClippingVisible(),
+                    type: PropertyType.BOOLEAN,
+                    onBeforeChange: saveUIClippingVisible,
+                    onChange: handleUIClippingVisibleChange
+                });
+            }
+
+            fields.push({
+                key: MeshPropertyTitle.CLIPPING_FOLDER,
+                value: clipping_fields,
+                type: PropertyType.FOLDER,
+                params: { expanded: true }
+            });
+        }
     }
 
     function generateSizeField(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
@@ -1448,6 +1498,45 @@ function MeshInspectorCreate() {
             }
         });
         return result;
+    }
+
+    function saveUIClipping(info: BeforeChangeInfo) {
+        const oldClipping: MeshPropertyInfo<boolean>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[saveUIClipping] Mesh not found for id:', id);
+                return;
+            }
+            if (mesh.type != IObjectTypes.GUI_BOX) return;
+            oldClipping.push({
+                mesh_id: mesh.mesh_data.id,
+                value: (mesh as GuiBox).isClippingEnabled()
+            });
+        });
+        HistoryControl.add('MESH_CLIPPING', oldClipping, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleUIClippingChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        const patchedData = data.map(item => {
+            return {
+                mesh_id: item.mesh_id,
+                value: item.value != 'None'
+            };
+        });
+        updateUIClipping(patchedData, info.data.event.last);
+    }
+
+    function updateUIClipping(data: MeshPropertyInfo<boolean>[], _: boolean) {
+        data.forEach((item) => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (!mesh || !(mesh instanceof GuiBox)) return;
+            if (item.value) mesh.enableClipping();
+            else mesh.disableClipping();
+        });
+
+        force_refresh();
     }
 
     function saveModel(info: BeforeChangeInfo) {
@@ -2601,12 +2690,17 @@ function MeshInspectorCreate() {
 
                 const uniform = material.uniforms[info.field.key];
                 if (uniform) {
-                    const path = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
+                    let atlas_texture = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
+                    if (atlas_texture == '/') {
+                        const texture_name = get_file_name(uniform.value?.path || '');
+                        const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+                        atlas_texture = `${atlas}/${texture_name}`;
+                    }
                     sampler2Ds.push({
                         mesh_id: id,
                         material_index: 0,
                         uniform_name: info.field.key,
-                        value: path != '/' ? path : `/${get_file_name(uniform.value?.path || '')}`
+                        value: atlas_texture
                     });
                 }
             }
@@ -2616,22 +2710,16 @@ function MeshInspectorCreate() {
 
                 const uniform = material.uniforms[info.field.key];
                 if (uniform) {
-                    let path = uniform.value?.path || '';
-                    let texture_name = '';
-                    let atlas = '';
+                    let atlas_texture = '/';
                     const texture_info = mesh.get_texture(info.field.data.material_index);
                     if (texture_info) {
-                        texture_name = texture_info[0];
-                        atlas = texture_info[1];
-                    }
-                    if (texture_name != '' && atlas != '') {
-                        path = `${atlas} / ${texture_name}`;
+                        atlas_texture = `${texture_info[1]}/${texture_info[0]}`;
                     }
                     sampler2Ds.push({
                         mesh_id: id,
                         material_index: info.field.data.material_index,
                         uniform_name: info.field.key,
-                        value: path
+                        value: atlas_texture
                     });
                 }
             }
@@ -2670,8 +2758,6 @@ function MeshInspectorCreate() {
                 }
                 else {
                     ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, texture);
-                    // NOTE: не уверен что это тут нужно, это же толко в slice9 материале, и только для u_texture ?
-                    ResourceManager.set_material_define_for_mesh(mesh, 'USE_TEXTURE', '');
                 }
             }
             else if (mesh instanceof MultipleMaterialMesh) {
@@ -3375,6 +3461,66 @@ function MeshInspectorCreate() {
         }
     }
 
+    function saveUIInvertedClipping(info: BeforeChangeInfo) {
+        const oldClipping: MeshPropertyInfo<boolean>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[saveUIInvertedClipping] Mesh not found for id:', id);
+                return;
+            }
+            if (mesh.type != IObjectTypes.GUI_BOX) return;
+            oldClipping.push({
+                mesh_id: mesh.mesh_data.id,
+                value: (mesh as GuiBox).isInvertedClipping()
+            });
+        });
+        HistoryControl.add('MESH_INVERTED_CLIPPING', oldClipping, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleUIInvertedClippingChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<boolean>(info);
+        updateUIInvertedClipping(data, info.data.event.last);
+    }
+
+    function updateUIInvertedClipping(data: MeshPropertyInfo<boolean>[], _: boolean) {
+        data.forEach((item) => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (!mesh || !(mesh instanceof GuiBox)) return;
+            mesh.enableClipping(item.value, mesh.isClippingVisible());
+        });
+    }
+
+    function saveUIClippingVisible(info: BeforeChangeInfo) {
+        const oldClippingVisible: MeshPropertyInfo<boolean>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[saveUIClippingVisible] Mesh not found for id:', id);
+                return;
+            }
+            if (mesh.type != IObjectTypes.GUI_BOX) return;
+            oldClippingVisible.push({
+                mesh_id: mesh.mesh_data.id,
+                value: (mesh as GuiBox).isClippingVisible()
+            });
+        });
+        HistoryControl.add('MESH_CLIPPING_VISIBLE', oldClippingVisible, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleUIClippingVisibleChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<boolean>(info);
+        updateUIClippingVisible(data, info.data.event.last);
+    }
+
+    function updateUIClippingVisible(data: MeshPropertyInfo<boolean>[], _: boolean) {
+        data.forEach((item) => {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
+            if (!mesh || !(mesh instanceof GuiBox)) return;
+            mesh.enableClipping(mesh.isInvertedClipping(), item.value);
+        });
+    }
+
     function undo(event: THistoryUndo) {
         switch (event.type) {
             case 'MESH_NAME':
@@ -3384,6 +3530,14 @@ function MeshInspectorCreate() {
             case 'MESH_ACTIVE':
                 const actives = event.data as MeshPropertyInfo<boolean>[];
                 updateActive(actives, true);
+                break;
+            case 'MESH_CLIPPING':
+                const clippings = event.data as MeshPropertyInfo<boolean>[];
+                updateUIClipping(clippings, true);
+                break;
+            case 'MESH_INVERTED_CLIPPING':
+                const invertedClippings = event.data as MeshPropertyInfo<boolean>[];
+                updateUIInvertedClipping(invertedClippings, true);
                 break;
             case 'MESH_LAYERS':
                 const layers = event.data as MeshPropertyInfo<number>[];

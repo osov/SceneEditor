@@ -1,5 +1,5 @@
 import { Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
-import { filter_list_base_mesh, is_base_mesh, is_label, is_sprite, is_text } from "./helpers/utils";
+import { filter_list_base_mesh, find_nearest_clipping_parent, is_base_mesh, is_label, is_sprite, is_text } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
 import { IBaseEntityAndThree, IBaseEntityData, IObjectTypes } from "./types";
 import { TextMesh } from "./objects/text";
@@ -329,14 +329,27 @@ export function SceneManagerModule() {
         return get_next_base_mesh_id(mesh);
     }
 
-    function find_nearest_gui_container(mesh: IBaseEntityAndThree): GuiContainer | null {
+    function find_nearest_gui_container(mesh: GuiBox | GuiText): GuiContainer | null {
         let current = mesh.parent;
         while (current) {
-            if (is_base_mesh(current) && (current as IBaseEntityAndThree).type == IObjectTypes.GUI_CONTAINER) {
+            if (is_base_mesh(current) && current.type == IObjectTypes.GUI_CONTAINER) {
                 return current as GuiContainer;
             }
             current = current.parent;
         }
+        return null;
+    }
+
+    function find_nearest_clipping_parent(mesh: GuiBox | GuiText): GuiBox | null {
+        if (mesh.parent instanceof GuiBox) {
+            if (mesh.parent.isClippingEnabled())
+                return mesh.parent;
+            return find_nearest_clipping_parent(mesh.parent);
+        }
+        if (mesh.parent instanceof GuiText) {
+            return find_nearest_clipping_parent(mesh.parent);
+        }
+
         return null;
     }
 
@@ -405,9 +418,16 @@ export function SceneManagerModule() {
             old_scale.divide(parent_scale);
             mesh.scale.copy(old_scale);
         }
-        const gui_container = find_nearest_gui_container(mesh);
-        if (gui_container) {
-            update_gui_container_children_z(gui_container);
+        if (mesh instanceof GuiBox || mesh instanceof GuiText) {
+            const gui_container = find_nearest_gui_container(mesh);
+            if (gui_container) {
+                update_gui_container_children_z(gui_container);
+            }
+            const clipping_parent = find_nearest_clipping_parent(mesh);
+            if (clipping_parent) {
+                // NOTE: поросто вызываем еще раз чтобы новый элемент тоже добавить в сlipping
+                clipping_parent.enableClipping(clipping_parent.isInvertedClipping(), clipping_parent.isClippingVisible());
+            }
         }
         EventBus.trigger('SYS_MESH_MOVED_TO', { id: mesh.mesh_data.id, pid }, false);
     }
@@ -419,9 +439,16 @@ export function SceneManagerModule() {
     function add_to_mesh(mesh: IBaseEntityAndThree, parent_mesh: IBaseEntityAndThree) {
         const id_parent = parent_mesh.mesh_data.id;
         move_mesh(mesh, id_parent);
-        const gui_container = find_nearest_gui_container(mesh);
-        if (gui_container) {
-            update_gui_container_children_z(gui_container);
+        if (mesh instanceof GuiBox || mesh instanceof GuiText) {
+            const gui_container = find_nearest_gui_container(mesh);
+            if (gui_container) {
+                update_gui_container_children_z(gui_container);
+            }
+            const clipping_parent = find_nearest_clipping_parent(mesh);
+            if (clipping_parent) {
+                // NOTE: поросто вызываем еще раз чтобы новый элемент тоже добавить в сlipping
+                clipping_parent.enableClipping(clipping_parent.isInvertedClipping(), clipping_parent.isClippingVisible());
+            }
         }
     }
 
@@ -509,6 +536,8 @@ export function SceneManagerModule() {
         set_mesh_name,
         get_mesh_id_by_url,
         get_mesh_url_by_id,
-        get_mesh_by_name
+        get_mesh_by_name,
+        find_nearest_gui_container,
+        find_nearest_clipping_parent
     };
 }

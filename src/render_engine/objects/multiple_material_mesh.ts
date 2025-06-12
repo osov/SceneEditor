@@ -31,10 +31,10 @@ export class MultipleMaterialMesh extends EntityPlane {
         this.set_size(width, height);
     }
 
-    set_texture(name: string, atlas = '', index = 0) {
-        this.textures[index] = [name, atlas];
+    set_texture(name: string, atlas = '', index = 0, uniform_key = 'u_texture') {
+        this.textures[index] = [name, atlas, uniform_key];
         const texture_data = ResourceManager.get_texture(name, atlas);
-        ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, 'u_texture', texture_data.texture);
+        ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, uniform_key, texture_data.texture);
     }
 
     get_texture(index = 0) {

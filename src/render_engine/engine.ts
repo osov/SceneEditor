@@ -7,10 +7,9 @@ ParticlePool - нельзя задать прямоугольный размер
 InstanceBufferPool - нет Z сортировки
 https://stackoverflow.com/questions/76514035/how-to-render-1000-2d-text-labels-using-three-js - хороший пример InstancedBufferGeometry для создания текста из атлас текстуры
 */
-import { Clock, Color, Object3D, OrthographicCamera, PerspectiveCamera, Raycaster, Scene, Vector2, WebGLRenderer, } from 'three'
+import { Clock, Color, Object3D, OrthographicCamera, PerspectiveCamera, Raycaster, Scene, Vector2, WebGLRenderer, ReplaceStencilOp } from 'three'
 import { resize_renderer_to_display_size } from './helpers/window_utils'
 import { CAMERA_FAR, CAMERA_Z, IS_CAMERA_ORTHOGRAPHIC } from '../config';
-import * as TWEEN from '@tweenjs/tween.js';
 
 declare global {
     const RenderEngine: ReturnType<typeof RenderEngineModule>;
@@ -23,7 +22,7 @@ export function register_engine() {
 
 export function RenderEngineModule() {
     const canvas = document.querySelector(`canvas#scene`)!;
-    const renderer = new WebGLRenderer({ canvas, antialias: !true, alpha: false, preserveDrawingBuffer: true })
+    const renderer = new WebGLRenderer({ canvas, antialias: !true, stencil: true, alpha: false, preserveDrawingBuffer: true });
     const scene = new Scene();
     scene.background = new Color('#222');
     const clock = new Clock();

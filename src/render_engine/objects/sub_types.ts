@@ -3,6 +3,7 @@ import { Slice9Mesh, Slice9SerializeData } from "./slice9";
 import { TextMesh, TextSerializeData } from "./text";
 import { EntityBase } from "./entity_base";
 import { flip_geometry_x, flip_geometry_y, flip_geometry_xy } from "../helpers/utils";
+import * as THREE from 'three';
 
 
 export class GuiContainer extends EntityBase {
@@ -32,6 +33,8 @@ export class GoContainer extends EntityBase {
 
 export class GuiBox extends Slice9Mesh {
     public type = IObjectTypes.GUI_BOX;
+    private clippingEnabled: boolean = false;
+    private invertedClipping: boolean = false;
     private alpha: number = 1;
 
     get_raw_alpha(): number {
@@ -62,6 +65,87 @@ export class GuiBox extends Slice9Mesh {
             if (child instanceof GuiBox) ResourceManager.set_material_uniform_for_mesh(child, 'alpha', child.get_raw_alpha());
             else if (child instanceof GuiText) child.fillOpacity = child.get_raw_alpha();
         });
+    }
+
+    enableClipping(inverted = false, visible = true): void {
+        this.clippingEnabled = true;
+        this.invertedClipping = inverted;
+
+        ResourceManager.set_material_property_for_mesh(this, 'colorWrite', visible);
+        ResourceManager.set_material_property_for_mesh(this, 'depthTest', false);
+        ResourceManager.set_material_property_for_mesh(this, 'stencilWrite', true);
+        ResourceManager.set_material_property_for_mesh(this, 'stencilRef', this.mesh_data.id);
+        let stencilFunc: number = THREE.AlwaysStencilFunc;
+        if (this.parent != null && this.parent instanceof GuiBox && this.parent.isClippingEnabled()) {
+            stencilFunc = this.parent.isInvertedClipping() ? THREE.NotEqualStencilFunc : THREE.EqualStencilFunc;
+        }
+        ResourceManager.set_material_property_for_mesh(this, 'stencilFunc', stencilFunc);
+        ResourceManager.set_material_property_for_mesh(this, 'stencilZPass', THREE.ReplaceStencilOp);
+
+        const setClippingForChildren = (children: THREE.Object3D[]) => {
+            children.forEach(child => {
+                // TODO: устанавливать и для текста тоже, нужно только разобраться как достучаться до материала
+                if (child instanceof GuiBox) {
+                    ResourceManager.set_material_property_for_mesh(child, 'stencilWrite', true);
+                    ResourceManager.set_material_property_for_mesh(child, 'stencilRef', this.mesh_data.id);
+                    ResourceManager.set_material_property_for_mesh(child, 'stencilFunc', inverted ? THREE.NotEqualStencilFunc : THREE.EqualStencilFunc);
+                    setClippingForChildren(child.children);
+                }
+
+                if (child instanceof GuiText && child.material) {
+                    child.material.stencilWrite = true;
+                    child.material.stencilRef = this.mesh_data.id;
+                    child.material.stencilFunc = inverted ? THREE.NotEqualStencilFunc : THREE.EqualStencilFunc;
+                    setClippingForChildren(child.children);
+                }
+            });
+        };
+
+        setClippingForChildren(this.children);
+    }
+
+    disableClipping(): void {
+        this.clippingEnabled = false;
+        ResourceManager.set_material_property_for_mesh(this, 'colorWrite', true);
+        ResourceManager.set_material_property_for_mesh(this, 'depthTest', true);
+        ResourceManager.set_material_property_for_mesh(this, 'stencilWrite', false);
+        ResourceManager.set_material_property_for_mesh(this, 'stencilRef', 0);
+        ResourceManager.set_material_property_for_mesh(this, 'stencilFunc', THREE.AlwaysStencilFunc);
+        ResourceManager.set_material_property_for_mesh(this, 'stencilZPass', THREE.KeepStencilOp);
+
+        const disableClippingForChildren = (children: THREE.Object3D[]) => {
+            children.forEach(child => {
+                if (child instanceof GuiBox) {
+                    ResourceManager.set_material_property_for_mesh(child, 'stencilWrite', false);
+                    ResourceManager.set_material_property_for_mesh(child, 'stencilRef', 0);
+                    ResourceManager.set_material_property_for_mesh(child, 'stencilFunc', THREE.AlwaysStencilFunc);
+                    ResourceManager.set_material_property_for_mesh(child, 'stencilZPass', THREE.KeepStencilOp);
+                    disableClippingForChildren(child.children);
+                }
+
+                if (child instanceof GuiText && child.material) {
+                    child.material.stencilWrite = false;
+                    child.material.stencilRef = 0;
+                    child.material.stencilFunc = THREE.AlwaysStencilFunc;
+                    child.material.stencilZPass = THREE.KeepStencilOp;
+                    disableClippingForChildren(child.children);
+                }
+            });
+        };
+
+        disableClippingForChildren(this.children);
+    }
+
+    isClippingEnabled(): boolean {
+        return this.clippingEnabled;
+    }
+
+    isInvertedClipping(): boolean {
+        return this.invertedClipping;
+    }
+
+    isClippingVisible(): boolean {
+        return this.material.colorWrite;
     }
 
     deserialize(data: Slice9SerializeData): void {

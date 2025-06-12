@@ -2,7 +2,7 @@ import { BufferGeometry, Line, LineDashedMaterial, Object3D, ShaderMaterial, Vec
 import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
 import { deepClone, getObjectHash } from "../../modules/utils";
 import { TextMesh } from "../objects/text";
-import { GoText, GoSprite } from "../objects/sub_types";
+import { GoText, GoSprite, GuiBox, GuiText } from "../objects/sub_types";
 import { MaterialUniformType } from "../resource_manager";
 
 
@@ -171,7 +171,15 @@ export function copy_material(material: ShaderMaterial) {
         name: material.name,
         vertexShader: material.vertexShader,
         fragmentShader: material.fragmentShader,
-        transparent: deepClone(material.transparent),
+        transparent: material.transparent,
+
+        depthTest: material.depthTest,
+        stencilWrite: material.stencilWrite,
+        stencilRef: material.stencilRef,
+        stencilFunc: material.stencilFunc,
+        stencilZPass: material.stencilZPass,
+        colorWrite: material.colorWrite,
+
         uniforms: {},
         defines: deepClone(material.defines || {})
     });
@@ -209,7 +217,13 @@ export function get_material_hash(material: ShaderMaterial) {
 
     const hash = getObjectHash({
         uniforms: not_readonly_uniforms,
-        defines: material.defines
+        defines: material.defines,
+        depthTest: material.depthTest,
+        stencilWrite: material.stencilWrite,
+        stencilRef: material.stencilRef,
+        stencilFunc: material.stencilFunc,
+        stencilZPass: material.stencilZPass,
+        colorWrite: material.colorWrite,
     });
 
     return hash;
@@ -372,4 +386,16 @@ export function error_popup(message: string) {
         params: { title: "Ошибка", text: message, button: "Ok", auto_close: true },
         callback: () => { }   // (success: boolean) => void
     });
+}
+
+export function has_nearest_clipping_parent(mesh: GuiBox | GuiText) {
+    if (mesh.parent instanceof GuiBox) {
+        if (mesh.parent.isClippingEnabled())
+            return true;
+        return has_nearest_clipping_parent(mesh.parent);
+    }
+    if (mesh.parent instanceof GuiText) {
+        return has_nearest_clipping_parent(mesh.parent);
+    }
+    return false;
 }

@@ -29,6 +29,9 @@ export type HistoryData = {
     MESH_ACTIVE: MeshPropertyInfo<boolean>
     MESH_VISIBLE: MeshPropertyInfo<boolean>
     MESH_COLOR: MeshPropertyInfo<string>
+    MESH_CLIPPING: MeshPropertyInfo<boolean>
+    MESH_INVERTED_CLIPPING: MeshPropertyInfo<boolean>
+    MESH_CLIPPING_VISIBLE: MeshPropertyInfo<boolean>
     MESH_UI_ALPHA: MeshMaterialUniformInfo<number>
     MESH_TEXT_ALPHA: MeshPropertyInfo<number>
     MESH_TEXT: MeshPropertyInfo<string>

@@ -24,7 +24,7 @@ NOTE: API для материалов:
 */
 
 import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4, AudioLoader } from 'three';
-import { copy_material, get_file_name, get_material_hash, is_tile } from './helpers/utils';
+import { copy_material, get_file_name, get_material_hash } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
@@ -36,7 +36,6 @@ import { deepClone, getObjectHash, hexToRGB, rgbToHex } from '../modules/utils';
 import { Slice9Mesh } from './objects/slice9';
 import { IBaseEntityData } from './types';
 import { MultipleMaterialMesh } from './objects/multiple_material_mesh';
-import { get_hash_by_mesh } from '@editor/inspectors/ui_utils';
 
 
 declare global {
@@ -734,6 +733,7 @@ export function ResourceManagerModule() {
         });
 
         // NOTE: без вызова get_material_hash потому что еще пока не создан material_info
+        // TODO: потенциальная проблема, общую логику нужно вынести в отдельную функцию
         const not_readonly_uniforms: { [uniform: string]: IUniform<any> } = {};
         Object.entries(material.uniforms).forEach(([key, uniform]) => {
             if (material_info.uniforms[key].readonly) {
@@ -744,7 +744,13 @@ export function ResourceManagerModule() {
 
         material_info.origin = getObjectHash({
             uniforms: not_readonly_uniforms,
-            defines: material.defines
+            defines: material.defines,
+            depthTest: material.depthTest,
+            stencilWrite: material.stencilWrite,
+            stencilRef: material.stencilRef,
+            stencilFunc: material.stencilFunc,
+            stencilZPass: material.stencilZPass,
+            colorWrite: material.colorWrite,
         });
 
         material_info.instances[material_info.origin] = material;
@@ -834,9 +840,7 @@ export function ResourceManagerModule() {
             material_info.material_hash_to_meshes_info[hash].splice(mesh_info_index, 1);
             if (material_info.material_hash_to_meshes_info[hash].length == 0 && hash != material_info.origin) {
                 // NOTE: если нет мешей которые используют этот материал, то удаляем материал
-                delete material_info.material_hash_to_changed_uniforms[hash];
-                delete material_info.material_hash_to_meshes_info[hash];
-                delete material_info.instances[hash];
+                delete_material_instance(material_info, hash);
             }
         } else {
             Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
@@ -849,7 +853,13 @@ export function ResourceManagerModule() {
     }
 
     function set_to_existing_copy(material_info: MaterialInfo, mesh_id: number, index: number, new_hash: string, hash: string) {
+        const mesh_info_index_new_hash = material_info.material_hash_to_meshes_info[new_hash].findIndex((mesh_info) => {
+            return mesh_info.id == mesh_id && mesh_info.index == index;
+        });
+        if (mesh_info_index_new_hash != -1) return;
+
         material_info.material_hash_to_meshes_info[new_hash].push({ id: mesh_id, index });
+
         if (!material_info.mesh_info_to_material_hashes[mesh_id]) {
             material_info.mesh_info_to_material_hashes[mesh_id] = [];
         }
@@ -869,9 +879,7 @@ export function ResourceManagerModule() {
             material_info.material_hash_to_meshes_info[hash].splice(mesh_info_index, 1);
             if (material_info.material_hash_to_meshes_info[hash].length == 0 && hash != material_info.origin && new_hash != hash) {
                 // NOTE: если нет мешей которые используют этот материал, то удаляем материал
-                delete material_info.material_hash_to_changed_uniforms[hash];
-                delete material_info.material_hash_to_meshes_info[hash];
-                delete material_info.instances[hash];
+                delete_material_instance(material_info, hash);
             }
         } else {
             Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
@@ -899,13 +907,59 @@ export function ResourceManagerModule() {
             material_info.material_hash_to_meshes_info[hash].splice(mesh_info_index, 1);
             if (material_info.material_hash_to_meshes_info[hash].length == 0 && hash != material_info.origin) {
                 // NOTE: если нет мешей которые используют этот материал, то удаляем материал
-                delete material_info.material_hash_to_changed_uniforms[hash];
-                delete material_info.material_hash_to_meshes_info[hash];
-                delete material_info.instances[hash];
+                delete_material_instance(material_info, hash);
             }
         } else {
             Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
         }
+    }
+
+    function delete_material_instance(material_info: MaterialInfo, hash: string) {
+        delete material_info.material_hash_to_changed_uniforms[hash];
+        delete material_info.material_hash_to_meshes_info[hash];
+        delete material_info.instances[hash];
+    }
+
+    function set_material_property_for_mesh(mesh: Slice9Mesh, property_name: string, value: any) {
+        const mesh_id = mesh.mesh_data.id;
+        const material_name = mesh.material.name;
+
+        const material_info = get_material_info(material_name);
+        if (!material_info) return;
+
+        if (set_material_property(material_info, mesh_id, 0, property_name, value)) {
+            mesh.set_material(material_info.name);
+        }
+    }
+
+    function set_material_property(material_info: MaterialInfo, mesh_id: number, index: number, property_name: string, value: any) {
+        const hash = get_material_hash_by_mesh_id(material_info.name, mesh_id, index);
+        if (!hash) {
+            return false;
+        }
+
+        const material = material_info.instances[hash];
+        if (!material) {
+            return false;
+        }
+
+        (material as any)[property_name] = value;
+
+        const new_hash = get_material_hash(material);
+
+        if (new_hash == hash) {
+            return false;
+        }
+
+        if (material_info.instances[new_hash]) {
+            set_to_existing_copy(material_info, mesh_id, index, hash, new_hash);
+            return true;
+        }
+
+        const copy = copy_material(material);
+        (copy as any)[property_name] = value;
+        set_to_new_copy(material_info, mesh_id, index, hash, new_hash, copy);
+        return true;
     }
 
     async function set_material_uniform_for_original<T>(material_name: string, uniform_name: string, value: T, is_save = true) {
@@ -1687,6 +1741,7 @@ export function ResourceManagerModule() {
         get_material_by_hash,
         get_material_hash_by_mesh_id,
         get_material_by_mesh_id,
+        set_material_property_for_mesh,
         set_material_uniform_for_original,
         set_material_uniform_for_mesh,
         set_material_uniform_for_multiple_material_mesh,
