@@ -8,10 +8,11 @@ import { go_module } from "./go";
 import { sprite_module } from "./sprite";
 import { timer_module } from "./timer";
 import { xmath_module } from "./extension/xmath";
+import { gui_module } from "./gui";
 
 declare global {
     function tonumber(e: any, base?: number): number | undefined;
-    function pprint(obj:any):void;
+    function pprint(obj: any): void;
     type hash = {};
     function hash(s: string): hash;
 }
@@ -31,6 +32,7 @@ export function register_lua_core() {
     (window as any).json = json_module();
     (window as any).math = math_module();
     (window as any).vmath = vmath_module();
+    (window as any).gui = gui_module();
     (window as any).go = go_module();
     (window as any).sprite = sprite_module();
     (window as any).factory = factory_module();
