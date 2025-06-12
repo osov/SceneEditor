@@ -64,13 +64,6 @@ export class GuiBox extends Slice9Mesh {
         });
     }
 
-        this.children.forEach(child => {
-            if (child instanceof GuiBox) {
-            }
-            }
-        });
-    }
-
     deserialize(data: Slice9SerializeData): void {
         super.deserialize(data);
         let inheredAlpha = 1;

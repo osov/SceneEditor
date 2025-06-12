@@ -1,7 +1,7 @@
 import { Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import { filter_list_base_mesh, is_base_mesh, is_label, is_sprite, is_text } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
-import { IBaseEntity, IBaseEntityAndThree, IBaseEntityData, IBaseMesh, IObjectTypes } from "./types";
+import { IBaseEntityAndThree, IBaseEntityData, IObjectTypes } from "./types";
 import { TextMesh } from "./objects/text";
 import { deepClone } from "../modules/utils";
 import { GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from "./objects/sub_types";
