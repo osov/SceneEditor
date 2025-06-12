@@ -17,7 +17,7 @@ import {
     POINT_EMPTY,
     Vector,
 } from '../modules/Geometry';
-import { Line as GeomLine } from 'three';
+import { Line as GeomLine, LineBasicMaterial } from 'three';
 import { LinesDrawer } from '../modules/LinesDrawer';
 import { PlayerMovementSettings, default_settings, ControlType, PathData, COLORS } from '@editor/modules/types';
 
@@ -84,11 +84,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
     let has_target = false;
     let PF: PathFinder
 
-    const player_circle: {
-        line: GeomLine;
-        p1: PointLike;
-        p2: PointLike;
-    }[] = [];
+    const obstacles_lines: {[key: string]: GeomLine<any>[]} = {};
 
     const joystick = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     joystick.name = 'joystick';
@@ -99,11 +95,60 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
     const player_way = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     player_way.name = 'player_way';
     SceneManager.add(player_way);
+    const obstacles_container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    obstacles_container.name = 'obstacles';
+    SceneManager.add(obstacles_container);
 
     function init(init_data: { model: AnimatedMesh, path_finder: PathFinder }) {
         const model = init_data.model;
         target = point(model.position.x, model.position.y);
         PF = init_data.path_finder;
+
+        if (debug) draw_obstacles();
+        
+        // Управление препятствиями
+
+        let n_pressed = false
+        EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
+            if (e.key == 'n' || e.key == 'т') {
+                n_pressed = true
+            }
+        })
+        EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
+            if (e.key == 'n' || e.key == 'т') {
+                n_pressed = false
+            }
+        })
+        EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
+            if (n_pressed && e.button == 0) {
+                const wp = Camera.screen_to_world(e.x, e.y);
+                const obj = PF.obstacles_manager.get_object_by_pos(wp.x, wp.y);
+                if (obj) {
+                    let color = COLORS.RED;
+                    if (obj.enabled) {
+                        log('Препятствие', obj.id, 'отключено');
+                        color = COLORS.YELLOW;
+                    }
+                    else {
+                        log('Препятствие', obj.id, 'включено');
+                    }
+                    PF.obstacles_manager.enable_object(obj.id, !obj.enabled);
+                    const lines = obstacles_lines[obj.id];
+                    for (const line of lines) {
+                        const material = new LineBasicMaterial({ color });
+                        line.material = material;
+                    }
+                }
+            }
+        })
+        EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
+            if (e.key == 'ь' || e.key == 'm') {
+                if (PF.check_obstacles_enabled()) PF.enable_collision(false);
+                else PF.enable_collision(true);
+            }
+        })
+        
+        ////
 
         if (pointer_control == ControlType.GP) {
             EventBus.on('SYS_ON_UPDATE', (e) => {
@@ -158,14 +203,14 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
 
         if (pointer_control == ControlType.FP || pointer_control == ControlType.GP) {
             EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
-                if (e.button != 0)
+                if (e.button != 0 || n_pressed)
                     return;
                 is_pointer_down = true;
                 has_target = true;
                 update_pointer_position(e);
             });
             EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
-                if (e.button != 0)
+                if (e.button != 0 || n_pressed)
                     return;
                 update_pointer_position(e);
                 is_pointer_down = false;
@@ -185,7 +230,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
         // Используем мышь вместо реального джойстика
         else if (pointer_control == ControlType.JS) {
             EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
-                if (e.button != 0)
+                if (e.button != 0 || n_pressed)
                     return;
                 stick_start = point(e.x, e.y);
             });
@@ -202,6 +247,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                 current_dir = vector(point(0, 0), point(0, 0));
             });
 
+            // Отрисовка джойстика
             EventBus.on('SYS_ON_UPDATE', (e) => {
                 LD.clear_container(joystick);
                 if (stick_start && stick_end) {
@@ -209,7 +255,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                     const end = Camera.screen_to_world(stick_end.x, stick_end.y);
                     if (settings.debug) {
                         LD.draw_arc(arc(point(start.x, start.y), 3, 0, Math.PI * 2), joystick, COLORS.RED);
-                        LD.draw_arc(arc(point(end.x, end.y), 3, 0, Math.PI * 2), joystick, COLORS.RED);
+                        LD.draw_arc(arc(point(end.x, end.y), 3, 0, Math.PI * 2), joystick, COLORS.LIGHT_RED);
                     }
 
                 }
@@ -274,25 +320,6 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                     way_required = segment(cp.x, cp.y, cp.x, cp.y);
             }
             return way_required;
-        }
-
-        function check_target_change() {
-            let result = false;
-            if (last_check_target.distanceTo(target)[0] > min_target_change) {
-                result = true;
-            }
-            return result;
-        }
-
-        function check_dir_change() {
-            let result = false;
-            if (last_check_dir.length() == 0 && current_dir.length() != last_check_dir.length())
-                result = true;
-            else if (current_dir.length() != 0 && last_check_dir.length() != 0) {
-                const d_angle = Math.abs(vec_angle(current_dir, last_check_dir));
-                result = (d_angle > update_way_angle);
-            }
-            return result;
         }
 
         function handle_update_follow_pointer(dt: number) {
@@ -377,6 +404,40 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                 line.position.y = current_pos.y;
             }
         }
+
+        function draw_obstacles() {
+            const objects_dict = PF.obstacles_manager.objects;
+            for (const id in objects_dict) {
+                const obstacles = objects_dict[id].obstacles;
+                obstacles_lines[id] = [];
+                for (const obst_id of obstacles) {
+                    const obstacle = PF.obstacles_manager.get_obstacle_by_id(obst_id);
+                    if (obstacle) {
+                        const line = LD.draw_line(obstacle, obstacles_container, COLORS.RED);
+                        obstacles_lines[id].push(line);             
+                    }
+                }
+            }
+        }
+    }
+
+    function check_target_change() {
+        let result = false;
+        if (last_check_target.distanceTo(target)[0] > min_target_change) {
+            result = true;
+        }
+        return result;
+    }
+
+    function check_dir_change() {
+        let result = false;
+        if (last_check_dir.length() == 0 && current_dir.length() != last_check_dir.length())
+            result = true;
+        else if (current_dir.length() != 0 && last_check_dir.length() != 0) {
+            const d_angle = Math.abs(vec_angle(current_dir, last_check_dir));
+            result = (d_angle > update_way_angle);
+        }
+        return result;
     }
 
     function update_pointer_position(pos: PointLike) {

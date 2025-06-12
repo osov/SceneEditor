@@ -92,6 +92,7 @@ export type PlayerMovementSettings = {
 
     // Настройки геометрического поиска пути
     min_find_path_interval: number 
+    target_max_correction: number // Макс. расстояние смещения целевой позиции при поиске свободного места если изначальная позиция пересекается с препятствием
     max_checks_number: number,    // Максимальное количество проверок при геометрическом поиске пути
     max_checks_one_dir: number,   // Макс. количество проверок при поиске пути в прямом направлении, после чего пробуем искать обратный путь
     max_depth: number,            // Макс. глубина дерева путей / макс. количество интервалов наденного пути
@@ -157,11 +158,12 @@ export const default_settings: PlayerMovementSettings = {
     min_subgrid_size: 70,
 
     min_find_path_interval: 0.5,
-    max_checks_number: 60,
+    target_max_correction: 20 * WORLD_SCALAR,
+    max_checks_number: 70,
     max_checks_one_dir: 30,
     max_depth: 13,
     max_way_length: 2100 * WORLD_SCALAR,
-    max_update_time: 80
+    max_update_time: 90
 }
 
 export const COLORS = {
@@ -169,7 +171,7 @@ export const COLORS = {
     LIGHT_RED: 0xff3333,
     DARK_RED: 0xaa0000,
     BLUE: 0x2233ff,
-    LIGHT_BLUE: 0x6677ff,
+    LIGHT_BLUE: 0x5555ff,
     PURPLE: 0xee44ff,
     YELLOW: 0xffff00,
     ORANGE: 0xff6600,

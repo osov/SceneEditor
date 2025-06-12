@@ -86,10 +86,12 @@ function ObstaclesGridCreate(grid: number[][], pos_to_coord_grid: PointLike[][],
 
 export function ObstaclesManager(hash_cell_size: number) {
     const all_obstacles: Segment[] = [];
+    const objects: {[key: string]: {id: string, obstacles: string[], enabled: boolean}} = {};
     const logger = Log.get_with_prefix('ObstaclesManager');
     const sp = createSpatialHash(hash_cell_size);
+    let id_object = 0;
     let id_obstacle = 0;
-    const _data: {[key: string]: Aabb & {obstacle: Segment}} = {};
+    const _data: {[key: string]: Aabb & {obstacle: Segment, object_id?: string}} = {};
     let _params: GridParams;
     let grid: ReturnType<typeof ObstaclesGridCreate>;
 
@@ -135,8 +137,24 @@ export function ObstaclesManager(hash_cell_size: number) {
         return ObstaclesGridCreate(_grid, _pos_to_coord_grid, _params);
     }
 
+    function add_object(_obstacles: Segment[], _id?: string) {
+        let id: string;
+        if (_id)
+            id = _id;
+        else {
+            id = 'obj_' + id_object;
+            id_object ++;
+        }
+        const obstacles: string[] = [];
+        for (const obst of _obstacles) {
+            const obst_id = add_obstacle(obst, id);
+            obstacles.push(obst_id);
+        }
+        const obj = {id, obstacles, enabled: true}
+        objects[id] = obj;
+    }
 
-    function add_obstacle(obstacle: Segment) {
+    function add_obstacle(obstacle: Segment, object_id?: string) {
         all_obstacles.push(obstacle);
         const center = obstacle.center();
         const x = center.x;
@@ -144,8 +162,8 @@ export function ObstaclesManager(hash_cell_size: number) {
         const height = Math.abs(obstacle.end.y - obstacle.start.y);
         const y = center.y;
         const id = 'obst_' + id_obstacle;
-        id_obstacle++;
-        _data[id] = { id, x, y, width, height, obstacle };
+        id_obstacle ++;
+        _data[id] = { id, x, y, width, height, obstacle, object_id };
         sp.add({ id, x, y, width, height });
         return id;
     }
@@ -157,6 +175,13 @@ export function ObstaclesManager(hash_cell_size: number) {
         sp.remove(obst_data);
         delete _data[id];
         return true;
+    }
+
+    function get_obstacle_by_id(id: string) {
+        const obst_data = _data[id];
+        if (!obst_data)
+            return false;
+        return obst_data.obstacle;
     }
 
     function set_obstacles(_obstacles: Segment[]) {
@@ -179,7 +204,13 @@ export function ObstaclesManager(hash_cell_size: number) {
         for (const entry of result) {
             const id = entry.id;
             const obst_data = _data[id];
-            if (obst_data) list.push(obst_data.obstacle);
+            if (obst_data) {
+                let obj = undefined;
+                if (obst_data.object_id)
+                    obj = objects[obst_data.object_id];
+                if (!obj || obj.enabled)
+                    list.push(obst_data.obstacle);
+            };
         }
         return list;
     }
@@ -207,43 +238,79 @@ export function ObstaclesManager(hash_cell_size: number) {
         return false;
     }
 
-    function load_obstacles_from_data(obstacles_data: ObstacleTileData[], world_scalar: number) {
-        for (let tile of obstacles_data) {
-            if (tile.polygon || tile.polyline) {
-                const cx = tile.x * world_scalar;
-                const cy = tile.y * world_scalar;
-                if (tile.polygon) {
-                    for (let i = 0; i < tile.polygon.length - 1; i++) {
-                        const s_x = tile.polygon[i].x;
-                        const s_y = tile.polygon[i].y;
-                        const e_x = tile.polygon[i + 1].x;
-                        const e_y = tile.polygon[i + 1].y;
-                        const seg = Segment(Point(cx + s_x * world_scalar, cy - s_y * world_scalar), Point(cx + e_x * world_scalar, cy - e_y * world_scalar));
-                        add_obstacle(seg);
-                    }
+    function enable_object(id: string, enabled: boolean) {
+        const obj = objects[id];
+        if (obj) obj.enabled = enabled;
+    }
 
-                    const s_x = tile.polygon[tile.polygon.length - 1].x;
-                    const s_y = tile.polygon[tile.polygon.length - 1].y;
-                    const e_x = tile.polygon[0].x;
-                    const e_y = tile.polygon[0].y;
-                    const seg = Segment(Point(cx + s_x * world_scalar, cy - s_y * world_scalar), Point(cx + e_x * world_scalar, cy - e_y * world_scalar));
-                    add_obstacle(seg);
-                }
-                if (tile.polyline) {
-                    for (let i = 0; i < tile.polyline.length - 1; i++) {
-                        const s_x = tile.polyline[i].x;
-                        const s_y = tile.polyline[i].y;
-                        const e_x = tile.polyline[i + 1].x;
-                        const e_y = tile.polyline[i + 1].y;
-                        const seg = Segment(Point(cx + s_x * world_scalar, cy - s_y * world_scalar), Point(cx + e_x * world_scalar, cy - e_y * world_scalar));
-                        add_obstacle(seg);
-                    }
+    function get_object_by_pos(x: number, y: number) {
+        const result = sp.query_range(x, y, 11, 11);
+        const point = Point(x, y);
+        let shortest_distance = Infinity;
+        let closest: string | undefined; 
+        for (const entry of result) {
+            const id = entry.id;
+            const obst_data = _data[id];
+            if (obst_data) {
+                const dist = point.distanceTo(obst_data.obstacle)[0];
+                if (dist < shortest_distance) {
+                    shortest_distance = dist;
+                    closest = obst_data.object_id;
                 }
             }
+        }
+        if (closest)
+            return objects[closest];
+        return false;
+    }
+
+    function polyline_to_segments(x: number, y: number, polygon: PointLike[], world_scalar: number) {
+        const segments: Segment[] = [];
+        const cx = x * world_scalar;
+        const cy = y * world_scalar;
+        for (let i = 0; i < polygon.length - 1; i++) {
+            const s_x = polygon[i].x;
+            const s_y = polygon[i].y;
+            const e_x = polygon[i + 1].x;
+            const e_y = polygon[i + 1].y;
+            const seg = Segment(Point(cx + s_x * world_scalar, cy - s_y * world_scalar), Point(cx + e_x * world_scalar, cy - e_y * world_scalar));
+            segments.push(seg);
+        }
+        return segments;
+    }
+
+    function polygon_to_segments(x: number, y: number, polygon: PointLike[], world_scalar: number) {
+        const segments: Segment[] = [];
+        const cx = x * world_scalar;
+        const cy = y * world_scalar;
+        segments.push(...polyline_to_segments(x, y, polygon, world_scalar));
+
+        const s_x = polygon[polygon.length - 1].x;
+        const s_y = polygon[polygon.length - 1].y;
+        const e_x = polygon[0].x;
+        const e_y = polygon[0].y;
+        const seg = Segment(Point(cx + s_x * world_scalar, cy - s_y * world_scalar), Point(cx + e_x * world_scalar, cy - e_y * world_scalar));
+        segments.push(seg);
+        return segments;
+    }
+
+    function load_obstacles_from_data(obstacles_data: ObstacleTileData[], world_scalar: number) {
+        for (let tile of obstacles_data) {
+            let obstacles: Segment[] = [];
+            if (tile.polygon || tile.polyline) {
+                if (tile.polygon) {
+                    obstacles = polygon_to_segments(tile.x, tile.y, tile.polygon, world_scalar);
+                }
+                if (tile.polyline) {
+                    obstacles = polyline_to_segments(tile.x, tile.y, tile.polyline, world_scalar);
+                }
+            }
+            if (obstacles.length > 0) add_object(obstacles);
         }
     }
 
     return { add_obstacle, remove_obstacle, set_obstacles, clear_obstacles, 
         get_obstacles, get_grid, init_grid, build_offsets, 
-        load_obstacles_from_data, all_obstacles }
+        load_obstacles_from_data, enable_object, get_object_by_pos, 
+        get_obstacle_by_id, objects }
 }

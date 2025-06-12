@@ -14,6 +14,7 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
     const collision_min_error = settings.collision_min_error;
     const move_min_angle = settings.block_move_min_angle;
     const collision_radius = settings.collision_radius;
+    const max_correction = settings.target_max_correction;
     const debug =  settings.debug;
 
     // Настройки геометрического поиска пути
@@ -25,7 +26,7 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
 
     let checking_obstacles = true;
 
-    function enable_obstacles(enable = true) {
+    function enable_collision(enable = true) {
         checking_obstacles = enable;
         logger.log(`Obstacles ${(enable) ? 'enabled' : 'disabled'}`)
     }
@@ -58,34 +59,62 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
         return predict_way(way_required, control_type);
     }
 
-    function find_way(way_required: Segment) {
-        log(`Start find_way`);
-        const path: (Segment | Arc)[] = [];
-        const target = way_required.end;
-        const start = way_required.start;
-        const R = collision_radius + collision_min_error
-        
-        // Сначала проверим, что зона возле target позиции свободна от препятствий
-        // TODO: Можно сделать варианет, что если в пределах collision_radius с target есть 
-        // препятствие, искать свободную позицию в заданном радиусе от target.
-        const obstacles_close_to_target = obstacles_manager.get_obstacles(target.x, target.y, 2 * R, 2 * R);
-        if (obstacles_close_to_target.length > 0) {
-            for (const obstacle of obstacles_close_to_target) {
-                const dist = target.distanceTo(obstacle)[0];
-                if (dist < R) {
-                    if (debug) 
-                        logger.log('Слишком близко к препятствию!')
-                    return {path, blocked_way_nodes: [], clear_way_nodes: []};
+    function find_clear_target(target: Point, checks_number = 4) {
+        let clear_target_pos = target;
+        const R = collision_radius + collision_min_error;
+        const close_obstacles = obstacles_manager.get_obstacles(
+            clear_target_pos.x, 
+            clear_target_pos.y, 
+            2 * (R + max_correction), 
+            2 * (R + max_correction)
+        );
+        if (close_obstacles.length > 0) {
+            let i = 0;
+            let point_found = false
+            while (i < checks_number && !point_found) {
+                i ++;
+                for (const obstacle of close_obstacles) {
+                    const dist = clear_target_pos.distanceTo(obstacle);
+                    const intersect_dist = R - dist[0];
+                    if (dist[0] <= R && intersect_dist <= max_correction) {
+                        const vec = dist[1].vector().normalize().invert().multiply(intersect_dist);
+                        clear_target_pos = clear_target_pos.translate(vec);
+                    }
+                    else point_found = true;
                 }
             }
         }
+        return clear_target_pos;
+    }
 
+    function find_way(required_way: Segment) {
+        log(`Start find_way`);
+        const target = required_way.end;
+        const start = required_way.start;
+        let corrected_required_way = required_way;
+        
+        const clear_target = find_clear_target(target);
+        if (clear_target) {
+            corrected_required_way = Segment(start, clear_target);
+        }
+        else {
+            if (debug) 
+                logger.log('У цели пути нет свободного места!')
+            return {path: [], blocked_way_nodes: [], clear_way_nodes: []};
+        }
         // Строим дерево путей и получаем его конечные ноды.
-        const {end_nodes, blocked_way_nodes, clear_way_nodes} = build_path_tree(way_required, max_checks);
+        const {end_nodes, blocked_way_nodes, clear_way_nodes} = build_path_tree(corrected_required_way, max_checks);
+
+        // Восстанавливаем полный путь до start.
+        const path = path_from_tree(end_nodes);
+
+        return {path, blocked_way_nodes, clear_way_nodes};
+    }
+
+    function path_from_tree(end_nodes: WayNode[]) {
+        const path: (Segment | Arc)[] = [];
         let min_length = Infinity;
         let min_length_node: WayNode | undefined = undefined;
-
-        // Ищем ноду с минимальной полной длиной пути и восстанавливаем полный путь до start.
         if (end_nodes.length > 0) {
             for (const node of end_nodes) {
                 if (node.total_length < min_length) {
@@ -103,7 +132,7 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
             }
         }
         path.reverse();
-        return {path, blocked_way_nodes, clear_way_nodes};
+        return path;
     }
 
     function build_path_tree(way_required: Segment, max_checks: number) {
@@ -135,6 +164,7 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
         // Пока есть пути, которые нужно проверить, при этом не превысили ограничений по числу проверок:
         while (ways_to_check.length > 0 && checks_number <= max_checks && time_elapsed <= max_update_time) {
             const way_to_check = ways_to_check.splice(0, 1)[0] as WayNode;
+            // const way_to_check = ways_to_check.pop() as WayNode;
             const result = check_way_node(way_to_check, target, checked_obstacles);
             ways_to_check.push(...result.ways_to_check);
             end_nodes.push(...result.end_nodes);
@@ -142,6 +172,7 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
             blocked_way_nodes.push(...result.blocked_way_nodes);
             checks_number ++;
             time_elapsed = Date.now() - time;
+            if (end_nodes.length > 0) break;
         }
         return {end_nodes, clear_way_nodes, blocked_way_nodes};
     }
@@ -205,7 +236,7 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
                     // Если не указана вершина предыдущего препятствия, создаём ноды с обходными путями к препятствию напрямую их стартовой позиции этой ноды:
                     // TODO: Раз имеем дело с дугой обхода вершины, previous_vertice никогда не будет undefined? Возможно стоит убрать make_sideways 
                     if (!(previous_vertice && previous_clockwise != undefined)) {
-                        sideways = make_all_sideways(
+                        sideways = make_sideways(
                             start,
                             end,
                             obstacle, 
@@ -357,15 +388,7 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
         let clockwise_r: boolean;
 
         // В зависимости положения вершин препятствия относительно вектора направления желаемого движения target_vec, определяем направление обхода этих вершин
-        if (angle_l < 0 && angle_r < 0) {
-            clockwise_l = true;
-            clockwise_r = true;
-        }
-        else if (angle_l > 0 && angle_r > 0) {
-            clockwise_l = false;
-            clockwise_r = false;
-        }
-        else if (angle_l > angle_r) {
+        if (angle_l > angle_r) {
             clockwise_l = true;
             clockwise_r = false;
         }
@@ -419,7 +442,6 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
                 ))
             }
         }
-
         return result;
     }
     
@@ -1116,8 +1138,9 @@ export function PathFinderModule(settings: PlayerMovementSettings, obstacles_man
     }
     
     return { update_path, get_next_pos, get_pos_at_ratio,
-        enable_obstacles, check_obstacles_enabled,
-        build_path_tree, way_from_angle, path_to_points
+        enable_collision, check_obstacles_enabled,
+        build_path_tree, way_from_angle, path_to_points,
+        obstacles_manager,
     }
 }
 
