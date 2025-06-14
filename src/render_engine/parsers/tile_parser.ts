@@ -101,14 +101,15 @@ export interface RenderMapData {
     objects_layers: RenderObjectLayer[]
 }
 
-let y_correction = 0;
-export function set_y_correction(val: number) {
-    y_correction = val;
+let cor_x = 0;
+let cor_y = 0;
+export function set_correction_xy(x:number,y:number){
+    cor_x = x;
+    cor_y = y;
 }
 
-
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
-    return id_layer * 600 - (y - height / 2 - y_correction) * 5;
+    return id_layer * 600 - (y - height / 2 - cor_y) * 5;
 }
 
 

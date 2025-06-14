@@ -56,6 +56,15 @@ declare global {
         function normalize(v_in_place: vmath.vector3 | vmath.vector4, v1: vmath.vector3 | vmath.vector4): void;
 
 
+        /**
+        * Linearly interpolate between two vectors orvmath.quaternions.
+        * @param v_in_place - The input vector orvmath.quaternion to be changed.
+        * @param t - The interpolation factor.
+        * @param v1 - The start vector orvmath.quaternion.
+        * @param v2 - The end vector orvmath.quaternion.
+        */
+        function lerp(v_in_place: vmath.vector3 | vmath.vector4, t: number, v1: vmath.vector3 | vmath.vector4, v2: vmath.vector3 | vmath.vector4): void;
+
     }
 
 
@@ -109,7 +118,7 @@ export function xmath_module() {
     }
 
     function normalize(v_in_place: vmath.vector3 | vmath.vector4, v1: vmath.vector3 | vmath.vector4) {
-        const len = Math.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z + ((v1 as vmath.vector4).w || 0) * ((v1 as vmath.vector4).w  || 0));
+        const len = Math.sqrt(v1.x * v1.x + v1.y * v1.y + v1.z * v1.z + ((v1 as vmath.vector4).w || 0) * ((v1 as vmath.vector4).w || 0));
         v_in_place.x = v1.x / len;
         v_in_place.y = v1.y / len;
         v_in_place.z = v1.z / len;
@@ -117,5 +126,13 @@ export function xmath_module() {
             v_in_place.w = v1.w / len;
     }
 
-    return {add, sub, mul, div, cross, mul_per_elem, normalize};
+    function lerp(v_in_place: vmath.vector3 | vmath.vector4, t: number, v1: vmath.vector3 | vmath.vector4, v2: vmath.vector3 | vmath.vector4): void {
+        v_in_place.x = v1.x + (v2.x - v1.x) * t;
+        v_in_place.y = v1.y + (v2.y - v1.y) * t;
+        v_in_place.z = v1.z + (v2.z - v1.z) * t;
+        if ('w' in v_in_place && 'w' in v1 && 'w' in v2)
+            v_in_place.w = v1.w + (v2.w - v1.w) * t;
+    }
+
+    return { add, sub, mul, div, cross, mul_per_elem, normalize, lerp };
 }
