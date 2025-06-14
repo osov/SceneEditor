@@ -2,7 +2,7 @@
     Модуль для работы с камерой и преобразованиями
 */
 
-import { OrthographicCamera, PerspectiveCamera, AudioListener, Vector3, Box3, Frustum, Matrix4 } from "three";
+import { OrthographicCamera, PerspectiveCamera, AudioListener, Vector3, Box3, Frustum, Matrix4, Plane, Raycaster, Vector2 } from "three";
 import { get_window_size } from "../render_engine/helpers/window_utils";
 import { IS_CAMERA_ORTHOGRAPHIC, TARGET_DISPLAY_HEIGHT, TARGET_DISPLAY_WIDTH } from "../config";
 import { IBaseEntityAndThree } from "@editor/render_engine/types";
@@ -166,6 +166,14 @@ function CameraModule() {
 
     function screen_to_world(x: number, y: number, is_gui = false) {
         const camera = is_gui ? RenderEngine.camera_gui : RenderEngine.camera;
+        const raycaster = new Raycaster();
+        const ndc = new Vector2(x, y);
+        raycaster.setFromCamera(ndc, camera);
+        const planeZ = new Plane(new Vector3(0, 0, 1), 0); // плоскость Z=0
+        const intersection = new Vector3();
+        raycaster.ray.intersectPlane(planeZ, intersection);
+        return intersection;
+
         return new Vector3(x, y, -1).unproject(camera);
     }
 

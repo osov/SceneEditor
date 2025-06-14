@@ -33,7 +33,7 @@ function ComponentsControlCreate() {
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
             if (Input.is_shift()) {
                 if (e.key == 'W' || e.key == 'Ц') {
-                    save();
+               //     save();
                 }
                 if (e.key == 'Q' || e.key == 'Й') {
 

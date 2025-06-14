@@ -55,7 +55,8 @@ function FlowMapControlCreate() {
             selected_mesh = get_selected_one_mesh();
             if (!selected_mesh)
                 return;
-            await foo(selected_mesh);
+            if (selected_mesh.material.name.includes('water'))
+                await foo(selected_mesh);
         });
 
         let is_pointer_down = false;
@@ -137,7 +138,7 @@ function FlowMapControlCreate() {
         if (!draw_canvas)
             return;
         mesh_list[key] = draw_canvas;
-        //log('activated water', key)
+        log('activated water', key)
     }
 
     async function deactivate(mesh: Slice9Mesh) {

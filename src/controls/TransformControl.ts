@@ -4,6 +4,7 @@ import { MeshPropertyInfo } from './types';
 import { IBaseEntityAndThree } from '../render_engine/types';
 import { MeshProperty } from '../inspectors/MeshInspector';
 import { HistoryOwner, THistoryUndo } from '../modules_editor/modules_editor_const';
+import { IS_CAMERA_ORTHOGRAPHIC } from '@editor/config';
 
 declare global {
     const TransformControl: ReturnType<typeof TransformControlCreate>;
@@ -100,7 +101,7 @@ function TransformControlCreate() {
                 element.parent.getWorldScale(ws);
             const tmp = _delta_position.clone();
             tmp.divide(ws);
-            element.set_position(element._position.x + tmp.x, element._position.y + tmp.y);
+            element.set_position(element._position.x + tmp.x, element._position.y + tmp.y, element._position.z + tmp.z);
         }
     }
 
@@ -264,20 +265,21 @@ function TransformControlCreate() {
 
     function set_mode(mode: TransformControlsMode) {
         control.setMode(mode);
+        const is_persective = !IS_CAMERA_ORTHOGRAPHIC;
         if (mode == 'rotate') {
-            control.showX = false;
-            control.showY = false;
+            control.showX = is_persective;
+            control.showY = is_persective;
             control.showZ = true;
         }
         else if (mode == 'translate') {
             control.showX = true;
             control.showY = true;
-            control.showZ = false;
+            control.showZ = is_persective;
         }
         else if (mode == 'scale') {
             control.showX = true;
             control.showY = true;
-            control.showZ = false;
+            control.showZ = is_persective;
         }
 
     }

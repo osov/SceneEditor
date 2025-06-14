@@ -1,4 +1,4 @@
-import { BufferGeometry, Line, LineDashedMaterial, Object3D, ShaderMaterial, Vector2, Vector3, Vector4, Texture, IUniform, Intersection, Object3DEventMap } from "three";
+import { BufferGeometry, Line, LineDashedMaterial, Object3D, ShaderMaterial, Vector2, Vector3, Vector4, Texture, IUniform, Intersection, Object3DEventMap, CanvasTexture } from "three";
 import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
 import { deepClone, getObjectHash } from "../../modules/utils";
 import { TextMesh } from "../objects/text";
@@ -185,7 +185,7 @@ export function copy_material(material: ShaderMaterial) {
     });
 
     for (const [key, uniform] of Object.entries(material.uniforms)) {
-        if (uniform.value instanceof Texture) {
+        if (uniform.value instanceof Texture || uniform.value instanceof CanvasTexture) {
             copy.uniforms[key] = { value: uniform.value };
         } else if (
             uniform.value instanceof Vector2 ||

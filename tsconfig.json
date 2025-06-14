@@ -39,5 +39,6 @@
     "../SceneEditor_Digg_Scan/src",
     "../SceneEditor_TicTac/src",
     "../SceneEditor_Kopateli/src",
+    "../SceneEditor_Water/src",
   ]
 }

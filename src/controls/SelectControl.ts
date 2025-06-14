@@ -41,7 +41,7 @@ function SelectControlCreate() {
             pointer.y = e.y;
             const old_pos = Camera.screen_to_world(click_point.x, click_point.y);
             const cur_pos = Camera.screen_to_world(pointer.x, pointer.y);
-            const len = cur_pos.sub(old_pos).length();
+            const len = cur_pos.clone().sub(old_pos).length();
             if (len > 5 * WORLD_SCALAR)
                 return;
             const intersects = RenderEngine.raycast_scene(pointer);
