@@ -18,43 +18,14 @@ export function TilePatcher(tilemap_path: string) {
 
     EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
         if (Input.is_control() && (e.key == 'l' || e.key == 'д')) {
-            save_tilesinfo_popup();
+            save_tilesinfo();
         }
     });
 
-    function save_tilesinfo_popup() {
-        log('lol');
-        Popups.open({
-            type: "Select",
-            params: { title: "Tilemap:", button: "Ok", auto_close: true, list: ResourceManager.get_all_loaded_tilemaps().map((tilemap) => { return { id: tilemap, title: tilemap } }) },
-            callback: async (success, data) => {
-                if (success && data) {
-                    const tilemap_name = data.itemId as string;
-                    const dir = ResourceManager.get_tilemap_path(tilemap_name).replace(/^\//, '').replace(new RegExp(`${tilemap_name}.*$`), '');
-                    const path = await new_tilesinfo(dir, tilemap_name);
-                    if (path) {
-                        save_tilesinfo(path);
-                    }
-                }
-            }
-        });
-    }
+    async function save_tilesinfo() {
+        const dir = tilemap_path.replace(/^\//, '').replace(new RegExp(`${tilemap_name}.*$`), '');
+        const path = `${dir}/${tilemap_name}.${TILES_INFO_EXT}`
 
-    async function new_tilesinfo(path: string, name: string) {
-        const tilesinfo_path = `${path}/${name}.${TILES_INFO_EXT}`
-        const r = await ClientAPI.save_data(tilesinfo_path, JSON.stringify({}));
-        if (r.result === 0) {
-            error_popup(`Не удалось создать tilesinfo, ответ сервера: ${r.message}`);
-            return;
-        }
-        if (r.result && r.data) {
-            await AssetControl.go_to_dir(path, true);
-        }
-
-        return tilesinfo_path;
-    }
-
-    async function save_tilesinfo(path: string) {
         const filename = get_file_name(path);
         const tiles_data: TDictionary<{ texture?: string, layers_mask?: number, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }> = {};
         SceneManager.get_scene_list().forEach(mesh => {
@@ -122,7 +93,10 @@ export function TilePatcher(tilemap_path: string) {
         });
 
         const r = await ClientAPI.save_data(path, JSON.stringify(tiles_data));
-        if (r && r.result) return Popups.toast.success(`Тайлы сохранены, путь: ${path}`);
+        if (r && r.result) {
+            await AssetControl.go_to_dir(dir, true);
+            return Popups.toast.success(`Тайлы сохранены, путь: ${path}`);
+        }
         else return Popups.toast.error(`Не удалось сохранить тайлы, путь: ${path}: ${r.message}`);
     }
 
