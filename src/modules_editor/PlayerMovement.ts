@@ -15,11 +15,10 @@ import {
     PointLike,
     Arc,
     POINT_EMPTY,
-    Vector,
 } from '../modules/Geometry';
 import { Line as GeomLine, LineBasicMaterial } from 'three';
 import { LinesDrawer } from '../modules/LinesDrawer';
-import { PlayerMovementSettings, default_settings, ControlType, PathData, COLORS } from '@editor/modules/types';
+import { PlayerMovementSettings, movement_default_settings, ControlType, PathData, COLORS } from '@editor/modules/types';
 
 
 function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
@@ -44,7 +43,7 @@ function interpolate_with_wrapping(start: number, end: number, percent: number, 
     return interpolated_val;
 }
 
-export function MovementControlCreate(settings: PlayerMovementSettings = default_settings) {
+export function MovementControlCreate(settings: PlayerMovementSettings = movement_default_settings) {
     let path_data: PathData = {length: 0, path: []};
     const LD = LinesDrawer();
     const width = 50 * WORLD_SCALAR;
@@ -57,21 +56,21 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
     let stick_end: Point | undefined = undefined;
     let current_dir = vector(pointer, target);
     let target_error = settings.target_stop_distance;
-    let layer = settings.model_layer;
     let animations = settings.animation_names;
     let pointer_control = settings.control_type;
+    let collision_radius = settings.collision_radius;
     let max_blocked_move_time = settings.max_blocked_move_time;
-    let min_required_way = settings.min_required_way;
-    let min_awailable_way = settings.min_awailable_way;
+    let min_required_path = settings.min_required_path;
+    let min_awailable_path = settings.min_awailable_path;
     let min_idle_time = settings.min_idle_time;
     let min_target_change = settings.min_target_change;
     let blocked_max_dist = settings.blocked_move_min_dist;
     let update_t_interval = settings.update_interval;
     let min_update_t_interval = settings.min_update_interval;
     let min_find_path_interval = settings.min_find_path_interval;
-    let update_way_angle = settings.update_way_angle;
+    let update_way_angle = settings.update_path_angle;
     let min_stick_dist = settings.min_stick_dist;
-    let predicted_way_lenght_mult = settings.predicted_way_lenght_mult;
+    let pred_path_lenght_mult = settings.pred_path_lenght_mult;
     let speed = settings.speed;
     let debug =  settings.debug;
     let current_speed: number = speed.WALK;
@@ -82,7 +81,8 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
     let last_upd_time_elapsed = 0;
     let last_stop_time_elapsed = 0;
     let has_target = false;
-    let PF: PathFinder
+    let PF: PathFinder;
+    let model: AnimatedMesh;
 
     const obstacles_lines: {[key: string]: GeomLine<any>[]} = {};
 
@@ -100,9 +100,9 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
     SceneManager.add(obstacles_container);
 
     function init(init_data: { model: AnimatedMesh, path_finder: PathFinder }) {
-        const model = init_data.model;
-        target = point(model.position.x, model.position.y);
+        model = init_data.model;
         PF = init_data.path_finder;
+        target = point(model.position.x, model.position.y);
 
         if (debug) draw_obstacles();
         
@@ -156,7 +156,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                 if (!has_target) return;
                 if (check_target_change()) {
                     if (last_upd_time_elapsed >= min_find_path_interval) {
-                        update_predicted_way();
+                        update_predicted_path();
                         last_upd_time_elapsed = 0;
                     }
                 }
@@ -169,13 +169,13 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                 if (!has_target) return;
                 if (is_pointer_down && check_target_change()) {
                     if (last_upd_time_elapsed >= min_update_t_interval) {
-                        update_predicted_way();
+                        update_predicted_path();
                         last_upd_time_elapsed = 0;
                     }
                 }
                 else {
                     if (last_upd_time_elapsed >= update_t_interval) {
-                        update_predicted_way();
+                        update_predicted_path();
                         last_upd_time_elapsed = 0;
                     }
                 }
@@ -188,13 +188,13 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
                 if (!stick_start) return;
                 if (check_dir_change()) {
                     if (last_upd_time_elapsed >= min_update_t_interval) {
-                        update_predicted_way();
+                        update_predicted_path();
                         last_upd_time_elapsed = 0;
                     }
                 }
                 else {
                     if (last_upd_time_elapsed >= update_t_interval) {
-                        update_predicted_way();
+                        update_predicted_path();
                         last_upd_time_elapsed = 0;
                     }
                 }
@@ -267,15 +267,15 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             last_stop_time_elapsed += e.dt;
         })
 
-        function update_predicted_way() {
-            let way_required = get_required_way(update_t_interval);
-            if (way_required.length() < min_required_way) {
+        function update_predicted_path() {
+            let way_required = get_required_path(update_t_interval);
+            if (way_required.length() < min_required_path) {
                 clear_way()
                 return;
             }
             last_check_dir = current_dir.clone();
             last_check_target = target.clone();
-            path_data = PF.update_path(way_required, pointer_control);
+            path_data = PF.update_path(way_required, collision_radius, pointer_control);
             
             LD.clear_container(player_way);
             if (debug) {
@@ -302,9 +302,9 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
             }
         }
 
-        function get_required_way(dt: number) {
+        function get_required_path(dt: number) {
             const cp = point(model.position.x, model.position.y);
-            let lenght_remains = dt * current_speed * predicted_way_lenght_mult;
+            let lenght_remains = dt * current_speed * pred_path_lenght_mult;
             let way_required = segment(cp.x, cp.y, target.x, target.y);
             if (pointer_control == ControlType.FP || pointer_control == ControlType.GP) {
                 if (lenght_remains < way_required.length()) {
@@ -325,7 +325,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = default
         function handle_update_follow_pointer(dt: number) {
             if (!has_target) return;
             const available_way = path_data.length;
-            if (available_way < min_awailable_way) {
+            if (available_way < min_awailable_path) {
                 stop_movement();
                 return;
             }

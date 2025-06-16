@@ -43,61 +43,61 @@ export type ClosestObstacleData = {
 export type PathData = {
     path: (Segment | Arc)[],
     length: number,
-    blocked_way_nodes?: WayNode[],
-    clear_way_nodes?: WayNode[],
+    blocked_way_nodes?: PathNode[],
+    clear_way_nodes?: PathNode[],
 }
 
-export type WayNode = {
+export type PathNode = {
     arc?: Arc,                          // Дуга пути обхода предыдущей вершины, если она была
     segment?: Segment,                  // Сегмент пути
     previous_vertice?: Point,           // Предыдущая вершина
     previous_clockwise?: boolean,       // Направление обхода этой вершины
     next_vertice?: Point,               // Вершина возле которой остановились в конце segment. Если segment заканчивается в точке target, не указывается
     next_clockwise?: boolean,           // Требуемое направление обхода этой вершины
-    parent?: WayNode,
-    children: WayNode[],
+    parent?: PathNode,
+    children: PathNode[],
     depth: number,
     total_length: number,
 };
 
 export type PlayerMovementSettings = {
-    collision_min_error: number,          // Минимальное расстояние сближения с припятствиями, для предотвращения соприкосновений геометрий 
-
-    max_predicted_way_intervals: number,  // Макс. количество отрезков прогнозируемого пути, на котором цикл построения пути завершится преждевременно
-    predicted_way_lenght_mult: number,    // Множитель длины пути для построения пути с запасом
-    min_required_way: number,
-    min_awailable_way: number,
+    min_required_path: number,
+    min_awailable_path: number,
     min_idle_time: number,
     min_target_change: number,
     control_type: ControlType,
     keys_control: boolean,         // TODO: управление через клавиатуру
-    model_layer: number,
     target_stop_distance: number,  // Расстояние остановки игрока от точки target
     animation_names: AnimationNames,
     update_interval: number,       // Интервал между обновлениями прогнозируемого пути по умолчанию 
     min_update_interval: number,   // Минимальный интервал между обновлениями прогнозируемого пути
-    update_way_angle: number,      // Минимальный угол изменения направления движения, при котором произойдёт обновление прогнозируемого пути
+    update_path_angle: number,      // Минимальный угол изменения направления движения, при котором произойдёт обновление прогнозируемого пути
     block_move_min_angle: number,  // Минимальный угол между нормалью к препятствию и направлением движения, при котором возможно движение вдоль препятствия
     speed: SpeedSettings,
     collision_radius: number,      // Радиус столкновения управляемого персонажа с препятствиями
-    max_try_dist: number,          // Только для BASIC режима расчёта пути, шаг проверки столкновений с препятствиями
+    pred_path_lenght_mult: number,  // Множитель длины пути для построения пути с запасом
     max_blocked_move_time: number, // Время нахождения застрявшего игрока в одной позиции, после которого движение приостановится
     blocked_move_min_dist: number, // Минимальное расстояние для перемещения, меньше него позиция остаётся прежней.
     min_stick_dist: number,
+    min_find_path_interval: number,
     debug?: boolean,
-    obstacles_space_cell_size: number,
-    max_subgrid_size: number,
-    min_subgrid_size: number,
+}
 
+export type PathFinderSettings = {
+    control_type: ControlType,
+    collision_min_error: number,    // Минимальное расстояние сближения с припятствиями, для предотвращения соприкосновений геометрий 
+    max_path_intervals: number,     // Макс. количество отрезков прогнозируемого пути, на котором цикл построения пути завершится преждевременно
+    obstacles_space_cell_size: number,
+    block_move_min_angle: number,   // Минимальный угол между нормалью к препятствию и направлением движения, при котором возможно движение вдоль препятствия
 
     // Настройки геометрического поиска пути
-    min_find_path_interval: number 
-    target_max_correction: number // Макс. расстояние смещения целевой позиции при поиске свободного места если изначальная позиция пересекается с препятствием
-    max_checks_number: number,    // Максимальное количество проверок при геометрическом поиске пути
-    max_checks_one_dir: number,   // Макс. количество проверок при поиске пути в прямом направлении, после чего пробуем искать обратный путь
-    max_depth: number,            // Макс. глубина дерева путей / макс. количество интервалов наденного пути
-    max_way_length: number,       // Ограничение на длину путей
-    max_update_time: number       // Ограничение на время, затрачиваемое на поиск пути, мс.
+    target_max_correction: number   // Макс. расстояние смещения целевой позиции при поиске свободного места если изначальная позиция пересекается с препятствием
+    max_checks_number: number,      // Максимальное количество проверок при геометрическом поиске пути
+    max_depth: number,              // Макс. глубина дерева путей / макс. количество интервалов наденного пути
+    max_way_length: number,         // Ограничение на длину путей
+    max_update_time: number         // Ограничение на время, затрачиваемое на поиск пути, мс.
+
+    debug?: boolean,
 }
 
 export type AnimationNames = {
@@ -130,40 +130,45 @@ export type ObstacleTileData = {
     polyline?: PointLike[],
 }
 
-export const default_settings: PlayerMovementSettings = {
-    max_predicted_way_intervals: 10,
-    predicted_way_lenght_mult: 1.5,
-    collision_min_error: 0.01,
-    min_required_way: 0.8,
-    min_awailable_way: 0.8,
+export const movement_default_settings: PlayerMovementSettings = {
+    pred_path_lenght_mult: 1.5,
+    min_required_path: 0.8,
+    min_awailable_path: 0.8,
     min_idle_time: 0.7,
     min_target_change: 1.5,
     control_type: ControlType.FP,
     keys_control: true,
     target_stop_distance: 0.5,
-    model_layer: 15,
     animation_names: { IDLE: "Unarmed Idle", WALK: "Unarmed Run Forward" },
     update_interval: 2.5,
     min_update_interval: 0.2,
-    update_way_angle: 3 * Math.PI / 180,
+    update_path_angle: 3 * Math.PI / 180,
     block_move_min_angle: 15 * Math.PI / 180,
     speed: { WALK: 26 },
     collision_radius: 4,
-    max_try_dist: 0.2,
     max_blocked_move_time: 5,
     blocked_move_min_dist: 0.006,
     min_stick_dist: 15,
-    obstacles_space_cell_size: 150 * WORLD_SCALAR,
-    max_subgrid_size: 100,
-    min_subgrid_size: 70,
 
     min_find_path_interval: 0.5,
+}
+
+export const PF_default_settings: PathFinderSettings = {
+    control_type: ControlType.GP,
+    collision_min_error: 0.01,
+    max_path_intervals: 13,
+    obstacles_space_cell_size: 150 * WORLD_SCALAR,
+    block_move_min_angle: 15 * Math.PI / 180,
+
+
+    // Настройки геометрического поиска пути
     target_max_correction: 20 * WORLD_SCALAR,
-    max_checks_number: 70,
-    max_checks_one_dir: 30,
+    max_checks_number: 80,
     max_depth: 13,
     max_way_length: 2100 * WORLD_SCALAR,
-    max_update_time: 90
+    max_update_time: 90,
+
+    debug: true,
 }
 
 export const COLORS = {

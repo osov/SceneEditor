@@ -1,4 +1,4 @@
-import { EQ, EQ_0, GE, vector_slope, GT, LE, LT, TAU } from "./utils"
+import { EQ, EQ_0, GE, GT, LE, LT, TAU } from "./utils"
 
 export type PointLike = {
     x: number
@@ -1992,6 +1992,12 @@ export function vec_angle(v1: Vector, v2: Vector) {
     let a = v1.angleTo(v2);
     if (a > Math.PI) a = a - 2 * Math.PI;
     return a
+}
+
+export function vector_slope(x: number, y: number) {
+    let angle = Math.atan2(y, x);
+    if (angle < 0) angle = TAU + angle;
+    return angle;
 }
 
 
