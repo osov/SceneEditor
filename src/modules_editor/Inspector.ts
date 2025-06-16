@@ -267,6 +267,11 @@ function InspectorModule() {
                     const data = uniqueField.data.onRefresh(uniqueField.ids);
                     if (data) {
                         uniqueField.data.value = data;
+                        _data.filter(item => uniqueField.ids.includes(item.id)).forEach(item => {
+                            item.fields.filter(field => field.key == uniqueField.data.key).forEach(field => {
+                                field.value = data;
+                            });
+                        });
                     }
                 }
 
@@ -777,6 +782,11 @@ function InspectorModule() {
             cut_float_precision(info, info.data.field);
             info.data.field.onChange(info);
         }
+        _data.filter(item => info.ids.includes(item.id)).forEach(item => {
+            item.fields.filter(field => field.key == info.data.field.key).forEach(field => {
+                field.value = info.data.field.value;
+            });
+        });
     }
 
     function cut_float_precision(info: ChangeInfo, field: PropertyData<PropertyType>) {
