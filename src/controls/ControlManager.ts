@@ -5,7 +5,7 @@ import { componentsGo } from "./ActionsControl";
 import { HistoryData } from "./HistoryControl";
 import { cbDataItem, Action } from "../modules_editor/Popups";
 import Stats from 'stats.js';
-import { DEFOLD_LIMITS } from "../config";
+import { DEFOLD_LIMITS, IS_CAMERA_ORTHOGRAPHIC } from "../config";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 
 declare global {
@@ -99,7 +99,7 @@ function ControlManagerCreate() {
             undo(event);
         });
 
-        set_active_control('size_transform_btn');
+        set_active_control(IS_CAMERA_ORTHOGRAPHIC ? 'size_transform_btn' : 'translate_transform_btn');
         init_stats();
         CameraControl.load_state('');
     }

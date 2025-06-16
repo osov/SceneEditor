@@ -1449,10 +1449,7 @@ export function ResourceManagerModule() {
             return new Promise<Group>(async (resolve, _) => {
                 const loader = new FBXLoader(manager);
                 loader.load(path, (mesh) => {
-                    //log(mesh);
-                    const has_mesh = has_skinned_mesh(mesh);
-                    if (has_mesh)
-                        models[model_name] = mesh;
+                    models[model_name] = mesh;
                     add_animations(mesh.animations, path);
                     resolve(mesh);
                 });
