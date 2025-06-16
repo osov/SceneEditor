@@ -179,7 +179,7 @@ function MeshInspectorCreate() {
             const fields: PropertyData<PropertyType>[] = [];
             generateBaseFields(fields, mesh);
 
-            if (mesh instanceof Slice9Mesh) {
+            if (mesh instanceof Slice9Mesh || mesh instanceof MultipleMaterialMesh) {
                 fields.push({
                     key: MeshProperty.TILE_LAYER,
                     title: MeshPropertyTitle.TILE_LAYER,
