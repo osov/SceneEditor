@@ -1,7 +1,7 @@
 import { Vector3, Vector2, Line, BufferGeometry, LineBasicMaterial } from "three";
 import { CAMERA_Z, WORLD_SCALAR } from "../config";
 import { make_ramk, rotate_point } from "./helpers/utils";
-import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo, preload_tiled_textures, TileInfo, set_correction_xy } from "./parsers/tile_parser";
+import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo, preload_tiled_textures, TileInfo, set_correction_xy, set_tileset, RenderMapData } from "./parsers/tile_parser";
 import { IObjectTypes } from "./types";
 import { GoContainer, GoSprite } from "./objects/sub_types";
 
@@ -22,31 +22,31 @@ export function get_id_by_tile(tile: RenderTileData | RenderTileObject, id_layer
 
 export function TileLoader(world: GoContainer, tileSize = 256) {
 
-    function calc_bb(map_data: MapData) {
-        const render_data = parse_tiled(map_data);
+    function calc_bb(render_data: RenderMapData) {
         const bb_min = vmath.vector3(1E10, 1E10, 1E10);
         const bb_max = vmath.vector3(-1E10, -1E10, -1E10);
         for (let layer of render_data.layers) {
             for (let tile of layer.tiles) {
                 const tile_id = tile.id & TILE_FLIP_MASK;
                 const tile_info = get_tile_texture(tile_id);
-                if (tile_info.h < tileSize) {
-                    tile_info.h = tileSize;
-                    Log.warn('fix tile_info.h', tile_info);
+                if (tile_info != undefined) {
+                    if (tile_info.h < tileSize) {
+                        tile_info.h = tileSize;
+                        Log.warn('fix tile_info.h', tile_info);
+                    }
+                    // Вычисляем коррекцию
+                    const tile_w = tile_info.w * WORLD_SCALAR;
+                    const tile_h = tile_info.h * WORLD_SCALAR;
+                    let x = tile.x * tileSize * WORLD_SCALAR;
+                    let y = tile.y * tileSize * WORLD_SCALAR - tileSize * WORLD_SCALAR;
+                    const new_pos = rotate_point(new Vector3(x, y, 0), new Vector2(tile_w, tile_h), 0);
+                    x = new_pos.x + tile_w / 2;
+                    y = new_pos.y + tile_h / 2;
+                    bb_min.x = Math.min(bb_min.x, x - tile_w / 2);
+                    bb_min.y = Math.min(bb_min.y, y - tile_h / 2);
+                    bb_max.x = Math.max(bb_max.x, x + tile_w / 2);
+                    bb_max.y = Math.max(bb_max.y, y + tile_h / 2);
                 }
-
-                // Вычисляем коррекцию
-                const tile_w = tile_info.w * WORLD_SCALAR;
-                const tile_h = tile_info.h * WORLD_SCALAR;
-                let x = tile.x * tileSize * WORLD_SCALAR;
-                let y = tile.y * tileSize * WORLD_SCALAR - tileSize * WORLD_SCALAR;
-                const new_pos = rotate_point(new Vector3(x, y, 0), new Vector2(tile_w, tile_h), 0);
-                x = new_pos.x + tile_w / 2;
-                y = new_pos.y + tile_h / 2;
-                bb_min.x = Math.min(bb_min.x, x - tile_w / 2);
-                bb_min.y = Math.min(bb_min.y, y - tile_h / 2);
-                bb_max.x = Math.max(bb_max.x, x + tile_w / 2);
-                bb_max.y = Math.max(bb_max.y, y + tile_h / 2);
             }
         }
         // OBJECTS
@@ -55,18 +55,19 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
             let id_object = -1;
             for (let tile of object_layer.objects) {
                 id_object++;
-
                 const tile_id = tile.tile_id & TILE_FLIP_MASK;
-                const tile_info = get_tile_texture(tile_id);
-                if (tile_info != undefined) {
-                    const tile_w = tile.width * WORLD_SCALAR;
-                    const tile_h = tile.height * WORLD_SCALAR;
-                    let x = tile.x * WORLD_SCALAR;
-                    let y = tile.y * WORLD_SCALAR;
-                    bb_min.x = Math.min(bb_min.x, x - tile_w / 2);
-                    bb_min.y = Math.min(bb_min.y, y - tile_h / 2);
-                    bb_max.x = Math.max(bb_max.x, x + tile_w / 2);
-                    bb_max.y = Math.max(bb_max.y, y + tile_h / 2);
+                if (tile.tile_id != -1) {
+                    const tile_info = get_tile_texture(tile_id);
+                    if (tile_info != undefined) {
+                        const tile_w = tile.width * WORLD_SCALAR;
+                        const tile_h = tile.height * WORLD_SCALAR;
+                        let x = tile.x * WORLD_SCALAR;
+                        let y = tile.y * WORLD_SCALAR;
+                        bb_min.x = Math.min(bb_min.x, x - tile_w / 2);
+                        bb_min.y = Math.min(bb_min.y, y - tile_h / 2);
+                        bb_max.x = Math.max(bb_max.x, x + tile_w / 2);
+                        bb_max.y = Math.max(bb_max.y, y + tile_h / 2);
+                    }
                 }
             }
         }
@@ -81,8 +82,9 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
     function load(map_data: MapData, tiles_data: TileInfo, debug_lines = true) {
         const tiles: SpriteTileInfoDict = {};
         const render_data = parse_tiled(map_data);
-        preload_tiled_textures(tiles_data, map_data);
-        const [cor_x, cor_y] = calc_bb(map_data);
+        set_tileset(map_data.tilesets);
+        preload_tiled_textures(tiles_data);
+        const [cor_x, cor_y] = calc_bb(render_data);
         set_correction_xy(cor_x, cor_y);
         log("correction XY:", cor_x, cor_y);
         // TILES
@@ -94,33 +96,35 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
             for (let tile of layer.tiles) {
                 const tile_id = tile.id & TILE_FLIP_MASK;
                 const tile_info = get_tile_texture(tile_id);
-                if (tile_info.w < tileSize) {
-                    tile_info.w = tileSize;
-                    Log.warn('fix tile_info.w', tile_info);
-                }
-                if (tile_info.h < tileSize) {
-                    tile_info.h = tileSize;
-                    Log.warn('fix tile_info.h', tile_info);
-                }
+                if (tile_info != undefined) {
+                    if (tile_info.w < tileSize) {
+                        tile_info.w = tileSize;
+                        Log.warn('fix tile_info.w', tile_info);
+                    }
+                    if (tile_info.h < tileSize) {
+                        tile_info.h = tileSize;
+                        Log.warn('fix tile_info.h', tile_info);
+                    }
 
-                // Вычисляем коррекцию
-                const tile_w = tile_info.w * WORLD_SCALAR;
-                const tile_h = tile_info.h * WORLD_SCALAR;
-                let x = tile.x * tileSize * WORLD_SCALAR;
-                let y = tile.y * tileSize * WORLD_SCALAR - tileSize * WORLD_SCALAR;
-                const new_pos = rotate_point(new Vector3(x, y, 0), new Vector2(tile_w, tile_h), 0);
-                x = new_pos.x + tile_w / 2;
-                y = new_pos.y + tile_h / 2;
-                const z = get_depth(x, y, id_layer, tile_w, tile_h);
+                    // Вычисляем коррекцию
+                    const tile_w = tile_info.w * WORLD_SCALAR;
+                    const tile_h = tile_info.h * WORLD_SCALAR;
+                    let x = tile.x * tileSize * WORLD_SCALAR;
+                    let y = tile.y * tileSize * WORLD_SCALAR - tileSize * WORLD_SCALAR;
+                    const new_pos = rotate_point(new Vector3(x, y, 0), new Vector2(tile_w, tile_h), 0);
+                    x = new_pos.x + tile_w / 2;
+                    y = new_pos.y + tile_h / 2;
+                    const z = get_depth(x, y, id_layer, tile_w, tile_h);
 
-                const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
-                plane.position.set(x, y, z);
-                plane.set_texture(tile_info.name, tile_info.atlas);
-                apply_tile_transform(plane, tile.id);
-                container.add(plane);
-                plane.name = tile_info.name + '' + plane.mesh_data.id;
-                plane.userData = { tile, id_layer };
-                tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
+                    const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
+                    plane.position.set(x, y, z);
+                    plane.set_texture(tile_info.name, tile_info.atlas);
+                    apply_tile_transform(plane, tile.id);
+                    container.add(plane);
+                    plane.name = tile_info.name + '' + plane.mesh_data.id;
+                    plane.userData = { tile, id_layer };
+                    tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
+                }
             }
         }
 
@@ -178,7 +182,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                         tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
                     }
                     else {
-                        Log.warn('tile not found', tile);
+                        Log.warn('tile not found', object_layer.layer_name, tile_id, tile);
                     }
                 }
             }

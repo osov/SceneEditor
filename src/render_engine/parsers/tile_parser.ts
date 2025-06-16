@@ -101,9 +101,10 @@ export interface RenderMapData {
     objects_layers: RenderObjectLayer[]
 }
 
+
 let cor_x = 0;
 let cor_y = 0;
-export function set_correction_xy(x:number,y:number){
+export function set_correction_xy(x: number, y: number) {
     cor_x = x;
     cor_y = y;
 }
@@ -113,32 +114,55 @@ export function get_depth(x: number, y: number, id_layer: number, width = 0, hei
 }
 
 
-const tiled_textures_data: { [k: string]: LoadedTileInfo } = {};
-function preload_tile_texture(id: string, path: string, atlas: string, w: number, h: number, tilesets: TileSets) {
+const tiled_textures_data: { [atlas: string]: { [id: string]: LoadedTileInfo } } = {};
+let tile_sets_data: TileSets = {};
+function preload_tile_texture(id: string, path: string, atlas: string, w: number, h: number,) {
     atlas = get_file_name(atlas);
-    // в карте нет этого тайл сета значит текстуры не грузим
-    if (!tilesets[atlas])
-        return;
-    const global_id = (tonumber(id)! + tilesets[atlas]) + '';
-    tiled_textures_data[global_id] = { name: get_file_name(path), atlas, w, h };
+    if (!tiled_textures_data[atlas])
+        tiled_textures_data[atlas] = {};
+    tiled_textures_data[atlas][id] = { name: get_file_name(path), w, h, atlas };
 }
 
-export function get_tile_texture(id: number) {
-    const data = tiled_textures_data[id + ''];
-    return data;
+export function get_tile_texture(gid: number) {
+    let result: LoadedTileInfo;
+    let max_firstgid = -1;
+    let tileset = '';
+    for (const atlas in tile_sets_data) {
+        const firstgid = tile_sets_data[atlas];
+        if (firstgid > max_firstgid && firstgid <= gid) {
+            max_firstgid = firstgid;
+            tileset = atlas;
+        }
+    }
+    if (tileset == '')
+        Log.error('Тайлсет не найден', gid);
+    const tile_sets = tiled_textures_data[tileset];
+    if (tile_sets != undefined) {
+        const local_id = gid - max_firstgid;
+        if (tile_sets[local_id + ''] == undefined) {
+            Log.error('Тайл не найден', gid);
+            return;
+        }
+        return tile_sets[local_id + ''];
+    }
 }
 
 export function get_all_tiled_textures() {
     return tiled_textures_data;
 }
 
+export function set_tileset(tilesets: TileSets){
+    tile_sets_data = {};
+    for (const k in tilesets)
+        tile_sets_data[k] = tilesets[k];
+}
 
-export function preload_tiled_textures(tile_info: TileInfo, map_data: MapData) {
+export function preload_tiled_textures(tile_info: TileInfo) {
     for (const id_tileset in tile_info) {
         const tile_set = tile_info[id_tileset];
         for (const id in tile_set) {
             const tex = tile_set[id];
-            preload_tile_texture(id, tex.url, id_tileset, tex.w, tex.h, map_data.tilesets);
+            preload_tile_texture(id, tex.url, id_tileset, tex.w, tex.h);
         }
     }
 }
