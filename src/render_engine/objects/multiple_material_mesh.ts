@@ -49,7 +49,7 @@ export class MultipleMaterialMesh extends EntityPlane {
     }
 
     get_color(index = 0) {
-        if (this.materials.length == 0 || this.materials.length < index) return "#fff";
+        if (this.materials.length == 0 || this.materials.length < index || !this.materials[index].uniforms['u_color']) return "#fff";
         return this.materials[index].uniforms['u_color'].value;
     }
 
