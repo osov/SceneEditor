@@ -57,7 +57,7 @@ interface ObjectLayer {
 }
 
 export type TileInfo = { [tile_set: string]: { [id: string]: TileData } };
-export type TileSets = { [tile_set: string]: number };
+export type TileSets = [string, number][];
 export interface MapData {
     tilesets: TileSets;
     layers: Layer[]
@@ -115,7 +115,7 @@ export function get_depth(x: number, y: number, id_layer: number, width = 0, hei
 
 
 const tiled_textures_data: { [atlas: string]: { [id: string]: LoadedTileInfo } } = {};
-let tile_sets_data: TileSets = {};
+let tile_sets_data: TileSets = [];
 function preload_tile_texture(id: string, path: string, atlas: string, w: number, h: number,) {
     atlas = get_file_name(atlas);
     if (!tiled_textures_data[atlas])
@@ -127,8 +127,10 @@ export function get_tile_texture(gid: number) {
     let result: LoadedTileInfo;
     let max_firstgid = -1;
     let tileset = '';
-    for (const atlas in tile_sets_data) {
-        const firstgid = tile_sets_data[atlas];
+    for (let i = 0; i < tile_sets_data.length; i++) {
+        const ts = tile_sets_data[i];
+        const atlas = ts[0];
+        const firstgid = ts[1];
         if (firstgid > max_firstgid && firstgid <= gid) {
             max_firstgid = firstgid;
             tileset = atlas;
@@ -151,8 +153,8 @@ export function get_all_tiled_textures() {
     return tiled_textures_data;
 }
 
-export function set_tileset(tilesets: TileSets){
-    tile_sets_data = {};
+export function set_tileset(tilesets: TileSets) {
+    tile_sets_data = [];
     for (const k in tilesets)
         tile_sets_data[k] = tilesets[k];
 }
