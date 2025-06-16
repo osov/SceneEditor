@@ -84,7 +84,6 @@ export class GuiBox extends Slice9Mesh {
 
         const setClippingForChildren = (children: THREE.Object3D[]) => {
             children.forEach(child => {
-                // TODO: устанавливать и для текста тоже, нужно только разобраться как достучаться до материала
                 if (child instanceof GuiBox) {
                     ResourceManager.set_material_property_for_mesh(child, 'stencilWrite', true);
                     ResourceManager.set_material_property_for_mesh(child, 'stencilRef', this.mesh_data.id);

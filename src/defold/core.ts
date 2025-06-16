@@ -15,6 +15,7 @@ declare global {
     function pprint(obj: any): void;
     type hash = {};
     function hash(s: string): hash;
+    type node = {};
 }
 
 

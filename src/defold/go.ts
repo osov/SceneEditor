@@ -1,8 +1,6 @@
-import * as TWEEN from '@tweenjs/tween.js';
 import { IBaseEntityAndThree, IObjectTypes } from "@editor/render_engine/types";
 import { Quaternion, Vector3 } from "three";
-import { get_nested_property, set_nested_property, uh_to_id } from "./utils";
-import { Slice9Mesh } from '@editor/render_engine/objects/slice9';
+import { animate_logic, cancel_animations_logic, get_nested_property, PLAYBACK_LOOP_BACKWARD, PLAYBACK_LOOP_FORWARD, PLAYBACK_ONCE_BACKWARD, PLAYBACK_ONCE_FORWARD, PLAYBACK_ONCE_PINGPONG, PLAYBACK_LOOP_PINGPONG, set_nested_property, uh_to_id, EASING_LINEAR, EASING_INQUART, EASING_INQUAD, EASING_OUTQUART, EASING_OUTQUAD, EASING_OUTQUINT, EASING_INOUTQUAD, EASING_INQUINT, EASING_INOUTQUART, EASING_INOUTQUINT, EASING_OUTCUBIC, EASING_INOUTCUBIC, EASING_OUTSINE, EASING_INSINE, EASING_INCUBIC, EASING_INOUTSINE, EASING_OUTCIRC, EASING_INOUTCIRC, EASING_INOUTEXPO, EASING_INCIRC, EASING_OUTBACK, EASING_INBACK, EASING_INOUTELASTIC, EASING_INOUTBACK, EASING_INEXPO, EASING_OUTEXPO, EASING_INELASTIC, EASING_OUTELASTIC, EASING_INBOUNCE, EASING_OUTBOUNCE, EASING_INOUTBOUNCE } from "./utils";
 
 declare global {
     namespace go {
@@ -10,7 +8,7 @@ declare global {
         export function get_position(id: string | hash): vmath.vector3
         export function set_rotation(rotation: vmath.quaternion, id: string | hash): void
         export function get_rotation(id: string | hash): vmath.quaternion
-        export function set_scale(scale: vmath.vector3|number, id: string | hash): void
+        export function set_scale(scale: vmath.vector3 | number, id: string | hash): void
         export function get_scale(id: string | hash): vmath.vector3
         export function set_parent(id: string | hash, parent_id: string | hash): void
         export function get_parent(id: string | hash): hash
@@ -65,79 +63,6 @@ declare global {
 }
 
 export function go_module() {
-    const PLAYBACK_ONCE_FORWARD = 0;
-    const PLAYBACK_ONCE_BACKWARD = 1;
-    const PLAYBACK_ONCE_PINGPONG = 2;
-    const PLAYBACK_LOOP_FORWARD = 3;
-    const PLAYBACK_LOOP_BACKWARD = 4;
-    const PLAYBACK_LOOP_PINGPONG = 5;
-
-    const EASING_LINEAR = 0;
-    const EASING_INQUAD = 1;
-    const EASING_OUTQUAD = 2;
-    const EASING_INOUTQUAD = 3;
-    const EASING_INCUBIC = 4;
-    const EASING_OUTCUBIC = 5;
-    const EASING_INOUTCUBIC = 6;
-    const EASING_INQUART = 7;
-    const EASING_OUTQUART = 8;
-    const EASING_INOUTQUART = 9;
-    const EASING_INQUINT = 10;
-    const EASING_OUTQUINT = 11;
-    const EASING_INOUTQUINT = 12;
-    const EASING_INSINE = 13;
-    const EASING_OUTSINE = 14;
-    const EASING_INOUTSINE = 15;
-    const EASING_INEXPO = 16;
-    const EASING_OUTEXPO = 17;
-    const EASING_INOUTEXPO = 18;
-    const EASING_INCIRC = 19;
-    const EASING_OUTCIRC = 20;
-    const EASING_INOUTCIRC = 21;
-    const EASING_INELASTIC = 22;
-    const EASING_OUTELASTIC = 23;
-    const EASING_INOUTELASTIC = 24;
-    const EASING_INBACK = 25;
-    const EASING_OUTBACK = 26;
-    const EASING_INOUTBACK = 27;
-    const EASING_INBOUNCE = 28;
-    const EASING_OUTBOUNCE = 29;
-    const EASING_INOUTBOUNCE = 30;
-
-    const EASING_MAP: Record<string, (k: number) => number> = {
-        [EASING_LINEAR]: TWEEN.Easing.Linear.None,
-        [EASING_INQUAD]: TWEEN.Easing.Quadratic.In,
-        [EASING_OUTQUAD]: TWEEN.Easing.Quadratic.Out,
-        [EASING_INOUTQUAD]: TWEEN.Easing.Quadratic.InOut,
-        [EASING_INCUBIC]: TWEEN.Easing.Cubic.In,
-        [EASING_OUTCUBIC]: TWEEN.Easing.Cubic.Out,
-        [EASING_INOUTCUBIC]: TWEEN.Easing.Cubic.InOut,
-        [EASING_INQUART]: TWEEN.Easing.Quartic.In,
-        [EASING_OUTQUART]: TWEEN.Easing.Quartic.Out,
-        [EASING_INOUTQUART]: TWEEN.Easing.Quartic.InOut,
-        [EASING_INQUINT]: TWEEN.Easing.Quintic.In,
-        [EASING_OUTQUINT]: TWEEN.Easing.Quintic.Out,
-        [EASING_INOUTQUINT]: TWEEN.Easing.Quintic.InOut,
-        [EASING_INSINE]: TWEEN.Easing.Sinusoidal.In,
-        [EASING_OUTSINE]: TWEEN.Easing.Sinusoidal.Out,
-        [EASING_INOUTSINE]: TWEEN.Easing.Sinusoidal.InOut,
-        [EASING_INEXPO]: TWEEN.Easing.Exponential.In,
-        [EASING_OUTEXPO]: TWEEN.Easing.Exponential.Out,
-        [EASING_INOUTEXPO]: TWEEN.Easing.Exponential.InOut,
-        [EASING_INCIRC]: TWEEN.Easing.Circular.In,
-        [EASING_OUTCIRC]: TWEEN.Easing.Circular.Out,
-        [EASING_INOUTCIRC]: TWEEN.Easing.Circular.InOut,
-        [EASING_INELASTIC]: TWEEN.Easing.Elastic.In,
-        [EASING_OUTELASTIC]: TWEEN.Easing.Elastic.Out,
-        [EASING_INOUTELASTIC]: TWEEN.Easing.Elastic.InOut,
-        [EASING_INBACK]: TWEEN.Easing.Back.In,
-        [EASING_OUTBACK]: TWEEN.Easing.Back.Out,
-        [EASING_INOUTBACK]: TWEEN.Easing.Back.InOut,
-        [EASING_INBOUNCE]: TWEEN.Easing.Bounce.In,
-        [EASING_OUTBOUNCE]: TWEEN.Easing.Bounce.Out,
-        [EASING_INOUTBOUNCE]: TWEEN.Easing.Bounce.InOut,
-    };
-
     function set_position(position: vmath.vector3, id: string | hash) {
         const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
         if (!mesh) {
@@ -191,7 +116,7 @@ export function go_module() {
         return vmath.euler_to_quat(euler.x, euler.y, euler.z);
     }
 
-    function set_scale(scale: vmath.vector3|number, id: string | hash) {
+    function set_scale(scale: vmath.vector3 | number, id: string | hash) {
         const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
         if (!mesh) {
             Log.error(`Mesh with url ${id} not found`);
@@ -201,7 +126,7 @@ export function go_module() {
             Log.error(`Mesh with id ${id} is not go`);
             return;
         }
-        if ( typeof scale === 'number') {
+        if (typeof scale === 'number') {
             scale = vmath.vector3(scale, scale, scale);
         }
         mesh.scale.copy(scale);
@@ -332,27 +257,6 @@ export function go_module() {
         set_nested_property(mesh, property, value);
     }
 
-    function applyPlayback(tween: TWEEN.Tween, playback: any) {
-        switch (playback) {
-            case PLAYBACK_ONCE_PINGPONG:
-                tween.yoyo(true).repeat(1);
-                break;
-            case PLAYBACK_LOOP_FORWARD:
-                tween.repeat(Infinity);
-                break;
-            case PLAYBACK_LOOP_BACKWARD:
-                tween.repeat(Infinity);
-                break;
-            case PLAYBACK_LOOP_PINGPONG:
-                tween.yoyo(true).repeat(Infinity);
-                break;
-        }
-    }
-
-    // NOTE: важно что для полей материала не поддерживается передача c доступом через '.'
-    // если нужно к примеру передать vector, то нужно передавать целиком
-    // pos.x - выдаст что поле не найдено
-    // pos - верно
     function animate(
         url: string | hash,
         property: string,
@@ -363,48 +267,15 @@ export function go_module() {
         delay: number = 0,
         complete_function?: (self: IBaseEntityAndThree, url: string | hash, property: string) => void
     ) {
-        if (property == 'tint.w')
-            property = 'alpha';
-
         const mesh_id = uh_to_id(url);
         const mesh = SceneManager.get_mesh_by_id(mesh_id);
         if (!mesh) {
             Log.error(`Mesh with url ${url} not found`);
             return;
         }
-
-        let is_material_property = false;
-        let currentValue = get_nested_property(mesh, property);
-        if (currentValue == undefined) {
-            is_material_property = true;
-            const material = (mesh as any).material;
-            if (material) currentValue = material.uniforms[property]?.value;
-            if (currentValue == undefined) {
-                Log.error(`Property ${property} not found on mesh`);
-                return;
-            }
-        }
-
-        const is_backward = playback == go.PLAYBACK_ONCE_BACKWARD || playback == go.PLAYBACK_LOOP_BACKWARD;
-        const obj = { value: is_backward ? to : currentValue };
-        const tween = new TWEEN.Tween(obj)
-            .to({ value: is_backward ? currentValue : to }, duration * 1000)
-            .onUpdate(() => {
-                if (is_material_property) {
-                    ResourceManager.set_material_uniform_for_mesh(mesh as Slice9Mesh, property, obj.value);
-                    return;
-                }
-                set_nested_property(mesh, property, obj.value);
-            })
-            .delay(delay * 1000)
-            .easing(EASING_MAP[easing] ?? TWEEN.Easing.Linear.None)
-            .onComplete((_: { [key: string]: any }) => {
-                TweenManager.remove_mesh_property_tween(mesh_id, property);
-                if (complete_function) complete_function(mesh, url, property);
-            });
-        applyPlayback(tween, playback);
-        TweenManager.set_mesh_property_tween(mesh_id, property, tween);
-        tween.start();
+        animate_logic(mesh, property, playback, to, easing, duration, delay, () => {
+            if (complete_function) complete_function(mesh, url, property);
+        });
     }
 
     function cancel_animations(url: string | hash, property?: string) {
@@ -414,29 +285,63 @@ export function go_module() {
             Log.error(`Mesh with url ${url} not found`);
             return;
         }
-        if (property == 'tint.w')
-            property = 'alpha';
-        if (property) TweenManager.remove_mesh_property_tween(mesh_id, property);
-        else TweenManager.remove_all_mesh_properties_tweens(mesh_id);
+        cancel_animations_logic(mesh, property);
     }
 
     return {
-        set_position, get_position, set_rotation, get_rotation,
-        set_scale, get_scale, set_parent, get_parent,
-        get_world_position, get_world_rotation, get_world_scale,
-        delete: _delete, get, set, animate, cancel_animations,
+        set_position,
+        get_position,
+        set_rotation,
+        get_rotation,
+        set_scale,
+        get_scale,
+        set_parent,
+        get_parent,
+        get_world_position,
+        get_world_rotation,
+        get_world_scale,
+        delete: _delete,
+        get,
+        set,
+        animate,
+        cancel_animations,
 
-        PLAYBACK_ONCE_FORWARD, PLAYBACK_ONCE_BACKWARD, PLAYBACK_ONCE_PINGPONG,
-        PLAYBACK_LOOP_FORWARD, PLAYBACK_LOOP_BACKWARD, PLAYBACK_LOOP_PINGPONG,
-        EASING_LINEAR, EASING_INQUAD, EASING_OUTQUAD, EASING_INOUTQUAD,
-        EASING_INCUBIC, EASING_OUTCUBIC, EASING_INOUTCUBIC,
-        EASING_INQUART, EASING_OUTQUART, EASING_INOUTQUART,
-        EASING_INQUINT, EASING_OUTQUINT, EASING_INOUTQUINT,
-        EASING_INSINE, EASING_OUTSINE, EASING_INOUTSINE,
-        EASING_INEXPO, EASING_OUTEXPO, EASING_INOUTEXPO,
-        EASING_INCIRC, EASING_OUTCIRC, EASING_INOUTCIRC,
-        EASING_INELASTIC, EASING_OUTELASTIC, EASING_INOUTELASTIC,
-        EASING_INBACK, EASING_OUTBACK, EASING_INOUTBACK,
-        EASING_INBOUNCE, EASING_OUTBOUNCE, EASING_INOUTBOUNCE
+        PLAYBACK_ONCE_FORWARD,
+        PLAYBACK_ONCE_BACKWARD,
+        PLAYBACK_ONCE_PINGPONG,
+        PLAYBACK_LOOP_FORWARD,
+        PLAYBACK_LOOP_BACKWARD,
+        PLAYBACK_LOOP_PINGPONG,
+        EASING_LINEAR,
+        EASING_INQUAD,
+        EASING_OUTQUAD,
+        EASING_INOUTQUAD,
+        EASING_INCUBIC,
+        EASING_OUTCUBIC,
+        EASING_INOUTCUBIC,
+        EASING_INQUART,
+        EASING_OUTQUART,
+        EASING_INOUTQUART,
+        EASING_INQUINT,
+        EASING_OUTQUINT,
+        EASING_INOUTQUINT,
+        EASING_INSINE,
+        EASING_OUTSINE,
+        EASING_INOUTSINE,
+        EASING_INEXPO,
+        EASING_OUTEXPO,
+        EASING_INOUTEXPO,
+        EASING_INCIRC,
+        EASING_OUTCIRC,
+        EASING_INOUTCIRC,
+        EASING_INELASTIC,
+        EASING_OUTELASTIC,
+        EASING_INOUTELASTIC,
+        EASING_INBACK,
+        EASING_OUTBACK,
+        EASING_INOUTBACK,
+        EASING_INBOUNCE,
+        EASING_OUTBOUNCE,
+        EASING_INOUTBOUNCE
     };
 }

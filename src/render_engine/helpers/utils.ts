@@ -264,34 +264,6 @@ export function is_sprite(mesh: Object3D) {
     return mesh instanceof GoSprite;
 }
 
-export function hex2rgba(hex: string, alpha = 1) {
-    hex = hex.replace('#', '');
-    if (hex.length == 3)
-        return vmath.vector4(
-            tonumber("0x" + hex.substr(0, 1))! * 17 / 255,
-            tonumber("0x" + hex.substr(1, 1))! * 17 / 255,
-            tonumber("0x" + hex.substr(2, 1))! * 17 / 255, alpha);
-
-    else if (hex.length == 6)
-        return vmath.vector4(
-            tonumber("0x" + hex.substr(0, 2))! / 255,
-            tonumber("0x" + hex.substr(2, 2))! / 255,
-            tonumber("0x" + hex.substr(4, 2))! / 255, alpha);
-    else {
-        Log.error(false, 'hex not correct:' + hex);
-        return vmath.vector4();
-    }
-}
-
-export function vec_to_hex(vec: vmath.vector3): string {
-    const r = Math.round(vec.x * 255);
-    const g = Math.round(vec.y * 255);
-    const b = Math.round(vec.z * 255);
-    const toHex = (v: number) => v.toString(16).padStart(2, "0");
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-
 export function rand_int(a: number, b: number) {
     return math.random(a, b);
 }

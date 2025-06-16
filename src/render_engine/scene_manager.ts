@@ -1,5 +1,5 @@
 import { Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
-import { filter_list_base_mesh, find_nearest_clipping_parent, is_base_mesh, is_label, is_sprite, is_text } from "./helpers/utils";
+import { filter_list_base_mesh, is_base_mesh, is_label, is_sprite, is_text } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
 import { IBaseEntityAndThree, IBaseEntityData, IObjectTypes } from "./types";
 import { TextMesh } from "./objects/text";
@@ -168,7 +168,7 @@ export function SceneManagerModule() {
         return get_unique_id();
     }
 
-    function serialize_mesh(m: IBaseEntityAndThree, clean_id_pid = false) {
+    function serialize_mesh(m: IBaseEntityAndThree, clean_id_pid = false, without_children = false) {
         const wp = new Vector3();
         const ws = new Vector3();
         const wr = new Quaternion();
@@ -191,7 +191,7 @@ export function SceneManagerModule() {
             delete (data as any).id;
             delete (data as any).pid;
         }
-        if (m.children.length > 0) {
+        if (!without_children && m.children.length > 0) {
             data.children = [];
             for (let i = 0; i < m.children.length; i++)
                 if (is_base_mesh(m.children[i])) {
