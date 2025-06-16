@@ -123,8 +123,8 @@ function preload_tile_texture(id: string, path: string, atlas: string, w: number
     tiled_textures_data[atlas][id] = { name: get_file_name(path), w, h, atlas };
 }
 
+
 export function get_tile_texture(gid: number) {
-    let result: LoadedTileInfo;
     let max_firstgid = -1;
     let tileset = '';
     for (let i = 0; i < tile_sets_data.length; i++) {
@@ -147,6 +147,7 @@ export function get_tile_texture(gid: number) {
         }
         return tile_sets[local_id + ''];
     }
+    return;
 }
 
 export function get_all_tiled_textures() {
@@ -155,8 +156,11 @@ export function get_all_tiled_textures() {
 
 export function set_tileset(tilesets: TileSets) {
     tile_sets_data = [];
-    for (const k in tilesets)
-        tile_sets_data[k] = tilesets[k];
+    for (let i = 0; i < tilesets.length; i++) {
+        const ts = tilesets[i];
+        tile_sets_data.push([ts[0], ts[1]]);
+        
+    }
 }
 
 export function preload_tiled_textures(tile_info: TileInfo) {
