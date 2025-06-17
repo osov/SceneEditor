@@ -1,14 +1,14 @@
 // NOTE: для большей ясности все изменения в материалах делаются на прямую в файл, ResourceManager прослушивает изменения в файлах и обновляет загруженные данные, альтернативный вариант, это посылать события изменения материала и прослушивать их в ResourceManager, но в таком случае будет чуть больше запутанность, так как ResourceManager всеравно будет прослушивать изменения в файлах, но при этом еще и обрабатывать напрямую события изменения материала, который записывает в файл, еще как вариант, это посылать только событие изменения, а ResourceManager будет обрабатывать и сам записывать эти изменения в файл
 
 
-import { Vector2, Vector3, Vector4, Color, IUniform, Texture, MagnificationTextureFilter, MinificationTextureFilter } from "three";
+import { Vector2, Vector3, Vector4, Color, IUniform, Texture, MagnificationTextureFilter, MinificationTextureFilter, Wrapping } from "three";
 import { get_file_name, updateEachMaterialWhichHasTexture } from "../render_engine/helpers/utils";
 import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
 import { IObjectTypes, IBaseMesh } from "../render_engine/types";
 import { PropertyData, PropertyType, ChangeInfo, BeforeChangeInfo, ObjectData } from "../modules_editor/Inspector";
 import { AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo } from "../controls/types";
 import { hexToRGB, rgbToHex } from "../modules/utils";
-import { convertFilterModeToThreeJS, convertThreeJSFilterToFilterMode, generateAtlasOptions, generateFragmentProgramOptions, generateTextureOptions, generateVertexProgramOptions } from "./helpers";
+import { convertFilterModeToThreeJS, convertThreeJSFilterToFilterMode, convertWrappingModeToThreeJS, convertThreeJSWrappingToWrappingMode, generateAtlasOptions, generateFragmentProgramOptions, generateTextureOptions, generateVertexProgramOptions } from "./helpers";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 
 
@@ -20,11 +20,25 @@ export function register_asset_inspector() {
     (window as any).AssetInspector = AssetInspectorCreate();
 }
 
+export enum FilterMode {
+    NEAREST = 'nearest',
+    LINEAR = 'linear',
+}
+
+export enum WrappingMode {
+    REPEAT = 'repeat',
+    CLAMP = 'clamp',
+    MIRROR = 'mirror'
+}
+
 export enum AssetProperty {
+    TEXTURE_NAME = 'texture_name',
     ATLAS = 'atlas',
     ATLAS_BUTTON = 'atlas_button',
     MIN_FILTER = 'min_filter',
     MAG_FILTER = 'mag_filter',
+    WRAP_S = 'wrap_s',
+    WRAP_T = 'wrap_t',
     VERTEX_PROGRAM = 'vertex_program',
     FRAGMENT_PROGRAM = 'fragment_program',
     TRANSPARENT = 'transparent',
@@ -39,10 +53,13 @@ export enum AssetProperty {
 }
 
 export enum AssetPropertyTitle {
+    TEXTURE_NAME = 'Имя текстуры',
     ATLAS = 'Атлас',
-    ATLAS_BUTTON = 'Атлас менеджер',
+    ATLAS_BUTTON = 'Перейти в атлас менеджер',
     MIN_FILTER = 'Минимальный фильтр',
     MAG_FILTER = 'Максимальный фильтр',
+    WRAP_S = 'Обертка по X',
+    WRAP_T = 'Обертка по Y',
     VERTEX_PROGRAM = 'Вершинный шейдер',
     FRAGMENT_PROGRAM = 'Фрагментный шейдер',
     TRANSPARENT = 'Прозрачность',
@@ -54,11 +71,6 @@ export enum AssetPropertyTitle {
     PAN = 'Панорамирование',
     SOUND_PLAY_BUTTON = 'Воспроизвести',
     SOUND_STOP_BUTTON = 'Остановить'
-}
-
-export enum FilterMode {
-    NEAREST = 'nearest',
-    LINEAR = 'linear',
 }
 
 function AssetInspectorCreate() {
@@ -129,6 +141,14 @@ function AssetInspectorCreate() {
             }
 
             result.fields.push({
+                key: AssetProperty.TEXTURE_NAME,
+                title: AssetPropertyTitle.TEXTURE_NAME,
+                value: texture_name,
+                readonly: true,
+                type: PropertyType.STRING
+            });
+
+            result.fields.push({
                 key: AssetProperty.ATLAS,
                 title: AssetPropertyTitle.ATLAS,
                 value: atlas,
@@ -174,6 +194,37 @@ function AssetInspectorCreate() {
                 },
                 onBeforeChange: saveMagFilter,
                 onChange: handleMagFilterChange
+            });
+
+            const wrap_s = convertThreeJSWrappingToWrappingMode(ResourceManager.get_texture(texture_name, atlas).texture.wrapS);
+            const wrap_t = convertThreeJSWrappingToWrappingMode(ResourceManager.get_texture(texture_name, atlas).texture.wrapT);
+
+            result.fields.push({
+                key: AssetProperty.WRAP_S,
+                title: AssetPropertyTitle.WRAP_S,
+                value: wrap_s,
+                type: PropertyType.LIST_TEXT,
+                params: {
+                    'repeat': WrappingMode.REPEAT,
+                    'clamp': WrappingMode.CLAMP,
+                    'mirror': WrappingMode.MIRROR
+                },
+                onBeforeChange: saveWrapS,
+                onChange: handleWrapSChange
+            });
+
+            result.fields.push({
+                key: AssetProperty.WRAP_T,
+                title: AssetPropertyTitle.WRAP_T,
+                value: wrap_t,
+                type: PropertyType.LIST_TEXT,
+                params: {
+                    'repeat': WrappingMode.REPEAT,
+                    'clamp': WrappingMode.CLAMP,
+                    'mirror': WrappingMode.MIRROR
+                },
+                onBeforeChange: saveWrapT,
+                onChange: handleWrapTChange
             });
 
             return result;
@@ -654,6 +705,102 @@ function AssetInspectorCreate() {
         }
     }
 
+    function saveWrapS(info: BeforeChangeInfo) {
+        const wrapS: AssetTextureInfo<Wrapping>[] = [];
+        info.ids.forEach((id) => {
+            const texture_path = _selected_textures[id];
+            if (texture_path == null) {
+                Log.error('[saveWrapS] Texture path not found for id:', id);
+                return;
+            }
+
+            const texture_name = get_file_name(texture_path);
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            if (atlas == null) {
+                Log.error('[saveWrapS] Atlas not found for texture:', texture_name);
+                return;
+            }
+
+            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            wrapS.push({
+                texture_path,
+                value: texture_data.texture.wrapS
+            });
+        });
+
+        HistoryControl.add('TEXTURE_WRAP_S', wrapS, HistoryOwner.ASSET_INSPECTOR);
+    }
+
+    function handleWrapSChange(info: ChangeInfo) {
+        const data = convertChangeInfoToTextureData<WrappingMode>(info).map(item => {
+            return {
+                ...item,
+                value: convertWrappingModeToThreeJS(item.value) as Wrapping
+            };
+        });
+        updateWrapS(data.map(item => ({ ...item, value: item.value })), info.data.event.last);
+    }
+
+    async function updateWrapS(data: AssetTextureInfo<Wrapping>[], last: boolean) {
+        for (const item of data) {
+            const texture_name = get_file_name(item.texture_path);
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            if (atlas == null) continue;
+            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            texture_data.texture.wrapS = item.value;
+            updateEachMaterialWhichHasTexture(texture_data.texture);
+        }
+        if (last) await ResourceManager.write_metadata();
+    }
+
+    function saveWrapT(info: BeforeChangeInfo) {
+        const wrapT: AssetTextureInfo<Wrapping>[] = [];
+        info.ids.forEach((id) => {
+            const texture_path = _selected_textures[id];
+            if (texture_path == null) {
+                Log.error('[saveWrapT] Texture path not found for id:', id);
+                return;
+            }
+
+            const texture_name = get_file_name(texture_path);
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            if (atlas == null) {
+                Log.error('[saveWrapT] Atlas not found for texture:', texture_name);
+                return;
+            }
+
+            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            wrapT.push({
+                texture_path,
+                value: texture_data.texture.wrapT
+            });
+        });
+
+        HistoryControl.add('TEXTURE_WRAP_T', wrapT, HistoryOwner.ASSET_INSPECTOR);
+    }
+
+    function handleWrapTChange(info: ChangeInfo) {
+        const data = convertChangeInfoToTextureData<WrappingMode>(info).map(item => {
+            return {
+                ...item,
+                value: convertWrappingModeToThreeJS(item.value) as Wrapping
+            };
+        });
+        updateWrapT(data.map(item => ({ ...item, value: item.value })), info.data.event.last);
+    }
+
+    async function updateWrapT(data: AssetTextureInfo<Wrapping>[], last: boolean) {
+        for (const item of data) {
+            const texture_name = get_file_name(item.texture_path);
+            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            if (atlas == null) continue;
+            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            texture_data.texture.wrapT = item.value;
+            updateEachMaterialWhichHasTexture(texture_data.texture);
+        }
+        if (last) await ResourceManager.write_metadata();
+    }
+
     function saveMaterialVertexProgram(info: BeforeChangeInfo) {
         const vertexPrograms: AssetMaterialInfo<string>[] = [];
         info.ids.forEach((id) => {
@@ -1034,6 +1181,8 @@ function AssetInspectorCreate() {
             return { texture_path, value };
         }).filter(item => item != null) as { texture_path: string, value: T }[];
     }
+
+
 
     async function undo(event: THistoryUndo) {
         switch (event.type) {

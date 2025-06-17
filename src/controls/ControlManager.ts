@@ -278,7 +278,9 @@ function ControlManagerCreate() {
 
     function open_layer_manager() {
         const list = ResourceManager.get_layers().filter(l => l != 'default').map((title, id) => {
-            return { id: id.toString(), title, can_delete: true };
+            return {
+                id: id.toString(), title, can_delete: true
+            };
         });
 
         Popups.open({
@@ -286,7 +288,8 @@ function ControlManagerCreate() {
             params: {
                 title: "Layer",
                 button: "Add",
-                list
+                list,
+                with_index: true
             },
             callback: (success: boolean, data?: cbDataItem) => {
                 if (!success) {

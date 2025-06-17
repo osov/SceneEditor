@@ -95,6 +95,7 @@ interface Layers {
         title: string,
         button: string,
         list: LayerItem[],
+        with_index?: boolean
     },
     callback: (success: boolean, data?: cbDataItem) => void
 }
@@ -140,7 +141,7 @@ export interface cbDataItem {
 
 function PopupsCreate() {
     let visible = false;
-    
+
     function open(data: Notify | Confirm | Rename | Layers | Select) {
         const popup = document.querySelector(`#popup${data?.type}`) as HTMLInputElement | null;
         if (!popup) return;
@@ -160,20 +161,19 @@ function PopupsCreate() {
         const inputField = popup.querySelector('.popup__input') as HTMLInputElement | null;
         if (inputField && data?.type == 'Rename') { inputField.value = data?.params?.currentName ? data?.params?.currentName : ''; }
 
-        // if (data?.type == 'Layers') {
         const layer_list: LayerItem[] = (data?.type == 'Layers' && data?.params?.list) ? deepClone(data?.params?.list) : [];
         const wrLayersList = popup.querySelector('#LayersList') as HTMLElement | null;
         if (wrLayersList && data?.type == 'Layers') {
-            wrLayersList.innerHTML = getLayersHtml(layer_list);
+            const layersData = data as Layers;
+            wrLayersList.innerHTML = getLayersHtml(
+                prepareLayersTitle(layer_list, layersData.params?.with_index ?? false)
+            );
             wrLayersList.addEventListener('click', layerListClick);
         }
-        // }
 
-        // if (data?.type == 'Select') {
         const select_list: SelectItem[] = (data?.type == 'Select' && data?.params?.list) ? data?.params?.list : [];
         const wrSelectList = popup.querySelector('#popupSelectList') as HTMLInputElement | null;
         if (wrSelectList && data?.type == 'Select') wrSelectList.innerHTML = getSelectHtml(select_list);
-        // }
 
         const closeBg = popup.querySelector('.bgpopup') as HTMLElement | null;
         const closeBtn = popup.querySelector('.popup__close') as HTMLElement | null;
@@ -233,7 +233,10 @@ function PopupsCreate() {
                 const newItem: LayerItem = { id: Date.now().toString(), title: inputField?.value.trim(), can_delete: true };
                 data?.callback(true, { action: Action.ADD, item: newItem });
                 layer_list.push(newItem);
-                wrLayersList.innerHTML = getLayersHtml(layer_list);
+                const layersData = data as Layers;
+                wrLayersList.innerHTML = getLayersHtml(
+                    prepareLayersTitle(layer_list, layersData.params?.with_index ?? false)
+                );
                 inputField.value = '';
             }
 
@@ -257,8 +260,13 @@ function PopupsCreate() {
             }
 
             layer_list.splice(layer_list.findIndex((item: LayerItem) => item.id == id), 1);
-            if (data?.type == 'Layers') data?.callback(true, { action: Action.DELETE, item });
-            if (wrLayersList) wrLayersList.innerHTML = getLayersHtml(layer_list);
+            if (data?.type == 'Layers') {
+                const layersData = data as Layers;
+                data?.callback(true, { action: Action.DELETE, item });
+                if (wrLayersList) wrLayersList.innerHTML = getLayersHtml(
+                    prepareLayersTitle(layer_list, layersData.params?.with_index ?? false)
+                );
+            }
         }
 
         function layerListClick(e: any) {
@@ -269,6 +277,17 @@ function PopupsCreate() {
 
 
         showPopup(popup);
+    }
+
+    function prepareLayersTitle(list: LayerItem[], with_index: boolean): LayerItem[] {
+        if (with_index) {
+            return list.map((item: LayerItem, index: number) => {
+                const newItem = deepClone(item);
+                newItem.title = newItem.title + ` (${index + 1})`;
+                return newItem;
+            });
+        }
+        return list;
     }
 
     function getLayersHtml(list: LayerItem[]): string {

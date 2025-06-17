@@ -1,4 +1,4 @@
-import { Euler, MagnificationTextureFilter, MinificationTextureFilter, Vector2, Vector3, Vector4 } from "three";
+import { Euler, MagnificationTextureFilter, MinificationTextureFilter, Vector2, Vector3, Vector4, Wrapping } from "three";
 import { get_keys } from "../modules/utils";
 import { MeshMoveEventData, MeshMaterialUniformInfo, MeshPropertyInfo, AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo } from "./types";
 import { BlendMode } from "../inspectors/MeshInspector";
@@ -66,6 +66,8 @@ export type HistoryData = {
     MATERIAL_TRANSPARENT: AssetMaterialInfo<boolean>
     TEXTURE_MIN_FILTER: AssetTextureInfo<MinificationTextureFilter>
     TEXTURE_MAG_FILTER: AssetTextureInfo<MagnificationTextureFilter>
+    TEXTURE_WRAP_S: AssetTextureInfo<Wrapping>
+    TEXTURE_WRAP_T: AssetTextureInfo<Wrapping>
     TEXTURE_ATLAS: AssetTextureInfo<string>
     SPLINE_STATE: MeshPropertyInfo<Vector3>[]
     MESH_SOUND: MeshPropertyInfo<string>

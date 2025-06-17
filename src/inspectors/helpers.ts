@@ -1,8 +1,8 @@
 import { TextureInfo } from "../render_engine/resource_manager";
 import { ChangeInfo } from "../modules_editor/Inspector";
 import { BlendMode, ScreenPointPreset } from "./MeshInspector";
-import { AdditiveBlending, Blending, LinearFilter, MultiplyBlending, NearestFilter, NormalBlending, SubtractiveBlending, Vector2 } from "three";
-import { FilterMode } from "./AssetInspector";
+import { AdditiveBlending, Blending, LinearFilter, MultiplyBlending, NearestFilter, NormalBlending, SubtractiveBlending, Vector2, RepeatWrapping, ClampToEdgeWrapping, MirroredRepeatWrapping } from "three";
+import { FilterMode, WrappingMode } from "./AssetInspector";
 
 export function getChangedInfo(info: ChangeInfo) {
     let isChangedX = false;
@@ -295,4 +295,30 @@ export function generateFragmentProgramOptions() {
         fragment_options[program] = program;
     });
     return fragment_options;
+}
+
+export function convertWrappingModeToThreeJS(wrapping_mode: WrappingMode): number {
+    switch (wrapping_mode) {
+        case WrappingMode.REPEAT:
+            return RepeatWrapping;
+        case WrappingMode.CLAMP:
+            return ClampToEdgeWrapping;
+        case WrappingMode.MIRROR:
+            return MirroredRepeatWrapping;
+        default:
+            return RepeatWrapping;
+    }
+}
+
+export function convertThreeJSWrappingToWrappingMode(wrapping: number): WrappingMode {
+    switch (wrapping) {
+        case RepeatWrapping:
+            return WrappingMode.REPEAT;
+        case ClampToEdgeWrapping:
+            return WrappingMode.CLAMP;
+        case MirroredRepeatWrapping:
+            return WrappingMode.MIRROR;
+        default:
+            return WrappingMode.REPEAT;
+    }
 }
