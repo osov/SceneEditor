@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { Arc, Circle, Line, Matrix, Point, points2norm, Segment, Vector } from "../../modules/Geometry"
+import { Arc, Circle, Line, Matrix, Point, points2norm, Segment, Vector } from "../../utils/physic/Geometry"
 
 describe('Point', function () {
   it('Default constructor creates new (0,0) point', function () {

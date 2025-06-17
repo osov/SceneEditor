@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { Circle, Line, Point, points2norm, Segment, Vector } from "../../modules/Geometry"
+import { Circle, Line, Point, points2norm, Segment, Vector } from "../../utils/physic/Geometry"
 import { EQ } from "../../modules/utils"
 
 describe('Segment', function () {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { Arc, Box, CCW, circle, Circle, CW, Line, Matrix, Point, point, Segment, vector } from "../../modules/Geometry"
+import { Arc, Box, CCW, circle, Circle, CW, IPoint, Line, Matrix, Point, point, Segment, vector } from "../../utils/physic/Geometry"
 import { DP_TOL, EQ, TAU } from "../../modules/utils"
 
 describe('Arc', function () {
@@ -303,10 +303,10 @@ describe('Arc', function () {
     it('gets the point at specific length', function () {
       let arc = Arc(Point(), 1, Math.PI / 4, (3 * Math.PI) / 4)
       expect(arc.length()).toEqual(Math.abs(Math.PI / -2))
-      let start = arc.pointAtLength(0) as Point
+      let start = arc.pointAtLength(0) as IPoint
       expect(start.x).toEqual(arc.start().x)
       expect(start.y).toEqual(arc.start().y)
-      let end = arc.pointAtLength(arc.length()) as Point
+      let end = arc.pointAtLength(arc.length()) as IPoint
       expect(end.x).toEqual(arc.end().x)
       expect(end.y).toEqual(arc.end().y)
     })
@@ -314,7 +314,7 @@ describe('Arc', function () {
       let arc = Arc(Point(), 1, Math.PI / 4, (3 * Math.PI) / 4)
       let length = arc.length()
       for (let i = 0; i < 33; i++) {
-        let point = arc.pointAtLength((i / 33) * length) as Point
+        let point = arc.pointAtLength((i / 33) * length) as IPoint
         expect(arc.contains(point)).toBe(true)
       }
     })

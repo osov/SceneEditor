@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { Matrix, Point, Vector } from "../../modules/Geometry"
+import { Matrix, Point, Vector } from "../../utils/physic/Geometry"
 
 describe('Matrix', function () {
   it('Default constructor creates identity matrix', function () {

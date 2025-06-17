@@ -15,20 +15,14 @@
     "@types/three": "latest",
     "bun-types": "^1.2.4",
     "notyf": "^3.10.0",
-    "tsx": "^4.19.3",
-    "typescript": "^5.8.2",
-    "vite": "^5.4.14",
-    "vite-multiple-assets": "^2.2.5"
+    "vite": "^5.4.14"
   },
   "dependencies": {
-    "2d-geometry": "^3.0.0",
     "@pangenerator/tweakpane-textarea-plugin": "^2.0.0",
-    "@three.ez/instanced-mesh": "^0.3.0-alpha.10",
     "@tweakpane/core": "^2.0.5",
     "@tweenjs/tween.js": "^25.0.0",
     "@types/cookie": "^0.6.0",
     "@types/stats": "^0.16.30",
-    "astar-typescript": "^1.2.7",
     "bun-serve-router": "^0.0.3",
     "camera-controls": "^2.10.0",
     "cookie": "^1.0.2",
@@ -42,7 +36,7 @@
     "tweakpane4-extended-boolean-plugin": "^0.0.5",
     "tweakpane4-extended-vector-plugin": "^1.0.1",
     "tweakpane4-image-list-plugin": "1.1.9",
-    "tweakpane4-search-list-plugin": "2.0.3",
-    "tweakpane4-item-list-plugin": "1.0.5"
+    "tweakpane4-item-list-plugin": "1.0.5",
+    "tweakpane4-search-list-plugin": "2.0.3"
   }
 }

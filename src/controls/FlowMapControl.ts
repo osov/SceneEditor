@@ -10,20 +10,6 @@ export function register_flow_map_control() {
     (window as any).FlowMapControl = FlowMapControlCreate();
 }
 
-interface FlowInfo {
-    material_name: string;
-    // water
-    u_speed: number;
-    u_normal_scale: number
-    u_normal_scale_2: number
-    // water simple
-    u_angle: number
-    u_padding_left: number
-    u_padding_right: number
-    u_padding_top: number
-    u_padding_bottom: number
-}
-
 function FlowMapControlCreate() {
     const mesh_list: { [k: string]: IDrawCanvas } = {};
     const dir_path = '/data/water/';
@@ -31,6 +17,9 @@ function FlowMapControlCreate() {
     let selected_mesh: Slice9Mesh | undefined;
 
     function init() {
+        const tex = ResourceManager.get_texture('waternormals').texture;
+        tex.wrapS = tex.wrapT = RepeatWrapping;
+        tex.needsUpdate = true; 
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
             if (Input.is_shift()) {
                 if (e.key == 'F' || e.key == 'А') {

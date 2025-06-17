@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { EQ, TAU } from "../../modules/utils"
-import { Vector } from "../../modules/Geometry"
+import { Vector } from "../../utils/physic/Geometry"
 
 describe('Vector', function () {
   it('Default constructor creates Vector(0, 0)', function () {

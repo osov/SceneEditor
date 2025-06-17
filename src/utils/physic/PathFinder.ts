@@ -1,6 +1,7 @@
-import { Arc, CCW, CW, Point, Segment, Vector, vector_from_points as vector, segment, arc, vec_angle, vector_from_points } from "./Geometry";
+/* eslint-disable prefer-const */
+import { IArc, CCW, CW, IPoint, ISegment, Vector, vector_from_points as vector, segment, arc, vec_angle, vector_from_points, Segment, Arc, IVector, Point } from "./Geometry";
 import { DP_TOL, EQ, EQ_0 } from "./utils";
-import { ObstaclesManager } from "@editor/utils/obstacle_manager";
+import { ObstaclesManager } from "./obstacle_manager";
 import { ClosestObstacleData, ControlType, NextMoveType, PredictNextMoveData, PathData as PathData, PathNode, PathFinderSettings } from "./types";
 
 
@@ -8,9 +9,9 @@ export type PathFinder = ReturnType<typeof PathFinderModule>;
 
 
 export function PathFinderModule(settings: PathFinderSettings, obstacles_manager: ReturnType<typeof ObstaclesManager>) {
-    const logger = Log.get_with_prefix('pathfinder')
+    const logger = Log.get_with_prefix('pathfinder');
 
-    const max_intervals =  settings.max_path_intervals;
+    const max_intervals = settings.max_path_intervals;
     const collision_min_error = settings.collision_min_error;
     const move_min_angle = settings.block_move_min_angle;
     const max_correction = settings.target_max_correction;
@@ -19,21 +20,21 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     const max_way_length = settings.max_way_length;
     const max_update_time = settings.max_update_time;
 
-    const debug =  settings.debug;
+    const debug = settings.debug;
 
     let checking_obstacles = true;
 
     function enable_collision(enable = true) {
         checking_obstacles = enable;
-        logger.log(`Obstacles ${(enable) ? 'enabled' : 'disabled'}`)
+        logger.log(`Obstacles ${(enable) ? 'enabled' : 'disabled'}`);
     }
     function check_obstacles_enabled() {
         return checking_obstacles;
     }
 
-    function update_path(way_required: Segment, collision_radius: number, control_type: ControlType) {
-        const now = Date.now();
-        const path_data: PathData = {path: [], length: 0};
+    function update_path(way_required: ISegment, collision_radius: number, control_type: ControlType) {
+        const now = System.now_ms();
+        const path_data: PathData = { path: [], length: 0 };
         if (control_type == ControlType.JS || control_type == ControlType.FP)
             path_data.path.push(...predict_way(way_required, collision_radius, control_type));
 
@@ -48,28 +49,28 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         }
         for (const elem of path_data.path)
             path_data.length += elem.length();
-        log('update_path took time: ', Date.now() - now, ' ms');
+        log('update_path took time: ', System.now_ms() - now, ' ms');
         return path_data;
     }
 
-    function default_update_way(way_required: Segment, collision_radius: number, control_type: ControlType) {
+    function default_update_way(way_required: ISegment, collision_radius: number, control_type: ControlType) {
         return predict_way(way_required, collision_radius, control_type);
     }
 
-    function find_clear_target(target: Point, collision_radius: number, checks_number = 4) {
+    function find_clear_target(target: IPoint, collision_radius: number, checks_number = 4) {
         let clear_target_pos = target;
         const R = collision_radius + collision_min_error;
         const close_obstacles = obstacles_manager.get_obstacles(
-            clear_target_pos.x, 
-            clear_target_pos.y, 
-            2 * (R + max_correction), 
+            clear_target_pos.x,
+            clear_target_pos.y,
+            2 * (R + max_correction),
             2 * (R + max_correction)
         );
         if (close_obstacles.length > 0) {
             let i = 0;
-            let point_found = false
+            let point_found = false;
             while (i < checks_number && !point_found) {
-                i ++;
+                i++;
                 for (const obstacle of close_obstacles) {
                     const dist = clear_target_pos.distanceTo(obstacle);
                     const intersect_dist = R - dist[0];
@@ -84,32 +85,32 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         return clear_target_pos;
     }
 
-    function find_way(required_path: Segment, collision_radius: number) {
+    function find_way(required_path: ISegment, collision_radius: number) {
         log(`Start find_way`);
         const target = required_path.end;
         const start = required_path.start;
         let corrected_required_path = required_path;
-        
+
         const clear_target = find_clear_target(target, collision_radius);
-        if (clear_target) {
+        if (clear_target != null) {
             corrected_required_path = Segment(start, clear_target);
         }
         else {
-            if (debug) 
-                logger.log('У цели пути нет свободного места!')
-            return {path: [], blocked_way_nodes: [], clear_way_nodes: []};
+            if (debug)
+                logger.log('У цели пути нет свободного места!');
+            return { path: [], blocked_way_nodes: [], clear_way_nodes: [] };
         }
         // Строим дерево путей и получаем его конечные ноды.
-        const {end_nodes, blocked_path_nodes: blocked_way_nodes, clear_path_nodes: clear_way_nodes} = build_path_tree(corrected_required_path, collision_radius, max_checks);
+        const { end_nodes, blocked_path_nodes: blocked_way_nodes, clear_path_nodes: clear_way_nodes } = build_path_tree(corrected_required_path, collision_radius, max_checks);
 
         // Восстанавливаем полный путь до start.
         const path = path_from_tree(end_nodes);
 
-        return {path, blocked_way_nodes, clear_way_nodes};
+        return { path, blocked_way_nodes, clear_way_nodes };
     }
 
     function path_from_tree(end_nodes: PathNode[]) {
-        const path: (Segment | Arc)[] = [];
+        const path: (ISegment | IArc)[] = [];
         let min_length = Infinity;
         let min_length_node: PathNode | undefined = undefined;
         if (end_nodes.length > 0) {
@@ -123,7 +124,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         if (min_length_node != undefined) {
             let node: PathNode | undefined = min_length_node;
             while (node) {
-                if (node.segment) path.push(node.segment as Segment);
+                if (node.segment) path.push(node.segment);
                 if (node.arc) path.push(node.arc);
                 node = node.parent;
             }
@@ -132,61 +133,61 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         return path;
     }
 
-    function build_path_tree(path_required: Segment, collision_radius: number, max_checks: number) {
+    function build_path_tree(path_required: ISegment, collision_radius: number, max_checks: number) {
         const target = path_required.end;
-        const checked_obstacles: {obstacles: Segment[], start_pos: Point}[] = [];
+        const checked_obstacles: { obstacles: ISegment[], start_pos: IPoint }[] = [];
         const nodes_to_check: PathNode[] = [];
         const path_tree_root: PathNode = {
-            children: [], 
-            depth: 0, 
+            children: [],
+            depth: 0,
             total_length: 0
         };
-        const end_nodes: PathNode[] = []; 
+        const end_nodes: PathNode[] = [];
         const clear_path_nodes: PathNode[] = [];
         const blocked_path_nodes: PathNode[] = [];
         const path_required_node: PathNode = {
-            segment: path_required, 
-            children: [], 
+            segment: path_required,
+            children: [],
             parent: path_tree_root,
-            depth: 1, 
+            depth: 1,
             total_length: path_required.length()
         };
         path_tree_root.children.push(path_required_node);
 
         nodes_to_check.push(path_required_node);
         let checks_number = 0;
-        const time = Date.now();
+        const time = System.now_ms();
         let time_elapsed = 0;
 
         // Пока есть пути, которые нужно проверить, при этом не превысили ограничений по числу проверок:
         while (nodes_to_check.length > 0 && checks_number <= max_checks && time_elapsed <= max_update_time) {
-            const node_to_check = nodes_to_check.splice(0, 1)[0] as PathNode;
+            const node_to_check = nodes_to_check.splice(0, 1)[0];
             // const way_to_check = ways_to_check.pop() as PathNode;
             const result = check_path_node(node_to_check, target, collision_radius, checked_obstacles);
             nodes_to_check.push(...result.ways_to_check);
             end_nodes.push(...result.end_nodes);
             clear_path_nodes.push(...result.clear_way_nodes);
             blocked_path_nodes.push(...result.blocked_way_nodes);
-            checks_number ++;
-            time_elapsed = Date.now() - time;
+            checks_number++;
+            time_elapsed = System.now_ms() - time;
             if (end_nodes.length > 0) break;
         }
-        return {end_nodes, clear_path_nodes, blocked_path_nodes};
+        return { end_nodes, clear_path_nodes, blocked_path_nodes };
     }
 
     /**
      * Для поиска пути: достаёт массив препятствий, к которым уже были построены обходные пути из указанной start_pos, создаёт новый массив, если он не был найден
      */
-    function get_checked_obstacles(checked_obstacles: {obstacles: Segment[], start_pos: Point}[], start_pos: Point): Segment[] {
-        let found_entry: Segment[] | undefined;
-        let result: Segment[];
+    function get_checked_obstacles(checked_obstacles: { obstacles: ISegment[], start_pos: IPoint }[], start_pos: IPoint): ISegment[] {
+        let found_entry: ISegment[] | undefined;
+        let result: ISegment[];
         for (const entry of checked_obstacles) {
             if (entry.start_pos.equalTo(start_pos)) {
                 found_entry = entry.obstacles;
             }
         }
         if (!found_entry) {
-            const new_entry = {obstacles: [], start_pos}
+            const new_entry = { obstacles: [], start_pos };
             checked_obstacles.push(new_entry);
             result = new_entry.obstacles;
         }
@@ -194,7 +195,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         return result;
     }
 
-    function check_path_node(path: PathNode, target: Point, collision_radius: number, checked_obstacles: {obstacles: Segment[], start_pos: Point}[]) {
+    function check_path_node(path: PathNode, target: IPoint, collision_radius: number, checked_obstacles: { obstacles: ISegment[], start_pos: IPoint }[]) {
         const paths_to_check: PathNode[] = [];
         const end_nodes: PathNode[] = [];
         const clear_way_nodes: PathNode[] = [];
@@ -203,8 +204,8 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         // Если глубина либо длина полного пути данной ноды больше максимальной, пропускаем проверку, саму ноду нигде не учитываем. 
         // TODO: можно добавлять её в список blocked_way_nodes или отдельный для отображения
         if (path.total_length > max_way_length || path.depth > max_depth) {
-            return {ways_to_check: paths_to_check, end_nodes, clear_way_nodes, blocked_way_nodes}
-        } 
+            return { ways_to_check: paths_to_check, end_nodes, clear_way_nodes, blocked_way_nodes };
+        }
 
         const arc = path.arc;
         const segment = path.segment;
@@ -236,7 +237,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                         sideways = make_sideways(
                             start,
                             end,
-                            obstacle, 
+                            obstacle,
                             path.parent,
                             collision_radius + collision_min_error,
                         );
@@ -247,8 +248,8 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                         sideways = make_sideways_bypass_vertice(
                             start,
                             end,
-                            obstacle, 
-                            previous_vertice, 
+                            obstacle,
+                            previous_vertice,
                             previous_clockwise,
                             path.parent,
                             collision_radius + collision_min_error
@@ -263,7 +264,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                 }
             }
         }
-        
+
         // Если у данной ноды есть сегмент (прямой отрезок) пути и не было пересечений с дугой пути, проверяем наличие пересечений сегмента с препятствиями
         if (segment && !arc_collision) {
             const obstacle = find_closest_obstacle(segment, collision_radius).obstacle;
@@ -276,7 +277,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                     let sideways: PathNode[];
                     if (!(previous_vertice && previous_clockwise != undefined)) {
                         sideways = make_sideways(
-                            start, 
+                            start,
                             end,
                             obstacle,
                             path.parent,
@@ -287,11 +288,11 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                     // Если указана, создаём ноды с обходными путями к препятствию с обходом вершины предыдущего препятствия:
                     else {
                         sideways = make_sideways_bypass_vertice(
-                            start, 
+                            start,
                             end,
-                            obstacle, 
+                            obstacle,
                             previous_vertice,
-                            previous_clockwise, 
+                            previous_clockwise,
                             path.parent,
                             collision_radius + collision_min_error
                         );
@@ -315,12 +316,12 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             }
             else if (next_vertice && next_clockwise != undefined) {
                 const next_way: PathNode = make_way_bypass_vertice(
-                    segment.end, 
-                    target, 
-                    next_vertice, 
+                    segment.end,
+                    target,
+                    next_vertice,
                     next_clockwise,
                     path
-                )
+                );
                 paths_to_check.push(next_way);
             }
         }
@@ -329,7 +330,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         else
             blocked_way_nodes.push(path);
 
-        return {ways_to_check: paths_to_check, end_nodes, clear_way_nodes, blocked_way_nodes};
+        return { ways_to_check: paths_to_check, end_nodes, clear_way_nodes, blocked_way_nodes };
     }
 
     /**
@@ -342,7 +343,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
      * @param parent_node
      * @returns PathNode
      */
-    function make_way(start: Point, target_vertice: Point, collision_radius: number, clockwise: boolean, parent_node?: PathNode) {
+    function make_way(start: IPoint, target_vertice: IPoint, collision_radius: number, clockwise: boolean, parent_node?: PathNode) {
         let temp_segment = Segment(start, target_vertice);
         let angle = Math.asin(collision_radius / temp_segment.length()) + Math.PI / 2;
         angle = (clockwise) ? angle : -angle;
@@ -350,14 +351,14 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         const way_end = target_vertice.translate(temp_vec);
         const segment = Segment(start, way_end);
         const node: PathNode = {
-            segment, 
+            segment,
             parent: parent_node,
             children: [],
             depth: (parent_node) ? parent_node.depth + 1 : 0,
             total_length: (parent_node) ? parent_node.total_length + segment.length() : segment.length(),
-            previous_vertice: parent_node?.previous_vertice, 
+            previous_vertice: parent_node?.previous_vertice,
             previous_clockwise: parent_node?.previous_clockwise,
-            next_vertice: target_vertice, 
+            next_vertice: target_vertice,
             next_clockwise: clockwise,
         };
         if (parent_node)
@@ -374,7 +375,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
      * @param collision_radius 
      * @returns [PathNode, PathNode]
      */
-    function make_sideways(start: Point, target: Point, obstacle: Segment, parent_node: PathNode | undefined, collision_radius: number) {
+    function make_sideways(start: IPoint, target: IPoint, obstacle: ISegment, parent_node: PathNode | undefined, collision_radius: number) {
         const target_vec = vector_from_points(start, target);
         const vec_l = vector_from_points(start, obstacle.start);
         const vec_r = vector_from_points(start, obstacle.end);
@@ -410,43 +411,43 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             // значит, start уже находится возле данной вершины. Пробуем строить путь дальше, от вершины к цели движения
             else {
                 result.push(make_way_bypass_vertice(
-                    start, 
-                    target, 
-                    obstacle.start, 
+                    start,
+                    target,
+                    obstacle.start,
                     clockwise_l,
                     parent_node
-                ))
+                ));
             }
         }
-        
+
         if (vec_r.length() > collision_radius - collision_min_error) {
             if (vec_r.length() > collision_radius) {
                 result.push(make_way(
                     start,
                     obstacle.end,
                     collision_radius,
-                    clockwise_r, 
+                    clockwise_r,
                     parent_node
                 ));
             }
             else {
                 result.push(make_way_bypass_vertice(
-                    start, 
-                    target, 
-                    obstacle.end, 
+                    start,
+                    target,
+                    obstacle.end,
                     clockwise_r,
                     parent_node
-                ))
+                ));
             }
         }
         return result;
     }
-    
+
 
     /**
      * Строит все варианты путей с касательными отрезками из точки start к окуружностям с collision_radius на вершинах сегмента препятствия
      */
-    function make_all_sideways(start: Point, target: Point, obstacle: Segment, parent_node: PathNode | undefined, collision_radius: number) {
+    function make_all_sideways(start: IPoint, target: IPoint, obstacle: ISegment, parent_node: PathNode | undefined, collision_radius: number) {
         const result: PathNode[] = [];
         for (const dir of [CCW, CW]) {
             for (const vertice of [obstacle.start, obstacle.end]) {
@@ -457,10 +458,10 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                     // Если расстояние больше радиуса столкновения, строим отрезок
                     if (dist > collision_radius) {
                         node = make_way(
-                            start, 
-                            vertice, 
-                            collision_radius, 
-                            dir, 
+                            start,
+                            vertice,
+                            collision_radius,
+                            dir,
                             parent_node
                         );
                     }
@@ -468,12 +469,12 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                     // значит, start уже находится возле данной вершины. Пробуем строить путь дальше, от вершины к цели движения
                     else {
                         node = make_way_bypass_vertice(
-                            start, 
-                            target, 
-                            vertice, 
+                            start,
+                            target,
+                            vertice,
                             dir,
                             parent_node
-                        )
+                        );
                     }
                     result.push(node);
                 }
@@ -488,7 +489,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     /**
      * Построение двух вариантов обхода препятствия с определением дуги пути для обхода вершины загораживающей путь
      */
-    function make_sideways_bypass_vertice(start: Point, target: Point, obstacle: Segment, vertice: Point, clockwise = CW, parent_node?: PathNode, collision_radius?: number) {
+    function make_sideways_bypass_vertice(start: IPoint, target: IPoint, obstacle: ISegment, vertice: IPoint, clockwise = CW, parent_node?: PathNode, collision_radius?: number) {
         const result: PathNode[] = [];
         const R = (collision_radius) ? collision_radius : start.distanceTo(vertice)[0];
         const arc_start_vec = vector_from_points(vertice, start);
@@ -497,10 +498,10 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         let vec_l = vector_from_points(vertice, vertice_l);
         let vec_r = vector_from_points(vertice, vertice_r);
         const target_vec = vector_from_points(start, target);
-        
+
         // В зависимости положения вершин препятствия относительно вектора направления желаемого движения target_vec, определяем направление обхода этих вершин
-        let same_side_touch_vertice: Point;
-        let diff_side_touch_vertice: Point;
+        let same_side_touch_vertice: IPoint;
+        let diff_side_touch_vertice: IPoint;
         if (vec_l.length() != 0 && vec_r.length() != 0) {
             let angle_l = vec_angle(target_vec, vec_l);
             let angle_r = vec_angle(target_vec, vec_r);
@@ -531,7 +532,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             let prev_segment = parent_node?.segment;
             let prev_arc = parent_node?.arc;
             let way_diff_angle = 0;
-            
+
             // Проверяем, отклоняется ли путь на больший угол от желаемого направления, чем путь ноды-родителя. 
             // Если да, нужно определить, как строить этот путь. Присоединять его будем к родителю полученной ноды-родителя
             if (prev_segment && !EQ_0(prev_segment.length())) {
@@ -545,13 +546,13 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                     if (prev_vertice) {
                         nodes = make_sideways_bypass_vertice(
                             prev_arc!.start(),
-                            target, 
+                            target,
                             obstacle,
                             prev_vertice,
                             clockwise,
                             parent_node?.parent,
                             R
-                        )
+                        );
                         result.push(...nodes);
                     }
                     // Если нет, значит, предыдущий путь состоял из одного сегмента. Определяем вариант построения 
@@ -559,10 +560,10 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                     // Если расстояние больше R, строим прямой путь.
                     else if (dist > R) {
                         result.push(make_way(
-                            prev_segment.start, 
-                            same_side_touch_vertice, 
-                            R, 
-                            clockwise, 
+                            prev_segment.start,
+                            same_side_touch_vertice,
+                            R,
+                            clockwise,
                             parent_node?.parent
                         ));
                     }
@@ -570,12 +571,12 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                     // TODO: Проверить, возможен ли такой вариант вообще
                     if (dist < R) {
                         result.push(make_way_bypass_vertice(
-                            prev_arc!.start(), 
-                            target, 
+                            prev_arc!.start(),
+                            target,
                             same_side_touch_vertice,
                             clockwise,
                             parent_node?.parent
-                        ))
+                        ));
                     }
                 }
             }
@@ -606,9 +607,9 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                     children: [],
                     depth: (parent_node) ? parent_node.depth + 1 : 0,
                     total_length: (parent_node) ? parent_node.total_length + length_S : length_S,
-                    previous_vertice: vertice, 
+                    previous_vertice: vertice,
                     previous_clockwise: clockwise,
-                    next_vertice: same_side_touch_vertice, 
+                    next_vertice: same_side_touch_vertice,
                     next_clockwise: clockwise,
                 };
                 if (parent_node)
@@ -625,9 +626,9 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             const obstacle_vec = vector_from_points(diff_side_touch_vertice, same_side_touch_vertice);
             const obstacle_norm = (!clockwise) ? obstacle_vec.rotate90CW() : obstacle_vec.rotate90CCW();
             const obstacle_block_angle = obstacle_norm.slope();
-            
+
             let angle = Math.acos(2 * R / vert_to_vert.length());
-            const vec_D = vert_to_vert.vector().normalize().multiply(R); 
+            const vec_D = vert_to_vert.vector().normalize().multiply(R);
             const vec_D_norm = (!clockwise) ? vec_D.rotate(-angle) : vec_D.rotate(angle);
 
             // Конец пути в точке:
@@ -646,8 +647,8 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                 children: [],
                 depth: (parent_node) ? parent_node.depth + 1 : 0,
                 total_length: (parent_node) ? parent_node.total_length + length_D : length_D,
-                previous_vertice: vertice, 
-                previous_clockwise: clockwise, 
+                previous_vertice: vertice,
+                previous_clockwise: clockwise,
                 next_vertice: diff_side_touch_vertice,
                 next_clockwise: !clockwise,
             };
@@ -661,29 +662,29 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     /**
      * Строит путь с дугой обходящей вершину препятствия в указанном направлении и прямым отрезком из конца этой дуги до точки target
      */
-    function make_way_bypass_vertice(start: Point, target: Point, vertice: Point, clockwise = CW, parent_node?: PathNode, collision_radius?: number) {
+    function make_way_bypass_vertice(start: IPoint, target: IPoint, vertice: IPoint, clockwise = CW, parent_node?: PathNode, collision_radius?: number) {
         const R = (collision_radius) ? collision_radius : start.distanceTo(vertice)[0];
         const arc_start_vec = vector_from_points(vertice, start);
         const vert_to_target = Segment(vertice, target);
         const angle = Math.acos(R / vert_to_target.length()) + DP_TOL;
-        const vec = vert_to_target.vector().normalize().multiply(R); 
+        const vec = vert_to_target.vector().normalize().multiply(R);
         const vec_norm = (clockwise) ? vec.rotate(angle) : vec.rotate(-angle);
         const start_angle = arc_start_vec.slope();
         const end_angle = vec_norm.slope();
         const arc_clockwise = !clockwise;
-        
+
         const arc = Arc(vertice, arc_start_vec.length(), start_angle, end_angle, arc_clockwise);
         const segment = Segment(arc.end(), target);
         const length = arc.length() + segment.length();
         const node: PathNode = {
             segment: segment,
-            arc: arc, 
+            arc: arc,
             parent: parent_node,
             children: [],
             depth: (parent_node) ? parent_node.depth + 1 : 0,
             total_length: (parent_node) ? parent_node.total_length + length : length,
-            previous_vertice: vertice, 
-            previous_clockwise: clockwise, 
+            previous_vertice: vertice,
+            previous_clockwise: clockwise,
             next_vertice: undefined,
             next_clockwise: undefined,
         };
@@ -692,15 +693,15 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         return node;
     }
 
-    function predict_way(way_required: Segment, collision_radius: number, control_type: ControlType) {
-        const way: (Segment | Arc)[] = [];
+    function predict_way(way_required: ISegment, collision_radius: number, control_type: ControlType) {
+        const way: (ISegment | IArc)[] = [];
         let lenght_remains = way_required.length();
-        const data: PredictNextMoveData = {next_do: NextMoveType.STRAIGHT_LINE, way_required, lenght_remains, control_type};
+        const data: PredictNextMoveData = { next_do: NextMoveType.STRAIGHT_LINE, way_required, lenght_remains, control_type };
         let counter = 0;
-        log(`Start predict_way`)
+        log(`Start predict_way`);
         while (data.lenght_remains >= collision_min_error && counter < max_intervals) {
-            if (debug)  {
-                log(`Next move in predicted way:`, NextMoveType[data.next_do]);   
+            if (debug) {
+                log(`Next move in predicted way:`, NextMoveType[data.next_do]);
             }
             if (data.next_do == NextMoveType.STRAIGHT_LINE) {
                 linear_move(way, collision_radius, data);
@@ -712,12 +713,12 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                 slide_obstacle(way, collision_radius, data);
             }
             else if (data.next_do == NextMoveType.STOP) break;
-            counter ++;
+            counter++;
         }
         return way;
     }
 
-    function _get_correction_angle(pos: Point, vertice: Point, way_req: Segment) {
+    function _get_correction_angle(pos: IPoint, vertice: IPoint, way_req: ISegment) {
         let correction_angle = 0;
         const pos_to_vert_vec = vector(pos, vertice);
         const vert_to_tar_vec = vector(vertice, way_req.end);
@@ -726,29 +727,29 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         return correction_angle;
     }
 
-    function _correct_vec_angle_to_dir(vec: Vector, data: PredictNextMoveData, rotate_dir: boolean) {
+    function _correct_vec_angle_to_dir(vec: IVector, data: PredictNextMoveData, rotate_dir: boolean) {
         let correction_angle = 0;
         let end_vec = vec;
         if (data.control_type == ControlType.JS) {
             correction_angle = 0;
         }
         else if (data.control_type == ControlType.FP) {
-            correction_angle =  _get_correction_angle(data.way_required.start, data.vertice_to_bypass as Point, data.way_required);
+            correction_angle = _get_correction_angle(data.way_required.start, data.vertice_to_bypass as IPoint, data.way_required);
         }
-        if (correction_angle) end_vec = (rotate_dir) ? end_vec.rotate(-correction_angle) : end_vec.rotate(correction_angle);
+        if (correction_angle != 0) end_vec = (rotate_dir) ? end_vec.rotate(-correction_angle) : end_vec.rotate(correction_angle);
         // log('correction_angle',  radToDeg(correction_angle));
         // log('corrected_end_angle',  radToDeg(end_vec.slope));
         return end_vec;
     }
 
-    function _get_new_target(pos: Point, new_pos: Point, old_target: Point) {
+    function _get_new_target(pos: IPoint, new_pos: IPoint, old_target: IPoint) {
         const d_vec = vector(pos, new_pos);
         return old_target.translate(d_vec);
     }
 
-    function bypass_vertice(way: (Segment | Arc)[], collision_radius: number, data: PredictNextMoveData) {
-        const obstacle = data.obstacle_to_slide as Segment;
-        const vertice = data.vertice_to_bypass as Point;
+    function bypass_vertice(way: (ISegment | IArc)[], collision_radius: number, data: PredictNextMoveData) {
+        const obstacle = data.obstacle_to_slide as ISegment;
+        const vertice = data.vertice_to_bypass as IPoint;
         const ostacle_vec = (vertice.equalTo(obstacle.start)) ? obstacle.vector() : obstacle.vector().invert();
         const s_pos = data.way_required.start;
         const pos_to_vertice_vec = vector(s_pos, vertice);
@@ -761,7 +762,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         let allowed_way = undefined;
 
         end_vec = _correct_vec_angle_to_dir(end_vec, data, rotate_dir);
-        
+
         // Проверяем, что при обходе угла не столкнулись с препятствием, край которого сейчас обходим, если столкнулись ограничиваем угол обхода
         let blocked_by_current_obstacle = false;
         let excess_rotation_angle = (rotate_dir) ? vec_angle(end_vec, obstacle_limit_vec) : vec_angle(obstacle_limit_vec, end_vec);
@@ -777,14 +778,14 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         const way_arc_full = arc(vertice, pos_to_vertice_vec.length(), start_angle, end_angle, !rotate_dir);
         let way_arc = way_arc_full;
         if (!check_collision_angle_ok(data.way_required.vector(), way_arc)) {
-            data.next_do = NextMoveType.STOP;    
-            return;          
+            data.next_do = NextMoveType.STOP;
+            return;
         }
 
         // Если длина дуги больше оставшейся для расчётов длины пути, ограничиваем дугу этой длиной
         if (data.lenght_remains < way_arc_full.length())
-            way_arc = way_arc_full.splitAtLength(data.lenght_remains)[0] as Arc;
-        
+            way_arc = way_arc_full.splitAtLength(data.lenght_remains)[0] as IArc;
+
         // Далее ищем пересечения дуги с остальными препятствиями
         const closest = find_closest_obstacle(way_arc, collision_radius);
         if (closest.obstacle && closest.obstacle != obstacle) {
@@ -798,11 +799,11 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             if (closest.is_vertice) {
                 data.vertice_to_bypass = closest.point;
                 data.next_do = NextMoveType.BYPASS_ANGLE;
-            } 
+            }
             else {
                 // Если столкнулись с препятствием, которое обходили в предыдущее действие, останавливаемся.
                 if (closest.obstacle == data.prev_obstacle) {
-                    data.next_do = NextMoveType.STOP; 
+                    data.next_do = NextMoveType.STOP;
                 }
                 else {
                     data.next_do = NextMoveType.SLIDE_OBSTACLE;
@@ -813,32 +814,32 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         }
         else {
             if (data.lenght_remains < way_arc_full.length()) {
-                data.next_do = NextMoveType.STOP; 
+                data.next_do = NextMoveType.STOP;
             }
-            else if (blocked_by_current_obstacle) 
+            else if (blocked_by_current_obstacle)
                 data.next_do = NextMoveType.SLIDE_OBSTACLE;
             else {
                 data.next_do = NextMoveType.STRAIGHT_LINE;
             }
-            data.lenght_remains -= way_arc.length(); 
+            data.lenght_remains -= way_arc.length();
             allowed_way = way_arc;
         }
-        
-        if (allowed_way) {
+
+        if (!('null' in allowed_way)) {
             if (data.control_type == ControlType.JS) {
                 const new_target = _get_new_target(s_pos, allowed_way.end(), data.way_required.end);
                 data.way_required = segment(allowed_way.end().x, allowed_way.end().y, new_target.x, new_target.y);
             }
             else if (data.control_type == ControlType.FP) {
-                const new_target =  data.way_required.end;
+                const new_target = data.way_required.end;
                 data.way_required = segment(allowed_way.end().x, allowed_way.end().y, new_target.x, new_target.y);
             }
             way.push(allowed_way);
         }
     }
 
-    function slide_obstacle(way: (Segment | Arc)[], collision_radius: number, data: PredictNextMoveData) {
-        const obstacle = data.obstacle_to_slide as Segment;
+    function slide_obstacle(way: (ISegment | IArc)[], collision_radius: number, data: PredictNextMoveData) {
+        const obstacle = data.obstacle_to_slide as ISegment;
         const s_pos = data.way_required.start;
         const distance_segment = s_pos.distanceTo(obstacle)[1];
         const translate_vec = distance_segment.vector().invert();
@@ -854,14 +855,14 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         let way_required_to_slide = slide.translate(translate_vec);
 
         if (!check_collision_angle_ok(data.way_required.vector(), way_required_to_slide)) {
-            data.next_do = NextMoveType.STOP;    
-            return;                  
+            data.next_do = NextMoveType.STOP;
+            return;
         }
         // Оставшееся расстояние может закончиться раньше, чем добрались до края препятствия:
-        const max_slide_distance = (data.control_type == ControlType.FP) ?data.lenght_remains * Math.cos(d_angle) : data.lenght_remains;
-        way_required_to_slide = way_required_to_slide.splitAtLength(max_slide_distance)[0] as Segment;
+        const max_slide_distance = (data.control_type == ControlType.FP) ? data.lenght_remains * Math.cos(d_angle) : data.lenght_remains;
+        way_required_to_slide = way_required_to_slide.splitAtLength(max_slide_distance)[0] as ISegment;
         if (EQ_0(max_slide_distance)) {
-            data.next_do = NextMoveType.STOP; 
+            data.next_do = NextMoveType.STOP;
             return;
         }
         const closest = find_closest_obstacle(way_required_to_slide, collision_radius);
@@ -875,11 +876,11 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             if (closest.is_vertice) {
                 data.vertice_to_bypass = closest.point;
                 data.next_do = NextMoveType.BYPASS_ANGLE;
-            } 
+            }
             else {
                 // Если столкнулись с препятствием, которое обходили в предыдущее действие, останавливаемся.
                 if (closest.obstacle == data.prev_obstacle) {
-                    data.next_do = NextMoveType.STOP; 
+                    data.next_do = NextMoveType.STOP;
                 }
                 else {
                     data.next_do = NextMoveType.SLIDE_OBSTACLE;
@@ -889,10 +890,10 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             data.lenght_remains -= distance_before_collision;
             data.prev_obstacle = obstacle;
         }
-        else { 
+        else {
             if (max_slide_distance < slide.length()) {
-                data.lenght_remains = 0; 
-                data.next_do = NextMoveType.STOP; 
+                data.lenght_remains = 0;
+                data.next_do = NextMoveType.STOP;
             }
             else {
                 data.lenght_remains -= (slide.length() / Math.cos(d_angle));
@@ -901,74 +902,74 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             }
             allowed_way = way_required_to_slide;
         }
-        if (allowed_way) {
+        if (!('null' in allowed_way)) {
             if (data.control_type == ControlType.JS) {
                 const new_target = _get_new_target(s_pos, allowed_way.end, data.way_required.end);
                 data.way_required = segment(allowed_way.end.x, allowed_way.end.y, new_target.x, new_target.y);
             }
             else if (data.control_type == ControlType.FP) {
-                const new_target =  data.way_required.end;
+                const new_target = data.way_required.end;
                 data.way_required = segment(allowed_way.end.x, allowed_way.end.y, new_target.x, new_target.y);
             }
             way.push(allowed_way);
         }
     }
 
-    function linear_move(way: (Segment | Arc)[], collision_radius: number, data: PredictNextMoveData) {
+    function linear_move(way: (ISegment | IArc)[], collision_radius: number, data: PredictNextMoveData) {
         data.obstacle_to_slide = undefined;
         data.vertice_to_bypass = undefined;
         const closest = find_closest_obstacle(data.way_required, collision_radius);
         let allowed_way = undefined;
-        if (closest.obstacle) { 
+        if (closest.obstacle) {
             let distance_before_collision = closest.distance;
             if (distance_before_collision < 0) {
                 distance_before_collision = 0;
             }
             const way_segments = data.way_required.splitAtLength(distance_before_collision);
             allowed_way = way_segments[0];
-            data.way_required = way_segments[1] as Segment;
+            data.way_required = way_segments[1] as ISegment;
             data.obstacle_to_slide = closest.obstacle;
             data.lenght_remains -= distance_before_collision;
             if (closest.is_vertice) {
                 data.vertice_to_bypass = closest.point;
-                data.next_do = NextMoveType.BYPASS_ANGLE; 
-            } 
+                data.next_do = NextMoveType.BYPASS_ANGLE;
+            }
             else {
                 data.next_do = NextMoveType.SLIDE_OBSTACLE;
             }
         }
         else {
             data.next_do = NextMoveType.STOP;
-            data.lenght_remains = 0; 
+            data.lenght_remains = 0;
             allowed_way = data.way_required;
         }
-        if (allowed_way) {
+        if (!('null' in allowed_way)) {
             way.push(allowed_way);
         }
     }
 
-    function check_collision_angle_ok(direction_required: Vector, way: Segment | Arc) {
+    function check_collision_angle_ok(direction_required: IVector, way: ISegment | IArc) {
         let collision_angle: number | undefined = undefined;
         if (way.name == "segment") {
-            const way_segment = way as Segment;
-            collision_angle = Math.PI / 2 - Math.abs(vec_angle(direction_required, way_segment.vector())); 
+            const way_segment = way as ISegment;
+            collision_angle = Math.PI / 2 - Math.abs(vec_angle(direction_required, way_segment.vector()));
         }
         if (way.name == "arc") {
-            const way_arc = way as Arc;
-            collision_angle = Math.PI / 2 - Math.abs(vec_angle(direction_required, way_arc.tangentInStart())); 
+            const way_arc = way as IArc;
+            collision_angle = Math.PI / 2 - Math.abs(vec_angle(direction_required, way_arc.tangentInStart()));
         }
         if (collision_angle) return (collision_angle) > move_min_angle;
         return false;
     }
-    
-    function find_closest_obstacle(way_required: Segment | Arc, collision_radius: number): ClosestObstacleData {
+
+    function find_closest_obstacle(way_required: ISegment | IArc, collision_radius: number): ClosestObstacleData {
         let shortest_distance = Infinity;
-        let closest_point: Point | undefined = undefined;
-        let closest_obstacle: Segment | undefined = undefined;
-        let shortest_way: Segment | Arc | undefined = undefined;
-        let is_vertice: boolean = false;
-        let offset_collision_line: Segment | Arc | undefined = undefined;
-        if (!checking_obstacles) return {obstacle: closest_obstacle, distance: way_required.length(), point: closest_point, way: shortest_way, is_vertice};
+        let closest_point: IPoint | undefined = undefined;
+        let closest_obstacle: ISegment | undefined = undefined;
+        let shortest_way: ISegment | IArc | undefined = undefined;
+        let is_vertice = false;
+        let offset_collision_line: ISegment | IArc | undefined = undefined;
+        if (!checking_obstacles) return { obstacle: closest_obstacle, distance: way_required.length(), point: closest_point, way: shortest_way, is_vertice };
         const way_box = way_required.box();
         const way_c = way_box.center();
         const obstacles = obstacles_manager.get_obstacles(way_c.x, way_c.y, way_box.width + collision_radius * 2, way_box.height + collision_radius * 2);
@@ -978,7 +979,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             for (const line of offset_collision_lines) {
                 const intersections = collision_way.intersect(line);
                 if (intersections.length > 0) {
-                    let closest: { distance: number; way?: Segment | Arc; point: Point } | undefined = undefined;
+                    let closest: { distance: number; way?: ISegment | IArc; point: IPoint } | undefined = undefined;
                     closest = get_closest_intersection(collision_way, intersections);
                     if (closest && closest.distance < shortest_distance) {
                         shortest_distance = closest.distance;
@@ -1008,34 +1009,34 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                 is_vertice = false;
             }
         }
-        return {obstacle: closest_obstacle, distance: shortest_distance, point: closest_point, way: shortest_way, is_vertice};
+        return { obstacle: closest_obstacle, distance: shortest_distance, point: closest_point, way: shortest_way, is_vertice };
     }
 
-    function get_closest_intersection(way: Segment | Arc, intersections: Point[]) {
-        const list: {distance: number, way?: Segment | Arc, point: Point}[] = [];
+    function get_closest_intersection(way: ISegment | IArc, intersections: IPoint[]) {
+        const list: { distance: number, way?: ISegment | IArc, point: IPoint }[] = [];
         for (const point of intersections) {
             const sub_way = way.split(point)[0];
-            if (sub_way)
-                list.push({distance: sub_way.length(), way: sub_way, point});
+            if (!('null' in sub_way))
+                list.push({ distance: sub_way.length(), way: sub_way, point });
             else
-                list.push({distance: 0, way: undefined, point});
+                list.push({ distance: 0, way: undefined, point });
         }
         list.sort((a, b) => a.distance - b.distance);
         return list[0];
     }
 
-    function get_waypoint_on_interval(interval: Segment | Arc, dt: number, current_speed: number) {
+    function get_waypoint_on_interval(interval: ISegment | IArc, dt: number, current_speed: number) {
         const cosA = 1;
         const dist = cosA * dt * current_speed;
         const point = interval.pointAtLength(dist);
         if (dist > interval.length()) {
             const dist_remains = dist - interval.length();
             const time_remains = dist_remains / cosA / current_speed;
-            return {point, time_remains};
+            return { point, time_remains };
         }
         else {
-            const time_remains = 0
-            return {point, time_remains};
+            const time_remains = 0;
+            return { point, time_remains };
         }
     }
 
@@ -1043,7 +1044,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         if (path_data.path.length == 0) {
             logger.warn("No path to get the next waypoint!");
             return undefined;
-        };
+        }
         let ratio = (_ratio > 1) ? 1 : _ratio;
         ratio = (_ratio < 0) ? 0 : _ratio;
         let length_remains = path_data.length * ratio;
@@ -1056,51 +1057,51 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             }
         }
         let interval = path_data.path[0];
-        let start = (interval.name == 'segment') ? (interval as Segment).start : (interval as Arc).start();
+        let start = (interval.name == 'segment') ? (interval as ISegment).start : (interval as IArc).start();
         return start;
     }
 
-    function find_current_interval(path: (Segment | Arc)[], current_pos: Point) {
+    function find_current_interval(path: (ISegment | IArc)[], current_pos: IPoint) {
         for (let i = 0; i < path.length; i++) {
-            if (path[i].contains(current_pos)) 
+            if (path[i].contains(current_pos))
                 return i;
         }
         return -1;
     }
-    
-    function get_next_pos(path_data: PathData, current_pos: Point, dt: number, speed: number) {
+
+    function get_next_pos(path_data: PathData, current_pos: IPoint, dt: number, speed: number) {
         let _current_pos = current_pos;
         let _time_remains = dt;
         if (path_data.path.length == 0) {
             logger.warn("No path to get the next waypoint!");
             return _current_pos;
-        };
+        }
         const id = find_current_interval(path_data.path, current_pos);
         if (id == -1) {
             logger.warn("current_pos doesn't belong to any path interval");
             return _current_pos;
         }
-        const _path_intervals: (Segment | Arc)[] = [];
+        const _path_intervals: (ISegment | IArc)[] = [];
         const current_interval_remains = path_data.path[id].split(_current_pos)[1];
-        if (current_interval_remains)
+        if (!('null' in current_interval_remains))
             _path_intervals.push(current_interval_remains);
         _path_intervals.push(...path_data.path.slice(id + 1));
 
         let i = 0;
         while (_time_remains > 0 && i < _path_intervals.length) {
             let interval = _path_intervals[i];
-            const {point, time_remains} = get_waypoint_on_interval(interval, _time_remains, speed);
-            _current_pos = point as Point;
+            const { point, time_remains } = get_waypoint_on_interval(interval, _time_remains, speed);
+            _current_pos = point as IPoint;
             _time_remains = time_remains;
             if (!time_remains) {
                 break;
             }
-            i ++;
+            i++;
         }
         return _current_pos;
     }
 
-    function way_from_angle(cp: Point, angle: number, length: number) {
+    function way_from_angle(cp: IPoint, angle: number, length: number) {
         const dir = Vector(1, 0).rotate(angle);
         const ep = cp.translate(dir.multiply(length));
         return Segment(Point(cp.x, cp.y), Point(ep.x, ep.y));
@@ -1109,8 +1110,8 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     function path_to_points_amount(path_data: PathData, amount: number) {
         if (amount == 1 && path_data.path.length > 0) {
             const first = path_data.path[0];
-            if (first.name == 'segment') return (first as Segment).start;
-            else return (first as Arc).start();
+            if (first.name == 'segment') return (first as ISegment).start;
+            else return (first as IArc).start();
         }
         else if (amount == 0) return false;
         const step = path_data.length / (amount - 1);
@@ -1120,37 +1121,38 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     function path_to_points_step(path_data: PathData, step: number) {
         const path = path_data.path;
         let length_left = 0;
-        const result: Point[] = [];
+        const result: IPoint[] = [];
         if (path_data.path.length == 0) return result;
         const first = path[0];
-        result.push(first.pointAtLength(0) as Point)
+        result.push(first.pointAtLength(0) as IPoint);
         for (let interval of path) {
             const length = interval.length();
             if (length < step) {
                 length_left += length;
             }
             else if (length >= step) {
-                const first_interval = (EQ_0(step - length_left)) ? 0 : step - length_left
-                const point = interval.pointAtLength(first_interval) as Point;
+                const first_interval = (EQ_0(step - length_left)) ? 0 : step - length_left;
+                const point = interval.pointAtLength(first_interval) as IPoint;
                 result.push(point);
                 let total_length = step - length_left + step;
                 while (total_length < length && !EQ(total_length, length)) {
-                    const point = interval.pointAtLength(total_length) as Point;
+                    const point = interval.pointAtLength(total_length) as IPoint;
                     result.push(point);
                     total_length += step;
                 }
                 length_left = length - total_length + step;
             }
         }
-        const last = path[path.length-1];
-        result.push(last.pointAtLength(last.length()) as Point)
+        const last = path[path.length - 1];
+        result.push(last.pointAtLength(last.length()) as IPoint);
         return result;
     }
-    
-    return { update_path, get_next_pos, get_pos_at_ratio,
+
+    return {
+        update_path, get_next_pos, get_pos_at_ratio,
         enable_collision, check_obstacles_enabled,
         build_path_tree, way_from_angle, path_to_points_step, path_to_points_amount,
         obstacles_manager, find_clear_target
-    }
+    };
 }
 

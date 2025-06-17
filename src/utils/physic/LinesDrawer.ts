@@ -1,16 +1,16 @@
 import { LineBasicMaterial, Vector2, Line as GeomLine, BufferGeometry, Vector2Like } from 'three';
 
-import { CAMERA_Z } from "../config";
-import { GoContainer } from "../render_engine/objects/sub_types";
-import { Point, PointLike, Segment } from "./Geometry";
+import { CAMERA_Z } from "../../config";
+import { GoContainer } from "../../render_engine/objects/sub_types";
+import { IArc, ISegment, Point, PointLike, Segment } from "./Geometry";
 import { Arc } from './Geometry';
-import { GridParams } from './types';
+import { GridParams } from '../../modules/types';
 
 
 export function LinesDrawer() {
     const DRAWN_ARC_EDGES_AMOUNT = 60;
 
-    function draw_line(segment: Segment, container: GoContainer, color = 0x22ff77) {
+    function draw_line(segment: ISegment, container: GoContainer, color = 0x22ff77) {
         const a = segment.start;
         const b = segment.end;
         const point_a = new Vector2(a.x,  a.y);
@@ -24,17 +24,17 @@ export function LinesDrawer() {
         return line;
     }
 
-    function draw_arc(arc: Arc, container: GoContainer, color = 0x22ff77) {
+    function draw_arc(arc: IArc, container: GoContainer, color = 0x22ff77) {
         const step = 2 * Math.PI * arc.r / DRAWN_ARC_EDGES_AMOUNT;
         const list = [];
         let lenght_remains = arc.length();
         let _allowed_way = arc;
-        while (lenght_remains > 0 && _allowed_way) {
+        while (lenght_remains > 0 && !('null' in _allowed_way)) {
             const move = (step < _allowed_way.length()) ? step : _allowed_way.length();
             lenght_remains -= move;
             const sub_arcs = _allowed_way.splitAtLength(move);
-            const move_arc = sub_arcs[0] as Arc;
-            _allowed_way = sub_arcs[1] as Arc;
+            const move_arc = sub_arcs[0] as IArc;
+            _allowed_way = sub_arcs[1] as IArc;
             const p1 = move_arc.start();
             const p2 = move_arc.end();
             const line = draw_line(Segment(p1, p2), container, color);

@@ -120,7 +120,7 @@ function preload_tile_texture(id: string, path: string, atlas: string, w: number
     atlas = get_file_name(atlas);
     if (!tiled_textures_data[atlas])
         tiled_textures_data[atlas] = {};
-    tiled_textures_data[atlas][id] = { name: get_file_name(path), w, h, atlas };
+    tiled_textures_data[atlas][id] = { name: get_file_name(path), w, h, atlas:'' }; // todo debug
 }
 
 

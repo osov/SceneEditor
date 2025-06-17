@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { TAU } from "../../modules/utils"
-import { Circle, Line, Point, Segment, Vector } from "../../modules/Geometry"
+import { Circle, Line, Point, Segment, Vector } from "../../utils/physic/Geometry"
 
 describe('Circle', function () {
   it('Constructor Circle(pt, r) creates new circle', function () {

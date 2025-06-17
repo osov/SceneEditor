@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { Arc, Circle, CW, Line, Point, points2norm, Vector } from "../../modules/Geometry"
+import { Arc, Circle, CW, Line, Point, points2norm, Vector } from "../../utils/physic/Geometry"
 
 describe('Line', function () {
   it('Default constructor creates line that is equal to axe x', function () {

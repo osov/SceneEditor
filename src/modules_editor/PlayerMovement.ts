@@ -3,7 +3,7 @@ import { get_depth } from '../render_engine/parsers/tile_parser';
 import { EQ_0 } from '../modules/utils';
 import { IObjectTypes } from '../render_engine/types';
 import { WORLD_SCALAR } from '../config';
-import { PathFinder } from '../modules/PathFinder';
+import { PathFinder } from '../utils/physic/PathFinder';
 import {
     point,
     vector_from_points as vector,
@@ -15,9 +15,12 @@ import {
     PointLike,
     Arc,
     POINT_EMPTY,
-} from '../modules/Geometry';
+    IPoint,
+    IArc,
+    ISegment,
+} from '../utils/physic/Geometry';
 import { Line as GeomLine, LineBasicMaterial } from 'three';
-import { LinesDrawer } from '../modules/LinesDrawer';
+import { LinesDrawer } from '../utils/physic/LinesDrawer';
 import { PlayerMovementSettings, movement_default_settings, ControlType, PathData, COLORS } from '@editor/modules/types';
 
 
@@ -52,8 +55,8 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
     let target = point(0, 0);
     let last_check_dir = vector(pointer, target);
     let last_check_target = point(0, 0);
-    let stick_start: Point | undefined = undefined;
-    let stick_end: Point | undefined = undefined;
+    let stick_start: IPoint | undefined = undefined;
+    let stick_end: IPoint | undefined = undefined;
     let current_dir = vector(pointer, target);
     let target_error = settings.target_stop_distance;
     let animations = settings.animation_names;
@@ -295,9 +298,9 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                 }
                 for (const interval of path_data.path) {
                     if (interval.name == 'arc') 
-                        LD.draw_arc(interval as Arc, player_way, COLORS.GREEN);
+                        LD.draw_arc(interval as IArc, player_way, COLORS.GREEN);
                     else 
-                        LD.draw_line(interval as Segment, player_way, COLORS.GREEN);
+                        LD.draw_line(interval as ISegment, player_way, COLORS.GREEN);
                 }
             }
         }
@@ -309,7 +312,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             if (pointer_control == ControlType.FP || pointer_control == ControlType.GP) {
                 if (lenght_remains < way_required.length()) {
                     const _segment = way_required.splitAtLength(lenght_remains)[0];
-                    way_required = (_segment) ? _segment : segment(cp.x, cp.y, cp.x, cp.y);
+                    way_required = (!('null' in _segment)) ? _segment : segment(cp.x, cp.y, cp.x, cp.y);
                 }
             }
             if (pointer_control == ControlType.JS) {

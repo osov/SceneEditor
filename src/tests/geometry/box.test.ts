@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { Box, Point } from '../../modules/Geometry'
+import { Box, Point } from '../../utils/physic/Geometry'
 
 describe('Box', function () {
   it('.center works', function () {
