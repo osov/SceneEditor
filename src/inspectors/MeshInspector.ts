@@ -3429,7 +3429,9 @@ function MeshInspectorCreate() {
                 Log.error('[saveTileLayer] Mesh not found for id:', id);
                 return;
             }
-            layers.push({ mesh_id: id, value: mesh.layers.mask });
+            if (mesh instanceof MultipleMaterialMesh && mesh.children.length > 0) {
+                layers.push({ mesh_id: id, value: mesh.children[0].layers.mask });
+            } else layers.push({ mesh_id: id, value: mesh.layers.mask });
         });
         HistoryControl.add('MESH_LAYERS', layers, HistoryOwner.MESH_INSPECTOR);
     }
@@ -3441,6 +3443,9 @@ function MeshInspectorCreate() {
             if (!mesh) {
                 Log.error('[handleLayerChange] Mesh not found for id:', item.mesh_id);
                 return;
+            }
+            if (mesh instanceof MultipleMaterialMesh && mesh.children.length > 0) {
+                return { mesh_id: item.mesh_id, value: mesh.children[0].layers.mask & 0xFFFFFC00 | ResourceManager.get_layers_mask_by_names(item.value) };
             }
             return { mesh_id: item.mesh_id, value: (mesh.layers.mask & 0xFFFFFC00) | ResourceManager.get_layers_mask_by_names(item.value) };
         }).filter(item => item != undefined) as MeshPropertyInfo<number>[];
@@ -3454,7 +3459,11 @@ function MeshInspectorCreate() {
                 Log.error('[updateTileLayer] Mesh not found for id:', item.mesh_id);
                 continue;
             }
-            mesh.layers.mask = item.value;
+            if (mesh instanceof MultipleMaterialMesh) {
+                mesh.children.forEach(child => {
+                    child.layers.mask = item.value;
+                });
+            } else mesh.layers.mask = item.value;
         }
     }
 
