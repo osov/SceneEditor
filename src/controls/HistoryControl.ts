@@ -1,6 +1,6 @@
 import { Euler, MagnificationTextureFilter, MinificationTextureFilter, Vector2, Vector3, Vector4, Wrapping } from "three";
 import { get_keys } from "../modules/utils";
-import { MeshMoveEventData, MeshMaterialUniformInfo, MeshPropertyInfo, AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo } from "./types";
+import { MeshMoveEventData, MeshMaterialUniformInfo, MeshPropertyInfo, AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo, MeshMaterialPropertyInfo } from "./types";
 import { BlendMode } from "../inspectors/MeshInspector";
 import { TDictionary } from "@editor/modules_editor/modules_editor_const";
 
@@ -43,7 +43,7 @@ export type HistoryData = {
     MESH_ANIMATED_MODEL: MeshPropertyInfo<{ mesh_name: string, scale: number, animations: string[], current_animation: string }>
     MESH_ANIMATION_LIST: MeshPropertyInfo<string[]>
     MESH_ACTIVE_MODEL_ANIMATION: MeshPropertyInfo<string>
-    MESH_BLEND_MODE: MeshPropertyInfo<BlendMode>
+    MESH_BLEND_MODE: MeshMaterialPropertyInfo<BlendMode>
     MESH_UV: MeshPropertyInfo<Float32Array>
     MESH_MATERIAL: MeshPropertyInfo<{ name: string, uniforms?: TDictionary<any> }>
     MESH_MATERIAL_SAMPLER2D: MeshMaterialUniformInfo<string>

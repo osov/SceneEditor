@@ -10,6 +10,12 @@ export interface MeshPropertyInfo<T> {
     value: T;
 }
 
+export interface MeshMaterialPropertyInfo<T> {
+    mesh_id: number;
+    material_index: number;
+    value: T;
+}
+
 export interface MeshMaterialUniformInfo<T> {
     mesh_id: number;
     material_index: number;

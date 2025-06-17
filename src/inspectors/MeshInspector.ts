@@ -6,7 +6,7 @@ import { TextMesh } from "../render_engine/objects/text";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { ChangeInfo, PropertyType, BeforeChangeInfo, PropertyData } from "../modules_editor/Inspector";
 import { deepClone, hexToRGB } from "../modules/utils";
-import { MeshMaterialUniformInfo, MeshPropertyInfo } from "../controls/types";
+import { MeshMaterialPropertyInfo, MeshMaterialUniformInfo, MeshPropertyInfo } from "../controls/types";
 import { anchorToScreenPreset, convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode, generateMaterialOptions, generateModelOptions, generateTextureOptions, getChangedInfo, getDraggedInfo, pivotToScreenPreset, screenPresetToAnchorValue, screenPresetToPivotValue } from "./helpers";
 import { IUniform, Texture } from "three";
 import { Color } from "three";
@@ -2435,7 +2435,7 @@ function MeshInspectorCreate() {
     }
 
     function saveBlendMode(info: BeforeChangeInfo) {
-        const blendModes: MeshPropertyInfo<BlendMode>[] = [];
+        const blendModes: MeshMaterialPropertyInfo<BlendMode>[] = [];
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
@@ -2444,26 +2444,22 @@ function MeshInspectorCreate() {
             }
             if (mesh instanceof Slice9Mesh) {
                 const blend_mode = convertThreeJSBlendingToBlendMode(mesh.material.blending);
-                blendModes.push({ mesh_id: id, value: blend_mode });
+                blendModes.push({ mesh_id: id, material_index: 0, value: blend_mode });
             }
             else if (mesh instanceof MultipleMaterialMesh) {
                 const blend_mode = convertThreeJSBlendingToBlendMode(mesh.get_materials()[info.field.data.material_index].blending);
-                blendModes.push({ mesh_id: id, value: blend_mode });
+                blendModes.push({ mesh_id: id, material_index: info.field.data.material_index, value: blend_mode });
             }
         });
         HistoryControl.add('MESH_BLEND_MODE', blendModes, HistoryOwner.MESH_INSPECTOR);
     }
 
     function handleBlendModeChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMeshData<BlendMode>(info);
-        // HACK: только для этого поля добавлен material_index MeshData - нужно сделать индекс в MeshPropertyInfo как в MeshMaterialUniformInfo
-        data.forEach(item => {
-            (item as any).material_index = info.data.field.data.material_index;
-        });
+        const data = convertChangeInfoToMeshMaterialData<BlendMode>(info);
         updateBlendMode(data, info.data.event.last);
     }
 
-    function updateBlendMode(data: MeshPropertyInfo<BlendMode>[], _: boolean) {
+    function updateBlendMode(data: MeshMaterialPropertyInfo<BlendMode>[], _: boolean) {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
@@ -2476,7 +2472,8 @@ function MeshInspectorCreate() {
                 (mesh as Slice9Mesh).material.blending = threeBlendMode;
             }
             else if (mesh instanceof MultipleMaterialMesh) {
-                (mesh as MultipleMaterialMesh).get_materials()[(item as any).material_index].blending = threeBlendMode;
+                log(threeBlendMode);
+                (mesh as MultipleMaterialMesh).get_materials()[item.material_index].blending = threeBlendMode;
             }
         }
     }
@@ -2725,7 +2722,7 @@ function MeshInspectorCreate() {
     }
 
     function handleUniformSampler2DChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMeshMaterialData<string>(info);
+        const data = convertChangeInfoToMeshMaterialUniformData<string>(info);
         data.forEach(item => {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (!mesh) return;
@@ -2826,7 +2823,7 @@ function MeshInspectorCreate() {
     }
 
     function handleUniformFloatChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMeshMaterialData<number>(info);
+        const data = convertChangeInfoToMeshMaterialUniformData<number>(info);
         updateUniformFloat(data, info.data.event.last);
     }
 
@@ -2897,7 +2894,7 @@ function MeshInspectorCreate() {
     }
 
     function handleUniformRangeChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMeshMaterialData<number>(info);
+        const data = convertChangeInfoToMeshMaterialUniformData<number>(info);
         updateUniformRange(data, info.data.event.last);
     }
 
@@ -2949,7 +2946,7 @@ function MeshInspectorCreate() {
     }
 
     function handleUIAlphaChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMeshMaterialData<number>(info);
+        const data = convertChangeInfoToMeshMaterialUniformData<number>(info);
         updateUIAlpha(data, info.data.event.last);
     }
 
@@ -3020,7 +3017,7 @@ function MeshInspectorCreate() {
     }
 
     function handleUniformVec2Change(info: ChangeInfo) {
-        const data = convertChangeInfoToMeshMaterialData<Vector2>(info);
+        const data = convertChangeInfoToMeshMaterialUniformData<Vector2>(info);
         updateUniformVec2(data, info.data.event.last);
     }
 
@@ -3091,7 +3088,7 @@ function MeshInspectorCreate() {
     }
 
     function handleUniformVec3Change(info: ChangeInfo) {
-        const data = convertChangeInfoToMeshMaterialData<Vector3>(info);
+        const data = convertChangeInfoToMeshMaterialUniformData<Vector3>(info);
         updateUniformVec3(data, info.data.event.last);
     }
 
@@ -3163,7 +3160,7 @@ function MeshInspectorCreate() {
     }
 
     function handleUniformVec4Change(info: ChangeInfo) {
-        const data = convertChangeInfoToMeshMaterialData<Vector4>(info);
+        const data = convertChangeInfoToMeshMaterialUniformData<Vector4>(info);
         updateUniformVec4(data, info.data.event.last);
     }
 
@@ -3238,7 +3235,7 @@ function MeshInspectorCreate() {
     }
 
     function handleUniformColorChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMeshMaterialData<string>(info);
+        const data = convertChangeInfoToMeshMaterialUniformData<string>(info);
         updateUniformColor(data, info.data.event.last);
     }
 
@@ -3638,7 +3635,7 @@ function MeshInspectorCreate() {
                 updateActiveModelAnimation(activeModelAnimations, true);
                 break;
             case 'MESH_BLEND_MODE':
-                const blendModes = event.data as MeshPropertyInfo<BlendMode>[];
+                const blendModes = event.data as MeshMaterialPropertyInfo<BlendMode>[];
                 updateBlendMode(blendModes, true);
                 break;
             case 'MESH_MATERIAL':
@@ -3714,7 +3711,19 @@ function MeshInspectorCreate() {
         }).filter(item => item != null) as { mesh_id: number, value: T }[];
     }
 
-    function convertChangeInfoToMeshMaterialData<T>(info: ChangeInfo): MeshMaterialUniformInfo<T>[] {
+    function convertChangeInfoToMeshMaterialData<T>(info: ChangeInfo): MeshMaterialPropertyInfo<T>[] {
+        const value = info.data.event.value as T;
+        return info.ids.map(id => {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            if (mesh == undefined) {
+                Log.error('[convertChangeInfoToMeshData] Mesh not found for id:', id);
+                return null;
+            }
+            return { mesh_id: id, material_index: info.data.field.data.material_index, value };
+        }).filter(item => item != null) as MeshMaterialPropertyInfo<T>[];
+    }
+
+    function convertChangeInfoToMeshMaterialUniformData<T>(info: ChangeInfo): MeshMaterialUniformInfo<T>[] {
         const value = info.data.event.value as T;
         return info.ids.map(id => {
             const mesh = SceneManager.get_mesh_by_id(id);
