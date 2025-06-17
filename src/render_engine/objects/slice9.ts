@@ -168,13 +168,12 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
     }
 
     function set_texture(name: string, atlas = '', uniform_key = 'u_texture') {
-        parameters.texture = name;
-        parameters.atlas = atlas;
-
         if (name != '') {
             const texture_data = ResourceManager.get_texture(name, atlas);
             ResourceManager.set_material_uniform_for_mesh(mesh, uniform_key, texture_data.texture);
             if (uniform_key == 'u_texture') {
+                parameters.texture = name;
+                parameters.atlas = atlas;
                 parameters.clip_width = texture_data.size.x;
                 parameters.clip_height = texture_data.size.y;
                 for (let i = 0; i < 4; i++) {

@@ -122,7 +122,7 @@ export function generateAtlasOptions() {
 
 export function generateMaterialOptions() {
     const materialOptions: { [key: string]: string } = {};
-    ResourceManager.get_all_materials().forEach(material => {
+    ResourceManager.get_all_materials().sort().forEach(material => {
         materialOptions[material] = material;
     });
     return materialOptions;

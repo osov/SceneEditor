@@ -1,5 +1,5 @@
 import { TDictionary, TILES_INFO_EXT } from "@editor/modules_editor/modules_editor_const";
-import { error_popup, get_file_name, is_tile } from "./helpers/utils";
+import { get_file_name, is_tile } from "./helpers/utils";
 import { SpriteTileInfoDict } from "./tile_loader";
 import { Blending, Texture } from "three";
 import { GoSprite } from "./objects/sub_types";
@@ -74,20 +74,36 @@ export function TilePatcher(tilemap_path: string) {
                 tiles_data[hash].color = current_color;
             }
 
-            const changed_uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh as Slice9Mesh);
-            if (changed_uniforms) {
-                Object.keys(changed_uniforms).forEach((key) => {
-                    if (key != 'u_texture') return;
-                    delete changed_uniforms[key];
+            const material_info = ResourceManager.get_material_info(material.name);
+
+            // const uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh as Slice9Mesh);
+            const uniforms: { [key: string]: any } = {};
+            Object.entries(material.uniforms).forEach(([key, value]) => {
+                uniforms[key] = value.value;
+            });
+
+            if (material_info && uniforms) {
+                Object.keys(uniforms).forEach((key) => {
+                    if (!material_info.uniforms[key].readonly) return;
+                    delete uniforms[key];
                 });
-                if (Object.keys(changed_uniforms).length > 0) {
+                Object.keys(uniforms).forEach((key) => {
+                    if (key != 'u_texture') return;
+                    delete uniforms[key];
+                });
+                if (Object.keys(uniforms).length > 0) {
                     if (!tiles_data[hash]) tiles_data[hash] = {};
-                    Object.entries(changed_uniforms).forEach(([key, value]) => {
+                    Object.entries(uniforms).forEach(([key, value]) => {
                         if (value instanceof Texture) {
-                            changed_uniforms[key] = `/${hash}`;
+                            if (key == 'u_flowMap') uniforms[key] = `/${hash}`;
+                            else {
+                                const texture_name = get_file_name((value as any).path);
+                                const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+                                uniforms[key] = `${atlas}/${texture_name}`;
+                            }
                         }
                     });
-                    tiles_data[hash].uniforms = changed_uniforms;
+                    tiles_data[hash].uniforms = uniforms;
                 }
             }
         });
@@ -112,6 +128,7 @@ export function TilePatcher(tilemap_path: string) {
             Log.log(`No tilesinfo file found for tilemap ${tilemap_name}`);
             return;
         }
+
         Object.entries(tilesinfo).forEach(([id, info]) => {
             const tile = tiles[id];
             if (!tile) return;
@@ -137,7 +154,8 @@ export function TilePatcher(tilemap_path: string) {
             }
 
             if (info.texture) {
-                sprite.set_texture(info.texture);
+                const texture_info = info.texture.split('/');
+                sprite.set_texture(texture_info[1], texture_info[0]);
             }
 
             if (info.layers_mask != undefined) {
