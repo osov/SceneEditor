@@ -2823,7 +2823,7 @@ function MeshInspectorCreate() {
                     });
                 }
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
@@ -2857,7 +2857,7 @@ function MeshInspectorCreate() {
 
                 ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
@@ -2894,7 +2894,7 @@ function MeshInspectorCreate() {
                     });
                 }
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
@@ -2928,7 +2928,7 @@ function MeshInspectorCreate() {
 
                 ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
@@ -3017,7 +3017,7 @@ function MeshInspectorCreate() {
                     });
                 }
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
@@ -3051,7 +3051,7 @@ function MeshInspectorCreate() {
 
                 ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
@@ -3088,7 +3088,7 @@ function MeshInspectorCreate() {
                     });
                 }
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
@@ -3123,7 +3123,7 @@ function MeshInspectorCreate() {
 
                 ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
@@ -3160,7 +3160,7 @@ function MeshInspectorCreate() {
                     });
                 }
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 
@@ -3194,7 +3194,7 @@ function MeshInspectorCreate() {
 
                 ResourceManager.set_material_uniform_for_mesh(mesh, item.uniform_name, item.value);
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[item.material_index];
                 if (!material) return;
 
@@ -3233,7 +3233,7 @@ function MeshInspectorCreate() {
                     });
                 }
             }
-            else if (mesh instanceof AnimatedMesh) {
+            else if (mesh instanceof MultipleMaterialMesh) {
                 const material = mesh.get_materials()[info.field.data.material_index];
                 if (!material) return;
 

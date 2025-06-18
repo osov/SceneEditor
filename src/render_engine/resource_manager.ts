@@ -1268,9 +1268,11 @@ export function ResourceManagerModule() {
         const hash = material_info.mesh_info_to_material_hashes[mesh_id][index];
         const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
         const changed_uniforms_data: { [key: string]: any } = {};
-        for (const uniform_name of changed_uniforms) {
-            const value = material_info.instances[hash].uniforms[uniform_name].value;
-            changed_uniforms_data[uniform_name] = value;
+        if (changed_uniforms) {
+            for (const uniform_name of Object.keys(changed_uniforms)) {
+                const value = material_info.instances[hash].uniforms[uniform_name].value;
+                changed_uniforms_data[uniform_name] = value;
+            }
         }
         return changed_uniforms_data;
     }
