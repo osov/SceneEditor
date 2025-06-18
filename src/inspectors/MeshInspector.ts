@@ -180,10 +180,19 @@ function MeshInspectorCreate() {
             generateBaseFields(fields, mesh);
 
             if (mesh instanceof Slice9Mesh || mesh instanceof MultipleMaterialMesh) {
+                let mask = 0;
+                if (mesh instanceof MultipleMaterialMesh) {
+                    mesh.traverse((m) => {
+                        if (["Mesh", "SkinnedMesh"].includes(m.type))
+                            mask = m.layers.mask;
+                    });
+                } else {
+                    mask = mesh.layers.mask;
+                }
                 fields.push({
                     key: MeshProperty.TILE_LAYER,
                     title: MeshPropertyTitle.TILE_LAYER,
-                    value: ResourceManager.get_layers_names_by_mask(mesh.layers.mask),
+                    value: ResourceManager.get_layers_names_by_mask(mask),
                     type: PropertyType.ITEM_LIST,
                     params: {
                         pickText: 'Выберите слой',
@@ -238,6 +247,16 @@ function MeshInspectorCreate() {
     }
 
     function generateBaseFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        // NOTE: для дебага
+        fields.push({
+            key: 'id',
+            title: 'id',
+            value: mesh.mesh_data.id,
+            type: PropertyType.NUMBER,
+            params: { format: (v: number) => v.toFixed(0) },
+            readonly: true
+        });
+
         fields.push({
             key: MeshProperty.TYPE,
             title: MeshPropertyTitle.TYPE,
@@ -3426,14 +3445,7 @@ function MeshInspectorCreate() {
                 Log.error('[saveTileLayer] Mesh not found for id:', id);
                 return;
             }
-            if (mesh instanceof MultipleMaterialMesh) {
-                let mask = 0;
-                mesh.traverse((m) => {
-                    if (["Mesh", "SkinnedMesh"].includes(m.type))
-                        mask = m.layers.mask;
-                });
-                layers.push({ mesh_id: id, value: mask });
-            } else layers.push({ mesh_id: id, value: mesh.layers.mask });
+            layers.push({ mesh_id: id, value: mesh.layers.mask });
         });
         HistoryControl.add('MESH_LAYERS', layers, HistoryOwner.MESH_INSPECTOR);
     }
@@ -3445,14 +3457,6 @@ function MeshInspectorCreate() {
             if (!mesh) {
                 Log.error('[handleLayerChange] Mesh not found for id:', item.mesh_id);
                 return;
-            }
-            if (mesh instanceof MultipleMaterialMesh) {
-                let mask = 0;
-                mesh.traverse((m) => {
-                    if (["Mesh", "SkinnedMesh"].includes(m.type))
-                        mask = m.layers.mask;
-                });
-                return { mesh_id: item.mesh_id, value: mask & 0xFFFFFC00 | ResourceManager.get_layers_mask_by_names(item.value) };
             }
             return { mesh_id: item.mesh_id, value: (mesh.layers.mask & 0xFFFFFC00) | ResourceManager.get_layers_mask_by_names(item.value) };
         }).filter(item => item != undefined) as MeshPropertyInfo<number>[];
@@ -3466,12 +3470,14 @@ function MeshInspectorCreate() {
                 Log.error('[updateTileLayer] Mesh not found for id:', item.mesh_id);
                 continue;
             }
+            mesh.layers.mask = item.value;
             if (mesh instanceof MultipleMaterialMesh) {
                 mesh.traverse((m) => {
-                    if (["Mesh", "SkinnedMesh"].includes(m.type))
+                    if (["Mesh", "SkinnedMesh"].includes(m.type)) {
                         m.layers.mask = item.value;
+                    }
                 });
-            } else mesh.layers.mask = item.value;
+            }
         }
     }
 
