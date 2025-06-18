@@ -2584,17 +2584,15 @@ function MeshInspectorCreate() {
                 const material_name = item.value.name;
                 mesh.set_material(material_name, item.index);
 
-                if (has_texture) {
-                    mesh.set_texture(texture_name, atlas, item.index);
-                }
-                else {
-                    const material = ResourceManager.get_material_by_mesh_id(material_name, item.mesh_id, item.index);
-                    if (material && material.uniforms['u_texture'] != undefined) {
-                        if (material.uniforms['u_texture'].value != null) {
-                            const texture_name = material.uniforms['u_texture'].value.name;
-                            const atlas = material.uniforms['u_texture'].value.atlas;
-                            mesh.set_texture(texture_name, atlas, item.index);
-                        }
+                const material = ResourceManager.get_material_by_mesh_id(material_name, item.mesh_id, item.index);
+                if (material && material.uniforms['u_texture'] != undefined) {
+                    if (has_texture) {
+                        mesh.set_texture(texture_name, atlas, item.index);
+                    }
+                    else if (material.uniforms['u_texture'].value != null) {
+                        const texture_name = material.uniforms['u_texture'].value.name;
+                        const atlas = material.uniforms['u_texture'].value.atlas;
+                        mesh.set_texture(texture_name, atlas, item.index);
                     }
                 }
 

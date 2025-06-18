@@ -46,11 +46,19 @@ export class MultipleMaterialMesh extends EntityPlane {
 
     set_color(color: string, index = 0) {
         if (this.materials.length == 0 || this.materials.length < index) return;
+        if (!this.materials[index].uniforms['u_color']) {
+            Log.warn('Material has no u_color uniform', this.materials[index].name);
+            return;
+        }
         ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, 'u_color', color);
     }
 
     get_color(index = 0) {
-        if (this.materials.length == 0 || this.materials.length < index || !this.materials[index].uniforms['u_color']) return "#fff";
+        if (this.materials.length == 0 || this.materials.length < index) return;
+        if (!this.materials[index].uniforms['u_color']) {
+            Log.warn('Material has no u_color uniform', this.materials[index].name);
+            return "#fff";
+        }
         return this.materials[index].uniforms['u_color'].value;
     }
 
@@ -189,9 +197,9 @@ export class MultipleMaterialMesh extends EntityPlane {
                     const uniform_info = material_info.uniforms[key];
                     if (!uniform_info) continue;
 
-                    if (uniform_info.type === MaterialUniformType.SAMPLER2D && typeof value === 'string') {
+                    if (uniform_info.type == MaterialUniformType.SAMPLER2D && typeof value === 'string') {
                         const [atlas, texture_name] = value.split('/');
-                        this.set_texture(texture_name, atlas, index);
+                        this.set_texture(texture_name, atlas, index, key);
                     } else {
                         ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, key, value);
                     }

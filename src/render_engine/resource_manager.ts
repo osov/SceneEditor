@@ -1269,9 +1269,11 @@ export function ResourceManagerModule() {
         const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
         const changed_uniforms_data: { [key: string]: any } = {};
         if (changed_uniforms) {
-            for (const uniform_name of Object.keys(changed_uniforms)) {
-                const value = material_info.instances[hash].uniforms[uniform_name].value;
-                changed_uniforms_data[uniform_name] = value;
+            for (const uniform_name of changed_uniforms) {
+                if (material_info.instances[hash].uniforms[uniform_name]) {
+                    const value = material_info.instances[hash].uniforms[uniform_name].value;
+                    changed_uniforms_data[uniform_name] = value;
+                }
             }
         }
         return changed_uniforms_data;
