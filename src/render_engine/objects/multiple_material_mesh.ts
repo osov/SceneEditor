@@ -15,6 +15,7 @@ export interface MultipleMaterialMeshSerializeData {
     materials: {
         [key in number]: { name: string, changed_uniforms?: string[] }
     }
+    layers: number;
 }
 
 export class MultipleMaterialMesh extends EntityPlane {
@@ -150,6 +151,14 @@ export class MultipleMaterialMesh extends EntityPlane {
             data.materials[idx] = info;
         });
 
+        let mask = 0;
+        this.traverse((m) => {
+            if (["Mesh", "SkinnedMesh"].includes(m.type))
+                mask = m.layers.mask;
+        });
+        if (mask != 0)
+            data.layers = mask;
+
         return data;
     }
 
@@ -188,6 +197,13 @@ export class MultipleMaterialMesh extends EntityPlane {
                     }
                 }
             }
+        }
+
+        if (data.layers != undefined) {
+            this.traverse((m) => {
+                if (["Mesh", "SkinnedMesh"].includes(m.type))
+                    m.layers.mask = data.layers;
+            });
         }
 
         // NOTE: сериализуем в конце, так как внутри есть методы обращающиеся к материалам которые создаются тут
