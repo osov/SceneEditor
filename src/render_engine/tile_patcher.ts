@@ -22,7 +22,7 @@ export function TilePatcher(tilemap_path: string) {
         }
     });
 
-    async function save_tilesinfo(with_all_uniforms = false) {
+    async function save_tilesinfo(optimized = false) {
         const dir = tilemap_path.replace(/^\//, '').replace(new RegExp(`${tilemap_name}.*$`), '');
         const path = `${dir}/${tilemap_name}.${TILES_INFO_EXT}`
 
@@ -77,11 +77,12 @@ export function TilePatcher(tilemap_path: string) {
             const material_info = ResourceManager.get_material_info(material.name);
 
             let uniforms: { [key: string]: any } = {};
-            if (material.name != default_material_name && with_all_uniforms) {
+            if (optimized) uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh as Slice9Mesh) || {};
+            else if (material.name != default_material_name) {
                 Object.entries(material.uniforms).forEach(([key, value]) => {
                     uniforms[key] = value.value;
                 });
-            } else uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh as Slice9Mesh) ?? {};
+            }
 
             if (material_info && uniforms) {
                 Object.keys(uniforms).forEach((key) => {
