@@ -865,12 +865,13 @@ export function ResourceManagerModule() {
         }
         material_info.mesh_info_to_material_hashes[mesh_id][index] = new_hash;
 
-        const prev_changed_uniforms = material_info.material_hash_to_changed_uniforms[new_hash];
-        prev_changed_uniforms.forEach((uniform) => {
-            if (!material_info.material_hash_to_changed_uniforms[new_hash].includes(uniform)) {
-                material_info.material_hash_to_changed_uniforms[new_hash].push(uniform);
-            }
-        });
+        // NOTE: это же бесполезно, берем из new_hash и ставим в new_hash 0_0
+        // const prev_changed_uniforms = material_info.material_hash_to_changed_uniforms[new_hash];
+        // prev_changed_uniforms.forEach((uniform) => {
+        //     if (!material_info.material_hash_to_changed_uniforms[new_hash].includes(uniform)) {
+        //         material_info.material_hash_to_changed_uniforms[new_hash].push(uniform);
+        //     }
+        // });
 
         const mesh_info_index = material_info.material_hash_to_meshes_info[hash].findIndex((mesh_info) => {
             return mesh_info.id == mesh_id && mesh_info.index == index;
@@ -1010,6 +1011,7 @@ export function ResourceManagerModule() {
 
                 if (!is_readonly) {
                     // NOTE: обновляем hash в копии материала
+                    // NOTE: возможно тут можно применить set_to_existing_copy вместо всего этого куска кода
                     const new_hash = get_material_hash(copy);
                     if (new_hash != hash) {
                         material_info.instances[new_hash] = copy;

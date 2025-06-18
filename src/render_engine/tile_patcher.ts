@@ -22,7 +22,7 @@ export function TilePatcher(tilemap_path: string) {
         }
     });
 
-    async function save_tilesinfo() {
+    async function save_tilesinfo(with_all_uniforms = false) {
         const dir = tilemap_path.replace(/^\//, '').replace(new RegExp(`${tilemap_name}.*$`), '');
         const path = `${dir}/${tilemap_name}.${TILES_INFO_EXT}`
 
@@ -76,11 +76,12 @@ export function TilePatcher(tilemap_path: string) {
 
             const material_info = ResourceManager.get_material_info(material.name);
 
-            // const uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh as Slice9Mesh);
-            const uniforms: { [key: string]: any } = {};
-            Object.entries(material.uniforms).forEach(([key, value]) => {
-                uniforms[key] = value.value;
-            });
+            let uniforms: { [key: string]: any } = {};
+            if (material.name != default_material_name && with_all_uniforms) {
+                Object.entries(material.uniforms).forEach(([key, value]) => {
+                    uniforms[key] = value.value;
+                });
+            } else uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh as Slice9Mesh) ?? {};
 
             if (material_info && uniforms) {
                 Object.keys(uniforms).forEach((key) => {
@@ -95,12 +96,9 @@ export function TilePatcher(tilemap_path: string) {
                     if (!tiles_data[hash]) tiles_data[hash] = {};
                     Object.entries(uniforms).forEach(([key, value]) => {
                         if (value instanceof Texture) {
-                            if (key == 'u_flowMap') uniforms[key] = `/${hash}`;
-                            else {
-                                const texture_name = get_file_name((value as any).path);
-                                const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
-                                uniforms[key] = `${atlas}/${texture_name}`;
-                            }
+                            const texture_name = get_file_name((value as any).path);
+                            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+                            uniforms[key] = `${atlas}/${texture_name}`;
                         }
                     });
                     tiles_data[hash].uniforms = uniforms;
@@ -135,6 +133,10 @@ export function TilePatcher(tilemap_path: string) {
 
             const sprite = tile._hash as GoSprite;
 
+            if (info.layers_mask != undefined) {
+                sprite.layers.mask = info.layers_mask;
+            }
+
             if (info.material_name) {
                 const texture_data = sprite.get_texture();
                 sprite.set_material(info.material_name);
@@ -149,17 +151,9 @@ export function TilePatcher(tilemap_path: string) {
                 sprite.set_color(info.color);
             }
 
-            if (info.alpha != undefined) {
-                sprite.set_alpha(info.alpha);
-            }
-
             if (info.texture) {
                 const texture_info = info.texture.split('/');
                 sprite.set_texture(texture_info[1], texture_info[0]);
-            }
-
-            if (info.layers_mask != undefined) {
-                sprite.layers.mask = info.layers_mask;
             }
 
             if (info.uniforms) {
