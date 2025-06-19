@@ -1,6 +1,8 @@
 import { Type, Field, Root, Namespace } from 'protobufjs';
 import { Vector3, Vector4 } from 'three';
 
+const DDF_PATH = 'src/defold/converter/ddf/proto/ddf.proto';
+
 export enum DefoldGuiNodeType {
     TYPE_BOX = 0,
     TYPE_TEXT,
@@ -257,7 +259,7 @@ export interface IDefoldSpineModel {
 
 const typecache: Record<string, Type> = {};
 const protos = new Root();
-const root = protos.loadSync("src/converter/ddf/proto/ddf.proto", { keepCase: true });
+const root = protos.loadSync(DDF_PATH, { keepCase: true });
 
 function findMessage(name: string, message: Namespace, path: string): Type | undefined {
     for (const m of message.nestedArray) {

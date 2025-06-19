@@ -8,6 +8,7 @@ import { TRecursiveDict } from '../../../modules_editor/modules_editor_const';
 import test_scene from './test_anim_scene.json';
 import metadata from './test_anim_scene_project/assets/metadata.json';
 import path from 'path';
+import { GuiBox } from '@editor/render_engine/objects/sub_types';
 
 pass();
 
@@ -194,8 +195,7 @@ function convert(data: IBaseEntityData[], nodes: INodesList) {
                         slice_width: mesh.slice_width,
                         slice_height: mesh.slice_height,
                         stencil: false,
-                        visible: entity.visible,
-                        enabled: true,
+                        enabled: entity.visible,
                         alpha: 1,
                         pivot: mesh.pivot ? [mesh.pivot.x, mesh.pivot.y] : [0.5, 0.5]
                     }
@@ -223,8 +223,7 @@ function convert(data: IBaseEntityData[], nodes: INodesList) {
                         outline_alpha: 1,
                         shadow: "#FFFFFF",
                         shadow_alpha: 1,
-                        visible: entity.visible,
-                        enabled: true,
+                        enabled: entity.visible,
                         alpha: 1,
                         pivot: mesh.pivot ? [mesh.pivot.x, mesh.pivot.y] : [0.5, 0.5]
                     }
