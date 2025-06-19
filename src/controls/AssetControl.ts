@@ -1160,7 +1160,11 @@ function AssetControlCreate() {
         // TODO: set_rotation нету в EntityBase
         // if (rotation) obj.set_rotation(rotation);
         if (scale) root.set_scale(scale.x, scale.y);
-        SceneManager.add(root);
+        let id_parent = -1;
+        if (SelectControl.get_selected_list().length == 1)
+            id_parent = SelectControl.get_selected_list()[0].mesh_data.id;
+        SceneManager.add(root, id_parent);
+        root.position.z = 0;
         return root;
     }
 

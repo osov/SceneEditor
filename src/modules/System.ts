@@ -16,8 +16,8 @@ function SystemModule() {
         return Date.now() ;
     }
 
-    function now_with_ms(){
-        return now_ms();
+    function now_with_ms() {
+        return Date.now() / 1000;
     }
 
 

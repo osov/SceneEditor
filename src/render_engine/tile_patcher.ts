@@ -18,7 +18,7 @@ export function TilePatcher(tilemap_path: string) {
 
     EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
         if (Input.is_control() && (e.key == 'l' || e.key == 'д')) {
-            save_tilesinfo();
+            save_tilesinfo(true);
         }
     });
 
