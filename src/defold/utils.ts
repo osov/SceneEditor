@@ -352,3 +352,23 @@ export function convert_threejs_pivot_to_defold(x: number, y: number): any {
     // Default to center if no exact match
     return gui.PIVOT_CENTER;
 }
+
+export function generate_unique_name(baseName: string): string {
+    let counter = 1;
+    let uniqueName = baseName;
+    while (SceneManager.get_mesh_by_name(uniqueName)) {
+        uniqueName = `${baseName}_${counter}`;
+        counter++;
+    }
+    return uniqueName;
+}
+
+export function make_names_unique(data: any) {
+    data.name = generate_unique_name(data.name);
+    if (data.children && Array.isArray(data.children)) {
+        for (const child of data.children) {
+            make_names_unique(child);
+        }
+    }
+    return data;
+}

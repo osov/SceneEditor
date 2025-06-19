@@ -34,6 +34,7 @@ export type HistoryData = {
     MESH_CLIPPING_VISIBLE: MeshPropertyInfo<boolean>
     MESH_UI_ALPHA: MeshMaterialUniformInfo<number>
     MESH_TEXT_ALPHA: MeshPropertyInfo<number>
+    MESH_INHERITED_ALPHA: MeshPropertyInfo<boolean>
     MESH_TEXT: MeshPropertyInfo<string>
     MESH_FONT: MeshPropertyInfo<string>
     MESH_FONT_SIZE: MeshPropertyInfo<Vector3>

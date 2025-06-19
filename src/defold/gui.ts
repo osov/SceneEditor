@@ -3,7 +3,7 @@ import { is_base_mesh } from "@editor/render_engine/helpers/utils";
 import { GuiBox, GuiText } from "@editor/render_engine/objects/sub_types";
 import { IBaseEntityAndThree, IObjectTypes } from "@editor/render_engine/types";
 import { Quaternion, Vector3 } from "three";
-import { animate_logic, cancel_animations_logic, hex2rgba, PLAYBACK_LOOP_BACKWARD, PLAYBACK_LOOP_FORWARD, PLAYBACK_ONCE_BACKWARD, PLAYBACK_ONCE_FORWARD, PLAYBACK_ONCE_PINGPONG, PLAYBACK_LOOP_PINGPONG, EASING_LINEAR, EASING_INQUART, EASING_INQUAD, EASING_OUTQUART, EASING_OUTQUAD, EASING_OUTQUINT, EASING_INOUTQUAD, EASING_INQUINT, EASING_INOUTQUART, EASING_INOUTQUINT, EASING_OUTCUBIC, EASING_INOUTCUBIC, EASING_OUTSINE, EASING_INSINE, EASING_INCUBIC, EASING_INOUTSINE, EASING_OUTCIRC, EASING_INOUTCIRC, EASING_INOUTEXPO, EASING_INCIRC, EASING_OUTBACK, EASING_INBACK, EASING_INOUTELASTIC, EASING_INOUTBACK, EASING_INEXPO, EASING_OUTEXPO, EASING_INELASTIC, EASING_OUTELASTIC, EASING_INBOUNCE, EASING_OUTBOUNCE, EASING_INOUTBOUNCE, get_nested_property, set_nested_property, convert_defold_blend_mode_to_threejs, convert_threejs_blend_mode_to_defold, convert_defold_pivot_to_threejs, convert_threejs_pivot_to_defold } from "./utils";
+import { animate_logic, cancel_animations_logic, hex2rgba, PLAYBACK_LOOP_BACKWARD, PLAYBACK_LOOP_FORWARD, PLAYBACK_ONCE_BACKWARD, PLAYBACK_ONCE_FORWARD, PLAYBACK_ONCE_PINGPONG, PLAYBACK_LOOP_PINGPONG, EASING_LINEAR, EASING_INQUART, EASING_INQUAD, EASING_OUTQUART, EASING_OUTQUAD, EASING_OUTQUINT, EASING_INOUTQUAD, EASING_INQUINT, EASING_INOUTQUART, EASING_INOUTQUINT, EASING_OUTCUBIC, EASING_INOUTCUBIC, EASING_OUTSINE, EASING_INSINE, EASING_INCUBIC, EASING_INOUTSINE, EASING_OUTCIRC, EASING_INOUTCIRC, EASING_INOUTEXPO, EASING_INCIRC, EASING_OUTBACK, EASING_INBACK, EASING_INOUTELASTIC, EASING_INOUTBACK, EASING_INEXPO, EASING_OUTEXPO, EASING_INELASTIC, EASING_OUTELASTIC, EASING_INBOUNCE, EASING_OUTBOUNCE, EASING_INOUTBOUNCE, get_nested_property, set_nested_property, convert_defold_blend_mode_to_threejs, convert_threejs_blend_mode_to_defold, convert_defold_pivot_to_threejs, convert_threejs_pivot_to_defold, generate_unique_name, make_names_unique } from "./utils";
 
 declare global {
     namespace gui {
@@ -527,6 +527,7 @@ export function gui_module() {
         }
         const parent = mesh.parent ?? RenderEngine.scene;
         const origin = SceneManager.serialize_mesh(mesh, false, true);
+        origin.name = generate_unique_name(origin.name);
         const clone = SceneManager.deserialize_mesh(origin, false, parent);
         parent.add(clone);
         return { id: clone.mesh_data.id } as node;
@@ -540,6 +541,7 @@ export function gui_module() {
         }
         const parent = mesh.parent ?? RenderEngine.scene;
         const origin = SceneManager.serialize_mesh(mesh);
+        make_names_unique(origin);
         const clone = SceneManager.deserialize_mesh(origin, false, parent);
         parent.add(clone);
         return { id: clone.mesh_data.id } as node;

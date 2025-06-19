@@ -41,6 +41,7 @@ export enum MeshProperty {
     ANCHOR = 'anchor',
     ANCHOR_PRESET = 'anchor_preset',
     COLOR = 'color',
+    INHERITED_ALPHA = 'inherited_alpha',
     TEXT_ALPHA = 'text_alpha',
     SLICE9 = 'slice9',
     TEXT = 'text',
@@ -83,6 +84,7 @@ export enum MeshPropertyTitle {
     ANCHOR = 'Anchor',
     ANCHOR_PRESET = 'Anchor Preset',
     COLOR = 'Цвет',
+    INHERITED_ALPHA = 'Наследовать Прозрачность',
     TEXT_ALPHA = 'Прозрачность',
     SLICE9 = 'Slice9',
     TEXT = 'Текст',
@@ -733,6 +735,16 @@ function MeshInspectorCreate() {
                             let onRefresh = undefined;
                             // NOTE: для ui нужны свои обработчики
                             if (key == 'alpha' && (mesh instanceof GuiBox || mesh instanceof GuiText)) {
+                                // NOTE: если это alpha то нужно добавить флаг наследования прозрачности
+                                material_fields.push({
+                                    key: MeshProperty.INHERITED_ALPHA,
+                                    title: MeshPropertyTitle.INHERITED_ALPHA,
+                                    value: (mesh as GuiBox).isInheredAlpha(),
+                                    type: PropertyType.BOOLEAN,
+                                    onBeforeChange: saveInheredAlpha,
+                                    onChange: handleInheredAlphaChange,
+                                });
+
                                 value = mesh.get_alpha();
                                 onBeforeChange = saveUIAlpha;
                                 onChange = handleUIAlphaChange;
@@ -1276,6 +1288,7 @@ function MeshInspectorCreate() {
     function generateGuiBoxFields(list: IBaseMeshAndThree[], fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
         generateTransformFields(fields, mesh, true);
         generateGuiTransformFields(fields, mesh);
+
         generateMaterialFields('Материал', list, fields, mesh, (mesh as Slice9Mesh).material, true, true, false);
     }
 
@@ -2248,6 +2261,35 @@ function MeshInspectorCreate() {
                 continue;
             }
             mesh.fillOpacity = item.value;
+        }
+    }
+
+    function saveInheredAlpha(info: BeforeChangeInfo) {
+        const inheredAlphas: MeshPropertyInfo<boolean>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as GuiBox;
+            if (mesh == undefined) {
+                Log.error('[saveInheredAlpha] Mesh not found for id:', id);
+                return;
+            }
+            inheredAlphas.push({ mesh_id: id, value: mesh.isInheredAlpha() });
+        });
+        HistoryControl.add('MESH_INHERITED_ALPHA', inheredAlphas, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleInheredAlphaChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<boolean>(info);
+        updateInheredAlpha(data, info.data.event.last);
+    }
+
+    function updateInheredAlpha(data: MeshPropertyInfo<boolean>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as GuiBox;
+            if (mesh == undefined) {
+                Log.error('[updateInheredAlpha] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.setInheredAlpha(item.value);
         }
     }
 
@@ -3592,6 +3634,10 @@ function MeshInspectorCreate() {
             case 'MESH_COLOR':
                 const colors = event.data as MeshPropertyInfo<string>[];
                 updateColor(colors, true);
+                break;
+            case 'MESH_INHERITED_ALPHA':
+                const inheredAlphas = event.data as MeshPropertyInfo<boolean>[];
+                updateInheredAlpha(inheredAlphas, true);
                 break;
             case 'MESH_TEXT_ALPHA':
                 const alphas = event.data as MeshPropertyInfo<number>[];

@@ -30,16 +30,22 @@ export class GoContainer extends EntityBase {
     }
 }
 
+export interface GuiBoxSerializeData extends Slice9SerializeData {
+    clippingEnabled?: boolean;
+    invertedClipping?: boolean;
+    inheredAlpha?: number
+}
 
 export class GuiBox extends Slice9Mesh {
     public type = IObjectTypes.GUI_BOX;
     private clippingEnabled: boolean = false;
     private invertedClipping: boolean = false;
+    private inheredAlpha: boolean = false;
     private alpha: number = 1;
 
     get_raw_alpha(): number {
         let inheredAlpha = 1;
-        if (this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
+        if (this.isInheredAlpha() && this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
             const parent = this.parent as GuiBox | GuiText;
             inheredAlpha = parent.get_raw_alpha();
         }
@@ -54,7 +60,7 @@ export class GuiBox extends Slice9Mesh {
         this.alpha = value;
 
         let inheredAlpha = 1;
-        if (this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
+        if (this.isInheredAlpha() && this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
             const parent = this.parent as GuiBox | GuiText;
             inheredAlpha = parent.get_raw_alpha();
         }
@@ -62,8 +68,8 @@ export class GuiBox extends Slice9Mesh {
         ResourceManager.set_material_uniform_for_mesh(this, 'alpha', value);
         this.children.forEach(child => {
             // NOTE: не меняем альфу, а меняем действительное посчитаное значение
-            if (child instanceof GuiBox) ResourceManager.set_material_uniform_for_mesh(child, 'alpha', child.get_raw_alpha());
-            else if (child instanceof GuiText) child.fillOpacity = child.get_raw_alpha();
+            if (child instanceof GuiBox && child.isInheredAlpha()) ResourceManager.set_material_uniform_for_mesh(child, 'alpha', child.get_raw_alpha());
+            else if (child instanceof GuiText && child.isInheredAlpha()) child.fillOpacity = child.get_raw_alpha();
         });
     }
 
@@ -135,6 +141,15 @@ export class GuiBox extends Slice9Mesh {
         disableClippingForChildren(this.children);
     }
 
+    isInheredAlpha(): boolean {
+        return this.inheredAlpha as boolean;
+    }
+
+    setInheredAlpha(value: boolean) {
+        this.inheredAlpha = value;
+        this.set_alpha(this.alpha);
+    }
+
     isClippingEnabled(): boolean {
         return this.clippingEnabled;
     }
@@ -147,24 +162,42 @@ export class GuiBox extends Slice9Mesh {
         return this.material.colorWrite;
     }
 
-    deserialize(data: Slice9SerializeData): void {
+    serialize(): GuiBoxSerializeData {
+        const data = super.serialize();
+        if (this.clippingEnabled) data.clippingEnabled = this.clippingEnabled;
+        if (this.invertedClipping) data.invertedClipping = this.invertedClipping;
+        if (this.isInheredAlpha() && this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
+            data.inheredAlpha = this.parent.get_raw_alpha();
+        }
+        return data;
+    }
+
+    deserialize(data: GuiBoxSerializeData): void {
         super.deserialize(data);
+        this.clippingEnabled = data.clippingEnabled || false;
+        this.invertedClipping = data.invertedClipping || false;
+        this.inheredAlpha = false;
         let inheredAlpha = 1;
-        if (this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
-            const parent = this.parent as GuiBox | GuiText;
-            inheredAlpha = parent.get_raw_alpha();
+        if (data.inheredAlpha) {
+            this.inheredAlpha = true;
+            inheredAlpha = data.inheredAlpha;
         }
         this.alpha = this.material.uniforms.alpha.value / inheredAlpha;
     }
 }
 
+export interface GuiTextSerializeData extends TextSerializeData {
+    inheredAlpha?: number
+}
+
 export class GuiText extends TextMesh {
     public type = IObjectTypes.GUI_TEXT;
+    private inheredAlpha: boolean = false;
     private alpha: number = 1;
 
     get_raw_alpha(): number {
         let inheredAlpha = 1;
-        if (this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
+        if (this.isInheredAlpha() && this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
             const parent = this.parent as GuiBox | GuiText;
             inheredAlpha = parent.get_raw_alpha();
         }
@@ -178,7 +211,7 @@ export class GuiText extends TextMesh {
     set_alpha(value: number) {
         this.alpha = value;
         let inheredAlpha = 1;
-        if (this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
+        if (this.isInheredAlpha() && this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
             const parent = this.parent as GuiBox | GuiText;
             inheredAlpha = parent.get_raw_alpha();
         }
@@ -186,17 +219,35 @@ export class GuiText extends TextMesh {
         this.fillOpacity = value;
         this.children.forEach(child => {
             // NOTE: не меняем альфу, а меняем действительное посчитаное значение
-            if (child instanceof GuiBox) ResourceManager.set_material_uniform_for_mesh(child, 'alpha', child.get_raw_alpha());
-            else if (child instanceof GuiText) child.fillOpacity = child.get_raw_alpha();
+            if (child instanceof GuiBox && child.isInheredAlpha()) ResourceManager.set_material_uniform_for_mesh(child, 'alpha', child.get_raw_alpha());
+            else if (child instanceof GuiText && child.isInheredAlpha()) child.fillOpacity = child.get_raw_alpha();
         });
     }
 
-    deserialize(data: TextSerializeData): void {
+    isInheredAlpha(): boolean {
+        return this.inheredAlpha as boolean;
+    }
+
+    setInheredAlpha(value: boolean) {
+        this.inheredAlpha = value;
+        this.set_alpha(this.alpha);
+    }
+
+    serialize(): GuiTextSerializeData {
+        const data = super.serialize() as GuiTextSerializeData;
+        if (this.isInheredAlpha() && this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
+            data.inheredAlpha = this.parent.get_raw_alpha();
+        }
+        return data;
+    }
+
+    deserialize(data: GuiTextSerializeData): void {
         super.deserialize(data);
+        this.inheredAlpha = false;
         let inheredAlpha = 1;
-        if (this.parent != null && (this.parent instanceof GuiBox || this.parent instanceof GuiText)) {
-            const parent = this.parent as GuiBox | GuiText;
-            inheredAlpha = parent.get_raw_alpha();
+        if (data.inheredAlpha) {
+            this.inheredAlpha = true;
+            inheredAlpha = data.inheredAlpha;
         }
         this.alpha = this.fillOpacity / inheredAlpha;
     }

@@ -8,7 +8,6 @@ import { TRecursiveDict } from '../../../modules_editor/modules_editor_const';
 import test_scene from './test_anim_scene.json';
 import metadata from './test_anim_scene_project/assets/metadata.json';
 import path from 'path';
-import { GuiBox } from '@editor/render_engine/objects/sub_types';
 
 pass();
 
