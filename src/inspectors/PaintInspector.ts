@@ -47,25 +47,20 @@ function PaintInspectorCreate() {
                         if (mesh.material.uniforms.u_mask.value.name != 'null') {
                             generateDrawFields(fields);
                             generateSaveDeleteButtons(fields, mesh);
-                        } else {
-                            generateDrawCreateFields(fields, mesh);
-                        }
+                        } else generateDrawCreateFields(fields, mesh);
                     } else Popups.toast.error('Нет u_mask');
                 } else if (mesh instanceof MultipleMaterialMesh) {
-                    let has_u_mask = true;
-                    for (const material of mesh.get_materials()) {
-                        has_u_mask = material.uniforms.u_mask == undefined;
-                        if (!has_u_mask) break;
-                    }
-                    if (has_u_mask) {
+                    if (mesh.get_materials().length > 0) {
                         const firstMaterial = mesh.get_materials()[0];
-                        if (firstMaterial.uniforms.u_mask.value.name != 'null') {
-                            generateDrawFields(fields);
-                            generateSaveDeleteButtons(fields, mesh);
-                        }
-                        generateDrawCreateFields(fields, mesh);
-                    }
-                } else Popups.toast.error('Нет u_mask');
+                        const has_u_mask = firstMaterial.uniforms.u_mask != undefined;
+                        if (has_u_mask) {
+                            if (firstMaterial.uniforms.u_mask.value.name != 'null') {
+                                generateDrawFields(fields);
+                                generateSaveDeleteButtons(fields, mesh);
+                            } else generateDrawCreateFields(fields, mesh);
+                        } else Popups.toast.error('Нет u_mask');
+                    } else Popups.toast.error('Нет материалов');
+                }
                 break;
             case PAINT_MODE.NORMAL:
                 if (mesh instanceof Slice9Mesh) {
@@ -73,25 +68,20 @@ function PaintInspectorCreate() {
                         if (mesh.material.uniforms.u_flowMap.value.name != 'null') {
                             generateDrawFields(fields);
                             generateSaveDeleteButtons(fields, mesh);
-                        } else {
-                            generateDrawCreateFields(fields, mesh);
-                        }
+                        } else generateDrawCreateFields(fields, mesh);
                     } else Popups.toast.error('Нет u_flowMap');
                 } else if (mesh instanceof MultipleMaterialMesh) {
-                    let has_u_flowMap = true;
-                    for (const material of mesh.get_materials()) {
-                        has_u_flowMap = material.uniforms.u_flowMap == undefined;
-                        if (!has_u_flowMap) break;
-                    }
-                    if (has_u_flowMap) {
+                    if (mesh.get_materials().length > 0) {
                         const firstMaterial = mesh.get_materials()[0];
-                        if (firstMaterial.uniforms.u_flowMap.value.name != 'null') {
-                            generateDrawFields(fields);
-                            generateSaveDeleteButtons(fields, mesh);
-                        }
-                        generateDrawCreateFields(fields, mesh);
-                    }
-                } else Popups.toast.error('Нет u_flowMap');
+                        const has_u_flowMap = firstMaterial.uniforms.u_flowMap != undefined;
+                        if (has_u_flowMap) {
+                            if (firstMaterial.uniforms.u_flowMap.value.name != 'null') {
+                                generateDrawFields(fields);
+                                generateSaveDeleteButtons(fields, mesh);
+                            } else generateDrawCreateFields(fields, mesh);
+                        } else Popups.toast.error('Нет u_flowMap');
+                    } else Popups.toast.error('Нет материалов');
+                }
                 break;
         }
 

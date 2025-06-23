@@ -98,7 +98,8 @@ function PaintControlCreate() {
                                 selected_mesh.material.uniforms.u_mask.value.needsUpdate = true;
                             } else if (selected_mesh instanceof MultipleMaterialMesh) {
                                 selected_mesh.get_materials().forEach((material) => {
-                                    material.uniforms.u_mask.value.needsUpdate = true;
+                                    if (material.uniforms.u_mask)
+                                        material.uniforms.u_mask.value.needsUpdate = true;
                                 });
                             } else Popups.toast.error('Неподдерживаемый тип mesh');
                             break;
@@ -108,7 +109,8 @@ function PaintControlCreate() {
                                 selected_mesh.material.uniforms.u_flowMap.value.needsUpdate = true;
                             } else if (selected_mesh instanceof MultipleMaterialMesh) {
                                 selected_mesh.get_materials().forEach((material) => {
-                                    material.uniforms.u_flowMap.value.needsUpdate = true;
+                                    if (material.uniforms.u_flowMap)
+                                        material.uniforms.u_flowMap.value.needsUpdate = true;
                                 });
                             } else Popups.toast.error('Неподдерживаемый тип mesh');
                             break;
@@ -140,7 +142,8 @@ function PaintControlCreate() {
                                 selected_mesh.material.uniforms.u_mask.value.needsUpdate = true;
                             } else if (selected_mesh instanceof MultipleMaterialMesh) {
                                 selected_mesh.get_materials().forEach((material) => {
-                                    material.uniforms.u_mask.value.needsUpdate = true;
+                                    if (material.uniforms.u_mask)
+                                        material.uniforms.u_mask.value.needsUpdate = true;
                                 });
                             } else Popups.toast.error('Неподдерживаемый тип mesh');
                             break;
@@ -150,7 +153,8 @@ function PaintControlCreate() {
                                 selected_mesh.material.uniforms.u_flowMap.value.needsUpdate = true;
                             } else if (selected_mesh instanceof MultipleMaterialMesh) {
                                 selected_mesh.get_materials().forEach((material) => {
-                                    material.uniforms.u_flowMap.value.needsUpdate = true;
+                                    if (material.uniforms.u_flowMap)
+                                        material.uniforms.u_flowMap.value.needsUpdate = true;
                                 });
                             } else Popups.toast.error('Неподдерживаемый тип mesh');
                             break;
@@ -197,8 +201,9 @@ function PaintControlCreate() {
             if (mesh instanceof Slice9Mesh) {
                 ResourceManager.set_material_uniform_for_mesh(mesh, uniform_name, texture);
             } else if (mesh instanceof MultipleMaterialMesh) {
-                mesh.get_materials().forEach((_, index) => {
-                    ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, index, uniform_name, texture);
+                mesh.get_materials().forEach((material, index) => {
+                    if (material.uniforms[uniform_name])
+                        ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, index, uniform_name, texture);
                 });
             } else Popups.toast.error('Неподдерживаемый тип mesh');
         }
@@ -234,8 +239,9 @@ function PaintControlCreate() {
             if (mesh instanceof Slice9Mesh) {
                 ResourceManager.set_material_uniform_for_mesh(mesh, uniform_name, ResourceManager.get_texture('').texture);
             } else if (mesh instanceof MultipleMaterialMesh) {
-                mesh.get_materials().forEach((_, index) => {
-                    ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, index, uniform_name, ResourceManager.get_texture('').texture);
+                mesh.get_materials().forEach((material, index) => {
+                    if (material.uniforms[uniform_name])
+                        ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, index, uniform_name, ResourceManager.get_texture('').texture);
                 });
             } else Popups.toast.error('Неподдерживаемый тип mesh');
         }
@@ -267,8 +273,9 @@ function PaintControlCreate() {
                 if (mesh instanceof Slice9Mesh) {
                     ResourceManager.set_material_uniform_for_mesh(mesh, uniform_name, data.texture);
                 } else if (mesh instanceof MultipleMaterialMesh) {
-                    mesh.get_materials().forEach((_, index) => {
-                        ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, index, uniform_name, data.texture);
+                    mesh.get_materials().forEach((material, index) => {
+                        if (material.uniforms[uniform_name])
+                            ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, index, uniform_name, data.texture);
                     });
                 }
             }
