@@ -23,7 +23,7 @@ NOTE: API для материалов:
         get_info_about_unique_materials
 */
 
-import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4, AudioLoader } from 'three';
+import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4, AudioLoader, Wrapping } from 'three';
 import { copy_material, get_file_name, get_material_hash } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
@@ -1565,7 +1565,9 @@ export function ResourceManagerModule() {
                     metadata_atlas[texture_name] = {
                         path: (texture.data.texture as any).path.replace(project_path, ''),
                         minFilter: texture.data.texture.minFilter,
-                        magFilter: texture.data.texture.magFilter
+                        magFilter: texture.data.texture.magFilter,
+                        wrapS: texture.data.texture.wrapS,
+                        wrapT: texture.data.texture.wrapT
                     };
                 }
             }
@@ -1616,14 +1618,20 @@ export function ResourceManagerModule() {
                     override_atlas_texture(old_atlas || '', atlas_name, texture_name);
 
                     if (typeof texture_data === 'object' && texture_data !== null) {
-                        const data = texture_data as { minFilter?: MinificationTextureFilter; magFilter?: MagnificationTextureFilter };
+                        const data = texture_data as { minFilter?: MinificationTextureFilter; magFilter?: MagnificationTextureFilter; wrapS?: Wrapping; wrapT?: Wrapping };
                         if (has_texture_name(texture_name, atlas_name)) {
                             const texture = atlases[atlas_name][texture_name].data.texture;
-                            if (data.minFilter !== undefined) {
+                            if (data.minFilter != undefined) {
                                 texture.minFilter = data.minFilter;
                             }
-                            if (data.magFilter !== undefined) {
+                            if (data.magFilter != undefined) {
                                 texture.magFilter = data.magFilter;
+                            }
+                            if (data.wrapS != undefined) {
+                                texture.wrapS = data.wrapS;
+                            }
+                            if (data.wrapT != undefined) {
+                                texture.wrapT = data.wrapT;
                             }
                         }
                     }
