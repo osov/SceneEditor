@@ -23,7 +23,7 @@ export function TilePatcher(tilemap_path: string) {
     });
 
     async function save_tilesinfo(optimized = false) {
-        const dir = tilemap_path.replace(/^\//, '').replace(new RegExp(`${tilemap_name}.*$`), '');
+        const dir = tilemap_path.replace(/^\//, '').replace(new RegExp(`/${tilemap_name}.*$`), '');
         const path = `${dir}/${tilemap_name}.${TILES_INFO_EXT}`
 
         const filename = get_file_name(path);
