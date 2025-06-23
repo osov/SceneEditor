@@ -237,8 +237,10 @@ export function updateEachMaterialWhichHasTexture(texture: Texture) {
         Object.entries(material_info.uniforms).forEach(([uniform_name, uniform]) => {
             if (uniform.type != MaterialUniformType.SAMPLER2D) return;
             Object.values(material_info.instances).forEach((inst) => {
-                if ((inst.uniforms[uniform_name] as IUniform<Texture>).value.uuid != texture.uuid) return;
-                inst.uniforms[uniform_name].value.needsUpdate = true;
+                if (inst.uniforms[uniform_name] && inst.uniforms[uniform_name].value != null) {
+                    if ((inst.uniforms[uniform_name] as IUniform<Texture>).value.uuid != texture.uuid) return;
+                    inst.uniforms[uniform_name].value.needsUpdate = true;
+                }
             });
         });
     });

@@ -1204,6 +1204,18 @@ function AssetInspectorCreate() {
                 set_selected_textures(_selected_textures);
                 break;
 
+            case 'TEXTURE_WRAP_S':
+                const wrapS = event.data as AssetTextureInfo<Wrapping>[];
+                await updateWrapS(wrapS, true);
+                set_selected_textures(_selected_textures);
+                break;
+
+            case 'TEXTURE_WRAP_T':
+                const wrapT = event.data as AssetTextureInfo<Wrapping>[];
+                await updateWrapT(wrapT, true);
+                set_selected_textures(_selected_textures);
+                break;
+
             case 'MATERIAL_VERTEX_PROGRAM':
                 const vertexPrograms = event.data as AssetMaterialInfo<string>[];
                 await updateMaterialVertexProgram(vertexPrograms, true);
