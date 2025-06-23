@@ -684,7 +684,7 @@ function MeshInspectorCreate() {
                                     const info = mesh.get_texture();
                                     texture_name = info ? info[0] : '';
                                 }
-                            } else texture_name = get_file_name((texture.value as any).path || '');
+                            } else if (texture.value) texture_name = get_file_name((texture.value as any).path || '');
 
                             let atlas = '';
                             if (key == 'u_texture') {

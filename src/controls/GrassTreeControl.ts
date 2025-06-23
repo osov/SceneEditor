@@ -1,8 +1,9 @@
-import { get_selected_one_mesh, get_hash_by_mesh } from "../inspectors/ui_utils";
-import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { Vector2 } from "three";
+import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { filter_intersect_list } from "../render_engine/helpers/utils";
 import { createGrassManager } from "../utils/grass_manager";
+import { get_selected_one_mesh, get_hash_by_mesh, get_selected_one_slice9 } from "../inspectors/ui_utils";
+import { IObjectTypes } from "@editor/render_engine/types";
 
 declare global {
     const GrassTreeControl: ReturnType<typeof GrassTreeControlCreate>;
@@ -15,14 +16,13 @@ export function register_grass_tree_control() {
 function GrassTreeControlCreate() {
     const gm = createGrassManager();
     const mesh_list: { [k: string]: boolean } = {};
-    // const dir_path = '/data/tree/';
     let selected_mesh: Slice9Mesh | undefined;
 
     function init() {
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
             if (Input.is_shift()) {
                 if (e.key == 'R' || e.key == 'К') {
-                    const mesh = get_selected_one_mesh();
+                    const mesh = get_selected_one_slice9();
                     if (mesh)
                         activate(mesh);
                 }
@@ -30,18 +30,13 @@ function GrassTreeControlCreate() {
                     if (selected_mesh)
                         deactivate(selected_mesh);
                 }
-                // NOTE: нужно ли здесь сохранять tilesinfo ?
-                // else if (e.key == 'H' || e.key == 'Р') {
-                //     if (selected_mesh)
-                //         save_map(selected_mesh);
-                // }
             }
         });
 
         EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
             if (Input.is_shift())
                 return;
-            selected_mesh = get_selected_one_mesh();
+            selected_mesh = get_selected_one_slice9();
         });
 
         let is_pointer_down = false;
@@ -100,7 +95,6 @@ function GrassTreeControlCreate() {
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         selected_mesh = undefined;
         delete mesh_list[key];
-        // NOTE: нужно ли здесь сохранять tilesinfo ?
         //log('deactivated', key)
     }
 

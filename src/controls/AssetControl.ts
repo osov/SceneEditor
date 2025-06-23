@@ -5,21 +5,16 @@ import {
     ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, ASSET_AUDIO, AssetType, DataFormatType, FILE_UPLOAD_CMD,
     FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses,
     TDictionary, texture_ext, URL_PATHS, AUDIO_EXT,
-    TILES_INFO_EXT,
     FSEvent,
 } from "../modules_editor/modules_editor_const";
-import { span_elem, json_parsable, get_keys, hexToRGB } from "../modules/utils";
+import { span_elem, json_parsable, get_keys } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction } from "./ActionsControl";
 import { api } from "../modules_editor/ClientAPI";
 import { IBaseEntityData } from "../render_engine/types";
-import { error_popup, get_file_name, is_tile } from "../render_engine/helpers/utils";
-import { Blending, Quaternion, Texture, Vector3 } from "three";
-import { get_hash_by_mesh } from "@editor/inspectors/ui_utils";
-import { Slice9Mesh } from "@editor/render_engine/objects/slice9";
-import { BlendMode } from "@editor/inspectors/MeshInspector";
-import { convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode } from "@editor/inspectors/helpers";
+import { error_popup, get_file_name } from "../render_engine/helpers/utils";
+import { Quaternion, Vector3 } from "three";
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
 }

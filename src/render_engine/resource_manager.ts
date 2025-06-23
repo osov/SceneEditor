@@ -448,6 +448,7 @@ export function ResourceManagerModule() {
         textureCanvas.wrapS = RepeatWrapping;
         textureCanvas.wrapT = RepeatWrapping;
         (textureCanvas as any).system = true;
+        textureCanvas.name = 'null';
         bad_texture = textureCanvas;
     }
 

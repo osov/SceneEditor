@@ -15,8 +15,8 @@ import { register_resource_manager } from './render_engine/resource_manager';
 import { register_actions_control } from './controls/ActionsControl';
 import { register_view_control } from './controls/ViewControl';
 import { register_asset_control } from './controls/AssetControl';
-import { register_flow_map_control } from './controls/FlowMapControl';
 import { register_grass_tree_control } from './controls/GrassTreeControl';
+import { register_paint_control } from './controls/PaintControl';
 import { register_mesh_inspector } from './inspectors/MeshInspector';
 import { register_asset_inspector } from './inspectors/AssetInspector';
 import { register_paint_inspector } from './inspectors/PaintInspector';
@@ -50,8 +50,8 @@ function register_controls() {
     register_contextmenu();
     register_control_manager();
     register_history_control();
-    register_flow_map_control();
     register_grass_tree_control();
+    register_paint_control();
     register_components_control();
 }
 

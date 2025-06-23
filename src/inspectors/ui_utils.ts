@@ -5,14 +5,18 @@ import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { Component } from "../render_engine/components/container_component";
 
 
-export function get_selected_one_mesh() {
+export function get_selected_one_mesh(allowed_types: IObjectTypes[]) {
     const selected_list = SelectControl.get_selected_list();
     if (selected_list.length != 1)
         return;
     const mesh = selected_list[0];
-    if (mesh.type != IObjectTypes.GO_SPRITE_COMPONENT)
+    if (!allowed_types.includes(mesh.type))
         return;
-    return mesh as Slice9Mesh;
+    return mesh;
+}
+
+export function get_selected_one_slice9() {
+    return get_selected_one_mesh([IObjectTypes.GO_SPRITE_COMPONENT]) as Slice9Mesh;
 }
 
 export function get_selected_one_component() {
@@ -82,7 +86,7 @@ export function CreateDrawCanvas(size_x: number, size_y: number, brush_size = 40
     const canvas = document.createElement("canvas");
     canvas.width = size_x;
     canvas.height = size_y;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
     ctx.fillStyle = fillColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
