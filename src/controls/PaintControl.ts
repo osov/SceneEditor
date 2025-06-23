@@ -257,7 +257,7 @@ function PaintControlCreate() {
         const imageData = image.toDataURL();
         const answer = await AssetControl.save_base64_img(dir_path + key + '.png', imageData);
         if (answer.result == 1) {
-            const data = await ResourceManager.preload_texture(dir_path + key + '.png');
+            const data = await ResourceManager.preload_texture(dir_path + key + '.png', '', true);
             let uniform_name = '';
             switch (state[PaintProperty.MODE]) {
                 case PAINT_MODE.COLOR: uniform_name = 'u_mask'; break;
