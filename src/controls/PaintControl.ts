@@ -173,18 +173,7 @@ function PaintControlCreate() {
     }
 
     async function setup_draw_canvas(mesh: AllowedMeshType): Promise<IDrawCanvas | null> {
-        const size = mesh.get_size();
-        size.x *= mesh.scale.x;
-        size.y *= mesh.scale.y;
-        size.x *= state[PaintProperty.CREATE_SIZE];
-        size.y *= state[PaintProperty.CREATE_SIZE];
-
-        // NOTE: фиксированые размеры из FlowMapControl
-        // const draw_canvas = CreateDrawCanvas(256, 256, 40, 'rgb(128, 128, 0)');
-        const draw_canvas = CreateDrawCanvas(Math.floor(size.x), Math.floor(size.y));
-
-        const texture = new Texture(draw_canvas.getCanvas());
-        texture.needsUpdate = true;
+        let draw_canvas: IDrawCanvas | null = null;
 
         let uniform_name = '';
         switch (state[PaintProperty.MODE]) {
@@ -197,27 +186,71 @@ function PaintControlCreate() {
                 uniform_name = 'u_flowMap';
                 break;
         }
-        if (uniform_name != '') {
-            if (mesh instanceof Slice9Mesh) {
-                ResourceManager.set_material_uniform_for_mesh(mesh, uniform_name, texture);
-            } else if (mesh instanceof MultipleMaterialMesh) {
-                mesh.get_materials().forEach((material, index) => {
-                    if (material.uniforms[uniform_name])
-                        ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, index, uniform_name, texture);
-                });
-            } else Popups.toast.error('Неподдерживаемый тип mesh');
+
+        if (uniform_name == '') return null;
+
+        let material;
+        if (mesh instanceof Slice9Mesh) {
+            material = mesh.material;
+        } else if (mesh instanceof MultipleMaterialMesh) {
+            const materials = mesh.get_materials();
+            if (materials.length > 0) material = materials[0];
+            else Popups.toast.error('Нет материалов');
+        } else {
+            Popups.toast.error('Неподдерживаемый тип mesh');
+            return null;
         }
+        if (!material) return null;
+
+        const uniform = material.uniforms[uniform_name];
+        if (uniform && uniform.value && uniform.value.image) {
+            const image = uniform.value.image;
+            draw_canvas = CreateDrawCanvas(image.width, image.height);
+            draw_canvas.getCanvas().getContext('2d')?.drawImage(image, 0, 0);
+        } else {
+            const size = mesh.get_size();
+            size.x *= mesh.scale.x;
+            size.y *= mesh.scale.y;
+            size.x *= state[PaintProperty.CREATE_SIZE];
+            size.y *= state[PaintProperty.CREATE_SIZE];
+            draw_canvas = CreateDrawCanvas(Math.floor(size.x), Math.floor(size.y));
+        }
+
+        if (!draw_canvas) {
+            return null;
+        }
+
+        const texture = new Texture(draw_canvas.getCanvas());
+        texture.needsUpdate = true;
+
+        if (mesh instanceof Slice9Mesh) {
+            ResourceManager.set_material_uniform_for_mesh(mesh, uniform_name, texture);
+        } else if (mesh instanceof MultipleMaterialMesh) {
+            mesh.get_materials().forEach((material, index) => {
+                if (material.uniforms[uniform_name])
+                    ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, index, uniform_name, texture);
+            });
+        } else {
+            Popups.toast.error('Неподдерживаемый тип mesh');
+            return null;
+        }
+
         return draw_canvas;
     }
 
-    async function activate(mesh: AllowedMeshType) {
+    async function activate(mesh: AllowedMeshType, and_refresh_inspector = true) {
         const key = get_hash_by_mesh(mesh);
+        if (mesh_list[key]) return;
+
         selected_mesh = mesh;
         const draw_canvas = await setup_draw_canvas(mesh);
         if (!draw_canvas)
             return;
         mesh_list[key] = draw_canvas;
-        PaintInspector.show(selected_mesh);
+
+        if (and_refresh_inspector) {
+            PaintInspector.show(selected_mesh);
+        }
     }
 
     async function deactivate(mesh: AllowedMeshType) {

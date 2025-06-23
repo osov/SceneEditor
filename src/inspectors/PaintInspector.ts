@@ -26,7 +26,7 @@ export enum PaintPropertyTitle {
 function PaintInspectorCreate() {
     let selected_mesh: AllowedMeshType;
 
-    function show(mesh: AllowedMeshType) {
+    async function show(mesh: AllowedMeshType) {
         selected_mesh = mesh;
 
         const data: ObjectData[] = [{ id: 0, fields: [] as PropertyData<PropertyType>[] }];
@@ -45,6 +45,7 @@ function PaintInspectorCreate() {
                 if (mesh instanceof Slice9Mesh) {
                     if (mesh.material.uniforms.u_mask) {
                         if (mesh.material.uniforms.u_mask.value.name != 'null') {
+                            await PaintControl.activate(mesh, false);
                             generateDrawFields(fields);
                             generateSaveDeleteButtons(fields, mesh);
                         } else generateDrawCreateFields(fields, mesh);
@@ -55,6 +56,7 @@ function PaintInspectorCreate() {
                         const has_u_mask = firstMaterial.uniforms.u_mask != undefined;
                         if (has_u_mask) {
                             if (firstMaterial.uniforms.u_mask.value.name != 'null') {
+                                await PaintControl.activate(mesh, false);
                                 generateDrawFields(fields);
                                 generateSaveDeleteButtons(fields, mesh);
                             } else generateDrawCreateFields(fields, mesh);
@@ -66,6 +68,7 @@ function PaintInspectorCreate() {
                 if (mesh instanceof Slice9Mesh) {
                     if (mesh.material.uniforms.u_flowMap) {
                         if (mesh.material.uniforms.u_flowMap.value.name != 'null') {
+                            await PaintControl.activate(mesh, false);
                             generateDrawFields(fields);
                             generateSaveDeleteButtons(fields, mesh);
                         } else generateDrawCreateFields(fields, mesh);
@@ -76,6 +79,7 @@ function PaintInspectorCreate() {
                         const has_u_flowMap = firstMaterial.uniforms.u_flowMap != undefined;
                         if (has_u_flowMap) {
                             if (firstMaterial.uniforms.u_flowMap.value.name != 'null') {
+                                await PaintControl.activate(mesh, false);
                                 generateDrawFields(fields);
                                 generateSaveDeleteButtons(fields, mesh);
                             } else generateDrawCreateFields(fields, mesh);
