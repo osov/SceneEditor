@@ -13,6 +13,7 @@ function AudioManagerModule() {
     const listener = new AudioListener();
     const sounds: TDictionary<Audio> = {};
     const panners: TDictionary<StereoPannerNode> = {};
+    const gains: TDictionary<GainNode> = {};
     const end_callbacks: TDictionary<() => void> = {};
 
     function init() {
@@ -26,6 +27,7 @@ function AudioManagerModule() {
         sound.setBuffer(buffer);
         sounds[id] = sound;
         panners[id] = panner;
+        gains[id] = listener.context.createGain();
         return id;
     }
 
@@ -44,6 +46,7 @@ function AudioManagerModule() {
         panner.disconnect();
         delete sounds[id];
         delete panners[id];
+        delete gains[id];
         if (end_callbacks[id]) {
             delete end_callbacks[id];
         }
@@ -64,12 +67,22 @@ function AudioManagerModule() {
             Log.error(`[SoundManager.play]: panner ${id} not found`);
             return;
         }
+        const gain = gains[id];
+        if (!gain) {
+            Log.error(`[SoundManager.play]: gain ${id} not found`);
+            return;
+        }
+
+        panner.pan.value = pan;
+        sound.gain.disconnect();
+        sound.gain.connect(panner);
+        panner.connect(gain);
+        gain.connect(listener.context.destination);
+        gain.gain.value = volume;
 
         sound.offset = offset;
         sound.setLoop(loop);
-        sound.setVolume(volume);
         sound.setPlaybackRate(speed);
-        panner.pan.value = pan;
 
         sound.play();
 
@@ -80,9 +93,6 @@ function AudioManagerModule() {
                     end_callbacks[id]();
                 }
             }
-            // NOTE/HACK: для того чтобы выключить звук если громкость 0
-            if (volume > 0) sound.source.connect(panner);
-            panner.connect(listener.context.destination);
         }
     }
 
@@ -119,13 +129,19 @@ function AudioManagerModule() {
             Log.error(`[SoundManager.set_volume]: sound ${id} not found`);
             return;
         }
+        const gain = gains[id];
+        if (!gain) {
+            Log.error(`[SoundManager.set_volume]: gain ${id} not found`);
+            return;
+        }
+        gain.gain.value = volume;
         if (!sound.isPlaying || sound.source) {
-            sound.setVolume(volume);
+            gain.gain.value = volume;
         }
 
         // NOTE/HACK: для того чтобы полностью отключить звук если громкость 0
-        if (volume == 0) sound.source?.disconnect();
-        else sound.source?.connect(panners[id]);
+        // if (volume == 0) sound.source?.disconnect();
+        // else sound.source?.connect(panners[id]);
     }
 
     function get_volume(id: number) {
@@ -134,7 +150,12 @@ function AudioManagerModule() {
             Log.error(`[SoundManager.get_volume]: sound ${id} not found`);
             return 0;
         }
-        return sound.getVolume();
+        const gain = gains[id];
+        if (!gain) {
+            Log.error(`[SoundManager.get_volume]: gain ${id} not found`);
+            return 0;
+        }
+        return gain.gain.value;
     }
 
     function set_loop(id: number, loop: boolean) {

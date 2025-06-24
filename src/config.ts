@@ -14,6 +14,14 @@ export const WS_RECONNECT_INTERVAL = 10;
 
 export const FLOAT_PRECISION = 4;
 
+export const MIN_VOLUME = 0.0;
+export const MAX_VOLUME = 2.0;
+export const DEFAULT_SOUND_RADIUS = 0;
+export const DEFAULT_MAX_VOLUME_RADIUS = DEFAULT_SOUND_RADIUS;
+export const DEFAULT_PAN_NORMALIZATION_DISTANCE = 0;
+export const DEFAULT_FADE_IN_TIME = 1.0;
+export const DEFAULT_FADE_OUT_TIME = 1.0;
+
 export type _UserMessages = {
     REGION_ENTER: { id_mesh: string, id_region: string }
     REGION_LEAVE: { id_mesh: string, id_region: string }

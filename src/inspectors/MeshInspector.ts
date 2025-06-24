@@ -18,7 +18,7 @@ import { AnimatedMesh } from "../render_engine/objects/animated_mesh";
 import { WORLD_SCALAR } from "../config";
 import { Model } from "@editor/render_engine/objects/model";
 import { MultipleMaterialMesh } from "@editor/render_engine/objects/multiple_material_mesh";
-import { AudioMesh } from "@editor/render_engine/objects/audio_mesh";
+import { AudioMesh, SoundFunctionType } from "../render_engine/objects/audio_mesh";
 
 
 declare global {
@@ -63,9 +63,12 @@ export enum MeshProperty {
     VOLUME = 'volume',
     SPEED = 'speed',
     LOOP = 'loop',
-    PAN = 'pan',
     PLAY = 'play',
     STOP = 'stop',
+    SOUND_RADIUS = 'sound_radius',
+    MAX_VOLUME_RADIUS = 'max_volume_radius',
+    PAN_NORMALIZATION_DISTANCE = 'pan_normalization_distance',
+    SOUND_FUNCTION = 'sound_function',
     TILE_LAYER = 'tile_layer',
     CLIPPING_MODE = 'clipping_mode',
     INVERTED_CLIPPING = 'inverted_clipping',
@@ -106,9 +109,12 @@ export enum MeshPropertyTitle {
     VOLUME = 'Громкость',
     SPEED = 'Скорость',
     LOOP = 'Повторять',
-    PAN = 'Панорамирование',
     PLAY = 'Воспроизвести',
     STOP = 'Остановить',
+    SOUND_RADIUS = 'Радиус звука',
+    MAX_VOLUME_RADIUS = 'Радиус макс. громкости',
+    PAN_NORMALIZATION_DISTANCE = 'Дистанция панормирования',
+    SOUND_FUNCTION = 'Функция звука',
     TILE_LAYER = 'Слой',
     CLIPPING_FOLDER = 'Обрезка',
     CLIPPING_MODE = 'Режим',
@@ -1233,41 +1239,81 @@ function MeshInspectorCreate() {
         });
 
         audio_fields.push({
-            key: MeshProperty.PAN,
-            title: MeshPropertyTitle.PAN,
-            value: mesh.get_pan(),
-            type: PropertyType.SLIDER,
+            key: MeshProperty.SOUND_RADIUS,
+            title: MeshPropertyTitle.SOUND_RADIUS,
+            value: mesh.get_sound_radius(),
+            type: PropertyType.NUMBER,
             params: {
-                min: -1,
-                max: 1,
-                step: 0.1,
-                format: (value: number) => value.toFixed(1)
+                min: 0,
+                max: 1000,
+                step: 1,
+                format: (value: number) => value.toFixed(0)
             },
-            onBeforeChange: savePan,
-            onChange: handlePanChange
+            onBeforeChange: saveSoundRadius,
+            onChange: handleSoundRadiusChange
+        });
+
+        audio_fields.push({
+            key: MeshProperty.MAX_VOLUME_RADIUS,
+            title: MeshPropertyTitle.MAX_VOLUME_RADIUS,
+            value: mesh.get_max_volume_radius(),
+            type: PropertyType.NUMBER,
+            params: {
+                min: 0,
+                max: 1000,
+                step: 1,
+                format: (value: number) => value.toFixed(0)
+            },
+            onBeforeChange: saveMaxVolumeRadius,
+            onChange: handleMaxVolumeRadiusChange
+        });
+
+        audio_fields.push({
+            key: MeshProperty.PAN_NORMALIZATION_DISTANCE,
+            title: MeshPropertyTitle.PAN_NORMALIZATION_DISTANCE,
+            value: mesh.get_pan_normalization_distance(),
+            type: PropertyType.NUMBER,
+            params: {
+                min: 0,
+                max: 1000,
+                step: 1,
+                format: (value: number) => value.toFixed(0)
+            },
+            onBeforeChange: savePanNormalizationDistance,
+            onChange: handlePanNormalizationDistanceChange
+        });
+
+        audio_fields.push({
+            key: MeshProperty.SOUND_FUNCTION,
+            title: MeshPropertyTitle.SOUND_FUNCTION,
+            value: mesh.get_sound_function(),
+            type: PropertyType.LIST_TEXT,
+            params: {
+                'Линейная': 'linear',
+                'Экспоненциальная': 'exponential',
+                'Квадратичная': 'quadratic',
+                'Обратная квадратичная': 'inverse_quadratic',
+                'Плавная ступень': 'smooth_step'
+            },
+            onBeforeChange: saveSoundFunction,
+            onChange: handleSoundFunctionChange
         });
 
         if (mesh.get_sound() != '') {
-            const is_playing = AudioManager.is_playing(mesh.get_id());
+            const is_playing = mesh.is_playing();
             audio_fields.push({
                 key: is_playing ? MeshProperty.STOP : MeshProperty.PLAY,
                 title: is_playing ? MeshPropertyTitle.STOP : MeshPropertyTitle.PLAY,
                 value: () => {
-                    if (is_playing) AudioManager.stop(mesh.get_id());
-                    else {
-
+                    if (is_playing) {
+                        mesh.stop();
+                    } else {
                         // NOTE: для того чтобы сменить кнопку по окончанию проигрывания звука
                         AudioManager.set_end_callback(mesh.get_id(), () => {
                             set_selected_meshes(_selected_meshes);
                         });
 
-                        AudioManager.play(
-                            mesh.get_id(),
-                            mesh.get_loop(),
-                            mesh.get_volume(),
-                            mesh.get_speed(),
-                            mesh.get_pan()
-                        );
+                        mesh.play();
                     }
 
                     // NOTE: для того чтобы сменить кнопку
@@ -3447,36 +3493,6 @@ function MeshInspectorCreate() {
         }
     }
 
-    function savePan(info: BeforeChangeInfo) {
-        const pans: MeshPropertyInfo<number>[] = [];
-        info.ids.forEach((id) => {
-            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
-            if (mesh == undefined) {
-                Log.error('[savePan] Mesh not found for id:', id);
-                return;
-            }
-            pans.push({ mesh_id: id, value: mesh.get_pan() });
-        });
-        HistoryControl.add('MESH_SOUND_PAN', pans, HistoryOwner.MESH_INSPECTOR);
-    }
-
-    function handlePanChange(info: ChangeInfo) {
-        const data = convertChangeInfoToMeshData<number>(info);
-        updatePan(data, info.data.event.last);
-    }
-
-    function updatePan(data: MeshPropertyInfo<number>[], _: boolean) {
-        for (const item of data) {
-            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
-            if (mesh == undefined) {
-                Log.error('[updatePan] Mesh not found for id:', item.mesh_id);
-                continue;
-            }
-            if (!Number.isFinite(item.value)) continue;
-            mesh.set_pan(item.value);
-        }
-    }
-
     function saveLayer(info: BeforeChangeInfo) {
         const layers: MeshPropertyInfo<number>[] = [];
         info.ids.forEach((id) => {
@@ -3579,6 +3595,122 @@ function MeshInspectorCreate() {
             if (!mesh || !(mesh instanceof GuiBox)) return;
             mesh.enableClipping(mesh.isInvertedClipping(), item.value);
         });
+    }
+
+    function saveSoundRadius(info: BeforeChangeInfo) {
+        const soundRadius: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveSoundRadius] Mesh not found for id:', id);
+                return;
+            }
+            soundRadius.push({ mesh_id: id, value: mesh.get_sound_radius() });
+        });
+        HistoryControl.add('MESH_SOUND_RADIUS', soundRadius, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleSoundRadiusChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateSoundRadius(data, info.data.event.last);
+    }
+
+    function updateSoundRadius(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateSoundRadius] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_sound_radius(item.value);
+        }
+    }
+
+    function saveMaxVolumeRadius(info: BeforeChangeInfo) {
+        const maxVolumeRadius: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveMaxVolumeRadius] Mesh not found for id:', id);
+                return;
+            }
+            maxVolumeRadius.push({ mesh_id: id, value: mesh.get_max_volume_radius() });
+        });
+        HistoryControl.add('MESH_MAX_VOLUME_RADIUS', maxVolumeRadius, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleMaxVolumeRadiusChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateMaxVolumeRadius(data, info.data.event.last);
+    }
+
+    function updateMaxVolumeRadius(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateMaxVolumeRadius] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_max_volume_radius(item.value);
+        }
+    }
+
+    function savePanNormalizationDistance(info: BeforeChangeInfo) {
+        const panNormalizationDistance: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[savePanNormalizationDistance] Mesh not found for id:', id);
+                return;
+            }
+            panNormalizationDistance.push({ mesh_id: id, value: mesh.get_pan_normalization_distance() });
+        });
+        HistoryControl.add('MESH_PAN_NORMALIZATION_DISTANCE', panNormalizationDistance, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handlePanNormalizationDistanceChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updatePanNormalizationDistance(data, info.data.event.last);
+    }
+
+    function updatePanNormalizationDistance(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updatePanNormalizationDistance] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_pan_normalization_distance(item.value);
+        }
+    }
+
+    function saveSoundFunction(info: BeforeChangeInfo) {
+        const soundFunction: MeshPropertyInfo<string>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveSoundFunction] Mesh not found for id:', id);
+                return;
+            }
+            soundFunction.push({ mesh_id: id, value: mesh.get_sound_function() });
+        });
+        HistoryControl.add('MESH_SOUND_FUNCTION', soundFunction, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleSoundFunctionChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        updateSoundFunction(data, info.data.event.last);
+    }
+
+    function updateSoundFunction(data: MeshPropertyInfo<string>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateSoundFunction] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_sound_function(item.value as SoundFunctionType);
+        }
     }
 
     function undo(event: THistoryUndo) {
@@ -3751,9 +3883,21 @@ function MeshInspectorCreate() {
                 const speeds = event.data as MeshPropertyInfo<number>[];
                 updateSpeed(speeds, true);
                 break;
-            case 'MESH_SOUND_PAN':
-                const pans = event.data as MeshPropertyInfo<number>[];
-                updatePan(pans, true);
+            case 'MESH_SOUND_RADIUS':
+                const soundRadius = event.data as MeshPropertyInfo<number>[];
+                updateSoundRadius(soundRadius, true);
+                break;
+            case 'MESH_MAX_VOLUME_RADIUS':
+                const maxVolumeRadius = event.data as MeshPropertyInfo<number>[];
+                updateMaxVolumeRadius(maxVolumeRadius, true);
+                break;
+            case 'MESH_PAN_NORMALIZATION_DISTANCE':
+                const panNormalizationDistance = event.data as MeshPropertyInfo<number>[];
+                updatePanNormalizationDistance(panNormalizationDistance, true);
+                break;
+            case 'MESH_SOUND_FUNCTION':
+                const soundFunction = event.data as MeshPropertyInfo<string>[];
+                updateSoundFunction(soundFunction, true);
                 break;
         }
 
@@ -3803,5 +3947,5 @@ function MeshInspectorCreate() {
     }
 
     init();
-    return {};
+    return { force_refresh };
 }

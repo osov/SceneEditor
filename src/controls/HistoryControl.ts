@@ -75,7 +75,10 @@ export type HistoryData = {
     MESH_SOUND_LOOP: MeshPropertyInfo<boolean>
     MESH_SOUND_VOLUME: MeshPropertyInfo<number>
     MESH_SOUND_SPEED: MeshPropertyInfo<number>
-    MESH_SOUND_PAN: MeshPropertyInfo<number>
+    MESH_SOUND_RADIUS: MeshPropertyInfo<number>
+    MESH_MAX_VOLUME_RADIUS: MeshPropertyInfo<number>
+    MESH_PAN_NORMALIZATION_DISTANCE: MeshPropertyInfo<number>
+    MESH_SOUND_FUNCTION: MeshPropertyInfo<string>
     AUDIO_LOOP: AssetAudioInfo<boolean>
     AUDIO_VOLUME: AssetAudioInfo<number>
     AUDIO_SPEED: AssetAudioInfo<number>
