@@ -2,10 +2,13 @@ import { LineBasicMaterial, Vector2, Line as GeomLine, BufferGeometry, Vector2Li
 
 import { CAMERA_Z } from "../../config";
 import { GoContainer } from "../../render_engine/objects/sub_types";
-import { IArc, ISegment, Point, PointLike, Segment } from "./Geometry";
-import { Arc } from './Geometry';
 import { GridParams } from '../../modules/types';
+import { Point } from '../geometry/point';
+import { Segment } from '../geometry/segment';
+import { ISegment, IArc, PointLike } from '../geometry/types';
 
+
+export type TLinesDrawer = ReturnType<typeof LinesDrawer>;
 
 export function LinesDrawer() {
     const DRAWN_ARC_EDGES_AMOUNT = 60;

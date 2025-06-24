@@ -65,6 +65,27 @@ declare global {
         */
         function lerp(v_in_place: vmath.vector3 | vmath.vector4, t: number, v1: vmath.vector3 | vmath.vector4, v2: vmath.vector3 | vmath.vector4): void;
 
+
+        /**
+         * Set the value of a matrix to the identity matrix or copy another matrix.
+         * @param m_in_place - The input matrix.
+         * @param m1 - The matrix to copy (optional).
+         */
+        function matrix(m_in_place: vmath.matrix4, m1?: vmath.matrix4): void;
+
+        /**
+         * Set the value of a matrix for rotation around the z-axis.
+         * @param m_in_place - The input matrix.
+         * @param angle - The angle in radians.
+         */
+        function matrix_rotation_z(m_in_place: vmath.matrix4, angle: number): void;
+
+        /**
+         * Set the value of a matrix for translation.
+         * @param m_in_place - The input matrix.
+         * @param position - The position vector.
+         */
+        function matrix_translation(m_in_place: vmath.matrix4, position: vmath.vector3 | vmath.vector4): void;
     }
 
 
@@ -134,5 +155,72 @@ export function xmath_module() {
             v_in_place.w = v1.w + (v2.w - v1.w) * t;
     }
 
-    return { add, sub, mul, div, cross, mul_per_elem, normalize, lerp };
+    function matrix(m_in_place: vmath.matrix4) {
+        m_in_place.c0.x = 1;
+        m_in_place.c0.y = 0;
+        m_in_place.c0.z = 0;
+        m_in_place.c0.w = 0;
+
+        m_in_place.c1.x = 0;
+        m_in_place.c1.y = 1;
+        m_in_place.c1.z = 0;
+        m_in_place.c1.w = 0;
+
+        m_in_place.c2.x = 0;
+        m_in_place.c2.y = 0;
+        m_in_place.c2.z = 1;
+        m_in_place.c2.w = 0;
+
+        m_in_place.c3.x = 0;
+        m_in_place.c3.y = 0;
+        m_in_place.c3.z = 0;
+        m_in_place.c3.w = 1;
+
+        m_in_place.m01 = 1;
+        m_in_place.m02 = 0;
+        m_in_place.m03 = 0;
+        m_in_place.m04 = 0;
+        m_in_place.m11 = 0;
+        m_in_place.m12 = 1;
+        m_in_place.m13 = 0;
+        m_in_place.m14 = 0;
+        m_in_place.m21 = 0;
+        m_in_place.m22 = 0;
+        m_in_place.m23 = 1;
+        m_in_place.m24 = 0;
+        m_in_place.m31 = 0;
+        m_in_place.m32 = 0;
+        m_in_place.m33 = 0;
+        m_in_place.m34 = 1;
+    }
+
+    function matrix_translation(m_in_place: vmath.matrix4, position: vmath.vector3 | vmath.vector4) {
+        matrix(m_in_place);
+
+        m_in_place.c3.x = position.x;
+        m_in_place.c3.y = position.y;
+        m_in_place.c3.z = position.z;
+
+        m_in_place.m31 = position.x;
+        m_in_place.m32 = position.y;
+        m_in_place.m33 = position.z;
+    }
+
+    function matrix_rotation_z(m_in_place: vmath.matrix4, angle: number) {
+        matrix(m_in_place);
+        const cos = Math.cos(-angle);
+        const sin = Math.sin(-angle);
+
+        m_in_place.c0.x = cos;
+        m_in_place.c0.y = sin;
+        m_in_place.c1.x = -sin;
+        m_in_place.c1.y = cos;
+        
+        m_in_place.m01 = cos;
+        m_in_place.m02 = -sin;
+        m_in_place.m11 = sin;
+        m_in_place.m12 = cos;
+    }
+
+    return { add, sub, mul, div, cross, mul_per_elem, normalize, lerp, matrix_translation };
 }

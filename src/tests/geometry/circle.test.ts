@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test"
 import { TAU } from "../../modules/utils"
-import { Circle, Line, Point, Segment, Vector } from "../../utils/physic/Geometry"
+import { Circle } from "@editor/utils/geometry/circle"
+import { Point } from "@editor/utils/geometry/point"
+import { Segment } from "@editor/utils/geometry/segment"
+import { Vector } from "@editor/utils/geometry/vector"
+import { Line } from "@editor/utils/geometry/line"
+import { clone } from "@editor/utils/geometry/utils"
 
 describe('Circle', function () {
   it('Constructor Circle(pt, r) creates new circle', function () {
@@ -97,7 +102,7 @@ describe('Circle', function () {
   })
   it('Can intersect circle with circle - same circle, one intersection, leftmost Point', function () {
     let circle = Circle(Point(0, 0), 4)
-    let ip = circle.intersect(circle.clone())
+    let ip = circle.intersect(clone(circle))
     expect(ip.length).toEqual(1)
     let p = ip[0]
     expect(p.x).toEqual(-4)

@@ -20,6 +20,29 @@ declare global {
             w: number,
         }
 
+        export type matrix4 = number & {
+            c0: vmath.vector4,
+            c1: vmath.vector4,
+            c2: vmath.vector4,
+            c3: vmath.vector4,
+            m01: number,
+            m02: number,
+            m03: number,
+            m04: number,
+            m11: number,
+            m12: number,
+            m13: number,
+            m14: number,
+            m21: number,
+            m22: number,
+            m23: number,
+            m24: number,
+            m31: number,
+            m32: number,
+            m33: number,
+            m34: number,
+        }
+
         export function vector3(): vmath.vector3
         export function vector3(n: number): vmath.vector3
         export function vector3(v1: vmath.vector3): vmath.vector3
@@ -29,6 +52,15 @@ declare global {
         export function vector4(n: number): vmath.vector4
         export function vector4(v1: vmath.vector4): vmath.vector4
         export function vector4(x: number, y: number, z: number, w: number): vmath.vector4
+	    export function vector4(x: number, y: number, z: number, w: number): vmath.vector4
+        
+        export function matrix4(): vmath.matrix4
+
+        export function matrix4_translation(position: vmath.vector3 | vmath.vector4): vmath.matrix4
+        export function matrix4_rotation_x(angle: number): vmath.matrix4
+        export function matrix4_rotation_y(angle: number): vmath.matrix4
+        export function matrix4_rotation_z(angle: number): vmath.matrix4
+        export function matrix_mul_vector(m: vmath.matrix4, v: vmath.vector4): vmath.vector4
 
         export function length(v: vmath.vector3): number
         export function normalize(v: vmath.vector3): vmath.vector3
@@ -49,6 +81,100 @@ declare global {
 }
 
 export function vmath_module() {
+    /**
+        m01, m02, m03, m04
+        m11, m12, m13, m14
+        m21, m22, m23, m24
+        m31, m32, m33, m34
+
+        c0(m01, m11, m21, m31)
+        c1(m02, m12, m22, m32)
+        c2(m03, m13, m23, m33)
+        c3(m04, m14, m24, m34)
+     */
+    function matrix4() {
+        return {
+            c0: vector4(1, 0, 0, 0),
+            c1: vector4(0, 1, 0, 0),
+            c2: vector4(0, 0, 1, 0),
+            c3: vector4(0, 0, 0, 1),
+            m01: 1, m02: 0, m03: 0, m04: 0,
+            m11: 0, m12: 1, m13: 0, m14: 0,
+            m21: 0, m22: 0, m23: 1, m24: 0,
+            m31: 0, m32: 0, m33: 0, m34: 1,
+        }
+    }
+
+    function matrix4_translation(position: vmath.vector3 | vmath.vector4) {
+        const x = position.x;
+        const y = position.y;
+        const z = position.z;
+        return {
+            c0: vector4(1, 0, 0, 0),
+            c1: vector4(0, 1, 0, 0),
+            c2: vector4(0, 0, 1, 0),
+            c3: vector4(x, y, z, 1),
+            m01: 1, m02: 0, m03: 0, m04: x,
+            m11: 0, m12: 1, m13: 0, m14: y,
+            m21: 0, m22: 0, m23: 1, m24: z,
+            m31: 0, m32: 0, m33: 0, m34: 1,
+        }
+    }
+
+    function matrix4_rotation_x(angle: number) {
+        const cos = Math.cos(-angle);
+        const sin = Math.sin(-angle);
+        return {
+            c0: vector4(1, 0, 0, 0),
+            c1: vector4(0, cos, sin, 0),
+            c2: vector4(0, -sin, cos, 0),
+            c3: vector4(0, 0, 0, 1),
+            m01: 1, m02: 0, m03: 0, m04: 0,
+            m11: 0, m12: cos, m13: -sin, m14: 0,
+            m21: 0, m22: sin, m23: cos, m24: 0,
+            m31: 0, m32: 0, m33: 0, m34: 1,
+        }
+    }
+
+    function matrix4_rotation_y(angle: number) {
+        const cos = Math.cos(-angle);
+        const sin = Math.sin(-angle);
+        return {
+            c0: vector4(cos, 0, -sin, 0),
+            c1: vector4(0, 1, 0, 0),
+            c2: vector4(sin, 0, 1, 0),
+            c3: vector4(0, 0, 0, 1),
+            m01: cos, m02: 0, m03: sin, m04: 0,
+            m11: 0, m12: 1, m13: 0, m14: 0,
+            m21: -sin, m22: 0, m23: cos, m24: 0,
+            m31: 0, m32: 0, m33: 0, m34: 1,
+        }
+    }
+
+    function matrix4_rotation_z(angle: number) {
+        const cos = Math.cos(-angle);
+        const sin = Math.sin(-angle);
+        return {
+            c0: vector4(cos, sin, 0, 0),
+            c1: vector4(-sin, cos, 0, 0),
+            c2: vector4(0, 0, 1, 0),
+            c3: vector4(0, 0, 0, 1),
+            m01: cos, m02: -sin, m03: 0, m04: 0,
+            m11: sin, m12: cos, m13: 0, m14: 0,
+            m21: 0, m22: 0, m23: 1, m24: 0,
+            m31: 0, m32: 0, m33: 0, m34: 1,
+        }
+    }
+
+    function matrix_mul_vector(m: vmath.matrix4, v: vmath.vector4) {
+        return {
+            x: m.m01 * v.x + m.m02 * v.y + m.m03 * v.z + m.m04 * v.w,
+            y: m.m11 * v.x + m.m12 * v.y + m.m13 * v.z + m.m14 * v.w,
+            z: m.m21 * v.x + m.m22 * v.y + m.m23 * v.z + m.m24 * v.w,
+            w: m.m31 * v.x + m.m32 * v.y + m.m33 * v.z + m.m34 * v.w,
+        }
+    }
+
     function vector3_0() {
         return { x: 0, y: 0, z: 0 };
     }
@@ -242,6 +368,8 @@ export function vmath_module() {
 
     return {
         vector3, vector4, length, normalize, dot, cross, mul_per_element, lerp, slerp,
-        quat, quat_from_axis_angle, euler_to_quat, rotate,quat_rotation_z
+        quat, quat_from_axis_angle, euler_to_quat, rotate, quat_rotation_z,
+        matrix4, matrix4_translation, matrix4_rotation_x, matrix4_rotation_y, matrix4_rotation_z,
+        matrix_mul_vector
     };
 }

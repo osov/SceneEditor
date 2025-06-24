@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import { EQ, TAU } from "../../modules/utils"
-import { Vector } from "../../utils/physic/Geometry"
+import { Vector } from "@editor/utils/geometry/vector"
+import { clone } from "@editor/utils/geometry/utils"
 
 describe('Vector', function () {
   it('Default constructor creates Vector(0, 0)', function () {
@@ -15,7 +16,7 @@ describe('Vector', function () {
   })
   it('.clone() creates new instance of Vector', function () {
     let v1 = Vector(2, 1)
-    let v2 = v1.clone()
+    let v2 = clone(v1)
     expect(v1.x).toEqual(v2.x)
     expect(v1.y).toEqual(v2.y)
     expect(v2).not.toEqual(v1)
@@ -90,7 +91,7 @@ describe('Vector', function () {
   })
   it('.invert() returns inverted vector', function () {
     let v = Vector(2, 1)
-    let v1 = v.invert()
+    let v1 = clone(v).invert()
     expect(v1.x).toEqual(-2)
     expect(v1.y).toEqual(-1)
   })

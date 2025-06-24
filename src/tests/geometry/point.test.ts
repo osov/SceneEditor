@@ -1,5 +1,12 @@
+import { Arc } from "@editor/utils/geometry/arc"
+import { Circle } from "@editor/utils/geometry/circle"
+import { Line } from "@editor/utils/geometry/line"
+import { Matrix } from "@editor/utils/geometry/matrix"
+import { Point } from "@editor/utils/geometry/point"
+import { Segment } from "@editor/utils/geometry/segment"
+import { clone, points2norm } from "@editor/utils/geometry/utils"
+import { Vector } from "@editor/utils/geometry/vector"
 import { describe, expect, it } from "bun:test"
-import { Arc, Circle, Line, Matrix, Point, points2norm, Segment, Vector } from "../../utils/physic/Geometry"
 
 describe('Point', function () {
   it('Default constructor creates new (0,0) point', function () {
@@ -14,7 +21,7 @@ describe('Point', function () {
   })
   it('Method clone creates new instance of Point', function () {
     let point1 = Point(2, 1)
-    let point2 = point1.clone()
+    let point2 = clone(point1)
     expect(point2).not.toEqual(point1)
     expect(point2.x).toEqual(point1.x)
     expect(point2.y).toEqual(point1.y)
@@ -33,7 +40,7 @@ describe('Point', function () {
   })
   it('Method translate returns new point translated by (dx, dy)', function () {
     let point = Point(1, 1)
-    let tpoint = point.translate(Vector(2, 0))
+    let tpoint = point.translate(2, 0)
     expect(tpoint.x).toEqual(3)
     expect(tpoint.y).toEqual(1)
   })
@@ -55,7 +62,7 @@ describe('Point', function () {
   it('Method translate returns new point translated by vector', function () {
     let point = Point(1, 1)
     let v = Vector(2, 0)
-    let tpoint = point.translate(v)
+    let tpoint = point.translate(v.x, v.y)
     expect(tpoint.x).toEqual(3)
     expect(tpoint.y).toEqual(1)
   })
@@ -78,9 +85,9 @@ describe('Point', function () {
     let pt = Point(4, 1)
     let pc = Point(1, 1)
     let m = Matrix()
-      .translate(Vector(pc.x, pc.y))
+      .translate(pc.x, pc.y)
       .rotate((3 * Math.PI) / 2)
-      .translate(Vector(-pc.x, -pc.y))
+      .translate(-pc.x, -pc.y)
     let transformed_pt = pt.transform(m)
     let expected_pt = Point(1, -2)
     expect(transformed_pt.equalTo(expected_pt)).toBe(true)
@@ -131,7 +138,7 @@ describe('Point', function () {
   describe('#Point.On inclusion queries', function () {
     it('Method "on" returns true if point checked with same points', function () {
       let pt = Point(0, 1)
-      expect(pt.on(pt.clone())).toEqual(true)
+      expect(pt.on(clone(pt))).toEqual(true)
     })
     it('Method "on" returns true if point belongs to line', function () {
       let pt1 = Point(1, 1)
@@ -163,13 +170,9 @@ describe('Point', function () {
   it('Method leftTo returns true if point is on the "left" semi plane, which is the side of the normal vector', function () {
     let pt0 = Point(-1, -1)
     const norm = points2norm(pt0, Point(1, 1));
-    console.log('\n\n\n')
-    console.log(norm.x, norm.y)
     let line = Line(pt0, norm)
     let pt1 = Point(-2, 2)
     let pt2 = Point(3, 1)
-    console.log(pt1.leftTo(line))
-    console.log(pt2.leftTo(line))
     expect(pt1.leftTo(line)).toEqual(true)
     expect(pt2.leftTo(line)).toEqual(false)
   })

@@ -1,7 +1,15 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { Arc, Box, IArc, ISegment, Point, PointLike, Segment } from "./Geometry";
+
+import { Arc } from "../geometry/arc";
+import { Box } from "../geometry/box";
+import { Point } from "../geometry/point";
+import { Segment } from "../geometry/segment";
+import { PointLike, ISegment, IArc } from "../geometry/types";
+import { clone } from "../geometry/utils";
+import { Vector } from "../geometry/vector";
 import { Aabb, createSpatialHash } from "../spatial_hash";
 import { GridParams, ObstacleTileData, SubGridParams } from "./types";
+import { radToDeg } from "./utils";
 
 
 
@@ -216,13 +224,18 @@ export function ObstaclesManager(hash_cell_size: number) {
         return list;
     }
 
+    const normal_vec = Vector();
+
     function build_offsets(obstacle: ISegment, offset: number, build_option: OffsetBuildOption = "all") {
         const result: (ISegment | IArc)[] = [];
-        const tangent = obstacle.vector().normalize();
-        const normal = tangent.rotate90CW();
+        const obst_vec = obstacle.vector();
+        normal_vec.x = obst_vec.x;
+        normal_vec.y = obst_vec.y;
+        normal_vec.normalize().rotate90CW().multiply(offset);
         if (build_option == "all" || build_option == "segment") {
-            result.push(obstacle.translate(normal.multiply(offset)));
-            result.push(obstacle.translate(normal.multiply(-offset)));
+            result.push(clone(obstacle).translate(normal_vec.x, normal_vec.y));
+            normal_vec.invert()
+            result.push(clone(obstacle).translate(normal_vec.x, normal_vec.y));
         }
 
         if (build_option == "all" || build_option == "arc") {

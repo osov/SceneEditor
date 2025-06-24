@@ -1,5 +1,5 @@
 import { WORLD_SCALAR } from "../../config";
-import { IArc, IPoint, PointLike, ISegment } from "./Geometry";
+import { ISegment, IPoint, IArc, PointLike } from "../geometry/types";
 
 
 /**
@@ -23,7 +23,7 @@ export enum NextMoveType {
 
 export type PredictNextMoveData = {
     next_do: NextMoveType, 
-    way_required: ISegment,
+    path_required: ISegment,
     lenght_remains: number,
     vertice_to_bypass?: IPoint,
     prev_vertice?: IPoint,
@@ -163,10 +163,10 @@ export const PF_default_settings: PathFinderSettings = {
 
     // Настройки геометрического поиска пути
     target_max_correction: 20 * WORLD_SCALAR,
-    max_checks_number: 80,
-    max_depth: 13,
+    max_checks_number: 100,
+    max_depth: 15,
     max_way_length: 2100 * WORLD_SCALAR,
-    max_update_time: 90,
+    max_update_time: 150,
 
     debug: true,
 };

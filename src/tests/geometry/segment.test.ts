@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test"
-import { Circle, Line, Point, points2norm, Segment, Vector } from "../../utils/physic/Geometry"
 import { EQ } from "../../modules/utils"
+import { Line } from "@editor/utils/geometry/line"
+import { Circle } from "@editor/utils/geometry/circle"
+import { Point } from "@editor/utils/geometry/point"
+import { Segment } from "@editor/utils/geometry/segment"
+import { clone, points2norm } from "@editor/utils/geometry/utils"
+import { Vector } from "@editor/utils/geometry/vector"
 
 describe('Segment', function () {
   it('Constructor Segment(start, end) creates new instance of Segment', function () {
@@ -24,7 +29,7 @@ describe('Segment', function () {
     let start = Point(1, 1)
     let end = Point(2, 3)
     let segment = Segment(start, end)
-    let segment_clone = segment.clone()
+    let segment_clone = clone(segment)
     expect(segment_clone.start.x).toEqual(segment.start.x)
     expect(segment_clone.start.y).toEqual(segment.start.y)
     expect(segment_clone.end.x).toEqual(segment.end.x)
@@ -74,7 +79,7 @@ describe('Segment', function () {
     let seg = Segment(Point(0, 0), Point(3, 3))
     let v = Vector(-1, -1)
     let seg_t = Segment(Point(-1, -1), Point(2, 2))
-    let seg_d = seg.translate(v)
+    let seg_d = seg.translate(v.x, v.y)
     expect(seg_d.start.x).toEqual(seg_t.start.x)
     expect(seg_d.end.x).toEqual(seg_t.end.x)
     expect(seg_d.start.y).toEqual(seg_t.start.y)
@@ -85,15 +90,17 @@ describe('Segment', function () {
     let seg_plus_pi_2 = Segment(Point(3, -3), Point(3, 3))
     let seg_minus_pi_2 = Segment(Point(3, 3), Point(3, -3))
     let center = seg.box().center()
-    expect(seg.rotate(Math.PI / 2, center).equalTo(seg_plus_pi_2)).toBe(true)
-    expect(seg.rotate(-Math.PI / 2, center).equalTo(seg_minus_pi_2)).toBe(true)
+    expect(clone(seg).rotate(Math.PI / 2, center).equalTo(seg_plus_pi_2)).toBe(true)
+    expect(clone(seg).rotate(-Math.PI / 2, center).equalTo(seg_minus_pi_2)).toBe(true)
   })
   it('Can rotate by angle around given point', function () {
     let seg = Segment(Point(1, 1), Point(3, 3))
+    let seg_1 = clone(seg).rotate(Math.PI / 2, seg.start)
+    let seg_2 = clone(seg).rotate(-Math.PI / 2, seg.start)
     let seg_plus_pi_2 = Segment(Point(1, 1), Point(-1, 3))
     let seg_minus_pi_2 = Segment(Point(1, 1), Point(3, -1))
-    expect(seg.rotate(Math.PI / 2, seg.start).equalTo(seg_plus_pi_2)).toBe(true)
-    expect(seg.rotate(-Math.PI / 2, seg.start).equalTo(seg_minus_pi_2)).toBe(true)
+    expect(seg_1.equalTo(seg_plus_pi_2)).toBe(true)
+    expect(seg_2.equalTo(seg_minus_pi_2)).toBe(true)
   })
   describe('#Segment.Intersect', function () {
     it('Intersection with Segment - not parallel segments case (one point)', function () {

@@ -1,5 +1,11 @@
+import { Arc } from "@editor/utils/geometry/arc"
+import { Circle } from "@editor/utils/geometry/circle"
+import { CW } from "@editor/utils/geometry/const"
+import { Line } from "@editor/utils/geometry/line"
+import { Point } from "@editor/utils/geometry/point"
+import { clone, points2norm } from "@editor/utils/geometry/utils"
+import { Vector } from "@editor/utils/geometry/vector"
 import { describe, expect, it } from "bun:test"
-import { Arc, Circle, CW, Line, Point, points2norm, Vector } from "../../utils/physic/Geometry"
 
 describe('Line', function () {
   it('Default constructor creates line that is equal to axe x', function () {
@@ -22,7 +28,7 @@ describe('Line', function () {
     let pt2 = Point(3,3)
     const norm = points2norm(pt1, pt2);
     let l = Line(pt1, norm)
-    let l1 = l.clone()
+    let l1 = clone(l)
     expect(l1.pt).toEqual(l.pt)
     expect(l1.norm).toEqual(l.norm)
     expect(l1 === l).toBe(false)

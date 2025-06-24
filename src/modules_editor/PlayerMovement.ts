@@ -4,24 +4,13 @@ import { EQ_0 } from '../modules/utils';
 import { IObjectTypes } from '../render_engine/types';
 import { WORLD_SCALAR } from '../config';
 import { PathFinder } from '../utils/physic/PathFinder';
-import {
-    point,
-    vector_from_points as vector,
-    segment,
-    arc,
-    Point,
-    Segment,
-    vec_angle,
-    PointLike,
-    Arc,
-    POINT_EMPTY,
-    IPoint,
-    IArc,
-    ISegment,
-} from '../utils/physic/Geometry';
 import { Line as GeomLine, LineBasicMaterial } from 'three';
 import { LinesDrawer } from '../utils/physic/LinesDrawer';
 import { PlayerMovementSettings, movement_default_settings, ControlType, PathData, COLORS } from '@editor/modules/types';
+import { Arc } from '@editor/utils/geometry/arc';
+import { POINT_EMPTY } from '@editor/utils/geometry/const';
+import { IPoint, IArc, ISegment, PointLike } from '@editor/utils/geometry/types';
+import { point, vector_from_points as vector, segment, vec_angle, clone } from '@editor/utils/geometry/utils';
 
 
 function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
@@ -257,8 +246,8 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                     const start = Camera.screen_to_world(stick_start.x, stick_start.y);
                     const end = Camera.screen_to_world(stick_end.x, stick_end.y);
                     if (settings.debug) {
-                        LD.draw_arc(arc(point(start.x, start.y), 3, 0, Math.PI * 2), joystick, COLORS.RED);
-                        LD.draw_arc(arc(point(end.x, end.y), 3, 0, Math.PI * 2), joystick, COLORS.LIGHT_RED);
+                        LD.draw_arc(Arc(point(start.x, start.y), 3, 0, Math.PI * 2), joystick, COLORS.RED);
+                        LD.draw_arc(Arc(point(end.x, end.y), 3, 0, Math.PI * 2), joystick, COLORS.LIGHT_RED);
                     }
 
                 }
@@ -276,8 +265,8 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                 clear_way()
                 return;
             }
-            last_check_dir = current_dir.clone();
-            last_check_target = target.clone();
+            last_check_dir = clone(current_dir);
+            last_check_target = clone(target);
             path_data = PF.update_path(way_required, collision_radius, pointer_control);
             
             LD.clear_container(player_way);

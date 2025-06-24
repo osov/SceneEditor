@@ -1,13 +1,19 @@
 import { describe, expect, it } from "bun:test"
-import { Arc, Box, CCW, circle, Circle, CW, IPoint, Line, Matrix, Point, point, Segment, vector } from "../../utils/physic/Geometry"
 import { DP_TOL, EQ, TAU } from "../../modules/utils"
+import { Arc } from "@editor/utils/geometry/arc"
+import { Box } from "@editor/utils/geometry/box"
+import { Circle } from "@editor/utils/geometry/circle"
+import { CW, CCW } from "@editor/utils/geometry/const"
+import { Matrix } from "@editor/utils/geometry/matrix"
+import { Point } from "@editor/utils/geometry/point"
+import { Segment } from "@editor/utils/geometry/segment"
+import { IPoint } from "@editor/utils/geometry/types"
+import { vector } from "@editor/utils/geometry/utils"
+import { Line } from "@editor/utils/geometry/line"
 
 describe('Arc', function () {
   it('Default constructor constructs full circle unit arc with zero center and sweep 2PI CW', function () {
     let arc = Arc()
-    console.log(arc.sweep());
-    console.log(TAU);
-    console.log(arc.clockwise);
     expect(arc.sweep()).toEqual(TAU)
     expect(arc.clockwise).toEqual(CW)
   })
