@@ -16,7 +16,7 @@ export function Box(xmin = Infinity, ymin = Infinity, xmax = -Infinity, ymax = -
     const b: IBox = {
         xmin, ymin, xmax, ymax, name, center, box, width, height, low, high,
         contains, intersect, merge, equalTo, lessThan,
-        translate, rotate, scale, transform, toPoints, toSegments
+        translate, scale, transform, toPoints, toSegments
     };
 
     function contains(other: IPoint): boolean {
@@ -65,10 +65,6 @@ export function Box(xmin = Infinity, ymin = Infinity, xmax = -Infinity, ymax = -
             Segment(pts[2], pts[3]),
             Segment(pts[3], pts[0]),
         ];
-    }
-
-    function rotate(angle: number, _center: PointLike | undefined): IBox {
-        throw new Error('wrong operation');
     }
 
     function transform(_m: IMatrix | null) {

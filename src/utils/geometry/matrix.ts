@@ -27,7 +27,7 @@ export function Matrix(_a = 1, _b = 0, _c = 0, _d = 1, _tx = 0, _ty = 0) {
     matrix.c3.y = ty;
 
     const m: IMatrix = {
-        a, b, c, d, tx, ty,
+        a, b, c, d, tx, ty, matrix,
         transform,
         multiply,
         rotate,

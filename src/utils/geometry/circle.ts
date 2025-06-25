@@ -4,7 +4,7 @@ import { MATRIX_INDENTITY, POINT_EMPTY, ShapeNames } from "./const";
 import { reverse, point2circle, circle2circle, circle2line, segment2circle, arc2circle } from "./distance";
 import { intersectLine2Circle, intersectSegment2Circle, intersectCircle2Circle, intersectCircle2Box, intersectArc2Circle } from "./intersect";
 import { Matrix } from "./matrix";
-import { IArc, IBox, ICircle, ILine, IPoint, ISegment, IVector, PointLike, Shape } from "./types";
+import { IArc, IBox, ICircle, ILine, IPoint, ISegment, PointLike, Shape } from "./types";
 import { clone, clone_matrix, LE } from "./utils";
 
 
@@ -14,7 +14,7 @@ export function Circle(pc: IPoint, r = 0) {
     let box = () => Box(c.pc.x - c.r, c.pc.y - c.r, c.pc.x + c.r, c.pc.y + c.r);
     const c: ICircle = {
         pc, r, center, name, box,
-        scale, toArc, transform, contains, translate, rotate, intersect, distanceTo
+        scale, toArc, transform, contains, translate, intersect, distanceTo
     };
 
     function toArc(counterclockwise = true) {
@@ -68,11 +68,6 @@ export function Circle(pc: IPoint, r = 0) {
 
     function translate(x: number, y: number) {
         return transform(clone_matrix(MATRIX_INDENTITY).translate(x, y));
-    }
-
-    function rotate(angle: number, _center: PointLike | undefined) {
-        const center = (_center) ? _center : clone(POINT_EMPTY);
-        return transform(clone_matrix(MATRIX_INDENTITY).rotate(angle, center));
     }
 
     function intersect(_shape: Shape<any>): IPoint[] {

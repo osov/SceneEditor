@@ -7,7 +7,7 @@ import { CCW, CW, MATRIX_REFLECTION_X, MATRIX_INDENTITY, MATRIX_REFLECTION_Y, PO
 import { Point } from "../geometry/point";
 import { Segment } from "../geometry/segment";
 import { ISegment, IPoint, IArc, IVector } from "../geometry/types";
-import { vector_from_points, vec_angle, vector, segment, clone } from "../geometry/utils";
+import { vector_from_points, vec_angle, vector, segment, clone, rotate_vec_90CW, rotate_vec_90CCW, invert_vec, rotate } from "../geometry/utils";
 import { Vector } from "../geometry/vector";
 import { radToDeg } from "./utils";
 
@@ -70,6 +70,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         const R = collision_radius + collision_min_error;
         let i = 0;
         let point_found = false;
+        log('find_clear_space')
         while (i < checks_number && !point_found) {
             i++;
             const close_obstacles = obstacles_manager.get_obstacles(
@@ -86,7 +87,8 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                     const dist = dist_data[0];
                     const intersect_dist = R - dist;
                     if (dist <= R && intersect_dist <= max_correction) {
-                        const vec = clone(segment.vector()).normalize().multiply(intersect_dist).invert();
+                        const vec = clone(segment.vector()).normalize().multiply(intersect_dist);
+                        invert_vec(vec);
                         sum_vec.add(vec);
                     }
                 }
@@ -354,7 +356,9 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         const vec = vector_from_points(start, target_vertice);
         let angle = Math.asin(collision_radius / vec.length()) + Math.PI / 2;
         angle = (clockwise) ? angle : -angle;
-        vec.normalize().rotate(angle).multiply(collision_radius);
+        vec.normalize();
+        rotate(vec, angle)
+        vec.multiply(collision_radius);
         const way_end = clone(target_vertice).translate(vec.x, vec.y);
         const segment = Segment(start, way_end);
         const node: PathNode = {
@@ -601,12 +605,15 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                 // const obstacle_norm = (!clockwise) ? obstacle_vec.rotate90CCW() : obstacle_vec.rotate90CW();
                 const v2v_vec = vert_to_vert.vector();
                 const vec_S = clone(v2v_vec).normalize().multiply(R);
-                const vec_S_norm = (!clockwise) ? vec_S.rotate90CCW() : vec_S.rotate90CW();
+                if (!clockwise) 
+                    rotate_vec_90CCW(vec_S);
+                else 
+                    rotate_vec_90CW(vec_S)
 
                 // Конец пути в точке:
-                const end_S_point = clone(same_side_touch_vertice).translate(vec_S_norm.x, vec_S_norm.y);
+                const end_S_point = clone(same_side_touch_vertice).translate(vec_S.x, vec_S.y);
                 const start_angle = arc_start_vec.slope();
-                let end_angle = vec_S_norm.slope();
+                let end_angle = vec_S.slope();
 
                 // TODO: Возможно стоит останавливаться до столкновения с самим обходимым препятствием
                 // end_angle = (obstacle_block_angle < end_angle && end_angle < obstacle_block_angle + Math.PI) ? obstacle_block_angle : end_angle;
@@ -643,12 +650,16 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
 
             let angle = Math.acos(2 * R / vert_to_vert.length());
             const vec_D = clone(vert_to_vert.vector()).normalize().multiply(R);
-            const vec_D_norm = (!clockwise) ? vec_D.rotate(-angle) : vec_D.rotate(angle);
-            let end_angle = vec_D_norm.slope();
+            if (!clockwise) 
+                rotate(vec_D, -angle);
+            else
+                rotate(vec_D, angle);
+
+            let end_angle = vec_D.slope();
 
             // Конец пути в точке:
-            vec_D_norm.invert();
-            const end_D_point = clone(diff_side_touch_vertice).translate(vec_D_norm.x, vec_D_norm.y);
+            invert_vec(vec_D);
+            const end_D_point = clone(diff_side_touch_vertice).translate(vec_D.x, vec_D.y);
             const start_angle = arc_start_vec.slope();
             // end_angle = (obstacle_block_angle < end_angle && end_angle < obstacle_block_angle + Math.PI) ? obstacle_block_angle : end_angle;
             const arc_clockwise = !clockwise;
@@ -679,13 +690,19 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
      */
     function make_way_bypass_vertice(start: IPoint, target: IPoint, vertice: IPoint, clockwise = CW, parent_node?: PathNode, collision_radius?: number) {
         const R = (collision_radius) ? collision_radius : start.distanceTo(vertice)[0];
+        log(vertice)
+        log(start)
         const arc_start_vec = vector_from_points(vertice, start);
         const vert_to_target = Segment(vertice, target);
         const angle = Math.acos(R / vert_to_target.length()) + DP_TOL;
         const vec = clone(vert_to_target.vector()).normalize().multiply(R);
-        const vec_norm = (clockwise) ? vec.rotate(angle) : vec.rotate(-angle);
+        if (!clockwise) 
+            rotate(vec, -angle);
+        else
+            rotate(vec, angle);
+
         const start_angle = arc_start_vec.slope();
-        const end_angle = vec_norm.slope();
+        const end_angle = vec.slope();
         const arc_clockwise = !clockwise;
 
         const arc = Arc(vertice, arc_start_vec.length(), start_angle, end_angle, arc_clockwise);
@@ -737,9 +754,11 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         let correction_angle = 0;
         const pos_to_vert_vec = vector_from_points(pos, vertice);
         const vert_to_tar_vec = vector_from_points(vertice, way_req.end);
-        const vert_to_tar_vec_inver = clone(vert_to_tar_vec).invert();
+        const vert_to_tar_vec_inver = clone(vert_to_tar_vec)
+        invert_vec(vert_to_tar_vec_inver);
         const target_to_pos_vec = way_req.vector();
-        const pos_to_target_vec = clone(target_to_pos_vec).invert();
+        const pos_to_target_vec = clone(target_to_pos_vec)
+        invert_vec(pos_to_target_vec);
         correction_angle = Math.asin(pos_to_vert_vec.length() / vert_to_tar_vec.length()) - Math.abs(vec_angle(pos_to_target_vec, vert_to_tar_vec_inver));
         return correction_angle;
     }
@@ -753,7 +772,13 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         else if (data.control_type == ControlType.FP) {
             correction_angle = _get_correction_angle(data.path_required.start, data.vertice_to_bypass as IPoint, data.path_required);
         }
-        if (correction_angle != 0) end_vec = (rotate_dir) ? end_vec.rotate(-correction_angle) : end_vec.rotate(correction_angle);
+        if (correction_angle != 0) {
+            if (rotate_dir) 
+                rotate(end_vec, -correction_angle)
+            else
+                rotate(end_vec, correction_angle);
+        }
+
         // log('correction_angle',  radToDeg(correction_angle));
         // log('corrected_end_angle',  radToDeg(end_vec.slope));
         return end_vec;
@@ -767,16 +792,29 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     function bypass_vertice(way: (ISegment | IArc)[], collision_radius: number, data: PredictNextMoveData) {
         const obstacle = data.obstacle_to_slide as ISegment;
         const vertice = data.vertice_to_bypass as IPoint;
-        let obstacle_vec_copy = clone(obstacle.vector());
-        obstacle_vec_copy = (vertice.equalTo(obstacle.start)) ? obstacle_vec_copy : obstacle_vec_copy.invert();
         const s_pos = data.path_required.start;
         const pos_to_vertice_vec = vector_from_points(s_pos, vertice);
         const dir_diff_start_angle = vec_angle(data.path_required.vector(), pos_to_vertice_vec);
         const rotate_dir = (dir_diff_start_angle < 0) ? CW : CCW;
-        let obstacle_limit_vec = (rotate_dir) ? obstacle_vec_copy.rotate90CW() : obstacle_vec_copy.rotate90CCW();
-        let start_vec = clone(pos_to_vertice_vec).invert();
-        const path_vec_copy = clone(data.path_required.vector())
-        let end_vec = (rotate_dir) ? path_vec_copy.rotate90CW() : path_vec_copy.rotate90CCW();
+
+        let obstacle_limit_vec = clone(obstacle.vector());
+        if (vertice.equalTo(obstacle.end)) 
+            invert_vec(obstacle_limit_vec);
+        if (rotate_dir) 
+            rotate_vec_90CW(obstacle_limit_vec);
+        else
+            rotate_vec_90CCW(obstacle_limit_vec);
+
+        let start_vec = clone(pos_to_vertice_vec)
+        invert_vec(start_vec);
+
+        let end_vec = clone(data.path_required.vector())
+
+        if (rotate_dir) 
+            rotate_vec_90CW(end_vec);
+        else
+            rotate_vec_90CCW(end_vec);
+
         let _end_angle = end_vec.slope();
         let allowed_way = undefined;
 
@@ -861,7 +899,8 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         const obstacle = data.obstacle_to_slide as ISegment;
         const s_pos = data.path_required.start;
         const distance_segment = s_pos.distanceTo(obstacle)[1];
-        const vec = clone(distance_segment.vector()).invert();
+        const vec = clone(distance_segment.vector());
+        invert_vec(vec);
         const slide_l = segment(distance_segment.end.x, distance_segment.end.y, obstacle.start.x, obstacle.start.y);
         const slide_r = segment(distance_segment.end.x, distance_segment.end.y, obstacle.end.x, obstacle.end.y);
         const angle_l = (!EQ_0(slide_l.length())) ? Math.abs(vec_angle(data.path_required.vector(), slide_l.vector())) : 2 * Math.PI;
@@ -1121,7 +1160,9 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     }
 
     function way_from_angle(cp: IPoint, angle: number, length: number) {
-        const dir = Vector(1, 0).rotate(angle).multiply(length);
+        const dir = Vector(1, 0);
+        rotate(dir, angle);
+        dir.multiply(length);
         const ep = clone(cp).translate(dir.x, dir.y);
         return Segment(Point(cp.x, cp.y), Point(ep.x, ep.y));
     }
@@ -1180,22 +1221,22 @@ export function test_batch(PF: PathFinder, collision_radius: number, way_require
     const _obstacles: ISegment[] = [];
     const vec = vector_from_points(POINT_EMPTY, pivot);
     for (const obstacle of obstacles) {
-        _obstacles.push(clone(obstacle)
-            .translate(0, 0)
-            .transform((reflect_X) ? MATRIX_REFLECTION_X : MATRIX_INDENTITY)
-            .transform((reflect_Y) ? MATRIX_REFLECTION_Y : MATRIX_INDENTITY)
-            .rotate(angle, POINT_EMPTY)
-            .translate(vec.x, vec.y));
+        const obst = clone(obstacle);
+        obst.transform((reflect_X) ? MATRIX_REFLECTION_X : MATRIX_INDENTITY)
+        obst.transform((reflect_Y) ? MATRIX_REFLECTION_Y : MATRIX_INDENTITY)
+        rotate(obst, angle, POINT_EMPTY)
+        obst.translate(vec.x, vec.y);
+        _obstacles.push(obst);
     }
     const _way_required = clone(way_required)
-        .translate(0, 0)
-        .transform((reflect_X) ? MATRIX_REFLECTION_X : MATRIX_INDENTITY)
-        .transform((reflect_Y) ? MATRIX_REFLECTION_Y : MATRIX_INDENTITY)
-        .rotate(angle, POINT_EMPTY)
-        .translate(vec.x, vec.y);
+    _way_required.transform((reflect_X) ? MATRIX_REFLECTION_X : MATRIX_INDENTITY)
+    _way_required.transform((reflect_Y) ? MATRIX_REFLECTION_Y : MATRIX_INDENTITY)
+    rotate(_way_required, angle, POINT_EMPTY)
+    _way_required.translate(vec.x, vec.y);
 
     PF.obstacles_manager.set_obstacles(_obstacles);
-    const path_data = PF.update_path(_way_required, collision_radius, ControlType.GP);
+    let path_data: PathData = { path: [], length: 0 }
+    path_data = PF.update_path(_way_required, collision_radius, ControlType.GP);
     let full_way = path_data.path;
     return path_data;
 }

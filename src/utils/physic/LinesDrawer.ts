@@ -11,7 +11,7 @@ import { ISegment, IArc, PointLike } from '../geometry/types';
 export type TLinesDrawer = ReturnType<typeof LinesDrawer>;
 
 export function LinesDrawer() {
-    const DRAWN_ARC_EDGES_AMOUNT = 60;
+    const DRAWN_ARC_EDGES_AMOUNT = 40;
 
     function draw_line(segment: ISegment, container: GoContainer, color = 0x22ff77) {
         const a = segment.start;

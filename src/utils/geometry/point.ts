@@ -7,13 +7,16 @@ import { EQ, LT, EQ_0, vector_from_points, GT, clone, clone_matrix } from "./uti
 import { Vector } from "./vector";
 
 
+const tm = vmath.matrix4();
+const tv = vmath.vector3();
+
 export function Point(x = 0, y = 0) {
     const name = ShapeNames.Point;
     let center = () => Point(p.x, p.y);
     let box = () => Box(p.x, p.y, p.x, p.y);
     const p: IPoint = {
         x, y, name, center,
-        box, translate, rotate, scale,
+        box, translate, scale,
         contains, transform, equalTo, lessThan,
         projectionOn, leftTo, distanceTo, on,
     };
@@ -43,11 +46,6 @@ export function Point(x = 0, y = 0) {
         p.x = p.x + x;
         p.y = p.y + y;
         return p;
-    }
-
-    function rotate(angle: number, _center: PointLike | undefined) {
-        const center = (_center) ? _center : clone(POINT_EMPTY);
-        return transform(clone_matrix(MATRIX_INDENTITY).rotate(angle, center));
     }
 
     function scale(a: unknown, b?: unknown) {

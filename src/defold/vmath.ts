@@ -57,10 +57,9 @@ declare global {
         export function matrix4(): vmath.matrix4
 
         export function matrix4_translation(position: vmath.vector3 | vmath.vector4): vmath.matrix4
-        export function matrix4_rotation_x(angle: number): vmath.matrix4
-        export function matrix4_rotation_y(angle: number): vmath.matrix4
         export function matrix4_rotation_z(angle: number): vmath.matrix4
-        export function matrix_mul_vector(m: vmath.matrix4, v: vmath.vector4): vmath.vector4
+        export function matrix_mult_vector(m: vmath.matrix4, v: vmath.vector4): vmath.vector4
+        export function mult_matrices(m1: vmath.matrix4, m2: vmath.matrix4): vmath.matrix4;
 
         export function length(v: vmath.vector3): number
         export function normalize(v: vmath.vector3): vmath.vector3
@@ -121,39 +120,9 @@ export function vmath_module() {
         }
     }
 
-    function matrix4_rotation_x(angle: number) {
-        const cos = Math.cos(-angle);
-        const sin = Math.sin(-angle);
-        return {
-            c0: vector4(1, 0, 0, 0),
-            c1: vector4(0, cos, sin, 0),
-            c2: vector4(0, -sin, cos, 0),
-            c3: vector4(0, 0, 0, 1),
-            m01: 1, m02: 0, m03: 0, m04: 0,
-            m11: 0, m12: cos, m13: -sin, m14: 0,
-            m21: 0, m22: sin, m23: cos, m24: 0,
-            m31: 0, m32: 0, m33: 0, m34: 1,
-        }
-    }
-
-    function matrix4_rotation_y(angle: number) {
-        const cos = Math.cos(-angle);
-        const sin = Math.sin(-angle);
-        return {
-            c0: vector4(cos, 0, -sin, 0),
-            c1: vector4(0, 1, 0, 0),
-            c2: vector4(sin, 0, 1, 0),
-            c3: vector4(0, 0, 0, 1),
-            m01: cos, m02: 0, m03: sin, m04: 0,
-            m11: 0, m12: 1, m13: 0, m14: 0,
-            m21: -sin, m22: 0, m23: cos, m24: 0,
-            m31: 0, m32: 0, m33: 0, m34: 1,
-        }
-    }
-
     function matrix4_rotation_z(angle: number) {
-        const cos = Math.cos(-angle);
-        const sin = Math.sin(-angle);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
         return {
             c0: vector4(cos, sin, 0, 0),
             c1: vector4(-sin, cos, 0, 0),
@@ -166,12 +135,82 @@ export function vmath_module() {
         }
     }
 
-    function matrix_mul_vector(m: vmath.matrix4, v: vmath.vector4) {
+    function matrix_mult_vector(m: vmath.matrix4, v: vmath.vector4) {
         return {
             x: m.m01 * v.x + m.m02 * v.y + m.m03 * v.z + m.m04 * v.w,
             y: m.m11 * v.x + m.m12 * v.y + m.m13 * v.z + m.m14 * v.w,
             z: m.m21 * v.x + m.m22 * v.y + m.m23 * v.z + m.m24 * v.w,
             w: m.m31 * v.x + m.m32 * v.y + m.m33 * v.z + m.m34 * v.w,
+        }
+    }
+
+    function mult_matrices(m1: vmath.matrix4, m2: vmath.matrix4) {
+        const m01 =  m1.m01 * m2.m01 + m1.m02 * m2.m11 + m1.m03 * m2.m21 + m1.m04 * m2.m31;
+        const m02 =  m1.m01 * m2.m02 + m1.m02 * m2.m12 + m1.m03 * m2.m22 + m1.m04 * m2.m32;
+        const m03 =  m1.m01 * m2.m03 + m1.m02 * m2.m13 + m1.m03 * m2.m23 + m1.m04 * m2.m33;
+        const m04 =  m1.m01 * m2.m04 + m1.m02 * m2.m14 + m1.m03 * m2.m24 + m1.m04 * m2.m34;
+
+        const m11 =  m1.m11 * m2.m01 + m1.m12 * m2.m11 + m1.m13 * m2.m21 + m1.m14 * m2.m31;
+        const m12 =  m1.m11 * m2.m02 + m1.m12 * m2.m12 + m1.m13 * m2.m22 + m1.m14 * m2.m32;
+        const m13 =  m1.m11 * m2.m03 + m1.m12 * m2.m13 + m1.m13 * m2.m23 + m1.m14 * m2.m33;
+        const m14 =  m1.m11 * m2.m04 + m1.m12 * m2.m14 + m1.m13 * m2.m24 + m1.m14 * m2.m34;
+
+        const m21 =  m1.m21 * m2.m01 + m1.m22 * m2.m11 + m1.m23 * m2.m21 + m1.m24 * m2.m31;
+        const m22 =  m1.m21 * m2.m02 + m1.m22 * m2.m12 + m1.m23 * m2.m22 + m1.m24 * m2.m32;
+        const m23 =  m1.m21 * m2.m03 + m1.m22 * m2.m13 + m1.m23 * m2.m23 + m1.m24 * m2.m33;
+        const m24 =  m1.m21 * m2.m04 + m1.m22 * m2.m14 + m1.m23 * m2.m24 + m1.m24 * m2.m34;
+
+        const m31 =  m1.m31 * m2.m01 + m1.m32 * m2.m11 + m1.m33 * m2.m21 + m1.m34 * m2.m31;
+        const m32 =  m1.m31 * m2.m02 + m1.m32 * m2.m12 + m1.m33 * m2.m22 + m1.m34 * m2.m32;
+        const m33 =  m1.m31 * m2.m03 + m1.m32 * m2.m13 + m1.m33 * m2.m23 + m1.m34 * m2.m33;
+        const m34 =  m1.m31 * m2.m04 + m1.m32 * m2.m14 + m1.m33 * m2.m24 + m1.m34 * m2.m34;
+        
+
+        return {
+            m01, 
+            m02, 
+            m03,  
+            m04, 
+
+            m11, 
+            m12, 
+            m13,  
+            m14, 
+
+            m21,  
+            m22,  
+            m23, 
+            m24,
+
+            m31, 
+            m32, 
+            m33,  
+            m34,
+
+            c0: vector4(
+                m01, 
+                m11, 
+                m21, 
+                m31
+            ),
+            c1: vector4(
+                m02, 
+                m12, 
+                m22, 
+                m32
+            ),
+            c2: vector4(
+                m03, 
+                m13, 
+                m23, 
+                m33
+            ),
+            c3: vector4(
+                m04, 
+                m14, 
+                m24, 
+                m34
+            ),
         }
     }
 
@@ -369,7 +408,7 @@ export function vmath_module() {
     return {
         vector3, vector4, length, normalize, dot, cross, mul_per_element, lerp, slerp,
         quat, quat_from_axis_angle, euler_to_quat, rotate, quat_rotation_z,
-        matrix4, matrix4_translation, matrix4_rotation_x, matrix4_rotation_y, matrix4_rotation_z,
-        matrix_mul_vector
+        matrix4, matrix4_translation, matrix4_rotation_z,
+        matrix_mult_vector, mult_matrices
     };
 }

@@ -5,7 +5,7 @@ import { Box } from "../geometry/box";
 import { Point } from "../geometry/point";
 import { Segment } from "../geometry/segment";
 import { PointLike, ISegment, IArc } from "../geometry/types";
-import { clone } from "../geometry/utils";
+import { clone, invert_vec, rotate_vec_90CW } from "../geometry/utils";
 import { Vector } from "../geometry/vector";
 import { Aabb, createSpatialHash } from "../spatial_hash";
 import { GridParams, ObstacleTileData, SubGridParams } from "./types";
@@ -231,10 +231,12 @@ export function ObstaclesManager(hash_cell_size: number) {
         const obst_vec = obstacle.vector();
         normal_vec.x = obst_vec.x;
         normal_vec.y = obst_vec.y;
-        normal_vec.normalize().rotate90CW().multiply(offset);
+        normal_vec.normalize()
+        rotate_vec_90CW(normal_vec);
+        normal_vec.multiply(offset);
         if (build_option == "all" || build_option == "segment") {
             result.push(clone(obstacle).translate(normal_vec.x, normal_vec.y));
-            normal_vec.invert()
+            invert_vec(normal_vec)
             result.push(clone(obstacle).translate(normal_vec.x, normal_vec.y));
         }
 

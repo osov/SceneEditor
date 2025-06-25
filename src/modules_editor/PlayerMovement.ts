@@ -246,8 +246,8 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                     const start = Camera.screen_to_world(stick_start.x, stick_start.y);
                     const end = Camera.screen_to_world(stick_end.x, stick_end.y);
                     if (settings.debug) {
-                        LD.draw_arc(Arc(point(start.x, start.y), 3, 0, Math.PI * 2), joystick, COLORS.RED);
-                        LD.draw_arc(Arc(point(end.x, end.y), 3, 0, Math.PI * 2), joystick, COLORS.LIGHT_RED);
+                        LD.draw_arc(Arc(point(start.x, start.y), 3, 0, Math.PI * 2), joystick, COLORS.WHITE);
+                        LD.draw_arc(Arc(point(end.x, end.y), 3, 0, Math.PI * 2), joystick, COLORS.WHITE);
                     }
 
                 }
@@ -388,7 +388,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             const dir = vector(current_pos, end_pos);
             model.rotation.y = interpolate_with_wrapping(model.rotation.y, Math.atan2(dir.y, dir.x) + Math.PI / 2, 0.1, 0, 2 * Math.PI);
             model.transform_changed();
-            if (player_geometry.children.length == 0) {
+            if (debug && player_geometry.children.length == 0) {
                 LD.draw_arc(Arc(POINT_EMPTY, settings.collision_radius, 0, Math.PI * 2), player_geometry, COLORS.RED);
             }
             for (const line of player_geometry.children) {

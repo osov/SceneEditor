@@ -1,6 +1,5 @@
 import { Box } from "./box";
 import { ShapeNames, MATRIX_INDENTITY, TAU, POINT_EMPTY, VEC_A, VEC_B } from "./const";
-import { Matrix } from "./matrix";
 import { Point } from "./point";
 import { IMatrix, IVector, PointLike, Shape } from "./types";
 import { clone, clone_matrix, EQ, EQ_0, vector_slope } from "./utils";
@@ -14,8 +13,8 @@ export function Vector(x = 0, y = 0) {
     let box = () => Box(Math.min(0, v.x), Math.min(0, v.y), Math.max(0, v.x), Math.max(0, v.y));
     const v: IVector = {
         x, y, name, length, center, box, slope,
-        multiply, equalTo, contains, dot, cross, translate, scale, normalize, rotate,
-        transform, rotate90CW, rotate90CCW, invert, add, subtract,
+        multiply, equalTo, contains, dot, cross, translate, scale, normalize,
+        transform, add, subtract,
         angleTo, projectionOn, 
     };
 
@@ -59,56 +58,10 @@ export function Vector(x = 0, y = 0) {
         throw new Error('zero division while trying normalize a vector');
     }
 
-    function rotate(angle: number, _center: PointLike | undefined) {
-        const center = (_center) ? _center : clone(POINT_EMPTY);
-        if (center.x === 0 && center.y === 0) {
-            const rotate_matrix = Matrix().rotate(angle);
-            v.transform(rotate_matrix);
-            return v;
-        }
-        throw new Error('wrong operation');
-    }
-
     function transform(m: IMatrix) {
         const t = m.transform(v.x, v.y);
         v.x = t.x;
         v.y = t.y;
-        return v;
-    }
-    
-    // function rotate90CW() {
-    //     return Vector(-v.y, v.x);
-    // }
-
-    // function rotate90CCW() {
-    //     return Vector(v.y, -v.x);
-    // }
-
-    // function invert() {
-    //     return Vector(-v.x, -v.y);
-    // }
-
-    function rotate90CW() {
-        let t_x = v.x;
-        let t_y = v.y;
-        v.x = -t_y;
-        v.y = t_x;
-        return v;
-    }
-
-    function rotate90CCW() {
-        let t_x = v.x;
-        let t_y = v.y;
-        v.x = t_y;
-        v.y = -t_x;
-        return v;
-    }
-
-    function invert() {
-        const t_x = v.x;
-        const t_y = v.y;
-        v.x = -t_x;
-        v.y = -t_y;
         return v;
     }
 

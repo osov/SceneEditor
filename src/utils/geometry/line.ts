@@ -36,7 +36,7 @@ export function Line(_pt: IPoint | undefined = undefined, _norm: IVector | undef
     const l: ILine = {
         pt, norm, name, length, box, standard, center, vector, slope,
         parallelTo, incidentTo, contains, coord,
-        intersect, distanceTo, rotate, transform, translate, scale, sortPoints
+        intersect, distanceTo, transform, translate, scale, sortPoints
     };
 
     function parallelTo(other_line: ILine) {
@@ -114,13 +114,6 @@ export function Line(_pt: IPoint | undefined = undefined, _norm: IVector | undef
             return [distance, shortest_segment.reverse()];
         }
         throw new Error('wrong operation');
-    }
-
-    function rotate(angle: number, _center: PointLike | undefined) {
-        const center = (_center) ? _center : clone(POINT_EMPTY);
-        l.pt = pt.rotate(angle, center);
-        l.norm = norm.rotate(angle, center);
-        return l;
     }
 
     function transform(m: IMatrix) {

@@ -5,7 +5,7 @@ import { intersectLine2Arc, intersectArc2Circle, intersectSegment2Arc, intersect
 import { Matrix } from "./matrix";
 import { Point } from "./point";
 import { I_NULL_VALUE, IArc, IBox, ICircle, ILine, IPoint, ISegment, PointLike, Shape } from "./types";
-import { clone, clone_matrix, EQ, EQ_0, LE } from "./utils";
+import { clone, clone_matrix, EQ, EQ_0, LE, rotate } from "./utils";
 import { Vector } from "./vector";
 
 
@@ -19,8 +19,16 @@ export function Arc(_pc: IPoint | undefined = undefined, r = 1, startAngle = 0, 
     const name = ShapeNames.Arc;
     let center = () => a.pc;
     let clockwise = (cw !== undefined) ? cw : CW;
-    let start = () => Point(a.pc.x + a.r, a.pc.y).rotate(a.startAngle, a.pc);
-    let end = () => Point(a.pc.x + a.r, a.pc.y).rotate(a.endAngle, a.pc);
+    let start = () => {
+        const p = Point(a.pc.x + a.r, a.pc.y);
+        rotate(p, a.startAngle, a.pc);
+        return p;
+    }
+    let end = () => {
+        const p = Point(a.pc.x + a.r, a.pc.y);
+        rotate(p, a.endAngle, a.pc);
+        return p;
+    }
     let vertices = () => [start(), end()];
     let length = () => Math.abs(sweep() * r);
 
@@ -33,7 +41,7 @@ export function Arc(_pc: IPoint | undefined = undefined, r = 1, startAngle = 0, 
         name, center, pc, r, clockwise, startAngle, endAngle,
         start, end, vertices, sweep, length, box, reverse,
         contains, split, splitAtLength, middle, pointAtLength,
-        intersect, distanceTo, transform, translate, rotate, scale,
+        intersect, distanceTo, transform, translate, scale,
         tangentInStart, tangentInEnd, sortPoints,
         breakToFunctional
     };
@@ -190,11 +198,6 @@ export function Arc(_pc: IPoint | undefined = undefined, r = 1, startAngle = 0, 
         return transform(clone_matrix(MATRIX_INDENTITY).translate(x, y));
     }
 
-    function rotate(angle: number, _center: PointLike | undefined) {
-        const center = (_center) ? _center : clone(POINT_EMPTY);
-        return transform(clone_matrix(MATRIX_INDENTITY).rotate(angle, center));
-    }
-
     function scale(a: unknown, b?: unknown) {
         return transform(clone_matrix(MATRIX_INDENTITY).scale(a as number, (b ?? a) as number));
     }
@@ -220,7 +223,8 @@ export function Arc(_pc: IPoint | undefined = undefined, r = 1, startAngle = 0, 
         const vy = start_p.y - a.pc.y;
         const vec = Vector(vx, vy);
         const angle = a.clockwise ? Math.PI / 2 : -Math.PI / 2;
-        return vec.rotate(angle).normalize();
+        rotate(vec, angle);
+        return vec.normalize();
     }
 
     function tangentInEnd() {
@@ -229,7 +233,8 @@ export function Arc(_pc: IPoint | undefined = undefined, r = 1, startAngle = 0, 
         const vy = end_p.y - a.pc.y;
         const vec = Vector(vx, vy);
         const angle = a.clockwise ? -Math.PI / 2 : Math.PI / 2;
-        return vec.rotate(angle).normalize();
+        rotate(vec, angle);
+        return vec.normalize();
     }
 
     function sortPoints(pts: IPoint[]) {

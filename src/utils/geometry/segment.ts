@@ -35,7 +35,7 @@ export function Segment(start: IPoint, _end: IPoint | undefined = undefined) {
     const s: ISegment = {
         name, start, end, center, box, length, slope, vertices, vector,
         isZeroLength, transform, equalTo, contains,
-        translate, rotate, scale, intersect, pointAtLength,
+        translate, scale, intersect, pointAtLength,
         distanceToPoint, tangentInStart, tangentInEnd, distanceTo,
         reverse, split, splitAtLength
     };

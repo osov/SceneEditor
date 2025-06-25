@@ -155,7 +155,52 @@ export function xmath_module() {
             v_in_place.w = v1.w + (v2.w - v1.w) * t;
     }
 
-    function matrix(m_in_place: vmath.matrix4) {
+    function matrix(m_in_place: vmath.matrix4, m1?: vmath.matrix4) {
+        if (m1 != undefined) matrix_1(m_in_place, m1);
+        else matrix_0(m_in_place);
+    }
+
+    function matrix_1(m_in_place: vmath.matrix4, m1: vmath.matrix4) {
+        m_in_place.c0.x = m1.c0.x;
+        m_in_place.c0.y = m1.c0.y;
+        m_in_place.c0.z = m1.c0.z;
+        m_in_place.c0.w = m1.c0.w;
+
+        m_in_place.c1.x = m1.c1.x;
+        m_in_place.c1.y = m1.c1.y;
+        m_in_place.c1.z = m1.c1.z;
+        m_in_place.c1.w = m1.c1.w;
+
+        m_in_place.c2.x = m1.c2.x;
+        m_in_place.c2.y = m1.c2.y;
+        m_in_place.c2.z = m1.c2.z;
+        m_in_place.c2.w = m1.c2.w;
+
+        m_in_place.c3.x = m1.c3.x;
+        m_in_place.c3.y = m1.c3.y;
+        m_in_place.c3.z = m1.c3.z;
+        m_in_place.c3.w = m1.c3.w;
+
+        m_in_place.m01 = m1.m01;
+        m_in_place.m02 = m1.m02;
+        m_in_place.m03 = m1.m03;
+        m_in_place.m04 = m1.m04;
+        m_in_place.m11 = m1.m11;
+        m_in_place.m12 = m1.m12;
+        m_in_place.m13 = m1.m13;
+        m_in_place.m14 = m1.m14;
+        m_in_place.m21 = m1.m21;
+        m_in_place.m22 = m1.m22;
+        m_in_place.m23 = m1.m23;
+        m_in_place.m24 = m1.m24;
+        m_in_place.m31 = m1.m31;
+        m_in_place.m32 = m1.m32;
+        m_in_place.m33 = m1.m33;
+        m_in_place.m34 = m1.m34;
+
+    }
+
+    function matrix_0(m_in_place: vmath.matrix4) {
         m_in_place.c0.x = 1;
         m_in_place.c0.y = 0;
         m_in_place.c0.z = 0;
@@ -201,15 +246,15 @@ export function xmath_module() {
         m_in_place.c3.y = position.y;
         m_in_place.c3.z = position.z;
 
-        m_in_place.m31 = position.x;
-        m_in_place.m32 = position.y;
-        m_in_place.m33 = position.z;
+        m_in_place.m04 = position.x;
+        m_in_place.m14 = position.y;
+        m_in_place.m24 = position.z;
     }
 
     function matrix_rotation_z(m_in_place: vmath.matrix4, angle: number) {
         matrix(m_in_place);
-        const cos = Math.cos(-angle);
-        const sin = Math.sin(-angle);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
 
         m_in_place.c0.x = cos;
         m_in_place.c0.y = sin;
@@ -222,5 +267,5 @@ export function xmath_module() {
         m_in_place.m12 = cos;
     }
 
-    return { add, sub, mul, div, cross, mul_per_elem, normalize, lerp, matrix_translation };
+    return { add, sub, mul, div, cross, mul_per_elem, normalize, lerp, matrix_translation, matrix_rotation_z, matrix };
 }

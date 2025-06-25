@@ -3,7 +3,7 @@ import { LINE_A } from "./const";
 import { Line } from "./line";
 import { Point } from "./point";
 import { ILine, IPoint, ICircle, IVector, IBox, ISegment, IArc } from "./types";
-import { EQ_0, EQ, LT, ptInIntPoints, points2norm, isPointInSegmentBox, vector_from_points, GT, clone } from "./utils";
+import { EQ_0, EQ, LT, ptInIntPoints, points2norm, isPointInSegmentBox, vector_from_points, GT, clone, rotate_vec_90CW, invert_vec } from "./utils";
 import { Vector } from "./vector";
 
 
@@ -51,11 +51,13 @@ export function intersectLine2Circle(line: ILine, circle: ICircle): IPoint[] {
         const delta = Math.sqrt(circle.r * circle.r - dist * dist);
         let v_trans: IVector, pt: IPoint;
 
-        v_trans = clone(line.norm).rotate90CW().multiply(delta);
+        v_trans = clone(line.norm);
+        rotate_vec_90CW(v_trans);
+        v_trans.multiply(delta);
         pt = clone(prj).translate(v_trans.x, v_trans.y);
         ips.push(pt);
 
-        v_trans.invert();
+        invert_vec(v_trans);
         pt = prj.translate(v_trans.x, v_trans.y);
         ips.push(pt);
     }
@@ -290,11 +292,13 @@ export function intersectCircle2Circle(circle1: ICircle, circle2: ICircle): IPoi
     const mid_pt = clone(circle1.pc).translate(a * vec.x, a * vec.y);
     const h = Math.sqrt(r1 * r1 - a * a);
 
-    const v1 = vec.multiply(h).rotate90CW();
+    const v1 = vec.multiply(h);
+    rotate_vec_90CW(v1);
     pt = clone(mid_pt).translate(v1.x, v1.y);
     ips.push(pt);
 
-    const v2 = clone(vec).invert();
+    const v2 = clone(vec);
+    invert_vec(v2);
     pt = clone(mid_pt).translate(v2.x, v2.y);
     ips.push(pt);
 
