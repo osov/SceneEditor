@@ -31,6 +31,7 @@ export class AudioMesh extends EntityBase {
     private sound: string = '';
     private speed: number = 1;
     private volume: number = 1;
+    private pan: number = 0;
     private loop: boolean = false;
 
     private soundRadius: number = DEFAULT_SOUND_RADIUS;
@@ -93,6 +94,14 @@ export class AudioMesh extends EntityBase {
 
     get_volume() {
         return this.volume;
+    }
+
+    set_pan(pan: number) {
+        this.pan = pan;
+    }
+
+    get_pan() {
+        return this.pan;
     }
 
     set_loop(loop: boolean) {
@@ -159,6 +168,12 @@ export class AudioMesh extends EntityBase {
         this.fadeDuration = 0;
 
         AudioManager.play(this.get_id(), this.loop, this.volume, this.speed);
+        (window as any).MeshInspector.force_refresh();
+    }
+
+    pause() {
+        if (this.sound == '') return;
+        AudioManager.pause(this.get_id());
         (window as any).MeshInspector.force_refresh();
     }
 
@@ -292,17 +307,15 @@ export class AudioMesh extends EntityBase {
     }
 
     private calculatePanByDistance(distance: number, listenerPos: Vector3, soundPos: Vector3): number {
-        if (this.panNormalizationDistance <= 0) return 0;
+        if (this.panNormalizationDistance <= 0) return this.pan;
 
-        if (distance < this.panNormalizationDistance) {
-            return 0;
-        }
+        if (distance < this.panNormalizationDistance) return this.pan;
 
         const soundPos2D = new Vector2(soundPos.x, soundPos.y);
         const listenerPos2D = new Vector2(listenerPos.x, listenerPos.y);
         const direction2D = new Vector2().subVectors(soundPos2D, listenerPos2D).normalize();
         const pan = direction2D.x;
-        return Math.max(-1, Math.min(1, pan));
+        return Math.max(-1, Math.min(1, pan)) * this.pan;
     }
 
     private startSpatialAudio() {

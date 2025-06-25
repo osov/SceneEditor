@@ -25,7 +25,7 @@ import { register_components_control } from './controls/ComponentsControl';
 import { PROJECT_NAME } from './config';
 import { register_lua_core } from './defold/core';
 import { register_tween_manager } from './render_engine/tween_manager';
-import { register_audio_manager } from './modules/AudioManager';
+import { register_audio_manager } from './render_engine/AudioManager';
 
 function register_managers() {
     register_manager();

@@ -9,12 +9,17 @@ export function register_audio_manager() {
     (window as any).AudioManager = AudioManagerModule();
 }
 
+export enum SoundEndCallbackType {
+    SOUND_DONE = 'sound_done',
+    SOUND_STOP = 'sound_stop'
+}
+
 function AudioManagerModule() {
     const listener = new AudioListener();
     const sounds: TDictionary<Audio> = {};
     const panners: TDictionary<StereoPannerNode> = {};
     const gains: TDictionary<GainNode> = {};
-    const end_callbacks: TDictionary<() => void> = {};
+    const end_callbacks: TDictionary<(type: SoundEndCallbackType) => void> = {};
 
     function init() {
         Camera.set_listener(listener);
@@ -52,7 +57,7 @@ function AudioManagerModule() {
         }
     }
 
-    function set_end_callback(id: number, callback: () => void) {
+    function set_end_callback(id: number, callback: (type: SoundEndCallbackType) => void) {
         end_callbacks[id] = callback;
     }
 
@@ -90,7 +95,7 @@ function AudioManagerModule() {
             if (end_callbacks[id]) {
                 sound.source.onended = () => {
                     sound.onEnded();
-                    end_callbacks[id]();
+                    end_callbacks[id](SoundEndCallbackType.SOUND_DONE);
                 }
             }
         }
@@ -103,6 +108,9 @@ function AudioManagerModule() {
             return;
         }
         sound.stop();
+        if (end_callbacks[id]) {
+            end_callbacks[id](SoundEndCallbackType.SOUND_STOP);
+        }
     }
 
     function is_playing(id: number) {
@@ -138,10 +146,6 @@ function AudioManagerModule() {
         if (!sound.isPlaying || sound.source) {
             gain.gain.value = volume;
         }
-
-        // NOTE/HACK: для того чтобы полностью отключить звук если громкость 0
-        // if (volume == 0) sound.source?.disconnect();
-        // else sound.source?.connect(panners[id]);
     }
 
     function get_volume(id: number) {

@@ -7,7 +7,7 @@ declare global {
     type SystemMessagesEditor = _SystemMessagesEditor & NetMessagesEditor;
 }
 
-export function register_editor_modules(){
+export function register_editor_modules() {
     register_client_api();
     register_inspector();
 }

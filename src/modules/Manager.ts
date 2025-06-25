@@ -6,6 +6,7 @@ import { register_camera } from "./Camera";
 import { register_input } from "./InputManager";
 import { register_ws_client } from "./WsClient";
 import { register_editor_modules } from "../modules_editor/Manager_editor";
+import { register_spatial_sound } from "./SpatialSound";
 
 /*
     Основной модуль для подгрузки остальных, доступен по объекту Manager
@@ -31,6 +32,7 @@ function ManagerModule() {
         register_input();
         register_camera();
         register_ws_client();
+        register_spatial_sound();
         register_editor_modules();
     }
     return { init };
