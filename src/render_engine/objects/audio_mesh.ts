@@ -1,7 +1,10 @@
 import { IObjectTypes } from "../types";
 import { EntityBase } from "./entity_base";
 import { DEFAULT_PAN_NORMALIZATION_DISTANCE, DEFAULT_MAX_VOLUME_RADIUS, DEFAULT_SOUND_RADIUS, DEFAULT_FADE_IN_TIME, DEFAULT_FADE_OUT_TIME } from "../../config";
-import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, CircleGeometry, Mesh, MeshBasicMaterial, Vector2 } from "three";
+import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, CircleGeometry, Mesh, MeshBasicMaterial } from "three";
+
+// NOTE: чтобы использовать без (window as any)
+import "../../modules/SpatialSound";
 
 export enum SoundFunctionType {
     LINEAR = 'linear',
@@ -41,14 +44,6 @@ export class AudioMesh extends EntityBase {
     private fadeInTime: number = DEFAULT_FADE_IN_TIME;
     private fadeOutTime: number = DEFAULT_FADE_OUT_TIME;
 
-    private currentVolume: number = 0;
-    private targetVolume: number = 0;
-    private fadeStartVolume: number = 0;
-    private fadeStartTime: number = 0;
-    private fadeDuration: number = 0;
-
-    private forceControl: boolean = false;
-
     private soundRadiusVisual: Line | null = null;
     private maxVolumeRadiusVisual: Line | null = null;
     private panNormalizationVisual: Line | null = null;
@@ -58,13 +53,14 @@ export class AudioMesh extends EntityBase {
         super(id);
         this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
         this.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
-        EventBus.on('SYS_ON_UPDATE', this.update.bind(this));
+        EventBus.on('SYS_ON_UPDATE', this.updateVisual.bind(this));
     }
 
     get_id() {
         return this.mesh_data.id;
     }
 
+    // NOTE: важно чтобы мешь уже был создан и добавлен в сцену
     set_sound(name: string) {
         if (this.sound != '') {
             this.dispose();
@@ -72,6 +68,16 @@ export class AudioMesh extends EntityBase {
 
         this.sound = name;
         AudioManager.create_audio(name, this.get_id());
+        SpatialSound.create_spatial_sound(
+            SceneManager.get_mesh_url_by_id(this.get_id()),
+            this.soundRadius,
+            this.volume,
+            this.maxVolumeRadius,
+            this.panNormalizationDistance,
+            this.soundFunction,
+            this.fadeInTime,
+            this.fadeOutTime
+        );
         this.createVisual();
     }
 
@@ -90,6 +96,8 @@ export class AudioMesh extends EntityBase {
 
     set_volume(volume: number) {
         this.volume = volume;
+        if (this.soundRadius > 0) SpatialSound.set_max_volume(SceneManager.get_mesh_url_by_id(this.get_id()), volume);
+        else AudioManager.set_volume(this.get_id(), volume);
     }
 
     get_volume() {
@@ -98,6 +106,7 @@ export class AudioMesh extends EntityBase {
 
     set_pan(pan: number) {
         this.pan = pan;
+        AudioManager.set_pan(this.get_id(), pan);
     }
 
     get_pan() {
@@ -106,6 +115,7 @@ export class AudioMesh extends EntityBase {
 
     set_loop(loop: boolean) {
         this.loop = loop;
+        AudioManager.set_loop(this.get_id(), loop);
     }
 
     get_loop() {
@@ -114,6 +124,7 @@ export class AudioMesh extends EntityBase {
 
     set_sound_radius(radius: number) {
         this.soundRadius = Math.max(0, radius);
+        SpatialSound.set_sound_radius(SceneManager.get_mesh_url_by_id(this.get_id()), this.soundRadius);
     }
 
     get_sound_radius() {
@@ -122,6 +133,7 @@ export class AudioMesh extends EntityBase {
 
     set_max_volume_radius(radius: number) {
         this.maxVolumeRadius = Math.max(0, radius);
+        SpatialSound.set_max_volume_radius(SceneManager.get_mesh_url_by_id(this.get_id()), this.maxVolumeRadius);
     }
 
     get_max_volume_radius() {
@@ -130,6 +142,7 @@ export class AudioMesh extends EntityBase {
 
     set_pan_normalization_distance(distance: number) {
         this.panNormalizationDistance = Math.max(0, distance);
+        SpatialSound.set_pan_normalization_distance(SceneManager.get_mesh_url_by_id(this.get_id()), this.panNormalizationDistance);
     }
 
     get_pan_normalization_distance() {
@@ -138,6 +151,7 @@ export class AudioMesh extends EntityBase {
 
     set_sound_function(func: SoundFunctionType) {
         this.soundFunction = func;
+        SpatialSound.set_sound_function(SceneManager.get_mesh_url_by_id(this.get_id()), this.soundFunction);
     }
 
     get_sound_function() {
@@ -146,6 +160,7 @@ export class AudioMesh extends EntityBase {
 
     set_fade_in_time(time: number) {
         this.fadeInTime = Math.max(0, time);
+        SpatialSound.set_fade_in_time(SceneManager.get_mesh_url_by_id(this.get_id()), this.fadeInTime);
     }
 
     get_fade_in_time() {
@@ -154,6 +169,7 @@ export class AudioMesh extends EntityBase {
 
     set_fade_out_time(time: number) {
         this.fadeOutTime = Math.max(0, time);
+        SpatialSound.set_fade_out_time(SceneManager.get_mesh_url_by_id(this.get_id()), this.fadeOutTime);
     }
 
     get_fade_out_time() {
@@ -162,210 +178,24 @@ export class AudioMesh extends EntityBase {
 
     play() {
         if (this.sound == '') return;
-
-        this.currentVolume = this.volume;
-        this.targetVolume = this.volume;
-        this.fadeDuration = 0;
-
-        AudioManager.play(this.get_id(), this.loop, this.volume, this.speed);
-        (window as any).MeshInspector.force_refresh();
+        AudioManager.play(this.get_id(), this.loop, this.volume, this.speed, this.pan);
+        MeshInspector.force_refresh();
     }
 
     pause() {
         if (this.sound == '') return;
         AudioManager.pause(this.get_id());
-        (window as any).MeshInspector.force_refresh();
+        MeshInspector.force_refresh();
     }
 
     stop() {
         if (this.sound == '') return;
-
-        this.currentVolume = 0;
-        this.targetVolume = 0;
-        this.fadeDuration = 0;
-
         AudioManager.stop(this.get_id());
-        (window as any).MeshInspector.force_refresh();
+        MeshInspector.force_refresh();
     }
 
     is_playing() {
         return AudioManager.is_playing(this.get_id());
-    }
-
-    private update() {
-        if (!this.get_active() || this.sound == '') {
-            if (this.is_playing()) this.stopSpatialAudio();
-            return;
-        }
-
-        this.forceControl = this.soundRadius == 0;
-
-        const listenerPosition = this.getListenerPosition();
-        const soundPosition = new Vector3();
-        this.getWorldPosition(soundPosition);
-        // NOTE: для того чтобы не учитывать z координату
-        const soundPosition2D = new Vector2(soundPosition.x, soundPosition.y);
-        const listenerPosition2D = new Vector2(listenerPosition.x, listenerPosition.y);
-        const distance = soundPosition2D.distanceTo(listenerPosition2D);
-
-        if (this.soundRadius == 0) {
-            this.handleListenerInRange(distance, listenerPosition, soundPosition);
-        } else {
-            if (distance <= this.soundRadius) {
-                this.handleListenerInRange(distance, listenerPosition, soundPosition);
-            } else {
-                this.handleListenerOutOfRange();
-            }
-        }
-
-        this.updateFading();
-        this.updateVisual();
-
-        if (this.soundRadius > 0 && distance > this.soundRadius && this.currentVolume <= 0 && this.is_playing()) {
-            this.stopSpatialAudio();
-        }
-    }
-
-    private getListenerPosition(): Vector3 {
-        const camera = RenderEngine.camera;
-        return new Vector3(camera.position.x, camera.position.y, camera.position.z);
-    }
-
-    private handleListenerInRange(distance: number, listenerPos: Vector3, soundPos: Vector3) {
-        const newTargetVolume = this.calculateVolumeByDistance(distance);
-
-        const pan = this.calculatePanByDistance(distance, listenerPos, soundPos);
-        AudioManager.set_pan(this.get_id(), pan);
-
-        if (!this.forceControl && !this.is_playing() && newTargetVolume > 0) {
-            this.startSpatialAudio();
-        }
-
-        if (Math.abs(newTargetVolume - this.targetVolume) > 0.001) {
-            this.targetVolume = newTargetVolume;
-
-            if (!this.is_playing() && this.targetVolume > 0) {
-                this.currentVolume = 0;
-                this.startFade(this.targetVolume, this.fadeInTime);
-            } else if (this.is_playing()) {
-                this.startFade(this.targetVolume, this.fadeInTime);
-            }
-        }
-    }
-
-    private handleListenerOutOfRange() {
-        if (this.is_playing() && this.targetVolume > 0) {
-            this.targetVolume = 0;
-            this.startFade(0, this.fadeOutTime);
-        }
-
-        if (!this.is_playing()) {
-            this.currentVolume = 0;
-            this.targetVolume = 0;
-        }
-    }
-
-    private calculateVolumeByDistance(distance: number): number {
-        if (this.soundRadius == 0) {
-            return this.volume;
-        }
-
-        if (distance <= 0) return this.volume;
-
-        let volume = 0;
-        if (this.maxVolumeRadius > 0) {
-            if (distance <= this.maxVolumeRadius) {
-                volume = 1;
-            } else {
-                const fadeDistance = this.soundRadius - this.maxVolumeRadius;
-                const fadeProgress = (distance - this.maxVolumeRadius) / fadeDistance;
-                volume = this.applySoundFunction(1 - fadeProgress);
-            }
-        } else {
-            const fadeProgress = distance / this.soundRadius;
-            volume = this.applySoundFunction(1 - fadeProgress);
-        }
-
-        return Math.max(0, Math.min(1, volume)) * this.volume;
-    }
-
-    private applySoundFunction(progress: number): number {
-        switch (this.soundFunction) {
-            case SoundFunctionType.LINEAR:
-                return progress;
-            case SoundFunctionType.EXPONENTIAL:
-                return Math.pow(progress, 2);
-            case SoundFunctionType.QUADRATIC:
-                return Math.pow(progress, 3);
-            case SoundFunctionType.INVERSE_QUADRATIC:
-                return 1 - Math.pow(1 - progress, 2);
-            case SoundFunctionType.SMOOTH_STEP:
-                return progress * progress * (3 - 2 * progress);
-            default:
-                return progress;
-        }
-    }
-
-    private calculatePanByDistance(distance: number, listenerPos: Vector3, soundPos: Vector3): number {
-        if (this.panNormalizationDistance <= 0) return this.pan;
-
-        if (distance < this.panNormalizationDistance) return this.pan;
-
-        const soundPos2D = new Vector2(soundPos.x, soundPos.y);
-        const listenerPos2D = new Vector2(listenerPos.x, listenerPos.y);
-        const direction2D = new Vector2().subVectors(soundPos2D, listenerPos2D).normalize();
-        const pan = direction2D.x;
-        return Math.max(-1, Math.min(1, pan)) * this.pan;
-    }
-
-    private startSpatialAudio() {
-        if (this.is_playing()) return;
-        this.currentVolume = 0;
-        AudioManager.play(this.get_id(), this.loop, 0, this.speed);
-        (window as any).MeshInspector.force_refresh();
-    }
-
-    private stopSpatialAudio() {
-        if (!this.is_playing()) return;
-        AudioManager.stop(this.get_id());
-        this.currentVolume = 0;
-        this.targetVolume = 0;
-        (window as any).MeshInspector.force_refresh();
-    }
-
-    private startFade(targetVolume: number, duration: number) {
-        if (this.fadeDuration > 0 && Math.abs(this.targetVolume - targetVolume) < 0.001) {
-            return;
-        }
-
-        this.fadeStartVolume = this.currentVolume;
-        this.targetVolume = targetVolume;
-        this.fadeStartTime = performance.now() / 1000;
-        this.fadeDuration = duration;
-    }
-
-    private updateFading() {
-        if (this.fadeDuration <= 0) return;
-
-        const currentTime = performance.now() / 1000;
-        const fadeProgress = (currentTime - this.fadeStartTime) / this.fadeDuration;
-
-        if (fadeProgress >= 1) {
-            // NOTE: Затухание завершено
-            this.currentVolume = this.targetVolume;
-            this.fadeDuration = 0;
-
-            if (this.is_playing() && this.currentVolume <= 0) {
-                this.stopSpatialAudio();
-            }
-        } else {
-            const newVolume = this.fadeStartVolume + (this.targetVolume - this.fadeStartVolume) * fadeProgress;
-            this.currentVolume = Math.max(0, newVolume);
-        }
-
-        if (this.is_playing()) {
-            AudioManager.set_volume(this.get_id(), this.currentVolume);
-        }
     }
 
     private createVisual() {
@@ -398,7 +228,7 @@ export class AudioMesh extends EntityBase {
         });
         this.listenerVisual = new Mesh(listenerGeometry, listenerMaterial);
 
-        const listenerPosition = this.getListenerPosition();
+        const listenerPosition = SpatialSound.get_listener_position();
         this.listenerVisual.position.copy(listenerPosition);
         this.listenerVisual.parent?.localToWorld(this.listenerVisual.position);
         this.listenerVisual.visible = this.get_active();
@@ -451,7 +281,7 @@ export class AudioMesh extends EntityBase {
 
     private updateListenerVisual() {
         if (!this.listenerVisual) return;
-        const listenerPosition = this.getListenerPosition();
+        const listenerPosition = SpatialSound.get_listener_position();
         this.listenerVisual.position.copy(listenerPosition);
         this.listenerVisual.parent?.worldToLocal(this.listenerVisual.position);
         this.listenerVisual.visible = this.get_active();
@@ -574,7 +404,6 @@ export class AudioMesh extends EntityBase {
         }
         if (data.volume) {
             this.volume = data.volume;
-            AudioManager.set_volume(this.get_id(), this.volume);
         }
         if (data.loop) {
             this.loop = data.loop;
@@ -588,10 +417,24 @@ export class AudioMesh extends EntityBase {
         if (data.fadeOutTime) this.fadeOutTime = data.fadeOutTime;
     }
 
+    after_deserialize() {
+        SpatialSound.create_spatial_sound(
+            SceneManager.get_mesh_url_by_id(this.get_id()),
+            this.soundRadius,
+            this.volume,
+            this.maxVolumeRadius,
+            this.panNormalizationDistance,
+            this.soundFunction,
+            this.fadeInTime,
+            this.fadeOutTime
+        );
+    }
+
     dispose() {
         super.dispose();
-        this.stopSpatialAudio();
         this.removeVisual();
+        EventBus.off('SYS_ON_UPDATE', this.updateVisual.bind(this));
+        SpatialSound.remove_spatial_sound(SceneManager.get_mesh_url_by_id(this.get_id()));
         AudioManager.free_audio(this.get_id());
     }
 }

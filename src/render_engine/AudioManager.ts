@@ -23,6 +23,10 @@ function AudioManagerModule() {
 
     function init() {
         Camera.set_listener(listener);
+        EventBus.on('SYS_ON_UPDATE', () => {
+            const camera = RenderEngine.camera;
+            SpatialSound.set_listener_position(vmath.vector3(camera.position.x, camera.position.y, camera.position.z));
+        });
     }
 
     function create_audio(name: string, id = SceneManager.get_unique_id()) {
@@ -143,9 +147,6 @@ function AudioManagerModule() {
             return;
         }
         gain.gain.value = volume;
-        if (!sound.isPlaying || sound.source) {
-            gain.gain.value = volume;
-        }
     }
 
     function get_volume(id: number) {
@@ -186,7 +187,6 @@ function AudioManagerModule() {
             Log.error(`[SoundManager.set_speed]: sound ${id} not found`);
             return;
         }
-
 
         if (!sound.isPlaying || sound.source) {
             sound.setPlaybackRate(speed);

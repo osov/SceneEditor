@@ -22,7 +22,7 @@ import { AudioMesh, SoundFunctionType } from "../render_engine/objects/audio_mes
 
 
 declare global {
-    const ObjectInspector: ReturnType<typeof MeshInspectorCreate>;
+    const MeshInspector: ReturnType<typeof MeshInspectorCreate>;
 }
 
 export function register_mesh_inspector() {

@@ -208,8 +208,9 @@ export function SceneManagerModule() {
         const mesh = create(data.type, data.other_data, with_id ? data.id : -1);
         if (data.position)
             mesh.position.set(data.position[0], data.position[1], data.position[2]);
-        if (data.rotation)
+        if (data.rotation) {
             mesh.quaternion.set(data.rotation[0], data.rotation[1], data.rotation[2], data.rotation[3]);
+        }
         if (data.scale)
             mesh.scale.set(data.scale[0], data.scale[1], data.scale[2]);
         mesh.name = data.name;
@@ -236,6 +237,7 @@ export function SceneManagerModule() {
                         c.dispose();
                     }
                 }
+                if (m instanceof EntityBase) m.dispose();
                 scene.remove(m);
             }
         }
@@ -262,6 +264,7 @@ export function SceneManagerModule() {
                 const it = data[i];
                 const mesh = deserialize_mesh(it, false, scene);
                 scene.add(mesh);
+                if (mesh instanceof AudioMesh) mesh.after_deserialize();
             }
         }
         else {

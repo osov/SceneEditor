@@ -23,8 +23,6 @@ declare global {
         export function get_pan(url: string | hash): number;
         export function set_speed(url: string | hash, speed: number): void;
         export function get_speed(url: string | hash): number;
-        export function set_loop(url: string | hash, loop: boolean): void;
-        export function get_loop(url: string | hash): boolean;
     }
 }
 
@@ -62,7 +60,7 @@ export function sound_module() {
             speed: play_properties?.speed ?? 1
         };
 
-        sound_mesh.set_volume(properties.gain);
+        AudioManager.set_volume(id, properties.gain);
         sound_mesh.set_pan(properties.pan);
         sound_mesh.set_speed(properties.speed);
 
@@ -107,7 +105,7 @@ export function sound_module() {
             Log.error('Sound component not found');
             return;
         }
-        sound_mesh.set_volume(gain);
+        AudioManager.set_volume(id, gain);
     }
 
     function get_gain(url: string | hash): number {
@@ -117,7 +115,7 @@ export function sound_module() {
             Log.error('Sound component not found');
             return 0;
         }
-        return sound_mesh.get_volume();
+        return AudioManager.get_volume(id);
     }
 
     function set_pan(url: string | hash, pan: number): void {

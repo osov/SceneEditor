@@ -186,7 +186,8 @@ export function go_module() {
             Log.error(`Mesh with url ${id} not found`);
             return null;
         }
-        if (mesh.type != IObjectTypes.GO_CONTAINER) {
+        // TODO: нужно убрать, но пока нужно для аудио компонентa, в теории можно брать из обьекта родителя
+        if (![IObjectTypes.GO_CONTAINER, IObjectTypes.GO_AUDIO_COMPONENT].includes(mesh.type)) {
             Log.error(`Mesh with id ${id} is not go`);
             return null;
         }
