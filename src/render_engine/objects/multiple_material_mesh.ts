@@ -1,4 +1,4 @@
-import { MeshBasicMaterial, ShaderMaterial, Texture } from "three";
+import { Mesh, MeshBasicMaterial, ShaderMaterial, SkinnedMesh, Texture } from "three";
 import { EntityPlane } from "./entity_plane";
 import { MaterialUniformType } from "../resource_manager";
 import { get_file_name } from "../helpers/utils";
@@ -71,7 +71,13 @@ export class MultipleMaterialMesh extends EntityPlane {
         if (!material) return;
 
         this.materials[index] = material;
-        (this.children[0].children[index] as any).material = material;
+        let idx = 0;
+        this.children[0].traverse((child: any) => {
+            if ((child instanceof Mesh || child instanceof SkinnedMesh) && child.material) {
+                if (idx == index) child.material = material;
+                idx++;
+            }
+        });
     }
 
     get_materials() {
@@ -93,7 +99,7 @@ export class MultipleMaterialMesh extends EntityPlane {
         const old_maps: Texture[] = [];
         const m = skeleton_clone(src);
         m.traverse((child: any) => {
-            if (child.material) {
+            if ((child instanceof Mesh || child instanceof SkinnedMesh) && child.material) {
                 const old_material = (child.material as MeshBasicMaterial);
                 if (old_material.map && old_material.map.image) {
                     ResourceManager.add_texture(old_material.name, 'mesh_' + name, old_material.map);
