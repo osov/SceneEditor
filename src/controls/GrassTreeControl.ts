@@ -80,7 +80,7 @@ function GrassTreeControlCreate() {
         if (mesh_list[key])
             return;
         const tex_atlas = mesh.get_texture();
-        mesh.set_material('tree');
+        mesh.set_material('move_vert');
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         mesh_list[key] = true;
         //log('activated', key)
