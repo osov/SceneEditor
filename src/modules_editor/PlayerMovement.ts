@@ -7,10 +7,11 @@ import { PathFinder } from '../utils/physic/PathFinder';
 import { Line as GeomLine, LineBasicMaterial } from 'three';
 import { LinesDrawer } from '../utils/physic/LinesDrawer';
 import { PlayerMovementSettings, movement_default_settings, ControlType, PathData, COLORS } from '@editor/modules/types';
-import { Arc } from '@editor/utils/geometry/arc';
 import { POINT_EMPTY } from '@editor/utils/geometry/const';
 import { IPoint, IArc, ISegment, PointLike } from '@editor/utils/geometry/types';
-import { point, vector_from_points as vector, segment, vec_angle, clone } from '@editor/utils/geometry/utils';
+import { point, vector_from_points as vector, segment, vec_angle, clone, shape_equal_to, shape_length, split_at_length, vector_slope } from '@editor/utils/geometry/utils';
+import { Arc } from '@editor/utils/geometry/shapes';
+import { point2point } from '@editor/utils/geometry/distance';
 
 
 function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
@@ -212,7 +213,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                     return;
                 update_pointer_position(e);
                 const current_pos = point(model.position.x, model.position.y);
-                const dist = current_pos.distanceTo(target)[0];
+                const dist = point2point(current_pos, target)[0];
                 is_in_target = (dist <= target_error) ? true : false;
                 if (!is_in_target) has_target = true;
             });
@@ -261,7 +262,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
 
         function update_predicted_path() {
             let way_required = get_required_path(update_t_interval);
-            if (way_required.length() < min_required_path) {
+            if (shape_length(way_required) < min_required_path) {
                 clear_way()
                 return;
             }
@@ -299,14 +300,14 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             let lenght_remains = dt * current_speed * pred_path_lenght_mult;
             let way_required = segment(cp.x, cp.y, target.x, target.y);
             if (pointer_control == ControlType.FP || pointer_control == ControlType.GP) {
-                if (lenght_remains < way_required.length()) {
-                    const _segment = way_required.splitAtLength(lenght_remains)[0];
+                if (lenght_remains < shape_length(way_required)) {
+                    const _segment = split_at_length(way_required, lenght_remains)[0];
                     way_required = (!('null' in _segment)) ? _segment : segment(cp.x, cp.y, cp.x, cp.y);
                 }
             }
             if (pointer_control == ControlType.JS) {
-                if (!EQ_0(current_dir.length())) {
-                    way_required = PF.way_from_angle(cp, current_dir.slope(), lenght_remains);
+                if (!EQ_0(shape_length(current_dir))) {
+                    way_required = PF.way_from_angle(cp, vector_slope(current_dir), lenght_remains);
                 }
                 else
                     way_required = segment(cp.x, cp.y, cp.x, cp.y);
@@ -322,7 +323,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                 return;
             }
             const current_pos = point(model.position.x, model.position.y);
-            const dist = current_pos.distanceTo(target)[0];
+            const dist = point2point(current_pos, target)[0];
             is_in_target = (dist <= target_error) ? true : false;
             if (is_in_target && is_moving) {
                 stop_movement();
@@ -340,7 +341,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
         }
 
         function handle_update_follow_direction(dt: number) {
-            if (current_dir.length() == 0) {
+            if (shape_length(current_dir) == 0) {
                 if (is_moving) stop_movement();
             }
             else {
@@ -368,11 +369,11 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
         function update_position(dt: number) {
             const current_pos = point(model.position.x, model.position.y);
             const end_pos = PF.get_next_pos(path_data, current_pos, dt, current_speed);
-            if (!end_pos || (end_pos.equalTo(current_pos))) {
+            if (!end_pos || (shape_equal_to(end_pos, current_pos))) {
                 stop_movement();
                 return;
             }
-            if (current_pos.distanceTo(end_pos)[0] > blocked_max_dist) {
+            if (point2point(current_pos, end_pos)[0] > blocked_max_dist) {
                 model.position.x = end_pos.x;
                 model.position.y = end_pos.y;
                 model.position.z = get_depth(end_pos.x, end_pos.y, 9, width, height);
@@ -415,7 +416,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
 
     function check_target_change() {
         let result = false;
-        if (last_check_target.distanceTo(target)[0] > min_target_change) {
+        if (point2point(last_check_target, target)[0] > min_target_change) {
             result = true;
         }
         return result;
@@ -423,9 +424,9 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
 
     function check_dir_change() {
         let result = false;
-        if (last_check_dir.length() == 0 && current_dir.length() != last_check_dir.length())
+        if (shape_length(last_check_dir) == 0 && shape_length(current_dir) != shape_length(last_check_dir))
             result = true;
-        else if (current_dir.length() != 0 && last_check_dir.length() != 0) {
+        else if (shape_length(current_dir) != 0 && shape_length(last_check_dir) != 0) {
             const d_angle = Math.abs(vec_angle(current_dir, last_check_dir));
             result = (d_angle > update_way_angle);
         }
@@ -444,7 +445,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
         if (!stick_start)
             return;
         stick_end = point(e.x, e.y);
-        if (stick_end.distanceTo(stick_start)[0] < min_stick_dist)
+        if (point2point(stick_end, stick_start)[0] < min_stick_dist)
             current_dir = vector(stick_start, stick_end);
     }
 

@@ -1,16 +1,12 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-
-import { Arc } from "../geometry/arc";
-import { Box } from "../geometry/box";
-import { Point } from "../geometry/point";
-import { Segment } from "../geometry/segment";
+import { VEC_A } from "../geometry/const";
+import { point2segment } from "../geometry/distance";
+import { segment_intersect } from "../geometry/intersect";
+import { Box, Arc, Point, Segment } from "../geometry/shapes";
 import { PointLike, ISegment, IArc } from "../geometry/types";
-import { clone, invert_vec, rotate_vec_90CW } from "../geometry/utils";
-import { Vector } from "../geometry/vector";
+import { shape_center, clone, invert_vec, multiply, normalize, rotate_vec_90CW, translate, vector_slope, shape_vector } from "../geometry/utils";
 import { Aabb, createSpatialHash } from "../spatial_hash";
 import { GridParams, ObstacleTileData, SubGridParams } from "./types";
-import { radToDeg } from "./utils";
-
 
 
 export type ObstaclesGrid = ReturnType<typeof ObstaclesGridCreate>;
@@ -133,11 +129,13 @@ export function ObstaclesManager(hash_cell_size: number) {
                 const box_ymin = grid_params.start.y + grid_params.cell_size * y;
                 const box_ymax = box_ymin + grid_params.cell_size;
                 const box = Box(box_xmin, box_ymin, box_xmax, box_ymax);
-                const c = box.center();
+                const c = shape_center(box);
                 coord_row.push({ x: c.x, y: c.y });
-                const result = get_obstacles(c.x, c.y, box.width, box.height);
+                const box_width = Math.abs(box.xmax - box.xmin);
+                const box_height = Math.abs(box.ymax - box.ymin);
+                const result = get_obstacles(c.x, c.y, box_width, box_height);
                 for (const ob of result) {
-                    const ips = ob.intersect(box);
+                    const ips = segment_intersect(ob, box);
                     if (ips.length > 0) _grid[y][x] = 1;
                 }
             }
@@ -165,11 +163,11 @@ export function ObstaclesManager(hash_cell_size: number) {
 
     function add_obstacle(obstacle: ISegment, object_id?: string) {
         all_obstacles.push(obstacle);
-        const center = obstacle.center();
-        const x = center.x;
+        const pc = shape_center(obstacle);
+        const x = pc.x;
         const width = Math.abs(obstacle.end.x - obstacle.start.x);
         const height = Math.abs(obstacle.end.y - obstacle.start.y);
-        const y = center.y;
+        const y = pc.y;
         const id = 'obst_' + id_obstacle;
         id_obstacle++;
         _data[id] = { id, x, y, width, height, obstacle, object_id };
@@ -224,26 +222,29 @@ export function ObstaclesManager(hash_cell_size: number) {
         return list;
     }
 
-    const normal_vec = Vector();
-
     function build_offsets(obstacle: ISegment, offset: number, build_option: OffsetBuildOption = "all") {
         const result: (ISegment | IArc)[] = [];
-        const obst_vec = obstacle.vector();
-        normal_vec.x = obst_vec.x;
-        normal_vec.y = obst_vec.y;
-        normal_vec.normalize()
-        rotate_vec_90CW(normal_vec);
-        normal_vec.multiply(offset);
+        const obst_vec = shape_vector(obstacle);
+        VEC_A.x = obst_vec.x;
+        VEC_A.y = obst_vec.y;
+        normalize(VEC_A);
+        rotate_vec_90CW(VEC_A);
+        multiply(VEC_A, offset);
         if (build_option == "all" || build_option == "segment") {
-            result.push(clone(obstacle).translate(normal_vec.x, normal_vec.y));
-            invert_vec(normal_vec)
-            result.push(clone(obstacle).translate(normal_vec.x, normal_vec.y));
+            let offset = clone(obstacle);
+            translate(offset, VEC_A.x, VEC_A.y);
+            result.push(offset);
+            invert_vec(VEC_A);
+            offset = clone(obstacle);
+            translate(offset, VEC_A.x, VEC_A.y);
+            result.push(offset);
         }
 
         if (build_option == "all" || build_option == "arc") {
-            const slope = obstacle.slope;
-            result.push(Arc(obstacle.start, offset, slope() - Math.PI / 2, slope() + Math.PI / 2, false));
-            result.push(Arc(obstacle.end, offset, slope() + Math.PI / 2, slope() - Math.PI / 2, false));
+            const slope = vector_slope(shape_vector(obstacle));
+            
+            result.push(Arc(obstacle.start, offset, slope - Math.PI / 2, slope + Math.PI / 2, false));
+            result.push(Arc(obstacle.end, offset, slope + Math.PI / 2, slope - Math.PI / 2, false));
         }
         return result;
     }
@@ -268,7 +269,7 @@ export function ObstaclesManager(hash_cell_size: number) {
             const id = entry.id;
             const obst_data = _data[id];
             if (obst_data != null) {
-                const dist = point.distanceTo(obst_data.obstacle)[0];
+                const dist = point2segment(point, obst_data.obstacle)[0];
                 if (dist < shortest_distance) {
                     shortest_distance = dist;
                     closest = obst_data.object_id;

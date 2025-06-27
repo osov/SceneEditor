@@ -1,6 +1,5 @@
 import { IMatrix, IVector, PointLike } from "./types";
-import { det, determinant, EQ } from "./utils";
-import { Vector } from "./vector";
+import { EQ } from "./utils";
 
 
 export function Matrix(_a = 1, _b = 0, _c = 0, _d = 1, _tx = 0, _ty = 0) {

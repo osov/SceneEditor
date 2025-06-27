@@ -3,9 +3,9 @@ import { LineBasicMaterial, Vector2, Line as GeomLine, BufferGeometry, Vector2Li
 import { CAMERA_Z } from "../../config";
 import { GoContainer } from "../../render_engine/objects/sub_types";
 import { GridParams } from '../../modules/types';
-import { Point } from '../geometry/point';
-import { Segment } from '../geometry/segment';
 import { ISegment, IArc, PointLike } from '../geometry/types';
+import { arc_end, arc_start, shape_length, split_at_length } from '../geometry/utils';
+import { Segment, Point } from '../geometry/shapes';
 
 
 export type TLinesDrawer = ReturnType<typeof LinesDrawer>;
@@ -30,16 +30,16 @@ export function LinesDrawer() {
     function draw_arc(arc: IArc, container: GoContainer, color = 0x22ff77) {
         const step = 2 * Math.PI * arc.r / DRAWN_ARC_EDGES_AMOUNT;
         const list = [];
-        let lenght_remains = arc.length();
+        let lenght_remains = shape_length(arc);
         let _allowed_way = arc;
         while (lenght_remains > 0 && !('null' in _allowed_way)) {
-            const move = (step < _allowed_way.length()) ? step : _allowed_way.length();
+            const move = (step < shape_length(_allowed_way)) ? step : shape_length(_allowed_way);
             lenght_remains -= move;
-            const sub_arcs = _allowed_way.splitAtLength(move);
+            const sub_arcs = split_at_length(_allowed_way, move);
             const move_arc = sub_arcs[0] as IArc;
             _allowed_way = sub_arcs[1] as IArc;
-            const p1 = move_arc.start();
-            const p2 = move_arc.end();
+            const p1 = arc_start(move_arc);
+            const p2 = arc_end(move_arc);
             const line = draw_line(Segment(p1, p2), container, color);
             list.push({line, p1, p2});
         }

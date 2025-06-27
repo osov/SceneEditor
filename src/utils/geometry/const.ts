@@ -1,13 +1,6 @@
-import { Box } from "./box";
-import { Circle } from "./circle";
-import { Line } from "./line";
 import { Matrix } from "./matrix";
-import { Point } from "./point";
+import { Point, Circle, Box, Vector, Line } from "./shapes";
 import { clone } from "./utils";
-import { Vector } from "./vector";
-
-// export const tm = vmath.matrix4();
-// export const tv = vmath.vector3();
 
 export const DP_TOL = 0.000001;
 export const TAU = 2 * Math.PI;
@@ -40,6 +33,10 @@ export const VEC_A = Vector();
 export const VEC_B = Vector();
 export const VEC_C = Vector();
 export const LINE_A = Line()
+export const p1 = Point();
+export const p2 = Point();
+export const p3 = Point();
+export const p4 = Point();
 
 export const CW = true;
 export const CCW = false;
