@@ -5,7 +5,7 @@ import { GoSprite, FlipMode, GuiBox, GuiText } from "../render_engine/objects/su
 import { TextMesh } from "../render_engine/objects/text";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { ChangeInfo, PropertyType, BeforeChangeInfo, PropertyData } from "../modules_editor/Inspector";
-import { deepClone, hexToRGB } from "../modules/utils";
+import { deepClone, hexToRGB, quat_to_euler_xyz } from "../modules/utils";
 import { MeshMaterialPropertyInfo, MeshMaterialUniformInfo, MeshPropertyInfo } from "../controls/types";
 import { anchorToScreenPreset, convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode, generateMaterialOptions, generateModelOptions, generateTextureOptions, getChangedInfo, getDraggedInfo, pivotToScreenPreset, screenPresetToAnchorValue, screenPresetToPivotValue } from "./helpers";
 import { IUniform, Texture } from "three";
@@ -1299,7 +1299,7 @@ function MeshInspectorCreate() {
             onChange: handleSoundFunctionChange
         });
 
-        if (mesh.get_sound() != '') {
+        if (mesh.get_sound() != '' && !mesh.is_spatial()) {
             const is_playing = mesh.is_playing();
             audio_fields.push({
                 key: is_playing ? MeshProperty.STOP : MeshProperty.PLAY,

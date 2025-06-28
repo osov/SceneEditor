@@ -25,7 +25,7 @@ function AudioManagerModule() {
         Camera.set_listener(listener);
         EventBus.on('SYS_ON_UPDATE', () => {
             const camera = RenderEngine.camera;
-            SpatialSound.set_listener_position(vmath.vector3(camera.position.x, camera.position.y, camera.position.z));
+            Sound.set_listener_position(vmath.vector3(camera.position.x, camera.position.y, camera.position.z));
         });
     }
 

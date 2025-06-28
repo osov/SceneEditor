@@ -38,20 +38,6 @@ export function sound_module() {
         complete_function?: (self: IBaseEntityAndThree, message_id: string, message: { play_id: number }, sender: string) => void
     ): number {
         const id = uh_to_id(url);
-        const sound_mesh = SceneManager.get_mesh_by_id(id) as AudioMesh | null;
-        if (!sound_mesh) {
-            Log.error('Sound component not found');
-            return -1;
-        }
-
-        if (sound_mesh.get_sound() == '') {
-            Log.error('Sound not set');
-            return -1;
-        }
-
-        if (sound_mesh.is_playing()) {
-            sound_mesh.stop();
-        }
 
         const properties = {
             delay: play_properties?.delay ?? 0,
@@ -61,101 +47,74 @@ export function sound_module() {
         };
 
         AudioManager.set_volume(id, properties.gain);
-        sound_mesh.set_pan(properties.pan);
-        sound_mesh.set_speed(properties.speed);
+        AudioManager.set_pan(id, properties.pan);
+        AudioManager.set_speed(id, properties.speed);
 
         AudioManager.set_end_callback(id, (type: SoundEndCallbackType) => {
-            if (complete_function) complete_function(sound_mesh, type, { play_id: id }, SceneManager.get_mesh_url_by_id(id));
+            if (complete_function) {
+                const sound_mesh = SceneManager.get_mesh_by_id(id) as AudioMesh | null;
+                if (sound_mesh) {
+                    complete_function(sound_mesh, type, { play_id: id }, SceneManager.get_mesh_url_by_id(id));
+                }
+            }
         });
 
         if (properties.delay > 0) {
             setTimeout(() => {
-                sound_mesh.play();
+                AudioManager.play(id, false, properties.gain, properties.speed, properties.pan);
             }, properties.delay / 1000); // NOTE: конвертируем в миллисекунды
-        } else sound_mesh.play();
+        } else {
+            AudioManager.play(id, false, properties.gain, properties.speed, properties.pan);
+        }
+
+        MeshInspector.force_refresh();
 
         return id;
     }
 
     function stop(url: string | hash): void {
         const id = uh_to_id(url);
-        const sound_mesh = SceneManager.get_mesh_by_id(id) as AudioMesh | null;
-        if (!sound_mesh) {
-            Log.error('Sound component not found');
-            return;
-        }
-        sound_mesh.stop();
+        AudioManager.stop(id);
+        MeshInspector.force_refresh();
     }
 
     function pause(url: string | hash, pause: boolean): void {
         const id = uh_to_id(url);
-        const sound_mesh = SceneManager.get_mesh_by_id(id) as AudioMesh | null;
-        if (!sound_mesh) {
-            Log.error('Sound component not found');
-            return;
+        if (pause) {
+            AudioManager.pause(id);
+        } else {
+            AudioManager.play(id, false, AudioManager.get_volume(id), AudioManager.get_speed(id), AudioManager.get_pan(id));
         }
-        if (pause) sound_mesh.pause();
-        else sound_mesh.play();
     }
 
     function set_gain(url: string | hash, gain: number): void {
         const id = uh_to_id(url);
-        const sound_mesh = SceneManager.get_mesh_by_id(id) as AudioMesh | null;
-        if (!sound_mesh) {
-            Log.error('Sound component not found');
-            return;
-        }
         AudioManager.set_volume(id, gain);
     }
 
     function get_gain(url: string | hash): number {
         const id = uh_to_id(url);
-        const sound_mesh = SceneManager.get_mesh_by_id(id) as AudioMesh | null;
-        if (!sound_mesh) {
-            Log.error('Sound component not found');
-            return 0;
-        }
         return AudioManager.get_volume(id);
     }
 
     function set_pan(url: string | hash, pan: number): void {
         const id = uh_to_id(url);
-        const sound_mesh = SceneManager.get_mesh_by_id(id) as AudioMesh | null;
-        if (!sound_mesh) {
-            Log.error('Sound component not found');
-            return;
-        }
-        sound_mesh.set_pan(pan);
+        AudioManager.set_pan(id, pan);
     }
 
     function get_pan(url: string | hash): number {
         const id = uh_to_id(url);
-        const sound_mesh = SceneManager.get_mesh_by_id(id) as AudioMesh | null;
-        if (!sound_mesh) {
-            Log.error('Sound component not found');
-            return 0;
-        }
-        return sound_mesh.get_pan();
+        return AudioManager.get_pan(id);
     }
 
     function set_speed(url: string | hash, speed: number): void {
         const id = uh_to_id(url);
-        const sound_mesh = SceneManager.get_mesh_by_id(id) as AudioMesh | null;
-        if (!sound_mesh) {
-            Log.error('Sound component not found');
-            return;
-        }
-        sound_mesh.set_speed(speed);
+        AudioManager.set_speed(id, speed);
     }
 
     function get_speed(url: string | hash): number {
         const id = uh_to_id(url);
-        const sound_mesh = SceneManager.get_mesh_by_id(id) as AudioMesh | null;
-        if (!sound_mesh) {
-            Log.error('Sound component not found');
-            return 0;
-        }
-        return sound_mesh.get_speed();
+        return AudioManager.get_speed(id);
     }
 
     return {

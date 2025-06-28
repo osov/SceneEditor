@@ -4,7 +4,7 @@ import { DEFAULT_PAN_NORMALIZATION_DISTANCE, DEFAULT_MAX_VOLUME_RADIUS, DEFAULT_
 import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, CircleGeometry, Mesh, MeshBasicMaterial } from "three";
 
 // NOTE: чтобы использовать без (window as any)
-import "../../modules/SpatialSound";
+import "../../modules/Sound";
 
 export enum SoundFunctionType {
     LINEAR = 'linear',
@@ -60,7 +60,12 @@ export class AudioMesh extends EntityBase {
         return this.mesh_data.id;
     }
 
-    // NOTE: важно чтобы мешь уже был создан и добавлен в сцену
+    set_active(val: boolean): void {
+        super.set_active(val);
+        Sound.set_active(SceneManager.get_mesh_url_by_id(this.get_id()), val);
+    }
+
+    // NOTE: перед установкой звука важно чтобы мешь уже был создан и добавлен в сцену
     set_sound(name: string) {
         if (this.sound != '') {
             this.dispose();
@@ -68,7 +73,7 @@ export class AudioMesh extends EntityBase {
 
         this.sound = name;
         AudioManager.create_audio(name, this.get_id());
-        SpatialSound.create_spatial_sound(
+        Sound.create(
             SceneManager.get_mesh_url_by_id(this.get_id()),
             this.soundRadius,
             this.volume,
@@ -87,7 +92,7 @@ export class AudioMesh extends EntityBase {
 
     set_speed(speed: number) {
         this.speed = speed;
-        AudioManager.set_speed(this.get_id(), speed);
+        Sound.set_sound_speed(SceneManager.get_mesh_url_by_id(this.get_id()), speed);
     }
 
     get_speed() {
@@ -96,8 +101,7 @@ export class AudioMesh extends EntityBase {
 
     set_volume(volume: number) {
         this.volume = volume;
-        if (this.soundRadius > 0) SpatialSound.set_max_volume(SceneManager.get_mesh_url_by_id(this.get_id()), volume);
-        else AudioManager.set_volume(this.get_id(), volume);
+        Sound.set_max_volume(SceneManager.get_mesh_url_by_id(this.get_id()), volume);
     }
 
     get_volume() {
@@ -106,7 +110,7 @@ export class AudioMesh extends EntityBase {
 
     set_pan(pan: number) {
         this.pan = pan;
-        AudioManager.set_pan(this.get_id(), pan);
+        Sound.set_sound_pan(SceneManager.get_mesh_url_by_id(this.get_id()), pan);
     }
 
     get_pan() {
@@ -115,7 +119,7 @@ export class AudioMesh extends EntityBase {
 
     set_loop(loop: boolean) {
         this.loop = loop;
-        AudioManager.set_loop(this.get_id(), loop);
+        Sound.set_sound_loop(SceneManager.get_mesh_url_by_id(this.get_id()), loop);
     }
 
     get_loop() {
@@ -124,7 +128,8 @@ export class AudioMesh extends EntityBase {
 
     set_sound_radius(radius: number) {
         this.soundRadius = Math.max(0, radius);
-        SpatialSound.set_sound_radius(SceneManager.get_mesh_url_by_id(this.get_id()), this.soundRadius);
+        Sound.set_sound_radius(SceneManager.get_mesh_url_by_id(this.get_id()), this.soundRadius);
+        MeshInspector.force_refresh();
     }
 
     get_sound_radius() {
@@ -133,7 +138,7 @@ export class AudioMesh extends EntityBase {
 
     set_max_volume_radius(radius: number) {
         this.maxVolumeRadius = Math.max(0, radius);
-        SpatialSound.set_max_volume_radius(SceneManager.get_mesh_url_by_id(this.get_id()), this.maxVolumeRadius);
+        Sound.set_max_volume_radius(SceneManager.get_mesh_url_by_id(this.get_id()), this.maxVolumeRadius);
     }
 
     get_max_volume_radius() {
@@ -142,7 +147,7 @@ export class AudioMesh extends EntityBase {
 
     set_pan_normalization_distance(distance: number) {
         this.panNormalizationDistance = Math.max(0, distance);
-        SpatialSound.set_pan_normalization_distance(SceneManager.get_mesh_url_by_id(this.get_id()), this.panNormalizationDistance);
+        Sound.set_pan_normalization_distance(SceneManager.get_mesh_url_by_id(this.get_id()), this.panNormalizationDistance);
     }
 
     get_pan_normalization_distance() {
@@ -151,7 +156,7 @@ export class AudioMesh extends EntityBase {
 
     set_sound_function(func: SoundFunctionType) {
         this.soundFunction = func;
-        SpatialSound.set_sound_function(SceneManager.get_mesh_url_by_id(this.get_id()), this.soundFunction);
+        Sound.set_sound_function(SceneManager.get_mesh_url_by_id(this.get_id()), this.soundFunction);
     }
 
     get_sound_function() {
@@ -160,7 +165,7 @@ export class AudioMesh extends EntityBase {
 
     set_fade_in_time(time: number) {
         this.fadeInTime = Math.max(0, time);
-        SpatialSound.set_fade_in_time(SceneManager.get_mesh_url_by_id(this.get_id()), this.fadeInTime);
+        Sound.set_fade_in_time(SceneManager.get_mesh_url_by_id(this.get_id()), this.fadeInTime);
     }
 
     get_fade_in_time() {
@@ -169,7 +174,7 @@ export class AudioMesh extends EntityBase {
 
     set_fade_out_time(time: number) {
         this.fadeOutTime = Math.max(0, time);
-        SpatialSound.set_fade_out_time(SceneManager.get_mesh_url_by_id(this.get_id()), this.fadeOutTime);
+        Sound.set_fade_out_time(SceneManager.get_mesh_url_by_id(this.get_id()), this.fadeOutTime);
     }
 
     get_fade_out_time() {
@@ -177,25 +182,31 @@ export class AudioMesh extends EntityBase {
     }
 
     play() {
-        if (this.sound == '') return;
-        AudioManager.play(this.get_id(), this.loop, this.volume, this.speed, this.pan);
+        if (this.sound == '' || !this.get_active()) return;
+
+        Sound.play(SceneManager.get_mesh_url_by_id(this.get_id()));
         MeshInspector.force_refresh();
     }
 
+    is_spatial() {
+        return this.soundRadius > 0;
+    }
+
     pause() {
-        if (this.sound == '') return;
-        AudioManager.pause(this.get_id());
+        if (this.sound == '' || !this.get_active()) return;
+        sound.pause(SceneManager.get_mesh_url_by_id(this.get_id()), true);
         MeshInspector.force_refresh();
     }
 
     stop() {
-        if (this.sound == '') return;
-        AudioManager.stop(this.get_id());
+        if (this.sound == '' || !this.get_active()) return;
+        Sound.stop(SceneManager.get_mesh_url_by_id(this.get_id()));
         MeshInspector.force_refresh();
     }
 
     is_playing() {
-        return AudioManager.is_playing(this.get_id());
+        if (!this.get_active()) return false;
+        return Sound.is_sound_playing(SceneManager.get_mesh_url_by_id(this.get_id()));
     }
 
     private createVisual() {
@@ -228,7 +239,7 @@ export class AudioMesh extends EntityBase {
         });
         this.listenerVisual = new Mesh(listenerGeometry, listenerMaterial);
 
-        const listenerPosition = SpatialSound.get_listener_position();
+        const listenerPosition = Sound.get_listener_position();
         this.listenerVisual.position.copy(listenerPosition);
         this.listenerVisual.parent?.localToWorld(this.listenerVisual.position);
         this.listenerVisual.visible = this.get_active();
@@ -281,7 +292,7 @@ export class AudioMesh extends EntityBase {
 
     private updateListenerVisual() {
         if (!this.listenerVisual) return;
-        const listenerPosition = SpatialSound.get_listener_position();
+        const listenerPosition = Sound.get_listener_position();
         this.listenerVisual.position.copy(listenerPosition);
         this.listenerVisual.parent?.worldToLocal(this.listenerVisual.position);
         this.listenerVisual.visible = this.get_active();
@@ -398,17 +409,9 @@ export class AudioMesh extends EntityBase {
         this.sound = data.sound;
         AudioManager.create_audio(this.sound, this.get_id());
 
-        if (data.speed) {
-            this.speed = data.speed;
-            AudioManager.set_speed(this.get_id(), this.speed);
-        }
-        if (data.volume) {
-            this.volume = data.volume;
-        }
-        if (data.loop) {
-            this.loop = data.loop;
-            AudioManager.set_loop(this.get_id(), this.loop);
-        }
+        if (data.speed) this.speed = data.speed;
+        if (data.volume) this.volume = data.volume;
+        if (data.loop) this.loop = data.loop;
         if (data.soundRadius) this.soundRadius = data.soundRadius;
         if (data.maxVolumeRadius) this.maxVolumeRadius = data.maxVolumeRadius;
         if (data.panNormalizationDistance) this.panNormalizationDistance = data.panNormalizationDistance;
@@ -418,7 +421,7 @@ export class AudioMesh extends EntityBase {
     }
 
     after_deserialize() {
-        SpatialSound.create_spatial_sound(
+        Sound.create(
             SceneManager.get_mesh_url_by_id(this.get_id()),
             this.soundRadius,
             this.volume,
@@ -428,13 +431,17 @@ export class AudioMesh extends EntityBase {
             this.fadeInTime,
             this.fadeOutTime
         );
+
+        Sound.set_sound_speed(SceneManager.get_mesh_url_by_id(this.get_id()), this.speed);
+        Sound.set_sound_loop(SceneManager.get_mesh_url_by_id(this.get_id()), this.loop);
+        Sound.set_active(SceneManager.get_mesh_url_by_id(this.get_id()), this.get_active());
     }
 
     dispose() {
         super.dispose();
         this.removeVisual();
         EventBus.off('SYS_ON_UPDATE', this.updateVisual.bind(this));
-        SpatialSound.remove_spatial_sound(SceneManager.get_mesh_url_by_id(this.get_id()));
+        Sound.remove(SceneManager.get_mesh_url_by_id(this.get_id()));
         AudioManager.free_audio(this.get_id());
     }
 }

@@ -1,4 +1,4 @@
-import { IBaseEntityAndThree, IObjectTypes } from "@editor/render_engine/types";
+import { IBaseEntityAndThree, IBaseMeshAndThree, IObjectTypes } from "@editor/render_engine/types";
 import { Quaternion, Vector3 } from "three";
 import { animate_logic, cancel_animations_logic, get_nested_property, PLAYBACK_LOOP_BACKWARD, PLAYBACK_LOOP_FORWARD, PLAYBACK_ONCE_BACKWARD, PLAYBACK_ONCE_FORWARD, PLAYBACK_ONCE_PINGPONG, PLAYBACK_LOOP_PINGPONG, set_nested_property, uh_to_id, EASING_LINEAR, EASING_INQUART, EASING_INQUAD, EASING_OUTQUART, EASING_OUTQUAD, EASING_OUTQUINT, EASING_INOUTQUAD, EASING_INQUINT, EASING_INOUTQUART, EASING_INOUTQUINT, EASING_OUTCUBIC, EASING_INOUTCUBIC, EASING_OUTSINE, EASING_INSINE, EASING_INCUBIC, EASING_INOUTSINE, EASING_OUTCIRC, EASING_INOUTCIRC, EASING_INOUTEXPO, EASING_INCIRC, EASING_OUTBACK, EASING_INBACK, EASING_INOUTELASTIC, EASING_INOUTBACK, EASING_INEXPO, EASING_OUTEXPO, EASING_INELASTIC, EASING_OUTELASTIC, EASING_INBOUNCE, EASING_OUTBOUNCE, EASING_INOUTBOUNCE } from "./utils";
 
@@ -186,12 +186,23 @@ export function go_module() {
             Log.error(`Mesh with url ${id} not found`);
             return null;
         }
-        // TODO: нужно убрать, но пока нужно для аудио компонентa, в теории можно брать из обьекта родителя
-        if (![IObjectTypes.GO_CONTAINER, IObjectTypes.GO_AUDIO_COMPONENT].includes(mesh.type)) {
-            Log.error(`Mesh with id ${id} is not go`);
-            return null;
+
+        let targetMesh = mesh;
+        if (mesh.type != IObjectTypes.GO_CONTAINER) {
+            let parent = mesh.parent as IBaseMeshAndThree;
+            let foundGo = false;
+            while (parent) {
+                if (parent.type === IObjectTypes.GO_CONTAINER) {
+                    targetMesh = parent;
+                    foundGo = true;
+                    break;
+                }
+                parent = parent.parent as IBaseMeshAndThree;
+            }
+            if (!foundGo) targetMesh = mesh;
         }
-        const worldPosition = mesh.getWorldPosition(new Vector3());
+
+        const worldPosition = targetMesh.getWorldPosition(new Vector3());
         return vmath.vector3(...worldPosition.toArray());
     }
 
