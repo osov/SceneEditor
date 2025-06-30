@@ -1,11 +1,11 @@
-import { Euler, ShaderMaterial, Vector2, Vector3, Vector4 } from "three";
+import { Euler, Quaternion, ShaderMaterial, Vector2, Vector3, Vector4 } from "three";
 import { degToRad, radToDeg } from "three/src/math/MathUtils";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { GoSprite, FlipMode, GuiBox, GuiText } from "../render_engine/objects/sub_types";
 import { TextMesh } from "../render_engine/objects/text";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { ChangeInfo, PropertyType, BeforeChangeInfo, PropertyData } from "../modules_editor/Inspector";
-import { deepClone, hexToRGB } from "../modules/utils";
+import { deepClone, euler_to_quat, hexToRGB, quat_to_euler, swap } from "../modules/utils";
 import { MeshMaterialPropertyInfo, MeshMaterialUniformInfo, MeshPropertyInfo } from "../controls/types";
 import { anchorToScreenPreset, convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode, generateMaterialOptions, generateModelOptions, generateTextureOptions, getChangedInfo, getDraggedInfo, pivotToScreenPreset, screenPresetToAnchorValue, screenPresetToPivotValue } from "./helpers";
 import { IUniform, Texture } from "three";
@@ -322,8 +322,9 @@ function MeshInspectorCreate() {
             onRefresh: refreshPosition
         });
 
-        const raw = mesh.rotation;
-        const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
+        const raw = mesh.quaternion;
+        const rotation = new Vector3().fromArray(quat_to_euler(raw.x, raw.y, raw.z, raw.w));
+        swap(rotation, 'x', 'z');
         transform_fields.push({
             key: MeshProperty.ROTATION,
             title: MeshPropertyTitle.ROTATION,
@@ -1458,8 +1459,8 @@ function MeshInspectorCreate() {
             Log.error('[refreshRotation] Mesh not found for id:', ids);
             return;
         }
-        const raw = mesh.rotation;
-        return new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
+        const raw = mesh.quaternion;
+        return new Vector3().fromArray(quat_to_euler(raw.x, raw.y, raw.z, raw.w));
     }
 
     function refreshScale(ids: number[]) {
@@ -2026,22 +2027,21 @@ function MeshInspectorCreate() {
     }
 
     function saveRotation(info: BeforeChangeInfo) {
-        const oldRotations: MeshPropertyInfo<Euler>[] = [];
+        const oldRotations: MeshPropertyInfo<Quaternion>[] = [];
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
                 Log.error('[saveRotation] Mesh not found for id:', id);
                 return;
             }
-            oldRotations.push({ mesh_id: id, value: mesh.rotation.clone() });
+            oldRotations.push({ mesh_id: id, value: mesh.quaternion.clone() });
         });
         HistoryControl.add("MESH_ROTATE", oldRotations, HistoryOwner.MESH_INSPECTOR);
     }
 
     function handleRotationChange(info: ChangeInfo) {
         const [isChangedX, isChangedY, isChangedZ] = getChangedInfo(info);
-        const rawRot = info.data.event.value as Vector3;
-        const rot = new Vector3(degToRad(rawRot.x), degToRad(rawRot.y), degToRad(rawRot.z));
+        const rot = info.data.event.value as Vector3;
 
         const data = info.ids.map((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
@@ -2049,23 +2049,32 @@ function MeshInspectorCreate() {
                 Log.error('[updateRotation] Mesh not found for id:', id);
                 return;
             }
-            const x = isChangedX ? rot.x : mesh.rotation.x;
-            const y = isChangedY ? rot.y : mesh.rotation.y;
-            const z = isChangedZ ? rot.z : mesh.rotation.z;
-            return { mesh_id: id, value: new Euler(x, y, z) };
+
+            const currentQuat = mesh.quaternion;
+            const currentEuler = new Vector3().fromArray(quat_to_euler(currentQuat.x, currentQuat.y, currentQuat.z, currentQuat.w));
+
+            const finalRot = new Vector3(
+                isChangedZ ? rot.z : currentEuler.x,
+                isChangedY ? rot.y : currentEuler.y,
+                isChangedX ? rot.x : currentEuler.z
+            );
+
+            const newQuat = new Quaternion().fromArray(euler_to_quat(finalRot.x, finalRot.y, finalRot.z));
+
+            return { mesh_id: id, value: newQuat };
         }).filter((item) => item != undefined);
 
         updateRotation(data, info.data.event.last);
     }
 
-    function updateRotation(data: MeshPropertyInfo<Euler>[], _: boolean) {
+    function updateRotation(data: MeshPropertyInfo<Quaternion>[], _: boolean) {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
                 Log.error('[updateRotation] Mesh not found for id:', item.mesh_id);
                 continue;
             }
-            mesh.rotation.set(item.value.x, item.value.y, item.value.z);
+            mesh.quaternion.set(item.value.x, item.value.y, item.value.z, item.value.w);
             mesh.transform_changed();
         }
 
@@ -3972,7 +3981,7 @@ function MeshInspectorCreate() {
                 updatePosition(positions, true);
                 break;
             case 'MESH_ROTATE':
-                const rotations = event.data as MeshPropertyInfo<Euler>[];
+                const rotations = event.data as MeshPropertyInfo<Quaternion>[];
                 updateRotation(rotations, true);
                 break;
             case 'MESH_SCALE':

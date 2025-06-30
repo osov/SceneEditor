@@ -1,4 +1,4 @@
-import { Euler, MagnificationTextureFilter, MinificationTextureFilter, Vector2, Vector3, Vector4, Wrapping } from "three";
+import { Euler, MagnificationTextureFilter, MinificationTextureFilter, Quaternion, Vector2, Vector3, Vector4, Wrapping } from "three";
 import { get_keys } from "../modules/utils";
 import { MeshMoveEventData, MeshMaterialUniformInfo, MeshPropertyInfo, AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo, MeshMaterialPropertyInfo } from "./types";
 import { BlendMode } from "../inspectors/MeshInspector";
@@ -15,7 +15,7 @@ export function register_history_control() {
 
 export type HistoryData = {
     MESH_TRANSLATE: MeshPropertyInfo<Vector3>
-    MESH_ROTATE: MeshPropertyInfo<Euler>
+    MESH_ROTATE: MeshPropertyInfo<Quaternion>
     MESH_SCALE: MeshPropertyInfo<Vector3>
     MESH_MODEL_SCALE: MeshPropertyInfo<number>
     MESH_SIZE: MeshPropertyInfo<{ size: Vector2, pos: Vector3 }>

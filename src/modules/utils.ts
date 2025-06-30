@@ -1,4 +1,4 @@
-import { Vector, Circle, Segment } from "2d-geometry";
+import { Circle, Segment } from "2d-geometry";
 import { Vector3, Vector4 } from "three";
 
 export const DP_TOL = 0.000001;
@@ -260,25 +260,125 @@ export function calculate_distance_2d(pos1: vmath.vector3, pos2: vmath.vector3):
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-export function quat_to_euler_xyz(q: number[]): [number, number, number] {
-    const norm = Math.sqrt(q[0] ** 2 + q[1] ** 2 + q[2] ** 2 + q[3] ** 2);
-    const [w, x, y, z] = [q[0] / norm, q[1] / norm, q[2] / norm, q[3] / norm];
+export function swap<T>(obj: T, key1: keyof T, key2: keyof T) {
+    if (!obj[key1]) {
+        Log.error(`[swap]: in ${obj} not found (to) field ${key1 as string}`)
+        return;
+    }
+    if (!obj[key2]) {
+        Log.error(`[swap]: in ${obj} not found (from) field ${key2 as string}`)
+        return;
+    }
+    const tmp = deepClone(obj[key1]);
+    obj[key1] = deepClone(obj[key2]);
+    obj[key2] = tmp;
+}
 
-    const sinPitch = -2 * (w * y - x * z);
-    const pitch = Math.asin(sinPitch);
-    const nearSingularity = Math.abs(Math.abs(pitch) - Math.PI / 2) < 0.1;
+// DEFOLD IMPLEMENTATION OF CONVERTING QUATERNIONS TO EULERS AND BACKWARD
 
-    if (!nearSingularity) {
-        const roll = Math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y));
-        const yaw = Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z));
-        return [roll, pitch, yaw];
+const DEG_FACTOR = 180.0 / Math.PI;
+const HALF_RAD_FACTOR = 0.008726646; // (Math.PI/180)/2
+
+/**
+ * Converts a quaternion into euler angles (r0, r1, r2), based on YZX rotation order.
+ * To handle gimbal lock (singularity at r1 ~ +/- 90 degrees), the cut off is at r0 = +/- 88.85 degrees, which snaps to +/- 90.
+ * The provided quaternion is expected to be normalized.
+ * The error is guaranteed to be less than +/- 0.02 degrees
+ * @param q0 first imaginary axis
+ * @param q1 second imaginary axis
+ * @param q2 third imaginary axis
+ * @param q3 real part
+ * @returns Euler angles in degrees and the same order as the specified rotation order [r0, r1, r2]
+ */
+export function quat_to_euler(q0: number, q1: number, q2: number, q3: number): [number, number, number] {
+    // Early-out when the rotation axis is either X, Y or Z.
+    // The reasons we make this distinction is that one-axis rotation is common (and cheaper), especially around Z in 2D games
+    const mask = (q2 !== 0 ? 1 : 0) << 2 | (q1 !== 0 ? 1 : 0) << 1 | (q0 !== 0 ? 1 : 0);
+    switch (mask) {
+        case 0b000:
+            return [0.0, 0.0, 0.0];
+        case 0b001:
+        case 0b010:
+        case 0b100:
+            {
+                const r: [number, number, number] = [0.0, 0.0, 0.0];
+                // the sum of the values yields one value, as the others are 0
+                r[mask >> 1] = Math.atan2(q0 + q1 + q2, q3) * 2.0 * DEG_FACTOR;
+                return r;
+            }
     }
 
-    const rollZXY = Math.atan2(2 * (w * x - y * z), 1 - 2 * (x * x + z * z));
-    const yawZXY = Math.atan2(2 * (w * z - x * y), 1 - 2 * (y * y + z * z));
+    const limit = 0.4999; // gimbal lock limit, corresponds to 88.85 degrees
+    let r0: number, r1: number, r2: number;
+    const test = q0 * q1 + q2 * q3;
 
-    const rollXYZ = rollZXY;
-    const yawXYZ = yawZXY;
+    if (test > limit) {
+        r1 = 2.0 * Math.atan2(q0, q3);
+        r2 = Math.PI / 2;
+        r0 = 0.0;
+    } else if (test < -limit) {
+        r1 = -2.0 * Math.atan2(q0, q3);
+        r2 = -Math.PI / 2;
+        r0 = 0.0;
+    } else {
+        const sq0 = q0 * q0;
+        const sq1 = q1 * q1;
+        const sq2 = q2 * q2;
+        r1 = Math.atan2(2.0 * q1 * q3 - 2.0 * q0 * q2, 1.0 - 2.0 * sq1 - 2.0 * sq2);
+        r2 = Math.asin(2.0 * test);
+        r0 = Math.atan2(2.0 * q0 * q3 - 2.0 * q1 * q2, 1.0 - 2.0 * sq0 - 2.0 * sq2);
+    }
 
-    return [rollXYZ, pitch, yawXYZ];
+    return [r0 * DEG_FACTOR, r1 * DEG_FACTOR, r2 * DEG_FACTOR];
+}
+
+/**
+ * Converts euler angles (x, y, z) in degrees into a quaternion
+ * The error is guaranteed to be less than 0.001.
+ * @param x rotation around x-axis (deg)
+ * @param y rotation around y-axis (deg)
+ * @param z rotation around z-axis (deg)
+ * @returns Quaternion as [x, y, z, w] describing an equivalent rotation (231 (YZX) rotation sequence).
+ */
+export function euler_to_quat(x: number, y: number, z: number): [number, number, number, number] {
+    // Early-out when the rotation axis is either X, Y or Z.
+    // The reasons we make this distinction is that one-axis rotation is common (and cheaper), especially around Z in 2D games
+    const mask = (z !== 0 ? 1 : 0) << 2 | (y !== 0 ? 1 : 0) << 1 | (x !== 0 ? 1 : 0);
+    switch (mask) {
+        case 0b000:
+            return [0.0, 0.0, 0.0, 1.0];
+        case 0b001:
+        case 0b010:
+        case 0b100:
+            {
+                // the sum of the angles yields one angle, as the others are 0
+                const ha = (x + y + z) * HALF_RAD_FACTOR;
+                const q: [number, number, number, number] = [0.0, 0.0, 0.0, Math.cos(ha)];
+                q[mask >> 1] = Math.sin(ha);
+                return q;
+            }
+    }
+
+    // Implementation based on:
+    // http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19770024290.pdf
+    // Rotation sequence: 231 (YZX)
+    const t1 = y * HALF_RAD_FACTOR;
+    const t2 = z * HALF_RAD_FACTOR;
+    const t3 = x * HALF_RAD_FACTOR;
+
+    const c1 = Math.cos(t1);
+    const s1 = Math.sin(t1);
+    const c2 = Math.cos(t2);
+    const s2 = Math.sin(t2);
+    const c3 = Math.cos(t3);
+    const s3 = Math.sin(t3);
+    const c1_c2 = c1 * c2;
+    const s2_s3 = s2 * s3;
+
+    return [
+        s1 * s2 * c3 + s3 * c1_c2,       // x
+        s1 * c2 * c3 + s2_s3 * c1,       // y
+        -s1 * s3 * c2 + s2 * c1 * c3,    // z
+        -s1 * s2_s3 + c1_c2 * c3         // w
+    ];
 }

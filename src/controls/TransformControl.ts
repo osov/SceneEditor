@@ -1,10 +1,11 @@
 import { TransformControls, TransformControlsMode } from 'three/examples/jsm/controls/TransformControls.js';
-import { Euler, Object3D, Vector3 } from 'three';
+import { Euler, Object3D, Quaternion, Vector3 } from 'three';
 import { MeshPropertyInfo } from './types';
 import { IBaseEntityAndThree } from '../render_engine/types';
 import { MeshProperty } from '../inspectors/MeshInspector';
 import { HistoryOwner, THistoryUndo } from '../modules_editor/modules_editor_const';
 import { IS_CAMERA_ORTHOGRAPHIC } from '@editor/config';
+import { euler_to_quat } from '@editor/modules/utils';
 
 declare global {
     const TransformControl: ReturnType<typeof TransformControlCreate>;
@@ -20,13 +21,13 @@ function TransformControlCreate() {
     const tmp_vec3 = new Vector3();
     const _start_position = new Vector3();
     const _delta_position = new Vector3();
-    const _rotation = new Euler();
+    const _rotation = new Quaternion();
     const _scale = new Vector3();
     const _sum = new Vector3();
     const _averagePoint = new Vector3();
     let _oldPositions: Vector3[] = [];
     let _oldScales: Vector3[] = [];
-    let _oldRotations: Euler[] = [];
+    let _oldRotations: Quaternion[] = [];
 
     let selectedObjects: IBaseEntityAndThree[] = [];
     const proxy = new Object3D();
@@ -78,7 +79,7 @@ function TransformControlCreate() {
     }
 
     function set_proxy_rotation(x: number, y: number, z: number, objects = selectedObjects) {
-        proxy.rotation.set(x, y, z);
+        proxy.quaternion.fromArray(euler_to_quat(x, y, z));
         rotate(objects);
     }
 
@@ -106,10 +107,10 @@ function TransformControlCreate() {
     }
 
     function rotate(objects = selectedObjects) {
-        _rotation.copy(proxy.rotation);
+        _rotation.copy(proxy.quaternion);
         for (let i = 0; i < objects.length; i++) {
             const element = objects[i] as any;
-            element.rotation.copy(_rotation);
+            element.quaternion.copy(_rotation);
             element.transform_changed();
         }
     }
@@ -124,7 +125,6 @@ function TransformControlCreate() {
         }
     }
 
-    /** сохраняет текущие значения позиций выбраных обьектов */
     function save_previous_positions() {
         _oldPositions = [];
         selectedObjects.forEach((object) => {
@@ -133,16 +133,14 @@ function TransformControlCreate() {
         });
     }
 
-    /** сохраняет текущие значения вращений выбраных обьектов */
     function save_previous_rotations() {
         _oldRotations = [];
         selectedObjects.forEach((object) => {
-            const oldRotation = object.rotation.clone();
+            const oldRotation = object.quaternion.clone();
             _oldRotations.push(oldRotation);
         });
     }
 
-    /** сохраняет текущие значения маштабов выбраных обьектов */
     function save_previous_scales() {
         _oldScales = [];
         selectedObjects.forEach((object) => {
@@ -151,7 +149,6 @@ function TransformControlCreate() {
         });
     }
 
-    /** записывает сохраненные предыдущие значения позиций выбранных обьектов в историю изменений */
     function write_previous_positions_in_historty() {
         const pos_data: MeshPropertyInfo<Vector3>[] = [];
         for (let i = 0; i < selectedObjects.length; i++) {
@@ -162,9 +159,8 @@ function TransformControlCreate() {
         HistoryControl.add('MESH_TRANSLATE', pos_data, HistoryOwner.TRANSFORM_CONTROL);
     }
 
-    /** записывает сохраненные предыдущие значения вращений выбранных обьектов в историю изменений */
     function write_previous_rotations_in_historty() {
-        const rot_data: MeshPropertyInfo<Euler>[] = [];
+        const rot_data: MeshPropertyInfo<Quaternion>[] = [];
         for (let i = 0; i < selectedObjects.length; i++) {
             const object = selectedObjects[i];
             const rotation = _oldRotations[i].clone();
@@ -173,7 +169,6 @@ function TransformControlCreate() {
         HistoryControl.add('MESH_ROTATE', rot_data, HistoryOwner.TRANSFORM_CONTROL);
     }
 
-    /** записывает сохраненные предыдущие значения маштабов обьектов (по умолчанию выбранных) в историю изменений */
     function write_previous_scales_in_historty(objects = selectedObjects) {
         const scale_data: MeshPropertyInfo<Vector3>[] = [];
         for (let i = 0; i < objects.length; i++) {
