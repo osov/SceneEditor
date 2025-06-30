@@ -260,15 +260,7 @@ export function calculate_distance_2d(pos1: vmath.vector3, pos2: vmath.vector3):
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-export function swap<T>(obj: T, key1: keyof T, key2: keyof T) {
-    if (!obj[key1]) {
-        Log.error(`[swap]: in ${obj} not found (to) field ${key1 as string}`)
-        return;
-    }
-    if (!obj[key2]) {
-        Log.error(`[swap]: in ${obj} not found (from) field ${key2 as string}`)
-        return;
-    }
+export function swap<T extends Object>(obj: T, key1: keyof T, key2: keyof T) {
     const tmp = deepClone(obj[key1]);
     obj[key1] = deepClone(obj[key2]);
     obj[key2] = tmp;
