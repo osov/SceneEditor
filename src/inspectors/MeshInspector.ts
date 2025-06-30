@@ -5,7 +5,7 @@ import { GoSprite, FlipMode, GuiBox, GuiText } from "../render_engine/objects/su
 import { TextMesh } from "../render_engine/objects/text";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { ChangeInfo, PropertyType, BeforeChangeInfo, PropertyData } from "../modules_editor/Inspector";
-import { deepClone, hexToRGB, quat_to_euler_xyz } from "../modules/utils";
+import { deepClone, hexToRGB } from "../modules/utils";
 import { MeshMaterialPropertyInfo, MeshMaterialUniformInfo, MeshPropertyInfo } from "../controls/types";
 import { anchorToScreenPreset, convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode, generateMaterialOptions, generateModelOptions, generateTextureOptions, getChangedInfo, getDraggedInfo, pivotToScreenPreset, screenPresetToAnchorValue, screenPresetToPivotValue } from "./helpers";
 import { IUniform, Texture } from "three";
@@ -18,7 +18,7 @@ import { AnimatedMesh } from "../render_engine/objects/animated_mesh";
 import { WORLD_SCALAR } from "../config";
 import { Model } from "@editor/render_engine/objects/model";
 import { MultipleMaterialMesh } from "@editor/render_engine/objects/multiple_material_mesh";
-import { AudioMesh, SoundFunctionType } from "../render_engine/objects/audio_mesh";
+import { AudioMesh, SoundFunctionType, SoundZoneType } from "../render_engine/objects/audio_mesh";
 
 
 declare global {
@@ -69,6 +69,11 @@ export enum MeshProperty {
     MAX_VOLUME_RADIUS = 'max_volume_radius',
     PAN_NORMALIZATION_DISTANCE = 'pan_normalization_distance',
     SOUND_FUNCTION = 'sound_function',
+    ZONE_TYPE = 'zone_type',
+    RECTANGLE_WIDTH = 'rectangle_width',
+    RECTANGLE_HEIGHT = 'rectangle_height',
+    RECTANGLE_MAX_VOLUME_WIDTH = 'rectangle_max_volume_width',
+    RECTANGLE_MAX_VOLUME_HEIGHT = 'rectangle_max_volume_height',
     TILE_LAYER = 'tile_layer',
     CLIPPING_MODE = 'clipping_mode',
     INVERTED_CLIPPING = 'inverted_clipping',
@@ -115,6 +120,11 @@ export enum MeshPropertyTitle {
     MAX_VOLUME_RADIUS = 'Радиус макс. громкости',
     PAN_NORMALIZATION_DISTANCE = 'Дистанция панормирования',
     SOUND_FUNCTION = 'Функция звука',
+    ZONE_TYPE = 'Тип зоны',
+    RECTANGLE_WIDTH = 'Ширина зоны звука',
+    RECTANGLE_HEIGHT = 'Высота зоны звука',
+    RECTANGLE_MAX_VOLUME_WIDTH = 'Ширина зоны макс. громкости',
+    RECTANGLE_MAX_VOLUME_HEIGHT = 'Высота зоны макс. громкости',
     TILE_LAYER = 'Слой',
     CLIPPING_FOLDER = 'Обрезка',
     CLIPPING_MODE = 'Режим',
@@ -1239,34 +1249,111 @@ function MeshInspectorCreate() {
         });
 
         audio_fields.push({
-            key: MeshProperty.SOUND_RADIUS,
-            title: MeshPropertyTitle.SOUND_RADIUS,
-            value: mesh.get_sound_radius(),
-            type: PropertyType.NUMBER,
+            key: MeshProperty.ZONE_TYPE,
+            title: MeshPropertyTitle.ZONE_TYPE,
+            value: mesh.get_zone_type(),
+            type: PropertyType.LIST_TEXT,
             params: {
-                min: 0,
-                max: 1000,
-                step: 1,
-                format: (value: number) => value.toFixed(0)
+                'Круговая': SoundZoneType.CIRCULAR,
+                'Прямоугольная': SoundZoneType.RECTANGULAR
             },
-            onBeforeChange: saveSoundRadius,
-            onChange: handleSoundRadiusChange
+            onBeforeChange: saveZoneType,
+            onChange: handleZoneTypeChange
         });
 
-        audio_fields.push({
-            key: MeshProperty.MAX_VOLUME_RADIUS,
-            title: MeshPropertyTitle.MAX_VOLUME_RADIUS,
-            value: mesh.get_max_volume_radius(),
-            type: PropertyType.NUMBER,
-            params: {
-                min: 0,
-                max: 1000,
-                step: 1,
-                format: (value: number) => value.toFixed(0)
-            },
-            onBeforeChange: saveMaxVolumeRadius,
-            onChange: handleMaxVolumeRadiusChange
-        });
+        if (mesh.get_zone_type() == SoundZoneType.CIRCULAR) {
+            audio_fields.push({
+                key: MeshProperty.SOUND_RADIUS,
+                title: MeshPropertyTitle.SOUND_RADIUS,
+                value: mesh.get_sound_radius(),
+                type: PropertyType.NUMBER,
+                params: {
+                    min: 0,
+                    max: 1000,
+                    step: 1,
+                    format: (value: number) => value.toFixed(0)
+                },
+                onBeforeChange: saveSoundRadius,
+                onChange: handleSoundRadiusChange
+            });
+
+            audio_fields.push({
+                key: MeshProperty.MAX_VOLUME_RADIUS,
+                title: MeshPropertyTitle.MAX_VOLUME_RADIUS,
+                value: mesh.get_max_volume_radius(),
+                type: PropertyType.NUMBER,
+                params: {
+                    min: 0,
+                    max: 1000,
+                    step: 1,
+                    format: (value: number) => value.toFixed(0)
+                },
+                onBeforeChange: saveMaxVolumeRadius,
+                onChange: handleMaxVolumeRadiusChange
+            });
+        }
+
+        if (mesh.get_zone_type() == SoundZoneType.RECTANGULAR) {
+            audio_fields.push({
+                key: MeshProperty.RECTANGLE_WIDTH,
+                title: MeshPropertyTitle.RECTANGLE_WIDTH,
+                value: mesh.get_rectangle_width(),
+                type: PropertyType.NUMBER,
+                params: {
+                    min: 0,
+                    max: 1000,
+                    step: 1,
+                    format: (value: number) => value.toFixed(0)
+                },
+                onBeforeChange: saveRectangleWidth,
+                onChange: handleRectangleWidthChange
+            });
+
+            audio_fields.push({
+                key: MeshProperty.RECTANGLE_HEIGHT,
+                title: MeshPropertyTitle.RECTANGLE_HEIGHT,
+                value: mesh.get_rectangle_height(),
+                type: PropertyType.NUMBER,
+                params: {
+                    min: 0,
+                    max: 1000,
+                    step: 1,
+                    format: (value: number) => value.toFixed(0)
+                },
+                onBeforeChange: saveRectangleHeight,
+                onChange: handleRectangleHeightChange
+            });
+
+            audio_fields.push({
+                key: MeshProperty.RECTANGLE_MAX_VOLUME_WIDTH,
+                title: MeshPropertyTitle.RECTANGLE_MAX_VOLUME_WIDTH,
+                value: mesh.get_rectangle_max_volume_width(),
+                type: PropertyType.NUMBER,
+                params: {
+                    min: 0,
+                    max: 1000,
+                    step: 1,
+                    format: (value: number) => value.toFixed(0)
+                },
+                onBeforeChange: saveRectangleMaxVolumeWidth,
+                onChange: handleRectangleMaxVolumeWidthChange
+            });
+
+            audio_fields.push({
+                key: MeshProperty.RECTANGLE_MAX_VOLUME_HEIGHT,
+                title: MeshPropertyTitle.RECTANGLE_MAX_VOLUME_HEIGHT,
+                value: mesh.get_rectangle_max_volume_height(),
+                type: PropertyType.NUMBER,
+                params: {
+                    min: 0,
+                    max: 1000,
+                    step: 1,
+                    format: (value: number) => value.toFixed(0)
+                },
+                onBeforeChange: saveRectangleMaxVolumeHeight,
+                onChange: handleRectangleMaxVolumeHeightChange
+            });
+        }
 
         audio_fields.push({
             key: MeshProperty.PAN_NORMALIZATION_DISTANCE,
@@ -1289,11 +1376,11 @@ function MeshInspectorCreate() {
             value: mesh.get_sound_function(),
             type: PropertyType.LIST_TEXT,
             params: {
-                'Линейная': 'linear',
-                'Экспоненциальная': 'exponential',
-                'Квадратичная': 'quadratic',
-                'Обратная квадратичная': 'inverse_quadratic',
-                'Плавная ступень': 'smooth_step'
+                'Линейная': SoundFunctionType.LINEAR,
+                'Экспоненциальная': SoundFunctionType.EXPONENTIAL,
+                'Квадратичная': SoundFunctionType.QUADRATIC,
+                'Обратная квадратичная': SoundFunctionType.INVERSE_QUADRATIC,
+                'Плавная ступень': SoundFunctionType.SMOOTH_STEP
             },
             onBeforeChange: saveSoundFunction,
             onChange: handleSoundFunctionChange
@@ -3713,6 +3800,151 @@ function MeshInspectorCreate() {
         }
     }
 
+    function saveZoneType(info: BeforeChangeInfo) {
+        const zoneTypes: MeshPropertyInfo<string>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveZoneType] Mesh not found for id:', id);
+                return;
+            }
+            zoneTypes.push({ mesh_id: id, value: mesh.get_zone_type() });
+        });
+        HistoryControl.add('MESH_SOUND_ZONE_TYPE', zoneTypes, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleZoneTypeChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<string>(info);
+        updateZoneType(data, info.data.event.last);
+    }
+
+    function updateZoneType(data: MeshPropertyInfo<string>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateZoneType] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_zone_type(item.value as SoundZoneType);
+        }
+    }
+
+    function saveRectangleWidth(info: BeforeChangeInfo) {
+        const rectangleWidths: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveRectangleWidth] Mesh not found for id:', id);
+                return;
+            }
+            rectangleWidths.push({ mesh_id: id, value: mesh.get_rectangle_width() });
+        });
+        HistoryControl.add('MESH_SOUND_RECTANGLE_WIDTH', rectangleWidths, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleRectangleWidthChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateRectangleWidth(data, info.data.event.last);
+    }
+
+    function updateRectangleWidth(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateRectangleWidth] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_rectangle_width(item.value);
+        }
+    }
+
+    function saveRectangleHeight(info: BeforeChangeInfo) {
+        const rectangleHeights: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveRectangleHeight] Mesh not found for id:', id);
+                return;
+            }
+            rectangleHeights.push({ mesh_id: id, value: mesh.get_rectangle_height() });
+        });
+        HistoryControl.add('MESH_SOUND_RECTANGLE_HEIGHT', rectangleHeights, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleRectangleHeightChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateRectangleHeight(data, info.data.event.last);
+    }
+
+    function updateRectangleHeight(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateRectangleHeight] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_rectangle_height(item.value);
+        }
+    }
+
+    function saveRectangleMaxVolumeWidth(info: BeforeChangeInfo) {
+        const rectangleMaxVolumeWidths: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveRectangleMaxVolumeWidth] Mesh not found for id:', id);
+                return;
+            }
+            rectangleMaxVolumeWidths.push({ mesh_id: id, value: mesh.get_rectangle_max_volume_width() });
+        });
+        HistoryControl.add('MESH_SOUND_RECTANGLE_MAX_VOLUME_WIDTH', rectangleMaxVolumeWidths, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleRectangleMaxVolumeWidthChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateRectangleMaxVolumeWidth(data, info.data.event.last);
+    }
+
+    function updateRectangleMaxVolumeWidth(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateRectangleMaxVolumeWidth] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_rectangle_max_volume_width(item.value);
+        }
+    }
+
+    function saveRectangleMaxVolumeHeight(info: BeforeChangeInfo) {
+        const rectangleMaxVolumeHeights: MeshPropertyInfo<number>[] = [];
+        info.ids.forEach((id) => {
+            const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[saveRectangleMaxVolumeHeight] Mesh not found for id:', id);
+                return;
+            }
+            rectangleMaxVolumeHeights.push({ mesh_id: id, value: mesh.get_rectangle_max_volume_height() });
+        });
+        HistoryControl.add('MESH_SOUND_RECTANGLE_MAX_VOLUME_HEIGHT', rectangleMaxVolumeHeights, HistoryOwner.MESH_INSPECTOR);
+    }
+
+    function handleRectangleMaxVolumeHeightChange(info: ChangeInfo) {
+        const data = convertChangeInfoToMeshData<number>(info);
+        updateRectangleMaxVolumeHeight(data, info.data.event.last);
+    }
+
+    function updateRectangleMaxVolumeHeight(data: MeshPropertyInfo<number>[], _: boolean) {
+        for (const item of data) {
+            const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
+            if (mesh == undefined) {
+                Log.error('[updateRectangleMaxVolumeHeight] Mesh not found for id:', item.mesh_id);
+                continue;
+            }
+            mesh.set_rectangle_max_volume_height(item.value);
+        }
+    }
+
     function undo(event: THistoryUndo) {
         switch (event.type) {
             case 'MESH_NAME':
@@ -3898,6 +4130,26 @@ function MeshInspectorCreate() {
             case 'MESH_SOUND_FUNCTION':
                 const soundFunction = event.data as MeshPropertyInfo<string>[];
                 updateSoundFunction(soundFunction, true);
+                break;
+            case 'MESH_SOUND_ZONE_TYPE':
+                const zoneTypes = event.data as MeshPropertyInfo<string>[];
+                updateZoneType(zoneTypes, true);
+                break;
+            case 'MESH_SOUND_RECTANGLE_WIDTH':
+                const rectangleWidths = event.data as MeshPropertyInfo<number>[];
+                updateRectangleWidth(rectangleWidths, true);
+                break;
+            case 'MESH_SOUND_RECTANGLE_HEIGHT':
+                const rectangleHeights = event.data as MeshPropertyInfo<number>[];
+                updateRectangleHeight(rectangleHeights, true);
+                break;
+            case 'MESH_SOUND_RECTANGLE_MAX_VOLUME_WIDTH':
+                const rectangleMaxVolumeWidths = event.data as MeshPropertyInfo<number>[];
+                updateRectangleMaxVolumeWidth(rectangleMaxVolumeWidths, true);
+                break;
+            case 'MESH_SOUND_RECTANGLE_MAX_VOLUME_HEIGHT':
+                const rectangleMaxVolumeHeights = event.data as MeshPropertyInfo<number>[];
+                updateRectangleMaxVolumeHeight(rectangleMaxVolumeHeights, true);
                 break;
         }
 

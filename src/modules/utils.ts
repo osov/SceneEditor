@@ -203,7 +203,7 @@ function sortObjectDeep(obj: any): any {
 
     for (const key of sortedKeys) {
         if (key != 'renderTarget')
-        result[key] = sortObjectDeep(obj[key]);
+            result[key] = sortObjectDeep(obj[key]);
     }
 
     return result;
@@ -252,4 +252,33 @@ export function getObjectDifferences<T>(obj1: T, obj2: T): { [key: string]: { ol
 
     compareValues('', obj1, obj2);
     return differences;
+}
+
+export function calculate_distance_2d(pos1: vmath.vector3, pos2: vmath.vector3): number {
+    const dx = pos2.x - pos1.x;
+    const dy = pos2.y - pos1.y;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+export function quat_to_euler_xyz(q: number[]): [number, number, number] {
+    const norm = Math.sqrt(q[0] ** 2 + q[1] ** 2 + q[2] ** 2 + q[3] ** 2);
+    const [w, x, y, z] = [q[0] / norm, q[1] / norm, q[2] / norm, q[3] / norm];
+
+    const sinPitch = -2 * (w * y - x * z);
+    const pitch = Math.asin(sinPitch);
+    const nearSingularity = Math.abs(Math.abs(pitch) - Math.PI / 2) < 0.1;
+
+    if (!nearSingularity) {
+        const roll = Math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y));
+        const yaw = Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z));
+        return [roll, pitch, yaw];
+    }
+
+    const rollZXY = Math.atan2(2 * (w * x - y * z), 1 - 2 * (x * x + z * z));
+    const yawZXY = Math.atan2(2 * (w * z - x * y), 1 - 2 * (y * y + z * z));
+
+    const rollXYZ = rollZXY;
+    const yawXYZ = yawZXY;
+
+    return [rollXYZ, pitch, yawXYZ];
 }

@@ -10,12 +10,21 @@ export enum SoundFunctionType {
     SMOOTH_STEP = 'smooth_step'
 }
 
+export enum SoundZoneType {
+    CIRCULAR = 'circular',
+    RECTANGULAR = 'rectangular'
+}
+
 const DEFAULT_SOUND_RADIUS = 0;
 const DEFAULT_MAX_VOLUME = 1;
 const DEFAULT_MAX_VOLUME_RADIUS = DEFAULT_SOUND_RADIUS;
 const DEFAULT_PAN_NORMALIZATION_DISTANCE = 0;
 const DEFAULT_FADE_IN_TIME = 1.0;
 const DEFAULT_FADE_OUT_TIME = 1.0;
+const DEFAULT_RECTANGLE_WIDTH = 0;
+const DEFAULT_RECTANGLE_HEIGHT = 0;
+const DEFAULT_RECTANGLE_MAX_VOLUME_WIDTH = DEFAULT_RECTANGLE_WIDTH;
+const DEFAULT_RECTANGLE_MAX_VOLUME_HEIGHT = DEFAULT_RECTANGLE_HEIGHT;
 
 interface SoundData {
     soundRadius: number;
@@ -28,6 +37,11 @@ interface SoundData {
     speed: number;
     pan: number;
     loop: boolean;
+    zoneType: SoundZoneType;
+    rectangleWidth: number;
+    rectangleHeight: number;
+    rectangleMaxVolumeWidth: number;
+    rectangleMaxVolumeHeight: number;
 }
 
 interface SoundInstance {
@@ -64,7 +78,12 @@ function SoundModule() {
         panNormalizationDistance: number = DEFAULT_PAN_NORMALIZATION_DISTANCE,
         soundFunction: SoundFunctionType = SoundFunctionType.LINEAR,
         fadeInTime: number = DEFAULT_FADE_IN_TIME,
-        fadeOutTime: number = DEFAULT_FADE_OUT_TIME
+        fadeOutTime: number = DEFAULT_FADE_OUT_TIME,
+        zoneType: SoundZoneType = SoundZoneType.CIRCULAR,
+        rectangleWidth: number = DEFAULT_RECTANGLE_WIDTH,
+        rectangleHeight: number = DEFAULT_RECTANGLE_HEIGHT,
+        rectangleMaxVolumeWidth: number = DEFAULT_RECTANGLE_MAX_VOLUME_WIDTH,
+        rectangleMaxVolumeHeight: number = DEFAULT_RECTANGLE_MAX_VOLUME_HEIGHT
     ): string | hash {
 
         // TODO: нужен лучший способ проверки существования звука
@@ -85,7 +104,12 @@ function SoundModule() {
                 fadeOutTime: Math.max(0, fadeOutTime),
                 speed: sound.get_speed(url),
                 pan: sound.get_pan(url),
-                loop: false
+                loop: false,
+                zoneType,
+                rectangleWidth: Math.max(0, rectangleWidth),
+                rectangleHeight: Math.max(0, rectangleHeight),
+                rectangleMaxVolumeWidth: Math.max(0, rectangleMaxVolumeWidth),
+                rectangleMaxVolumeHeight: Math.max(0, rectangleMaxVolumeHeight)
             },
             currentVolume: 0,
             targetVolume: 0,
@@ -128,8 +152,11 @@ function SoundModule() {
             return;
         }
 
-        // NOTE: Когда soundRadius = 0, звук работает как обычный звук без пространственных ограничений
-        instance.forceControl = instance.data.soundRadius == 0;
+        // NOTE: Когда soundRadius = 0 и zoneType = CIRCULAR, звук работает как обычный звук без пространственных ограничений
+        // NOTE: Когда rectangleWidth = 0 и rectangleHeight = 0 и zoneType = RECTANGULAR, звук работает как обычный звук без пространственных ограничений
+        instance.forceControl = (instance.data.zoneType == SoundZoneType.CIRCULAR && instance.data.soundRadius == 0) ||
+            (instance.data.zoneType == SoundZoneType.RECTANGULAR &&
+                instance.data.rectangleWidth == 0 && instance.data.rectangleHeight == 0);
 
         const listenerPosition = get_listener_position();
         const soundPosition = go.get_world_position(url);
@@ -141,11 +168,19 @@ function SoundModule() {
             return;
         }
 
-        const distance = calculate_distance_2d(listenerPosition, soundPosition);
+        let distance = 0;
+        let isInRange = false;
 
-        if (instance.data.soundRadius == 0) {
-            handle_listener_in_range(url, 0, listenerPosition, soundPosition);
-        } else if (distance <= instance.data.soundRadius) {
+        if (instance.data.zoneType == SoundZoneType.CIRCULAR) {
+            distance = calculate_distance_2d(listenerPosition, soundPosition);
+            isInRange = instance.data.soundRadius == 0 || distance <= instance.data.soundRadius;
+        } else if (instance.data.zoneType == SoundZoneType.RECTANGULAR) {
+            const rectDistance = calculate_rectangle_distance(listenerPosition, soundPosition, instance.data);
+            distance = rectDistance.distance;
+            isInRange = (instance.data.rectangleWidth == 0 && instance.data.rectangleHeight == 0) || rectDistance.isInside;
+        }
+
+        if (isInRange) {
             handle_listener_in_range(url, distance, listenerPosition, soundPosition);
         } else {
             handle_listener_out_of_range(url);
@@ -153,8 +188,7 @@ function SoundModule() {
 
         update_fading(url);
 
-        if (instance.data.soundRadius > 0 && distance > instance.data.soundRadius &&
-            instance.currentVolume <= 0 && instance.isActive) {
+        if (!isInRange && instance.currentVolume <= 0 && instance.isActive) {
             stop(url);
         }
     }
@@ -209,6 +243,16 @@ function SoundModule() {
     }
 
     function calculate_volume_by_distance(instance: SoundInstance, distance: number): number {
+        if (instance.data.zoneType == SoundZoneType.CIRCULAR) {
+            return calculate_circular_volume(instance, distance);
+        } else if (instance.data.zoneType == SoundZoneType.RECTANGULAR) {
+            return calculate_rectangular_volume(instance, distance);
+        }
+
+        return instance.data.maxVolume;
+    }
+
+    function calculate_circular_volume(instance: SoundInstance, distance: number): number {
         if (instance.data.soundRadius == 0) {
             return instance.data.maxVolume;
         }
@@ -226,6 +270,34 @@ function SoundModule() {
             }
         } else {
             const fadeProgress = distance / instance.data.soundRadius;
+            volume = apply_sound_function(instance.data.soundFunction, 1 - fadeProgress);
+        }
+
+        return Math.max(0, Math.min(1, volume)) * instance.data.maxVolume;
+    }
+
+    function calculate_rectangular_volume(instance: SoundInstance, distance: number): number {
+        const maxDimension = Math.max(instance.data.rectangleWidth, instance.data.rectangleHeight);
+
+        if (maxDimension == 0) {
+            return instance.data.maxVolume;
+        }
+
+        if (distance <= 0) return instance.data.maxVolume;
+
+        let volume = 0;
+        const maxVolumeDimension = Math.max(instance.data.rectangleMaxVolumeWidth, instance.data.rectangleMaxVolumeHeight);
+
+        if (maxVolumeDimension > 0) {
+            if (distance <= maxVolumeDimension) {
+                volume = 1;
+            } else {
+                const fadeDistance = maxDimension / 2 - maxVolumeDimension / 2;
+                const fadeProgress = (distance - maxVolumeDimension / 2) / fadeDistance;
+                volume = apply_sound_function(instance.data.soundFunction, 1 - fadeProgress);
+            }
+        } else {
+            const fadeProgress = distance / (maxDimension / 2);
             volume = apply_sound_function(instance.data.soundFunction, 1 - fadeProgress);
         }
 
@@ -264,6 +336,32 @@ function SoundModule() {
         return Math.max(-1, Math.min(1, pan));
     }
 
+    function calculate_rectangle_distance(listenerPos: vmath.vector3, soundPos: vmath.vector3, soundData: SoundData): { distance: number, isInside: boolean } {
+        const halfWidth = soundData.rectangleWidth / 2;
+        const halfHeight = soundData.rectangleHeight / 2;
+        const halfMaxVolumeWidth = soundData.rectangleMaxVolumeWidth / 2;
+        const halfMaxVolumeHeight = soundData.rectangleMaxVolumeHeight / 2;
+
+        const dx = Math.abs(listenerPos.x - soundPos.x);
+        const dy = Math.abs(listenerPos.y - soundPos.y);
+
+        const isInside = dx <= halfWidth && dy <= halfHeight;
+
+        if (soundData.rectangleMaxVolumeWidth > 0 && soundData.rectangleMaxVolumeHeight > 0) {
+            if (dx <= halfMaxVolumeWidth && dy <= halfMaxVolumeHeight) {
+                return { distance: 0, isInside: isInside };
+            } else {
+                const closestX = Math.max(0, dx - halfMaxVolumeWidth);
+                const closestY = Math.max(0, dy - halfMaxVolumeHeight);
+                const distance = Math.sqrt(closestX * closestX + closestY * closestY);
+                return { distance, isInside: isInside };
+            }
+        } else {
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return { distance, isInside: isInside };
+        }
+    }
+
     function play(url: string | hash): void {
         const instance = instances.get(url);
         if (!instance || instance.isActive) return;
@@ -271,7 +369,11 @@ function SoundModule() {
         instance.currentVolume = 0;
         instance.isActive = true;
 
-        if (instance.data.soundRadius == 0) {
+        const isGlobalSound = (instance.data.zoneType == SoundZoneType.CIRCULAR && instance.data.soundRadius == 0) ||
+            (instance.data.zoneType == SoundZoneType.RECTANGULAR &&
+                instance.data.rectangleWidth == 0 && instance.data.rectangleHeight == 0);
+
+        if (isGlobalSound) {
             instance.targetVolume = instance.data.maxVolume;
             start_fade(url, instance.data.maxVolume, instance.data.fadeInTime);
         }
@@ -340,6 +442,41 @@ function SoundModule() {
         instance.data.soundRadius = Math.max(0, radius);
     }
 
+    function set_zone_type(url: string | hash, zoneType: SoundZoneType): void {
+        const instance = instances.get(url);
+        if (!instance) return;
+
+        instance.data.zoneType = zoneType;
+    }
+
+    function set_rectangle_width(url: string | hash, width: number): void {
+        const instance = instances.get(url);
+        if (!instance) return;
+
+        instance.data.rectangleWidth = Math.max(0, width);
+    }
+
+    function set_rectangle_height(url: string | hash, height: number): void {
+        const instance = instances.get(url);
+        if (!instance) return;
+
+        instance.data.rectangleHeight = Math.max(0, height);
+    }
+
+    function set_rectangle_max_volume_width(url: string | hash, width: number): void {
+        const instance = instances.get(url);
+        if (!instance) return;
+
+        instance.data.rectangleMaxVolumeWidth = Math.max(0, width);
+    }
+
+    function set_rectangle_max_volume_height(url: string | hash, height: number): void {
+        const instance = instances.get(url);
+        if (!instance) return;
+
+        instance.data.rectangleMaxVolumeHeight = Math.max(0, height);
+    }
+
     function set_max_volume_radius(url: string | hash, radius: number): void {
         const instance = instances.get(url);
         if (instance) {
@@ -390,6 +527,31 @@ function SoundModule() {
     function get_sound_radius(url: string | hash): number {
         const instance = instances.get(url);
         return instance ? instance.data.soundRadius : 0;
+    }
+
+    function get_zone_type(url: string | hash): SoundZoneType {
+        const instance = instances.get(url);
+        return instance ? instance.data.zoneType : SoundZoneType.CIRCULAR;
+    }
+
+    function get_rectangle_width(url: string | hash): number {
+        const instance = instances.get(url);
+        return instance ? instance.data.rectangleWidth : DEFAULT_RECTANGLE_WIDTH;
+    }
+
+    function get_rectangle_height(url: string | hash): number {
+        const instance = instances.get(url);
+        return instance ? instance.data.rectangleHeight : DEFAULT_RECTANGLE_HEIGHT;
+    }
+
+    function get_rectangle_max_volume_width(url: string | hash): number {
+        const instance = instances.get(url);
+        return instance ? instance.data.rectangleMaxVolumeWidth : 0;
+    }
+
+    function get_rectangle_max_volume_height(url: string | hash): number {
+        const instance = instances.get(url);
+        return instance ? instance.data.rectangleMaxVolumeHeight : 0;
     }
 
     function get_max_volume_radius(url: string | hash): number {
@@ -464,6 +626,11 @@ function SoundModule() {
         stop,
         set_listener_position,
         set_sound_radius,
+        set_zone_type,
+        set_rectangle_width,
+        set_rectangle_height,
+        set_rectangle_max_volume_width,
+        set_rectangle_max_volume_height,
         set_max_volume_radius,
         set_pan_normalization_distance,
         set_sound_function,
@@ -472,6 +639,11 @@ function SoundModule() {
         set_max_volume,
         get_max_volume,
         get_sound_radius,
+        get_zone_type,
+        get_rectangle_width,
+        get_rectangle_height,
+        get_rectangle_max_volume_width,
+        get_rectangle_max_volume_height,
         get_max_volume_radius,
         get_pan_normalization_distance,
         get_sound_function,

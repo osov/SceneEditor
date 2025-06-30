@@ -1,7 +1,7 @@
 import { IObjectTypes } from "../types";
 import { EntityBase } from "./entity_base";
 import { DEFAULT_PAN_NORMALIZATION_DISTANCE, DEFAULT_MAX_VOLUME_RADIUS, DEFAULT_SOUND_RADIUS, DEFAULT_FADE_IN_TIME, DEFAULT_FADE_OUT_TIME } from "../../config";
-import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, CircleGeometry, Mesh, MeshBasicMaterial } from "three";
+import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, CircleGeometry, Mesh, MeshBasicMaterial, BoxHelper } from "three";
 
 // NOTE: чтобы использовать без (window as any)
 import "../../modules/Sound";
@@ -12,6 +12,11 @@ export enum SoundFunctionType {
     QUADRATIC = 'quadratic',
     INVERSE_QUADRATIC = 'inverse_quadratic',
     SMOOTH_STEP = 'smooth_step'
+}
+
+export enum SoundZoneType {
+    CIRCULAR = 'circular',
+    RECTANGULAR = 'rectangular'
 }
 
 export interface AudioSerializeData {
@@ -26,6 +31,11 @@ export interface AudioSerializeData {
     soundFunction?: SoundFunctionType;
     fadeInTime?: number;
     fadeOutTime?: number;
+    zoneType?: SoundZoneType;
+    rectangleWidth?: number;
+    rectangleHeight?: number;
+    rectangleMaxVolumeWidth?: number;
+    rectangleMaxVolumeHeight?: number;
 }
 
 export class AudioMesh extends EntityBase {
@@ -44,10 +54,18 @@ export class AudioMesh extends EntityBase {
     private fadeInTime: number = DEFAULT_FADE_IN_TIME;
     private fadeOutTime: number = DEFAULT_FADE_OUT_TIME;
 
+    private zoneType: SoundZoneType = SoundZoneType.CIRCULAR;
+    private rectangleWidth: number = 0;
+    private rectangleHeight: number = 0;
+    private rectangleMaxVolumeWidth: number = 0;
+    private rectangleMaxVolumeHeight: number = 0;
+
     private soundRadiusVisual: Line | null = null;
     private maxVolumeRadiusVisual: Line | null = null;
     private panNormalizationVisual: Line | null = null;
     private listenerVisual: Mesh | null = null;
+    private rectangleVisual: Line | null = null;
+    private rectangleMaxVolumeVisual: Line | null = null;
 
     constructor(id: number) {
         super(id);
@@ -81,7 +99,12 @@ export class AudioMesh extends EntityBase {
             this.panNormalizationDistance,
             this.soundFunction,
             this.fadeInTime,
-            this.fadeOutTime
+            this.fadeOutTime,
+            this.zoneType,
+            this.rectangleWidth,
+            this.rectangleHeight,
+            this.rectangleMaxVolumeWidth,
+            this.rectangleMaxVolumeHeight
         );
         this.createVisual();
     }
@@ -134,6 +157,81 @@ export class AudioMesh extends EntityBase {
 
     get_sound_radius() {
         return this.soundRadius;
+    }
+
+    set_zone_type(zoneType: SoundZoneType) {
+        const previousZoneType = this.zoneType;
+        this.zoneType = zoneType;
+
+        if (previousZoneType != zoneType) {
+            if (zoneType == SoundZoneType.CIRCULAR) {
+                this.rectangleWidth = 0;
+                this.rectangleHeight = 0;
+                this.rectangleMaxVolumeWidth = 0;
+                this.rectangleMaxVolumeHeight = 0;
+
+                Sound.set_rectangle_width(SceneManager.get_mesh_url_by_id(this.get_id()), 0);
+                Sound.set_rectangle_height(SceneManager.get_mesh_url_by_id(this.get_id()), 0);
+                Sound.set_rectangle_max_volume_width(SceneManager.get_mesh_url_by_id(this.get_id()), 0);
+                Sound.set_rectangle_max_volume_height(SceneManager.get_mesh_url_by_id(this.get_id()), 0);
+            } else if (zoneType === SoundZoneType.RECTANGULAR) {
+                this.soundRadius = 0;
+                this.maxVolumeRadius = 0;
+
+                Sound.set_sound_radius(SceneManager.get_mesh_url_by_id(this.get_id()), 0);
+                Sound.set_max_volume_radius(SceneManager.get_mesh_url_by_id(this.get_id()), 0);
+            }
+
+            this.removeVisual();
+            this.createVisual();
+        }
+
+        Sound.set_zone_type(SceneManager.get_mesh_url_by_id(this.get_id()), zoneType);
+        MeshInspector.force_refresh();
+    }
+
+    get_zone_type() {
+        return this.zoneType;
+    }
+
+    set_rectangle_width(width: number) {
+        this.rectangleWidth = Math.max(0, width);
+        Sound.set_rectangle_width(SceneManager.get_mesh_url_by_id(this.get_id()), this.rectangleWidth);
+        MeshInspector.force_refresh();
+    }
+
+    get_rectangle_width() {
+        return this.rectangleWidth;
+    }
+
+    set_rectangle_height(height: number) {
+        this.rectangleHeight = Math.max(0, height);
+        Sound.set_rectangle_height(SceneManager.get_mesh_url_by_id(this.get_id()), this.rectangleHeight);
+        MeshInspector.force_refresh();
+    }
+
+    get_rectangle_height() {
+        return this.rectangleHeight;
+    }
+
+    set_rectangle_max_volume_width(width: number) {
+        this.rectangleMaxVolumeWidth = Math.max(0, width);
+        Sound.set_rectangle_max_volume_width(SceneManager.get_mesh_url_by_id(this.get_id()), this.rectangleMaxVolumeWidth);
+        MeshInspector.force_refresh();
+    }
+
+    get_rectangle_max_volume_width() {
+        return this.rectangleMaxVolumeWidth;
+    }
+
+    set_rectangle_max_volume_height(height: number) {
+        this.rectangleMaxVolumeHeight = Math.max(0, height);
+        Sound.set_rectangle_max_volume_height(SceneManager.get_mesh_url_by_id(this.get_id()), this.rectangleMaxVolumeHeight);
+        MeshInspector.force_refresh();
+    }
+
+    get_rectangle_max_volume_height() {
+        return this.rectangleMaxVolumeHeight;
     }
 
     set_max_volume_radius(radius: number) {
@@ -189,7 +287,9 @@ export class AudioMesh extends EntityBase {
     }
 
     is_spatial() {
-        return this.soundRadius > 0;
+        const is_circular_zone = this.zoneType == SoundZoneType.CIRCULAR && this.soundRadius > 0;
+        const is_rectangular_zone = this.zoneType == SoundZoneType.RECTANGULAR && (this.rectangleWidth > 0 || this.rectangleHeight > 0);
+        return is_circular_zone || is_rectangular_zone;
     }
 
     pause() {
@@ -211,15 +311,38 @@ export class AudioMesh extends EntityBase {
 
     private createVisual() {
         this.createListenerVisual();
-        this.createSoundRadiusVisual();
-        this.createMaxVolumeRadiusVisual();
+
+        this.removeSoundRadiusVisual();
+        this.removeMaxVolumeRadiusVisual();
+        this.removeRectangleVisual();
+        this.removeRectangleMaxVolumeVisual();
+
+        if (this.zoneType == SoundZoneType.CIRCULAR) {
+            this.createSoundRadiusVisual();
+            this.createMaxVolumeRadiusVisual();
+        } else {
+            this.createRectangleVisual();
+            this.createRectangleMaxVolumeVisual();
+        }
         this.createPanNormalizationVisual();
     }
 
     private updateVisual() {
         this.updateListenerVisual();
-        this.updateSoundRadiusVisual();
-        this.updateMaxVolumeRadiusVisual();
+
+        if (this.zoneType == SoundZoneType.CIRCULAR) {
+            this.removeRectangleVisual();
+            this.removeRectangleMaxVolumeVisual();
+
+            this.updateSoundRadiusVisual();
+            this.updateMaxVolumeRadiusVisual();
+        } else {
+            this.removeSoundRadiusVisual();
+            this.removeMaxVolumeRadiusVisual();
+
+            this.updateRectangleVisual();
+            this.updateRectangleMaxVolumeVisual();
+        }
         this.updatePanNormalizationVisual();
     }
 
@@ -227,6 +350,8 @@ export class AudioMesh extends EntityBase {
         this.removeListenerVisual();
         this.removeSoundRadiusVisual();
         this.removeMaxVolumeRadiusVisual();
+        this.removeRectangleVisual();
+        this.removeRectangleMaxVolumeVisual();
         this.removePanNormalizationVisual();
     }
 
@@ -272,6 +397,58 @@ export class AudioMesh extends EntityBase {
         this.maxVolumeRadiusVisual = new Line(maxVolumeGeometry, maxVolumeMaterial);
         this.maxVolumeRadiusVisual.visible = this.get_active();
         this.add(this.maxVolumeRadiusVisual);
+    }
+
+    private createRectangleVisual() {
+        if (this.rectangleWidth > 0 && this.rectangleHeight > 0) {
+            const halfWidth = this.rectangleWidth / 2;
+            const halfHeight = this.rectangleHeight / 2;
+
+            const rectanglePoints = [
+                new Vector3(-halfWidth, -halfHeight, 0),
+                new Vector3(halfWidth, -halfHeight, 0),
+                new Vector3(halfWidth, halfHeight, 0),
+                new Vector3(-halfWidth, halfHeight, 0),
+                new Vector3(-halfWidth, -halfHeight, 0)
+            ];
+
+            const rectangleGeometry = new BufferGeometry().setFromPoints(rectanglePoints);
+            const rectangleMaterial = new LineBasicMaterial({
+                color: 0x00ff00,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            this.rectangleVisual = new Line(rectangleGeometry, rectangleMaterial);
+            this.rectangleVisual.visible = this.get_active();
+            this.add(this.rectangleVisual);
+        }
+    }
+
+    private createRectangleMaxVolumeVisual() {
+        if (this.rectangleMaxVolumeWidth > 0 && this.rectangleMaxVolumeHeight > 0) {
+            const halfWidth = this.rectangleMaxVolumeWidth / 2;
+            const halfHeight = this.rectangleMaxVolumeHeight / 2;
+
+            const rectanglePoints = [
+                new Vector3(-halfWidth, -halfHeight, 0),
+                new Vector3(halfWidth, -halfHeight, 0),
+                new Vector3(halfWidth, halfHeight, 0),
+                new Vector3(-halfWidth, halfHeight, 0),
+                new Vector3(-halfWidth, -halfHeight, 0)
+            ];
+
+            const rectangleGeometry = new BufferGeometry().setFromPoints(rectanglePoints);
+            const rectangleMaterial = new LineBasicMaterial({
+                color: 0xffff00,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            this.rectangleMaxVolumeVisual = new Line(rectangleGeometry, rectangleMaterial);
+            this.rectangleMaxVolumeVisual.visible = this.get_active();
+            this.add(this.rectangleMaxVolumeVisual);
+        }
     }
 
     private createPanNormalizationVisual() {
@@ -326,6 +503,54 @@ export class AudioMesh extends EntityBase {
         } else this.removeMaxVolumeRadiusVisual();
     }
 
+    private updateRectangleVisual() {
+        if (this.rectangleWidth > 0 && this.rectangleHeight > 0) {
+            if (!this.rectangleVisual) this.createRectangleVisual();
+            else {
+                this.rectangleVisual.geometry.dispose();
+                const halfWidth = this.rectangleWidth / 2;
+                const halfHeight = this.rectangleHeight / 2;
+
+                const rectanglePoints = [
+                    new Vector3(-halfWidth, -halfHeight, 0),
+                    new Vector3(halfWidth, -halfHeight, 0),
+                    new Vector3(halfWidth, halfHeight, 0),
+                    new Vector3(-halfWidth, halfHeight, 0),
+                    new Vector3(-halfWidth, -halfHeight, 0)
+                ];
+
+                this.rectangleVisual.geometry = new BufferGeometry().setFromPoints(rectanglePoints);
+            }
+            this.rectangleVisual!.visible = this.get_active();
+        } else {
+            this.removeRectangleVisual();
+        }
+    }
+
+    private updateRectangleMaxVolumeVisual() {
+        if (this.rectangleMaxVolumeWidth > 0 && this.rectangleMaxVolumeHeight > 0) {
+            if (!this.rectangleMaxVolumeVisual) this.createRectangleMaxVolumeVisual();
+            else {
+                this.rectangleMaxVolumeVisual.geometry.dispose();
+                const halfWidth = this.rectangleMaxVolumeWidth / 2;
+                const halfHeight = this.rectangleMaxVolumeHeight / 2;
+
+                const rectanglePoints = [
+                    new Vector3(-halfWidth, -halfHeight, 0),
+                    new Vector3(halfWidth, -halfHeight, 0),
+                    new Vector3(halfWidth, halfHeight, 0),
+                    new Vector3(-halfWidth, halfHeight, 0),
+                    new Vector3(-halfWidth, -halfHeight, 0)
+                ];
+
+                this.rectangleMaxVolumeVisual.geometry = new BufferGeometry().setFromPoints(rectanglePoints);
+            }
+            this.rectangleMaxVolumeVisual!.visible = this.get_active();
+        } else {
+            this.removeRectangleMaxVolumeVisual();
+        }
+    }
+
     private updatePanNormalizationVisual() {
         if (this.panNormalizationDistance > 0) {
             if (!this.panNormalizationVisual) this.createPanNormalizationVisual();
@@ -360,6 +585,28 @@ export class AudioMesh extends EntityBase {
                 this.maxVolumeRadiusVisual.material.dispose();
             }
             this.maxVolumeRadiusVisual = null;
+        }
+    }
+
+    private removeRectangleVisual() {
+        if (this.rectangleVisual) {
+            this.remove(this.rectangleVisual);
+            this.rectangleVisual.geometry.dispose();
+            if (this.rectangleVisual.material instanceof LineBasicMaterial) {
+                this.rectangleVisual.material.dispose();
+            }
+            this.rectangleVisual = null;
+        }
+    }
+
+    private removeRectangleMaxVolumeVisual() {
+        if (this.rectangleMaxVolumeVisual) {
+            this.remove(this.rectangleMaxVolumeVisual);
+            this.rectangleMaxVolumeVisual.geometry.dispose();
+            if (this.rectangleMaxVolumeVisual.material instanceof LineBasicMaterial) {
+                this.rectangleMaxVolumeVisual.material.dispose();
+            }
+            this.rectangleMaxVolumeVisual = null;
         }
     }
 
@@ -400,6 +647,11 @@ export class AudioMesh extends EntityBase {
         if (this.soundFunction != SoundFunctionType.LINEAR) data.soundFunction = this.soundFunction;
         if (this.fadeInTime != DEFAULT_FADE_IN_TIME) data.fadeInTime = this.fadeInTime;
         if (this.fadeOutTime != DEFAULT_FADE_OUT_TIME) data.fadeOutTime = this.fadeOutTime;
+        if (this.zoneType != SoundZoneType.CIRCULAR) data.zoneType = this.zoneType;
+        if (this.rectangleWidth != 0) data.rectangleWidth = this.rectangleWidth;
+        if (this.rectangleHeight != 0) data.rectangleHeight = this.rectangleHeight;
+        if (this.rectangleMaxVolumeWidth != 0) data.rectangleMaxVolumeWidth = this.rectangleMaxVolumeWidth;
+        if (this.rectangleMaxVolumeHeight != 0) data.rectangleMaxVolumeHeight = this.rectangleMaxVolumeHeight;
 
         return data;
     }
@@ -418,6 +670,11 @@ export class AudioMesh extends EntityBase {
         if (data.soundFunction) this.soundFunction = data.soundFunction;
         if (data.fadeInTime) this.fadeInTime = data.fadeInTime;
         if (data.fadeOutTime) this.fadeOutTime = data.fadeOutTime;
+        if (data.zoneType) this.zoneType = data.zoneType;
+        if (data.rectangleWidth) this.rectangleWidth = data.rectangleWidth;
+        if (data.rectangleHeight) this.rectangleHeight = data.rectangleHeight;
+        if (data.rectangleMaxVolumeWidth) this.rectangleMaxVolumeWidth = data.rectangleMaxVolumeWidth;
+        if (data.rectangleMaxVolumeHeight) this.rectangleMaxVolumeHeight = data.rectangleMaxVolumeHeight;
     }
 
     after_deserialize() {
@@ -429,7 +686,12 @@ export class AudioMesh extends EntityBase {
             this.panNormalizationDistance,
             this.soundFunction,
             this.fadeInTime,
-            this.fadeOutTime
+            this.fadeOutTime,
+            this.zoneType,
+            this.rectangleWidth,
+            this.rectangleHeight,
+            this.rectangleMaxVolumeWidth,
+            this.rectangleMaxVolumeHeight
         );
 
         Sound.set_sound_speed(SceneManager.get_mesh_url_by_id(this.get_id()), this.speed);
