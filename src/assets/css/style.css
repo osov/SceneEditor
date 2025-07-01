@@ -16,7 +16,7 @@
 
   --menu_bg: #364346;
   --menu_border: 1px solid #6d6d6d;
-  --tree_width: 200px;
+  --tree_width: 280px;
   --tree_item_bg: #313a3d;
   --ml_min_w: 240px;
   --ml_w: calc(var(--tree_width) + 20px);
@@ -146,16 +146,17 @@ body {
 
 .menu_left {
   border-right: var(--menu_border);
-  width: auto;
-  min-width: var(--ml_w, 240px);
-  max-width: 440px;
+  width: var(--ml_w);
+  min-width: var(--ml_w);
+  max-width: var(--ml_w);
   left: var(--mm_w);
   z-index: 3;
   /* overflow-x: hidden; */
 }
+
 .menu_left.ml_width_auto {
-  width: auto;
-  min-width: var(--ml_min_w);
+  width: var(--ml_w);
+  min-width: var(--ml_w);
 }
 
 .menu_right {
@@ -327,8 +328,9 @@ a.tree__item {
 a.tree__item:not([data-visible="true"]) {
   color: var(--color_gray);
 }
+
 a.tree__item.isCut,
-a.tree__item.isCut + .tree_sub a.tree__item {
+a.tree__item.isCut+.tree_sub a.tree__item {
   opacity: 0.3;
 }
 
@@ -410,6 +412,7 @@ a.tree__item:not(.bottom, .top):hover .tree__item_bg,
 a.tree__item:not(.bottom, .top) .tree__item_bg:hover {
   background-color: var(--tree_item_bg);
 }
+
 a.tree__item.drop_texture .tree__item_bg {
   background-color: var(--tree_item_bg);
   border: 1px dashed var(--tp-plugin-thumbnail-list-dragging-color);
@@ -443,7 +446,7 @@ ul.tree li a.tree__item.selected span.tree__item_bg:not(:has(~ .tree__item_name[
   position: relative;
   /* min-width: 28px; */
   min-width: calc(100% - 17px);
-  max-width: 280px;
+  max-width: calc(var(--tree_width) - 40px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -794,6 +797,7 @@ body .notyf__toast {
   border-radius: 5px;
   max-width: 333px;
 }
+
 .notyf__message {
   font-size: 14px;
 }

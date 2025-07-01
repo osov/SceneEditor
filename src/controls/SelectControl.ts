@@ -1,7 +1,7 @@
 // todo select https://threejs.org/examples/?q=box#misc_boxselection
 import { Intersection, Object3D, Object3DEventMap, Texture, Vector2 } from "three";
 import { IBaseEntityAndThree, IBaseMeshAndThree } from "../render_engine/types";
-import { filter_list_base_mesh, is_base_mesh } from "../render_engine/helpers/utils";
+import { is_base_mesh } from "../render_engine/helpers/utils";
 import { WORLD_SCALAR } from "../config";
 
 
@@ -20,7 +20,6 @@ function SelectControlCreate() {
     let selected: IBaseMeshAndThree | null = null;
     let selected_list: IBaseMeshAndThree[] = [];
     function init() {
-
         EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
             if (e.target != RenderEngine.renderer.domElement)
                 return;
@@ -111,11 +110,11 @@ function SelectControlCreate() {
     }
 
 
-    function check_transparent(uv: Vector2, texture: Texture, name:string) {
+    function check_transparent(uv: Vector2, texture: Texture, name: string) {
         return true;
         const image = texture.image;
         const x = Math.floor(uv.x * image.width);
-        const y = Math.floor((1-uv.y) * image.height);
+        const y = Math.floor((1 - uv.y) * image.height);
         // Один раз при загрузке текстуры:
         const canvas = document.createElement('canvas');
         canvas.width = image.width;
@@ -123,7 +122,7 @@ function SelectControlCreate() {
         const ctx = canvas.getContext('2d')!;
         ctx.drawImage(image, 0, 0);
         const pixel = ctx.getImageData(x, y, 1, 1).data;
-        const alpha = pixel[3]; 
+        const alpha = pixel[3];
         //log(name, alpha)
         return alpha > 255 / 2;
     }

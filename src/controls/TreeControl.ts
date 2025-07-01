@@ -53,6 +53,7 @@ function TreeControlCreate() {
     let prevListSelected: number[] = [];
     let listSelected: number[] = [];
     let cutList: number[] = [];
+    let shiftAnchorId: number | null = null; // якорь для Shift-выбора
 
     let _is_mousedown: boolean = false; // зажата ли при mousemove
     let _is_dragging: boolean = true;
@@ -80,18 +81,92 @@ function TreeControlCreate() {
     let boxDD: any = document.querySelector(".drag_and_drop"); // div таскания за мышью
     let ddVisible: boolean = false; //  видимость div перетаскивания 
 
+    let elementCache: Map<number, HTMLElement> = new Map(); // кэш элементов по ID
+
+    function init() {
+        // ВЕШАЕМ ОБРАБОТЧИКИ
+
+        // поиск по дереву, вешаем обработчик  1 раз
+        paintIdenticalLive(".searchInTree", "#wr_tree .tree__item_name", "color_green", 777);
+
+        // drop texture
+        canvasDropTexture();
+
+        let params = new URLSearchParams(document.location.search);
+        let hide_menu = params.get("hide_menu");
+        if (hide_menu != null) {
+            const menu_section = document.querySelectorAll(".menu_section");
+            menu_section.forEach((ms: any) => {
+                ms?.classList.add("hide_menu");
+                ms?.classList.remove("active");
+            })
+        }
+
+        document.addEventListener('dblclick', (e: any) => {
+            const item = e.target.closest('.tree__item');
+            if (item) {
+                const itemId = item?.getAttribute('data-id');
+                if (itemId) {
+                    itemDragRenameId = null;
+                    //log(`SYS_GRAPH_CLICKED, { id: ${itemId} }`);
+                    EventBus.trigger("SYS_GRAPH_CLICKED", { id: itemId });
+                }
+            }
+        }, false);
+
+        document.querySelector('#wr_tree')?.addEventListener('contextmenu', (event: any) => {
+            event.preventDefault();
+        });
+
+        subscribe();
+    }
+
+    function subscribe() {
+        EventBus.on('SYS_GRAPH_ACTIVE', updateActive);
+        EventBus.on('SYS_GRAPH_VISIBLE', updateVisible);
+
+        // document.addEventListener('mousedown', onMouseDown, false);
+        EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
+        EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
+        EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
+    }
+
     function draw_graph(getList: Item[], scene_name?: string, is_hide_allSub = false, is_clear_state = false) {
+        // NOTE: проверка на наличие изменений в дереве для того чтобы его обновить
+        const newTreeList = deepClone(getList);
+        const needsUpdate = needsTreeUpdate(newTreeList, treeList);
+
+        // NOTE: Пропускаем обновление, если данные не изменились
+        if (!needsUpdate && !is_clear_state) {
+            return;
+        }
+
         currentSceneName = scene_name ? scene_name : currentSceneName;
-        treeList = deepClone(getList);
-        // log({treeList})
+        treeList = newTreeList;
+
         contexts[currentSceneName] = is_clear_state ? {} : contexts[currentSceneName];
         contexts[currentSceneName] = contexts[currentSceneName] ? contexts[currentSceneName] : {};
+
+        clearCache();
 
         const renderList = is_hide_allSub ? buildTree(treeList, currentSceneName) : buildTree(treeList);
         const html = getTreeHtml(renderList);
         divTree.innerHTML = html;
         updateDaD();
         scrollToLastSelected();
+    }
+
+    function needsTreeUpdate(newList: Item[], oldList: Item[]): boolean {
+        if (newList.length != oldList.length) return true;
+        for (let i = 0; i < Math.min(newList.length, oldList.length); i++) {
+            if (newList[i].id != oldList[i].id ||
+                newList[i].name != oldList[i].name ||
+                newList[i].pid != oldList[i].pid ||
+                newList[i].selected != oldList[i].selected) {
+                return true;
+            }
+        }
+        return false;
     }
 
     function buildTree(list: any, sneceName?: string) {
@@ -230,7 +305,6 @@ function TreeControlCreate() {
     }
 
     function scrollToLastSelected() {
-
         const idLastSelected = listSelected.find((i: number) => !prevListSelected.includes(i));
         if (idLastSelected == undefined) return;
 
@@ -249,11 +323,178 @@ function TreeControlCreate() {
         return undefined;
     }
 
-    function onMouseDown(event: any) {
+    function getItemsBetween(startId: number, endId: number): number[] {
+        const result: number[] = [];
 
+        const flatItems = getFlatItemsList();
+        if (flatItems.length == 0) {
+            return [startId, endId];
+        }
+
+        const startIndex = flatItems.findIndex(item => item.id === startId);
+        const endIndex = flatItems.findIndex(item => item.id === endId);
+
+        if (startIndex === -1 || endIndex === -1) {
+            return [startId, endId];
+        }
+
+        const minIndex = Math.min(startIndex, endIndex);
+        const maxIndex = Math.max(startIndex, endIndex);
+
+        const startItem = flatItems[startIndex];
+        const endItem = flatItems[endIndex];
+        const commonLevel = getCommonHierarchyLevel(startItem, endItem, flatItems);
+
+        for (let i = minIndex; i <= maxIndex; i++) {
+            const item = flatItems[i];
+
+            if (canIncludeInHierarchicalSelection(item, startItem, endItem, commonLevel, flatItems)) {
+                result.push(item.id);
+            }
+        }
+
+        return result;
+    }
+
+    function getCommonHierarchyLevel(startItem: Item, endItem: Item, flatItems: Item[]): number {
+        if (startItem.pid == endItem.pid) {
+            return getItemLevel(startItem, flatItems);
+        }
+
+        const startAncestors = getAncestors(startItem, flatItems);
+        const endAncestors = getAncestors(endItem, flatItems);
+
+        for (let i = 0; i < startAncestors.length; i++) {
+            const ancestor = startAncestors[i];
+            if (endAncestors.some(endAncestor => endAncestor.id === ancestor.id)) {
+                return getItemLevel(ancestor, flatItems);
+            }
+        }
+
+        return 0;
+    }
+
+    function getItemLevel(item: Item, flatItems: Item[]): number {
+        let level = 0;
+        let currentItem = item;
+
+        while (currentItem.pid !== -2 && currentItem.pid !== 0) {
+            const parent = flatItems.find(p => p.id === currentItem.pid);
+            if (!parent) break;
+            currentItem = parent;
+            level++;
+        }
+
+        return level;
+    }
+
+    function getAncestors(item: Item, flatItems: Item[]): Item[] {
+        const ancestors: Item[] = [];
+        let currentItem = item;
+
+        while (currentItem.pid !== -2 && currentItem.pid !== 0) {
+            const parent = flatItems.find(p => p.id === currentItem.pid);
+            if (!parent) break;
+            ancestors.push(parent);
+            currentItem = parent;
+        }
+
+        return ancestors;
+    }
+
+    function canIncludeInHierarchicalSelection(
+        item: Item,
+        startItem: Item,
+        endItem: Item,
+        commonLevel: number,
+        flatItems: Item[]
+    ): boolean {
+        const itemLevel = getItemLevel(item, flatItems);
+
+        if (itemLevel == commonLevel) {
+            return true;
+        }
+
+        if (itemLevel > commonLevel) {
+            let parent = item;
+            let currentLevel = itemLevel;
+            while (currentLevel > commonLevel) {
+                const parentItem = flatItems.find(p => p.id === parent.pid);
+                if (!parentItem) break;
+                parent = parentItem;
+                currentLevel--;
+            }
+
+            const parentInRange = isItemInRange(parent, startItem, endItem, flatItems);
+            const parentExpanded = isParentExpanded(parent.id);
+            return parentInRange && parentExpanded;
+        }
+
+        return false;
+    }
+
+    function isItemInRange(item: Item, startItem: Item, endItem: Item, flatItems: Item[]): boolean {
+        const startIndex = flatItems.findIndex(i => i.id === startItem.id);
+        const endIndex = flatItems.findIndex(i => i.id === endItem.id);
+        const itemIndex = flatItems.findIndex(i => i.id === item.id);
+
+        if (startIndex === -1 || endIndex === -1 || itemIndex === -1) {
+            return false;
+        }
+
+        const minIndex = Math.min(startIndex, endIndex);
+        const maxIndex = Math.max(startIndex, endIndex);
+        return itemIndex >= minIndex && itemIndex <= maxIndex;
+    }
+
+    function isParentExpanded(parentId: number): boolean {
+        const parentElement = document.querySelector(`.tree__item[data-id="${parentId}"]`);
+        if (!parentElement) return false;
+
+        const parentLi = parentElement.closest('li');
+        if (!parentLi) return false;
+
+        return parentLi.classList.contains('active');
+    }
+
+    function getFlatItemsList(): Item[] {
+        const result: Item[] = [];
+
+        const visibleItems = document.querySelectorAll('a.tree__item') as NodeListOf<HTMLElement>;
+        visibleItems.forEach(item => {
+            const idAttr = item.getAttribute('data-id');
+            const pidAttr = item.getAttribute('data-pid');
+            const name = item.querySelector('.tree__item_name')?.textContent || '';
+            const icon = item.getAttribute('data-icon') || '';
+            const visible = item.getAttribute('data-visible') === 'true';
+            const no_drag = item.getAttribute('data-no_drag') === 'true';
+            const no_drop = item.getAttribute('data-no_drop') === 'true';
+            const no_rename = item.getAttribute('data-no_rename') === 'true';
+            const no_remove = item.getAttribute('data-no_remove') === 'true';
+
+            if (idAttr !== null) {
+                result.push({
+                    id: +idAttr,
+                    pid: pidAttr ? +pidAttr : 0,
+                    name,
+                    visible,
+                    icon,
+                    no_drag,
+                    no_drop,
+                    no_rename,
+                    no_remove
+                });
+            }
+        });
+
+        return result;
+    }
+
+    function onMouseDown(event: any) {
         // if (mContextVisible && !event.target.closest('.menu__context a')) {
         //     menuContextClear();
         // }
+
         if (!event.target.closest('.tree_div')) return;
 
         // event.preventDefault();
@@ -284,9 +525,7 @@ function TreeControlCreate() {
     }
 
     function onMouseMove(event: any) {
-
         if (_is_mousedown) { // ЛКМ зажата
-
             _is_moveItemDrag = _is_moveItemDrag ? true : isMove(event.offset_x, event.offset_y, startX, startY); // начало движения было
 
             if (treeItem && _is_dragging) {
@@ -322,6 +561,14 @@ function TreeControlCreate() {
         //     log('menuContextClick')
         // }
 
+        // show/hide block menu
+        const btn_menu = event.target.closest(".btn_menu");
+        if (btn_menu) {
+            const menu_section = btn_menu.closest(".menu_section");
+            menu_section?.classList.remove("hide_menu");
+            menu_section?.classList.toggle("active");
+        }
+
         if ((event.button === 0 || event.button === 2)) {
 
             if (event.target.closest('.filemanager') && itemDrag && listSelected.length == 1) {
@@ -333,12 +580,13 @@ function TreeControlCreate() {
                 itemDragRenameId = null;
                 return;
             }
+
             _is_mousedown = false;
 
-            if (event.button === 0) setContendEditAble(event); // ЛКМ
+            if (event.button == 0) setContendEditAble(event); // ЛКМ
             sendListSelected(event);
 
-            if (event.button === 2) {
+            if (event.button == 2) {
                 openMenuContext(event);
                 return;
             }
@@ -352,7 +600,6 @@ function TreeControlCreate() {
             switchClassItem(event.target.closest('.tree__item'), event.offset_x, event.offset_y);
 
             if (event.target.closest('.tree__item') && currentDroppable && isDrop) {
-
                 const posInItem = getPosMouseInBlock(event.target.closest('.tree__item'), event.offset_x, event.offset_y);
                 if (posInItem) {
                     const movedList = getMovedList(listSelected, itemDrag, itemDrop, posInItem);
@@ -361,11 +608,9 @@ function TreeControlCreate() {
                         EventBus.trigger("SYS_GRAPH_MOVED_TO", movedList);
                     }
                 }
-
             }
 
             myClear();
-
         }
     }
 
@@ -383,7 +628,11 @@ function TreeControlCreate() {
         isDrop = false;
         countMove = 0;
         const items = document.querySelectorAll('.tree__item') as NodeListOf<HTMLLIElement>;
-        items.forEach(i => { i.classList.remove('top', 'bg', 'bottom'); });
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            item.classList.remove('top', 'bg', 'bottom');
+        }
+        clearCache();
     }
 
     function isMove(offset_x: number, offset_y: number, startX: number, startY: number) {
@@ -527,18 +776,13 @@ function TreeControlCreate() {
     }
 
     function toggleCurrentBox(droppableBelow: any) {
-
         // если элемент есть, сравниваем с текущим
         if (currentDroppable != droppableBelow) {
-            if (currentDroppable) {
+            if (currentDroppable)
                 currentDroppable.classList.remove('droppable');
-            }
-
             currentDroppable = droppableBelow
-
-            if (currentDroppable && _is_moveItemDrag) { // cursor in current
+            if (currentDroppable && _is_moveItemDrag)// cursor in current
                 currentDroppable.classList.add('droppable');
-            }
         }
     }
 
@@ -682,8 +926,6 @@ function TreeControlCreate() {
             }
             addClassActive(eLi?.closest("ul")?.closest(".li_line"), itemPid);
         }
-
-        return;
     }
 
     function treeBtnInit() {
@@ -691,7 +933,6 @@ function TreeControlCreate() {
         btns.forEach(btn => {
             // slideUp/slideDown for tree
             btn.addEventListener('click', () => {
-
                 const li = (btn as HTMLElement).closest("li");
                 if (li === null) return;
                 const treeSub = li.querySelector(".tree_sub") as HTMLElement;
@@ -760,11 +1001,12 @@ function TreeControlCreate() {
         if (!currentId) return;
 
         const itemsName: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item .tree__item_name');
-        itemsName.forEach(item => item?.removeAttribute("contenteditable"));
+        for (let i = 0; i < itemsName.length; i++) {
+            itemsName[i]?.removeAttribute("contenteditable");
+        }
 
         // если зажата ctrl
         if (Input.is_control()) {
-
             if (listSelected.includes(currentId)) { // если он уже выделен - исключаем его
                 const isOne = listSelected.length == 1 ? true : false;
                 _is_dragging = listSelected.length > 1 ? true : false; // отключаем, если единственный выбранный
@@ -773,7 +1015,6 @@ function TreeControlCreate() {
                 _is_currentOnly = true; // текущий
 
                 if (isOne) { // ctrl + 1 selected 
-                    //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${[]}})`);
                     EventBus.trigger('SYS_GRAPH_SELECTED', { list: [] });
                 }
             }
@@ -782,12 +1023,29 @@ function TreeControlCreate() {
                 listSelected.push(currentId);
             }
 
+            shiftAnchorId = currentId;
         }
-        else { //  если НЕ зажата ctrl
+        else if (Input.is_shift() && listSelected.length > 0) {
+            const itemsToSelect = getItemsBetween(shiftAnchorId || listSelected[0], currentId);
 
+            for (let i = 0; i < itemsToSelect.length; i++) {
+                const id = itemsToSelect[i];
+                if (!listSelected.includes(id)) {
+                    const item = getElementById(id);
+                    if (item) {
+                        item.classList.add("selected");
+                        listSelected.push(id);
+                    }
+                }
+            }
+
+            shiftAnchorId = currentId;
+        }
+        else { //  если НЕ зажата ctrl и НЕ зажата shift (или shift без выбранных элементов)
             if (listSelected?.length == 0) {
                 currentItem.classList.add("selected");
                 listSelected = [currentId]; // add first elem
+                shiftAnchorId = currentId; // Устанавливаем якорь при первом выборе
             }
             else {
                 if (listSelected.includes(currentId)) {
@@ -798,15 +1056,14 @@ function TreeControlCreate() {
                 }
                 else {
                     const menuItems: NodeListOf<HTMLElement> = document.querySelectorAll('a.tree__item');
-                    menuItems.forEach(item => {
-                        item.classList.remove("selected");
-                    });
+                    for (let i = 0; i < menuItems.length; i++) {
+                        menuItems[i].classList.remove("selected");
+                    }
                     currentItem.classList.add("selected");
                     listSelected = [currentId]; // остается один
+                    shiftAnchorId = currentId; // Устанавливаем якорь при новом выборе
                 }
-
             }
-
         }
     }
 
@@ -815,7 +1072,7 @@ function TreeControlCreate() {
         if (btn) return;
 
         if (!itemDrag) return;
-        if (event.button === 2 && !event.target.closest("a.tree__item")) return;
+        if (event.button == 2 && !event.target.closest("a.tree__item")) return;
 
         if (!_is_moveItemDrag) { // если движения Не было
             if (Input.is_control()) {
@@ -823,7 +1080,11 @@ function TreeControlCreate() {
                 EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
-            if (listSelected?.length > 1 && event.button === 0) {
+            if (Input.is_shift()) {
+                EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+                return;
+            }
+            if (listSelected?.length > 1 && event.button == 0) {
                 listSelected = [itemDrag?.id];
                 //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
                 EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
@@ -834,6 +1095,7 @@ function TreeControlCreate() {
                 EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
+
         }
 
         // если движение было
@@ -1256,8 +1518,6 @@ function TreeControlCreate() {
         addNodeTexture(event, true);
     }
 
-
-
     function addNodeTexture(event: any, isPos: boolean, icon: string = '', id: number = -1) {
         const data = event.dataTransfer.getData("text/plain");
 
@@ -1384,17 +1644,6 @@ function TreeControlCreate() {
     }
 
     function updateDaD(): void {
-
-        // устанавливаем ширину для span.tree__item_bg и .menu_left
-        const tree = divTree.querySelector('.tree');
-        const menuLeft = document.querySelector('.menu_left');
-        if (menuLeft && tree) {
-            menuLeft.classList.add('ml_width_auto');
-            const tree_widthAuto = tree?.clientWidth;
-            menuLeft.classList.remove('ml_width_auto');
-            document.documentElement.style.setProperty('--tree_width', 1 + tree_widthAuto + 'px');
-        }
-
         // раскрываем дерево с tree__item.selected
         if (listSelected?.length) {
             listSelected.forEach((id) => {
@@ -1411,69 +1660,29 @@ function TreeControlCreate() {
         // скрыть/раскрыть дерево
         treeBtnInit();
 
-        // подсветка идентичных имен();
+        // подсветка идентичных имен;
         paintIdentical();
 
         paintSearchNode("color_green");
 
         // вешаем обработчики для дроп текстуры
         toggleEventListenerTexture();
-
     }
 
-    // ВЕШАЕМ ОБРАБОТЧИКИ
-
-    // поиск по дереву, вешаем обработчик  1 раз
-    paintIdenticalLive(".searchInTree", "#wr_tree .tree__item_name", "color_green", 777);
-
-    // drop texture
-    canvasDropTexture();
-
-    EventBus.on('SYS_INPUT_POINTER_UP', (event: any) => {
-        // show/hide block menu
-        const btn_menu = event.target.closest(".btn_menu");
-        if (btn_menu) {
-            const menu_section = btn_menu.closest(".menu_section");
-            menu_section?.classList.remove("hide_menu");
-            menu_section?.classList.toggle("active");
-        }
-    });
-
-    let params = new URLSearchParams(document.location.search);
-    let hide_menu = params.get("hide_menu");
-    if (hide_menu != null) {
-        const menu_section = document.querySelectorAll(".menu_section");
-        menu_section.forEach((ms: any) => {
-            ms?.classList.add("hide_menu");
-            ms?.classList.remove("active");
-        })
+    // NOTE: оптимизированная функция для работы с DOM через кэш элементов
+    function getElementById(id: number): HTMLElement | null {
+        if (elementCache.has(id))
+            return elementCache.get(id) || null;
+        const element = document.querySelector(`.tree__item[data-id="${id}"]`) as HTMLElement;
+        if (element)
+            elementCache.set(id, element);
+        return element;
     }
 
+    function clearCache() {
+        elementCache.clear();
+    }
 
-    document.addEventListener('dblclick', (e: any) => {
-        const item = e.target.closest('.tree__item');
-        if (item) {
-            const itemId = item?.getAttribute('data-id');
-            if (itemId) {
-                itemDragRenameId = null;
-                //log(`SYS_GRAPH_CLICKED, { id: ${itemId} }`);
-                EventBus.trigger("SYS_GRAPH_CLICKED", { id: itemId });
-            }
-        }
-    }, false);
-
-    document.querySelector('#wr_tree')?.addEventListener('contextmenu', (event: any) => {
-        event.preventDefault();
-    });
-
-    EventBus.on('SYS_GRAPH_ACTIVE', updateActive);
-    EventBus.on('SYS_GRAPH_VISIBLE', updateVisible);
-
-    // document.addEventListener('mousedown', onMouseDown, false);
-    EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
-    EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
-    EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
-
-
+    init();
     return { draw_graph, preRename, setCutList, paintIdentical };
 }
