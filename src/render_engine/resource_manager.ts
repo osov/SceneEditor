@@ -1299,7 +1299,7 @@ export function ResourceManagerModule() {
     }
 
     function get_all_model_animations(model_name: string) {
-        return animations.filter((animation) => animation.model == model_name).map((animation) => animation.animation);
+        return animations.filter((animation) => animation.model == model_name || animation.model == '').map((animation) => animation.animation);
     }
 
     function get_font(name: string) {
@@ -1407,7 +1407,7 @@ export function ResourceManagerModule() {
                 Log.warn('animation more 1:', list_anim, name_anim, model_name);
             for (let i = 0; i < list_anim.length; i++) {
                 const it = list_anim[i];
-                if (it.model == model_name)
+                if (it.model == model_name || it.model == '')
                     return it;
             }
             return list_anim[0];
@@ -1432,11 +1432,12 @@ export function ResourceManagerModule() {
             if (file_name.indexOf('@') > -1) {
                 anim_name = file_name.substring(file_name.indexOf('@') + 1);
             }
-            for (let i = 0; i < anim_list.length; i++) {
+            // todo fix 1
+            for (let i = 0; i <1; i++) {
                 const clip = anim_list[i];
                 let cur_anim_name = anim_name;
                 if (find_animation(cur_anim_name, model_name))
-                    Log.warn('animation exists already', cur_anim_name, model_name);
+                     Log.warn('animation exists already', cur_anim_name, model_name);
                 animations.push({ model: model_name, animation: cur_anim_name, clip });
             }
         }
@@ -1456,7 +1457,8 @@ export function ResourceManagerModule() {
             return new Promise<Group>(async (resolve, _) => {
                 const loader = new FBXLoader(manager);
                 loader.load(path, (mesh) => {
-                    models[model_name] = mesh;
+                    if (model_name != '')
+                        models[model_name] = mesh;
                     add_animations(mesh.animations, path);
                     resolve(mesh);
                 });
@@ -1468,9 +1470,8 @@ export function ResourceManagerModule() {
                 loader.load(path, (gltf) => {
                     //log(gltf)
                     const has_mesh = has_skinned_mesh(gltf.scene);
-                    if (has_mesh)
-                        if (has_mesh)
-                            models[model_name] = gltf.scene;
+                    if (has_mesh && model_name != '')
+                        models[model_name] = gltf.scene;
                     add_animations(gltf.animations, path);
                     resolve(gltf.scene);
                 });
