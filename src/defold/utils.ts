@@ -211,6 +211,56 @@ export function animate_logic(
     }
 
     const is_backward = playback == PLAYBACK_ONCE_BACKWARD || playback == PLAYBACK_LOOP_BACKWARD;
+
+    // NOTE: спецально хак логика так как 'yoyo' сломан https://github.com/tweenjs/tween.js/issues/677
+    if (playback == PLAYBACK_LOOP_PINGPONG) {
+        const obj = { value: currentValue };
+
+        function forwardTween() {
+            const forward_tween = new TWEEN.Tween(obj)
+                .to({ value: to }, duration * 1000)
+                .onUpdate(() => {
+                    if (is_material_property) {
+                        ResourceManager.set_material_uniform_for_mesh(mesh as Slice9Mesh, property, obj.value);
+                        return;
+                    }
+                    set_nested_property(mesh, property, obj.value);
+                })
+                .delay(delay * 1000)
+                .easing(EASING_MAP[easing] ?? TWEEN.Easing.Linear.None)
+                .onComplete(() => {
+                    backwardTween();
+                });
+            applyPlayback(forward_tween, PLAYBACK_ONCE_FORWARD);
+            TweenManager.set_mesh_property_tween(mesh.mesh_data.id, property, forward_tween);
+            forward_tween.start();
+
+        }
+
+        function backwardTween() {
+            const backward_tween = new TWEEN.Tween(obj)
+                .to({ value: currentValue }, duration * 1000)
+                .onUpdate(() => {
+                    if (is_material_property) {
+                        ResourceManager.set_material_uniform_for_mesh(mesh as Slice9Mesh, property, obj.value);
+                        return;
+                    }
+                    set_nested_property(mesh, property, obj.value);
+                })
+                .delay(delay * 1000)
+                .easing(EASING_MAP[easing] ?? TWEEN.Easing.Linear.None)
+                .onComplete(() => {
+                    forwardTween();
+                });
+            applyPlayback(backward_tween, PLAYBACK_ONCE_FORWARD);
+            TweenManager.set_mesh_property_tween(mesh.mesh_data.id, property, backward_tween);
+            backward_tween.start();
+        }
+
+        forwardTween();
+        return;
+    }
+
     const obj = { value: is_backward ? to : currentValue };
     const tween = new TWEEN.Tween(obj)
         .to({ value: is_backward ? currentValue : to }, duration * 1000)
