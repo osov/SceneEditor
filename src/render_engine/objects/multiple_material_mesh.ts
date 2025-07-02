@@ -4,6 +4,7 @@ import { MaterialUniformType } from "../resource_manager";
 import { get_file_name } from "../helpers/utils";
 import { WORLD_SCALAR } from "../../config";
 import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils';
+import { hex2rgba, rgb2hex } from "@editor/defold/utils";
 
 export interface MultipleMaterialMeshSerializeData {
     mesh_name: string,
@@ -152,6 +153,8 @@ export class MultipleMaterialMesh extends EntityPlane {
                         const texture_name = uniformName == 'u_texture' ? this.get_texture(idx)[0] : get_file_name((uniform.value as any).path || '');
                         const atlas = uniformName == 'u_texture' ? this.get_texture(idx)[1] : ResourceManager.get_atlas_by_texture_name(texture_name) || '';
                         modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
+                    } else if (material_info.uniforms[uniformName].type == MaterialUniformType.COLOR) {
+                        modifiedUniforms[uniformName] = rgb2hex(uniform.value);
                     } else {
                         modifiedUniforms[uniformName] = uniform.value;
                     }
@@ -206,6 +209,8 @@ export class MultipleMaterialMesh extends EntityPlane {
                     if (uniform_info.type == MaterialUniformType.SAMPLER2D && typeof value === 'string') {
                         const [atlas, texture_name] = value.split('/');
                         this.set_texture(texture_name, atlas, index, key);
+                    } else if (uniform_info.type == MaterialUniformType.COLOR) {
+                        ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, key, hex2rgba(value));
                     } else {
                         ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, key, value);
                     }
