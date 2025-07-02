@@ -213,7 +213,7 @@ export function SceneManagerModule() {
         }
         if (data.scale)
             mesh.scale.set(data.scale[0], data.scale[1], data.scale[2]);
-        mesh.name = data.name;
+        set_mesh_name(mesh, data.name);
         mesh.set_active(data.visible);
 
         mesh.deserialize(data.other_data);
