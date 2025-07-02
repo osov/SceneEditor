@@ -3,6 +3,7 @@ import { IBaseParameters, IObjectTypes } from "../types";
 import { convert_width_height_to_pivot_bb, get_file_name, set_pivot_with_sync_pos } from "../helpers/utils";
 import { EntityPlane } from "./entity_plane";
 import { MaterialUniformType } from "../resource_manager";
+import { hex2rgba, rgb2hex } from "@editor/defold/utils";
 
 // todo optimize material list
 
@@ -269,6 +270,8 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
                     const texture_name = uniformName == 'u_texture' ? parameters.texture : get_file_name((uniform.value as any).path || '');
                     const atlas = uniformName == 'u_texture' ? parameters.atlas : ResourceManager.get_atlas_by_texture_name(texture_name) || '';
                     modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
+                } else if (material_info.uniforms[uniformName].type == MaterialUniformType.COLOR) {
+                    modifiedUniforms[uniformName] = rgb2hex(uniform.value);
                 } else {
                     modifiedUniforms[uniformName] = uniform.value;
                 }
@@ -311,6 +314,8 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
                 if (uniform_info.type == MaterialUniformType.SAMPLER2D && typeof value === 'string') {
                     const [atlas, texture_name] = value.split('/');
                     set_texture(texture_name, atlas, key);
+                } else if (uniform_info.type == MaterialUniformType.COLOR) {
+                    ResourceManager.set_material_uniform_for_mesh(mesh, key, hex2rgba(value));
                 } else {
                     ResourceManager.set_material_uniform_for_mesh(mesh, key, value);
                 }
