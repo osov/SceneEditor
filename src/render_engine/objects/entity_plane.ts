@@ -93,8 +93,5 @@ export class EntityPlane extends EntityBase implements IBaseMesh {
         if (_data.color) {
             this.set_color(_data.color);
         }
-        if (_data.active != undefined) {
-            this.set_active(_data.active);
-        }
     }
 }
