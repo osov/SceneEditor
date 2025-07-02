@@ -87,6 +87,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
         const [cor_x, cor_y] = calc_bb(render_data);
         set_correction_xy(cor_x, cor_y);
         log("correction XY:", cor_x, cor_y);
+        const used_textures = [];
         // TILES
         for (let layer of render_data.layers) {
             const id_layer = layer.id_order;
@@ -119,6 +120,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                     const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
                     plane.position.set(x, y, z);
                     plane.set_texture(tile_info.name, tile_info.atlas);
+                    used_textures.push(tile_info.name);
                     apply_tile_transform(plane, tile.id);
                     container.add(plane);
                     plane.name = tile_info.name + '' + plane.mesh_data.id;
@@ -173,6 +175,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                         const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
                         plane.position.set(x, y, z);
                         plane.set_texture(tile_info.name, tile_info.atlas);
+                        used_textures.push(tile_info.name);
                         apply_tile_transform(plane, tile.tile_id);
                         if (tile.rotation)
                             plane.rotation.z = -tile.rotation! * Math.PI / 180;
@@ -187,7 +190,7 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                 }
             }
         }
-
+        //log(Array.from(new Set(used_textures)));
         return tiles;
     }
 
