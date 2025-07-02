@@ -1,6 +1,6 @@
 import { Slice9Mesh } from "@editor/render_engine/objects/slice9";
 import { IBaseEntityAndThree } from "@editor/render_engine/types";
-import { AdditiveBlending, CustomBlending, MultiplyBlending, NormalBlending } from "three";
+import { AdditiveBlending, Color, CustomBlending, MultiplyBlending, NormalBlending } from "three";
 import * as TWEEN from '@tweenjs/tween.js';
 
 
@@ -40,6 +40,14 @@ export function get_nested_property(obj: any, path: string): any {
     if (path == 'euler.z') {
         return obj.rotation.z;
     }
+    if (path == 'tint') {
+        const clr = new Color(obj.get_color());
+        const v = vmath.vector4(clr.r, clr.g, clr.b, obj.get_alpha());
+        return v;
+    }
+    if (path == 'tint.w' || path == 'alpha') {
+        return obj.get_alpha();
+    }
     for (const part of parts) {
         if (current === undefined || current === null) {
             Log.error(`get_nested_property: ${path} not found`, obj);
@@ -63,7 +71,7 @@ export function set_nested_property(obj: any, path: string, value: any): void {
             obj.set_alpha(value.w);
         return;
     }
-    if (path == 'tint.w') {
+    if (path == 'tint.w' || path == 'alpha') {
         obj.set_alpha(value);
         return;
     }
