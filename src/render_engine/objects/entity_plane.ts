@@ -76,11 +76,6 @@ export class EntityPlane extends EntityBase implements IBaseMesh {
             data.pivot = pivot;
         }
 
-        // NOTE: только если не true
-        if (!this.get_active()) {
-            data.active = false;
-        }
-
         return data;
     }
 
@@ -88,7 +83,6 @@ export class EntityPlane extends EntityBase implements IBaseMesh {
         this.set_pivot(0.5, 0.5, false);
         this.set_size(32 * WORLD_SCALAR, 32 * WORLD_SCALAR);
         this.set_color('#fff');
-        this.set_active(true);
 
         if (_data.pivot) {
             this.set_pivot(_data.pivot.x, _data.pivot.y, false);
