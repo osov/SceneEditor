@@ -60,7 +60,7 @@ export class MultipleMaterialMesh extends EntityPlane {
             Log.warn('Material has no u_color uniform', this.materials[index].name);
             return "#fff";
         }
-        return this.materials[index].uniforms['u_color'].value;
+        return rgb2hex(this.materials[index].uniforms['u_color'].value) as any;
     }
 
     set_material(name: string, index = 0) {
