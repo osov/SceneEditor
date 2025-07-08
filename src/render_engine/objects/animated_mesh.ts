@@ -3,7 +3,7 @@ import { IObjectTypes } from "../types";
 import { MultipleMaterialMesh, MultipleMaterialMeshSerializeData } from "./multiple_material_mesh";
 
 export interface AnimatedMeshSerializeData extends MultipleMaterialMeshSerializeData {
-	animations: { name: string, alias: string }[],
+	animations: string[],
 	current_animation: string
 }
 
@@ -100,7 +100,7 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 		data.current_animation = this.get_animation();
 
 		for (const [name] of Object.entries(this.animations_list)) {
-			data.animations.push({ name: name });
+			data.animations.push(name);
 		}
 
 		return data;
@@ -111,7 +111,8 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 
 		if (data.animations) {
 			for (const animation of data.animations) {
-				this.add_animation(animation.name);
+				// NOTE: для обратной совместимости, после пересохранения всех сцен которые содежат аним модели можно удалить
+				this.add_animation((animation as any)?.name || animation);
 			}
 		}
 
