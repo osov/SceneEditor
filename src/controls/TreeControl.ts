@@ -288,6 +288,15 @@ function TreeControlCreate() {
     function updateTree(list: Item[], oldList: Item[]) {
         if (!isTreeExists()) return;
 
+        prevListSelected = deepClone(listSelected);
+        listSelected = [];
+
+        list.forEach(item => {
+            if (item.selected) {
+                listSelected.push(item.id);
+            }
+        });
+
         const changes = getChanges(list, oldList);
         if (changes.structureChanged) updateStructure(list);
         else {
@@ -884,8 +893,19 @@ function TreeControlCreate() {
         }
     }
 
+    function isElementInViewport(parentBlock: HTMLElement, elem: HTMLElement): boolean {
+        if (!parentBlock || !elem) return false;
+
+        const parentRect = parentBlock.getBoundingClientRect();
+        const elemRect = elem.getBoundingClientRect();
+
+        return elemRect.top >= parentRect.top &&
+            elemRect.bottom <= parentRect.bottom;
+    }
+
     function scrollToLastSelected() {
-        const idLastSelected = listSelected.find((i: number) => !prevListSelected.includes(i));
+        const selectedItems = treeList.filter(item => item.selected);
+        const idLastSelected = selectedItems.find(item => !prevListSelected.includes(item.id))?.id;
         if (idLastSelected == undefined) return;
 
         const lastSelected = document.querySelector(`.tree__item[data-id="${idLastSelected}"]`);
@@ -1712,9 +1732,10 @@ function TreeControlCreate() {
     }
 
     function openTreeWithSelected() {
-        if (listSelected?.length) {
-            listSelected.forEach((id) => {
-                const element = getElementById(id);
+        const selectedItems = treeList.filter(item => item.selected);
+        if (selectedItems.length) {
+            selectedItems.forEach((item) => {
+                const element = getElementById(item.id);
                 if (element) {
                     addClassActive(element.closest(".li_line"), element.closest(".tree__item")?.getAttribute("data-pid"));
                 }
@@ -2272,12 +2293,23 @@ function TreeControlCreate() {
     }
 
     function onKeyDown(event: KeyboardEvent) {
-        if (!(event.target as HTMLElement)?.closest('.tree_div') && document.activeElement?.tagName !== 'BODY') {
-            return;
+        const hasSelectedItems = listSelected.length > 0;
+        if (!hasSelectedItems) {
+            if (!(event.target as HTMLElement)?.closest('.tree_div') && document.activeElement?.tagName !== 'BODY') {
+                return;
+            }
         }
 
         if ((event.target as HTMLElement)?.closest('.tree__item_name[contenteditable="true"]')) {
             return;
+        }
+
+        const currentElement = getCurrentActiveElement();
+        if (!currentElement && (event.target as HTMLElement)?.closest('.tree_div')) {
+            const firstElement = document.querySelector('.tree__item') as HTMLElement;
+            if (firstElement) {
+                selectElement(firstElement);
+            }
         }
 
         switch (event.key) {
@@ -2304,7 +2336,7 @@ function TreeControlCreate() {
         }
 
         const previousElement = getPreviousElement(currentElement);
-        if (previousElement) {
+        if (previousElement && previousElement.closest('.tree__item')?.getAttribute('data-id') != '-1') {
             selectElement(previousElement);
         }
     }
@@ -2330,7 +2362,7 @@ function TreeControlCreate() {
         if (!currentElement) return;
 
         const parentElement = getParentElement(currentElement);
-        if (parentElement) {
+        if (parentElement && parentElement.closest('.tree__item')?.getAttribute('data-id') != '-1') {
             selectElement(parentElement);
         }
     }
@@ -2341,6 +2373,9 @@ function TreeControlCreate() {
 
         const focusedElement = document.activeElement?.closest('.tree__item') as HTMLElement;
         if (focusedElement) return focusedElement;
+
+        const firstElement = document.querySelector('.tree__item') as HTMLElement;
+        if (firstElement) return firstElement;
 
         return null;
     }
@@ -2415,7 +2450,9 @@ function TreeControlCreate() {
             EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
         }
 
-        scrollToElemInParent(divTree, element);
+        if (!isElementInViewport(divTree, element)) {
+            scrollToElemInParent(divTree, element);
+        }
 
         element.focus();
     }
