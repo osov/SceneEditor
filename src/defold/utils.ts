@@ -198,6 +198,8 @@ export function animate_logic(
     if (property == 'tint.w')
         property = 'alpha';
 
+    cancel_animations_logic(mesh, property);
+
     let is_material_property = false;
     let currentValue = get_nested_property(mesh, property);
     if (currentValue == undefined) {
