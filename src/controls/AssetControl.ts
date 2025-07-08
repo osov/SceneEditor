@@ -1117,7 +1117,7 @@ function AssetControlCreate() {
             return Popups.toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
         const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
         SceneManager.load_scene(data.scene_data);
-        ControlManager.update_graph(true, current_scene.name);
+        ControlManager.update_graph(true, current_scene.name, true);
     }
 
     function loadPartOfSceneInPos(

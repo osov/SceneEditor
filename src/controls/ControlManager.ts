@@ -226,12 +226,12 @@ function ControlManagerCreate() {
         return list;
     }
 
-    function update_graph(is_first = false, name = '') {
+    function update_graph(is_first = false, name = '', is_load_scene = false) {
         if (name) {
             current_scene_name = name;
             CameraControl.load_state(name);
         }
-        TreeControl.draw_graph(ControlManager.get_tree_graph(), 'test_scene', is_first);
+        TreeControl.draw_graph(ControlManager.get_tree_graph(), 'test_scene', is_first, false, is_load_scene);
     }
 
     function get_current_scene_name() {
