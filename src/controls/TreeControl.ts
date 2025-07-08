@@ -238,8 +238,6 @@ function TreeControlCreate() {
     }
 
     function setupTree(list: Item[], is_hide_allSub: boolean) {
-        log('setupTree', list, is_hide_allSub);
-
         const renderList = is_hide_allSub ? buildTree(list, currentSceneName) : buildTree(list);
         const html = getTreeHtml(renderList);
         divTree.innerHTML = html;
@@ -289,8 +287,6 @@ function TreeControlCreate() {
 
     function updateTree(list: Item[], oldList: Item[]) {
         if (!isTreeExists()) return;
-
-        log('updateTree', list, oldList);
 
         const changes = getChanges(list, oldList);
         if (changes.structureChanged) updateStructure(list);
