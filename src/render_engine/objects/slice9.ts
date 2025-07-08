@@ -1,9 +1,10 @@
-import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute, Texture } from "three";
+import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute, Texture, NormalBlending } from "three";
 import { IBaseParameters, IObjectTypes } from "../types";
 import { convert_width_height_to_pivot_bb, get_file_name, set_pivot_with_sync_pos } from "../helpers/utils";
 import { EntityPlane } from "./entity_plane";
 import { MaterialUniformType } from "../resource_manager";
 import { hex2rgba, rgb2hex } from "@editor/defold/utils";
+import { BlendMode } from "@editor/inspectors/MeshInspector";
 
 // todo optimize material list
 
@@ -77,6 +78,7 @@ export interface Slice9SerializeData {
     slice_width?: number;
     slice_height?: number;
     material_name?: string;
+    blending?: number;
     material_uniforms?: { [key: string]: any };
     layers?: number;
 }
@@ -259,6 +261,10 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         const hash = ResourceManager.get_material_hash_by_mesh_id(material.name, mesh.mesh_data.id);
         if (!hash) return data;
 
+        if (material.blending != NormalBlending) {
+            data.blending = material.blending;
+        }
+
         const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
         if (!changed_uniforms) return data;
 
@@ -301,6 +307,10 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         }
         if (data.slice_height != undefined) {
             parameters.slice_height = data.slice_height;
+        }
+
+        if (data.blending != undefined) {
+            ResourceManager.set_material_property_for_mesh(mesh, 'blending', data.blending);
         }
 
         // NOTE: применяем измененные uniforms, если они есть

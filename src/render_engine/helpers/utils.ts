@@ -173,6 +173,8 @@ export function copy_material(material: ShaderMaterial) {
         fragmentShader: material.fragmentShader,
         transparent: material.transparent,
 
+        blending: material.blending,
+
         depthTest: material.depthTest,
         stencilWrite: material.stencilWrite,
         stencilRef: material.stencilRef,
@@ -216,6 +218,7 @@ export function get_material_hash(material: ShaderMaterial) {
     });
 
     const hash = getObjectHash({
+        blending: material.blending,
         uniforms: not_readonly_uniforms,
         defines: material.defines,
         depthTest: material.depthTest,

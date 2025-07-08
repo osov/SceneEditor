@@ -2672,11 +2672,10 @@ function MeshInspectorCreate() {
             const blend_mode = item.value as BlendMode;
             const threeBlendMode = convertBlendModeToThreeJS(blend_mode);
             if (mesh instanceof Slice9Mesh) {
-                (mesh as Slice9Mesh).material.blending = threeBlendMode;
+                ResourceManager.set_material_property_for_mesh(mesh, 'blending', threeBlendMode);
             }
             else if (mesh instanceof MultipleMaterialMesh) {
-                log(threeBlendMode);
-                (mesh as MultipleMaterialMesh).get_materials()[item.material_index].blending = threeBlendMode;
+                ResourceManager.set_material_property_for_multiple_mesh(mesh, item.material_index, 'blending', threeBlendMode);
             }
         }
     }

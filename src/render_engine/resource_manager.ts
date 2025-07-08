@@ -934,6 +934,16 @@ export function ResourceManagerModule() {
         }
     }
 
+    function set_material_property_for_multiple_mesh(mesh: MultipleMaterialMesh, index: number, property_name: string, value: any) {
+        const material_name = mesh.get_materials()[index].name;
+        const material_info = get_material_info(material_name);
+        if (!material_info) return;
+
+        if (set_material_property(material_info, mesh.mesh_data.id, index, property_name, value)) {
+            mesh.set_material(material_info.name, index);
+        }
+    }
+
     function set_material_property(material_info: MaterialInfo, mesh_id: number, index: number, property_name: string, value: any) {
         const hash = get_material_hash_by_mesh_id(material_info.name, mesh_id, index);
         if (!hash) {
@@ -945,9 +955,10 @@ export function ResourceManagerModule() {
             return false;
         }
 
-        (material as any)[property_name] = value;
+        const copy = copy_material(material);
+        (copy as any)[property_name] = value;
 
-        const new_hash = get_material_hash(material);
+        const new_hash = get_material_hash(copy);
 
         if (new_hash == hash) {
             return false;
@@ -958,9 +969,8 @@ export function ResourceManagerModule() {
             return true;
         }
 
-        const copy = copy_material(material);
-        (copy as any)[property_name] = value;
         set_to_new_copy(material_info, mesh_id, index, hash, new_hash, copy);
+
         return true;
     }
 
@@ -1433,11 +1443,11 @@ export function ResourceManagerModule() {
                 anim_name = file_name.substring(file_name.indexOf('@') + 1);
             }
             // todo fix 1
-            for (let i = 0; i <1; i++) {
+            for (let i = 0; i < 1; i++) {
                 const clip = anim_list[i];
                 let cur_anim_name = anim_name;
                 if (find_animation(cur_anim_name, model_name))
-                     Log.warn('animation exists already', cur_anim_name, model_name);
+                    Log.warn('animation exists already', cur_anim_name, model_name);
                 animations.push({ model: model_name, animation: cur_anim_name, clip });
             }
         }
@@ -1755,6 +1765,7 @@ export function ResourceManagerModule() {
         get_material_hash_by_mesh_id,
         get_material_by_mesh_id,
         set_material_property_for_mesh,
+        set_material_property_for_multiple_mesh,
         set_material_uniform_for_original,
         set_material_uniform_for_mesh,
         set_material_uniform_for_multiple_material_mesh,

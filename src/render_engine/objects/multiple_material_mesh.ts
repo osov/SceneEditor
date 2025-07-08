@@ -1,4 +1,4 @@
-import { Mesh, MeshBasicMaterial, ShaderMaterial, SkinnedMesh, Texture } from "three";
+import { Mesh, MeshBasicMaterial, NormalBlending, ShaderMaterial, SkinnedMesh, Texture } from "three";
 import { EntityPlane } from "./entity_plane";
 import { MaterialUniformType } from "../resource_manager";
 import { get_file_name } from "../helpers/utils";
@@ -14,7 +14,7 @@ export interface MultipleMaterialMeshSerializeData {
         z: number
     }[],
     materials: {
-        [key in number]: { name: string, changed_uniforms?: string[] }
+        [key in number]: { name: string, blending?: number, changed_uniforms?: string[] }
     }
     layers: number;
 }
@@ -132,9 +132,13 @@ export class MultipleMaterialMesh extends EntityPlane {
         data.scales = this.children.map(child => child.scale.clone());
 
         this.materials.forEach((material, idx) => {
-            const info: { name: string, changed_uniforms?: { [key: string]: any } } = {
-                name: material.name
+            const info: { name: string, blending?: number, changed_uniforms?: { [key: string]: any } } = {
+                name: material.name,
             };
+
+            if (material.blending != NormalBlending) {
+                info.blending = material.blending;
+            }
 
             const material_info = ResourceManager.get_material_info(material.name);
             if (!material_info) return null;
@@ -196,6 +200,10 @@ export class MultipleMaterialMesh extends EntityPlane {
 
             if (info.name != 'default') {
                 this.set_material(info.name, index);
+            }
+
+            if (info.blending != undefined) {
+                ResourceManager.set_material_property_for_multiple_mesh(this, index, 'blending', info.blending);
             }
 
             if (info.changed_uniforms) {
