@@ -1,17 +1,15 @@
 /* eslint-disable prefer-const */
 import { ObstaclesManager } from "./obstacle_manager";
 import { ClosestObstacleData, ControlType, NextMoveType, PredictNextMoveData, PathData as PathData, PathNode, PathFinderSettings } from "./types";
-import { EQ_0, DP_TOL, EQ } from "@editor/modules/utils";
-import { CCW, CW, MATRIX_REFLECTION_X, MATRIX_INDENTITY, MATRIX_REFLECTION_Y, POINT_EMPTY } from "../geometry/const";
+import { CCW, CW, DP_TOL, ShapeNames } from "../geometry/const";
 import { ISegment, IPoint, IArc, IVector } from "../geometry/types";
 import { vector_from_points, vec_angle, segment, clone, rotate_vec_90CW, 
-    rotate_vec_90CCW, invert_vec, rotate, translate, normalize, multiply, add, shape_equal_to, 
-    shape_contains, transform, shape_center, shape_length, arc_start, arc_end, arc_start_tangent, 
-    shape_box, point_at_length, split_at_length, split, vector_slope, shape_vector 
-} from "../geometry/utils";
+    rotate_vec_90CCW, invert_vec, rotate, translate, shape_equal_to, 
+    shape_contains, transform, shape_center, arc_start, arc_end, arc_start_tangent, 
+    shape_box, point_at_length, split_at_length, split, shape_vector, intersect, point2point, point2segment 
+} from "../geometry/logic";
 import { Vector, Segment, Arc, Point } from "../geometry/shapes";
-import { point2point, point2segment } from "../geometry/distance";
-import { intersect } from "../geometry/intersect";
+import { shape_length, normalize, multiply, add, EQ_0, vector_slope, EQ } from "../geometry/utils";
 
 
 export type PathFinder = ReturnType<typeof PathFinderModule>;
@@ -47,13 +45,13 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         return checking_obstacles;
     }
 
-    function update_path(way_required: ISegment, collision_radius: number, control_type: ControlType) {
+    function update_path(way_required: ISegment, collision_radius: number, control_type: ControlType, use_first_found = false) {
         const path_data: PathData = { path: [], length: 0 };
         if (control_type == ControlType.JS || control_type == ControlType.FP)
             path_data.path.push(...predict_way(way_required, collision_radius, control_type));
 
         if (control_type == ControlType.GP) {
-            const data = find_way(way_required, collision_radius);
+            const data = find_way(way_required, collision_radius, use_first_found);
             path_data.path = data.path;
             path_data.clear_way_nodes = data.clear_way_nodes;
             path_data.blocked_way_nodes = data.blocked_way_nodes;
@@ -72,7 +70,6 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         const R = collision_radius + collision_min_error;
         let i = 0;
         let point_found = false;
-        log('find_clear_space')
         while (i < checks_number && !point_found) {
             i++;
             const close_obstacles = obstacles_manager.get_obstacles(
@@ -98,7 +95,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                 }
                 if (EQ_0(shape_length(sum_vec))) point_found = true;
                 else {
-                    clear_target_pos = clone(clear_target_pos)
+                    clear_target_pos = clone(clear_target_pos);
                     translate(clear_target_pos, sum_vec.x, sum_vec.y);
                 }
             }
@@ -107,7 +104,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         return (point_found) ? clear_target_pos : null;
     }
 
-    function find_way(required_path: ISegment, collision_radius: number) {
+    function find_way(required_path: ISegment, collision_radius: number, use_first_found: boolean) {
         const target = required_path.end;
         const start = required_path.start;
         let corrected_required_path = required_path;
@@ -122,7 +119,11 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             return { path: [], blocked_way_nodes: [], clear_way_nodes: [] };
         }
         // Строим дерево путей и получаем его конечные ноды.
-        const { end_nodes, blocked_path_nodes: blocked_way_nodes, clear_path_nodes: clear_way_nodes } = build_path_tree(corrected_required_path, collision_radius, max_checks);
+        const { 
+            end_nodes,
+            blocked_path_nodes: blocked_way_nodes,
+            clear_path_nodes: clear_way_nodes 
+        } = build_path_tree(corrected_required_path, collision_radius, max_checks, use_first_found);
 
         // Восстанавливаем полный путь до start.
         const path = path_from_tree(end_nodes);
@@ -154,7 +155,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         return path;
     }
 
-    function build_path_tree(path_required: ISegment, collision_radius: number, max_checks: number) {
+    function build_path_tree(path_required: ISegment, collision_radius: number, max_checks: number, use_first_found: boolean) {
         path_tree_root.children = [];
         const target = path_required.end;
         const checked_obstacles: { obstacles: ISegment[], start_pos: IPoint }[] = [];
@@ -187,7 +188,8 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             blocked_path_nodes.push(...result.blocked_way_nodes);
             checks_number++;
             time_elapsed = System.now_ms() - time;
-            // if (end_nodes.length > 0) break; 
+
+            if (use_first_found && end_nodes.length > 0) break; 
         }
         return { end_nodes, clear_path_nodes, blocked_path_nodes };
     }
@@ -364,9 +366,9 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         let angle = Math.asin(collision_radius / shape_length(vec)) + Math.PI / 2;
         angle = (clockwise) ? angle : -angle;
         normalize(vec);
-        rotate(vec, angle)
+        rotate(vec, angle);
         multiply(vec, collision_radius);
-        const way_end = clone(target_vertice)
+        const way_end = clone(target_vertice);
         translate(way_end, vec.x, vec.y);
         const segment = Segment(start, way_end);
         const node: PathNode = {
@@ -616,13 +618,13 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
                 const obstacle_vec = vector_from_points(same_side_touch_vertice, diff_side_touch_vertice);
                 // const obstacle_norm = (!clockwise) ? obstacle_vec.rotate90CCW() : obstacle_vec.rotate90CW();
                 const v2v_vec = shape_vector(vert_to_vert);
-                const vec_S = clone(v2v_vec)
-                normalize(vec_S)
+                const vec_S = clone(v2v_vec);
+                normalize(vec_S);
                 multiply(vec_S, R);
                 if (!clockwise) 
                     rotate_vec_90CCW(vec_S);
                 else 
-                    rotate_vec_90CW(vec_S)
+                    rotate_vec_90CW(vec_S);
 
                 // Конец пути в точке:
                 const end_S_point = clone(same_side_touch_vertice);
@@ -665,7 +667,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
 
             let angle = Math.acos(2 * R / v2v_length);
             const vec_D = clone(shape_vector(vert_to_vert));
-            normalize(vec_D)
+            normalize(vec_D);
             multiply(vec_D, R);
             if (!clockwise) 
                 rotate(vec_D, -angle);
@@ -676,7 +678,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
 
             // Конец пути в точке:
             invert_vec(vec_D);
-            const end_D_point = clone(diff_side_touch_vertice)
+            const end_D_point = clone(diff_side_touch_vertice);
             translate(end_D_point, vec_D.x, vec_D.y);
             const start_angle = vector_slope(arc_start_vec);
             // end_angle = (obstacle_block_angle < end_angle && end_angle < obstacle_block_angle + Math.PI) ? obstacle_block_angle : end_angle;
@@ -748,7 +750,6 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         let lenght_remains = shape_length(way_required);
         const data: PredictNextMoveData = { next_do: NextMoveType.STRAIGHT_LINE, path_required: way_required, lenght_remains, control_type };
         let counter = 0;
-        log(`Start predict_way`);
         while (data.lenght_remains >= collision_min_error && counter < max_intervals) {
             if (debug) {
                 log(`Next move in predicted way:`, NextMoveType[data.next_do]);
@@ -772,10 +773,10 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         let correction_angle = 0;
         const pos_to_vert_vec = vector_from_points(pos, vertice);
         const vert_to_tar_vec = vector_from_points(vertice, way_req.end);
-        const vert_to_tar_vec_inver = clone(vert_to_tar_vec)
+        const vert_to_tar_vec_inver = clone(vert_to_tar_vec);
         invert_vec(vert_to_tar_vec_inver);
         const target_to_pos_vec = shape_vector(way_req);
-        const pos_to_target_vec = clone(target_to_pos_vec)
+        const pos_to_target_vec = clone(target_to_pos_vec);
         invert_vec(pos_to_target_vec);
         correction_angle = Math.asin(shape_length(pos_to_vert_vec) / shape_length(vert_to_tar_vec)) - Math.abs(vec_angle(pos_to_target_vec, vert_to_tar_vec_inver));
         return correction_angle;
@@ -792,7 +793,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         }
         if (correction_angle != 0) {
             if (rotate_dir) 
-                rotate(end_vec, -correction_angle)
+                rotate(end_vec, -correction_angle);
             else
                 rotate(end_vec, correction_angle);
         }
@@ -825,10 +826,10 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         else
             rotate_vec_90CCW(obstacle_limit_vec);
 
-        let start_vec = clone(pos_to_vertice_vec)
+        let start_vec = clone(pos_to_vertice_vec);
         invert_vec(start_vec);
 
-        let end_vec = clone(shape_vector(data.path_required))
+        let end_vec = clone(shape_vector(data.path_required));
 
         if (rotate_dir) 
             rotate_vec_90CW(end_vec);
@@ -933,7 +934,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         let allowed_way = undefined;
 
         // Требуемый путь, чтобы добраться до края препятствия:
-        let way_required_to_slide = clone(slide)
+        let way_required_to_slide = clone(slide);
         translate(way_required_to_slide, vec.x, vec.y);
 
         if (!check_collision_angle_ok(shape_vector(data.path_required), way_required_to_slide)) {
@@ -1033,11 +1034,11 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
 
     function check_collision_angle_ok(direction_required: IVector, way: ISegment | IArc) {
         let collision_angle: number | undefined = undefined;
-        if (way.name == "segment") {
+        if (way.name == ShapeNames.Segment) {
             const way_segment = way as ISegment;
             collision_angle = Math.PI / 2 - Math.abs(vec_angle(direction_required, shape_vector(way_segment)));
         }
-        if (way.name == "arc") {
+        if (way.name == ShapeNames.Arc) {
             const way_arc = way as IArc;
             collision_angle = Math.PI / 2 - Math.abs(vec_angle(direction_required, arc_start_tangent(way_arc)));
         }
@@ -1086,7 +1087,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             shortest_distance = shape_length(way_required);
 
         if (offset_collision_line) {
-            if (offset_collision_line.name == "arc") {
+            if (offset_collision_line.name == ShapeNames.Arc) {
                 is_vertice = true;
                 closest_point = shape_center(offset_collision_line);
             }
@@ -1142,7 +1143,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             }
         }
         let interval = path_data.path[0];
-        let start = (interval.name == 'segment') ? (interval as ISegment).start : arc_start((interval as IArc));
+        let start = (interval.name == ShapeNames.Segment) ? (interval as ISegment).start : arc_start((interval as IArc));
         return start;
     }
 
@@ -1186,11 +1187,11 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         return _current_pos;
     }
 
-    function way_from_angle(cp: IPoint, angle: number, length: number) {
+    function path_from_angle(cp: IPoint, angle: number, length: number) {
         const dir = Vector(1, 0);
         rotate(dir, angle);
         multiply(dir, length);
-        const ep = clone(cp)
+        const ep = clone(cp);
         translate(ep, dir.x, dir.y);
         return Segment(Point(cp.x, cp.y), Point(ep.x, ep.y));
     }
@@ -1198,7 +1199,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     function path_to_points_amount(path_data: PathData, amount: number) {
         if (amount == 1 && path_data.path.length > 0) {
             const first = path_data.path[0];
-            if (first.name == 'segment') return (first as ISegment).start;
+            if (first.name == ShapeNames.Segment) return (first as ISegment).start;
             else return arc_start(first as IArc);
         }
         else if (amount == 0) return false;
@@ -1239,32 +1240,30 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     return {
         update_path, get_next_pos, get_pos_at_ratio,
         enable_collision, check_obstacles_enabled, 
-        build_path_tree, way_from_angle, path_to_points_step, path_to_points_amount,
+        build_path_tree, path_from_angle, path_to_points_step, path_to_points_amount,
         obstacles_manager, find_clear_space,
         make_sideways, make_sideways_bypass_vertice, make_way_bypass_vertice, make_way,
     };
 }
 
-export function test_batch(PF: PathFinder, collision_radius: number, way_required: ISegment, obstacles: ISegment[], pivot: IPoint = Point(0, 0), angle: number = 0, reflect_X = false, reflect_Y = false) {
+export function test_batch(PF: PathFinder, collision_radius: number, way_required: ISegment, obstacles: ISegment[], use_first_found = false) {
     const _obstacles: ISegment[] = [];
-    const vec = vector_from_points(POINT_EMPTY, pivot);
     for (const obstacle of obstacles) {
         const obst = clone(obstacle);
-        transform(obst, (reflect_X) ? MATRIX_REFLECTION_X : MATRIX_INDENTITY)
-        transform(obst, (reflect_Y) ? MATRIX_REFLECTION_Y : MATRIX_INDENTITY)
-        rotate(obst, angle, POINT_EMPTY)
-        translate(obst, vec.x, vec.y);
         _obstacles.push(obst);
     }
-    const _way_required = clone(way_required)
-    transform(_way_required, (reflect_X) ? MATRIX_REFLECTION_X : MATRIX_INDENTITY)
-    transform(_way_required, (reflect_Y) ? MATRIX_REFLECTION_Y : MATRIX_INDENTITY)
-    rotate(_way_required, angle, POINT_EMPTY)
-    translate(_way_required, vec.x, vec.y);
+    const _way_required = clone(way_required);
 
     PF.obstacles_manager.set_obstacles(_obstacles);
-    let path_data: PathData = { path: [], length: 0 }
-    path_data = PF.update_path(_way_required, collision_radius, ControlType.GP);
+    let path_data: PathData = { path: [], length: 0 };
+    path_data = PF.update_path(_way_required, collision_radius, ControlType.GP, use_first_found);
+    // log();
+    // log('path_data.length', path_data.length);
+    // log('path_data.path.length', path_data.path.length);
+    // if (path_data.path.length > 0) log('путь найден!', );
+    // log('blocked_way_nodes', path_data.blocked_way_nodes?.length);
+    // log('clear_way_nodes', path_data.clear_way_nodes?.length);
+    // log();
     let full_way = path_data.path;
     return path_data;
 }

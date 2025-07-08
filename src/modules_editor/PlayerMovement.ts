@@ -7,11 +7,11 @@ import { PathFinder } from '../utils/physic/PathFinder';
 import { Line as GeomLine, LineBasicMaterial } from 'three';
 import { LinesDrawer } from '../utils/physic/LinesDrawer';
 import { PlayerMovementSettings, movement_default_settings, ControlType, PathData, COLORS } from '@editor/modules/types';
-import { POINT_EMPTY } from '@editor/utils/geometry/const';
 import { IPoint, IArc, ISegment, PointLike } from '@editor/utils/geometry/types';
-import { point, vector_from_points as vector, segment, vec_angle, clone, shape_equal_to, shape_length, split_at_length, vector_slope } from '@editor/utils/geometry/utils';
-import { Arc } from '@editor/utils/geometry/shapes';
-import { point2point } from '@editor/utils/geometry/distance';
+import { shape_length, vector_slope } from '@editor/utils/geometry/utils';
+import { Arc, Point } from '@editor/utils/geometry/shapes';
+import { clone, point, point2point, segment, shape_equal_to, split_at_length, vec_angle, vector_from_points as vector } from '@editor/utils/geometry/logic';
+import { POINT_EMPTY } from '@editor/utils/geometry/helpers';
 
 
 function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
@@ -41,10 +41,10 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
     const LD = LinesDrawer();
     const width = 50 * WORLD_SCALAR;
     const height = 50 * WORLD_SCALAR;
-    let pointer = point(0, 0);
-    let target = point(0, 0);
+    let pointer = Point(0, 0);
+    let target = Point(0, 0);
     let last_check_dir = vector(pointer, target);
-    let last_check_target = point(0, 0);
+    let last_check_target = Point(0, 0);
     let stick_start: IPoint | undefined = undefined;
     let stick_end: IPoint | undefined = undefined;
     let current_dir = vector(pointer, target);
@@ -95,7 +95,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
     function init(init_data: { model: AnimatedMesh, path_finder: PathFinder }) {
         model = init_data.model;
         PF = init_data.path_finder;
-        target = point(model.position.x, model.position.y);
+        target = Point(model.position.x, model.position.y);
 
         if (debug) draw_obstacles();
         
@@ -212,7 +212,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                 if (!is_pointer_down)
                     return;
                 update_pointer_position(e);
-                const current_pos = point(model.position.x, model.position.y);
+                const current_pos = Point(model.position.x, model.position.y);
                 const dist = point2point(current_pos, target)[0];
                 is_in_target = (dist <= target_error) ? true : false;
                 if (!is_in_target) has_target = true;
@@ -225,7 +225,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
                 if (e.button != 0 || n_pressed)
                     return;
-                stick_start = point(e.x, e.y);
+                stick_start = Point(e.x, e.y);
             });
 
             EventBus.on('SYS_INPUT_POINTER_MOVE', (e) => {
@@ -296,7 +296,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
         }
 
         function get_required_path(dt: number) {
-            const cp = point(model.position.x, model.position.y);
+            const cp = Point(model.position.x, model.position.y);
             let lenght_remains = dt * current_speed * pred_path_lenght_mult;
             let way_required = segment(cp.x, cp.y, target.x, target.y);
             if (pointer_control == ControlType.FP || pointer_control == ControlType.GP) {
@@ -307,7 +307,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             }
             if (pointer_control == ControlType.JS) {
                 if (!EQ_0(shape_length(current_dir))) {
-                    way_required = PF.way_from_angle(cp, vector_slope(current_dir), lenght_remains);
+                    way_required = PF.path_from_angle(cp, vector_slope(current_dir), lenght_remains);
                 }
                 else
                     way_required = segment(cp.x, cp.y, cp.x, cp.y);
@@ -322,7 +322,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                 stop_movement();
                 return;
             }
-            const current_pos = point(model.position.x, model.position.y);
+            const current_pos = Point(model.position.x, model.position.y);
             const dist = point2point(current_pos, target)[0];
             is_in_target = (dist <= target_error) ? true : false;
             if (is_in_target && is_moving) {
@@ -367,7 +367,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
         }
 
         function update_position(dt: number) {
-            const current_pos = point(model.position.x, model.position.y);
+            const current_pos = Point(model.position.x, model.position.y);
             const end_pos = PF.get_next_pos(path_data, current_pos, dt, current_speed);
             if (!end_pos || (shape_equal_to(end_pos, current_pos))) {
                 stop_movement();
@@ -435,16 +435,16 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
 
     function update_pointer_position(pos: PointLike) {
         if (is_pointer_down) {
-            pointer = point(pos.x, pos.y);
+            pointer = Point(pos.x, pos.y);
             const wp = Camera.screen_to_world(pointer.x, pointer.y);
-            target = point(wp.x, wp.y);
+            target = Point(wp.x, wp.y);
         }
     }
 
     function update_stick_direction(e: PointLike) {
         if (!stick_start)
             return;
-        stick_end = point(e.x, e.y);
+        stick_end = Point(e.x, e.y);
         if (point2point(stick_end, stick_start)[0] < min_stick_dist)
             current_dir = vector(stick_start, stick_end);
     }

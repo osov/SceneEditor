@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { VEC_A } from "../geometry/const";
-import { point2segment } from "../geometry/distance";
-import { segment_intersect } from "../geometry/intersect";
+import { VEC_A } from "../geometry/helpers";
 import { Box, Arc, Point, Segment } from "../geometry/shapes";
 import { PointLike, ISegment, IArc } from "../geometry/types";
-import { shape_center, clone, invert_vec, multiply, normalize, rotate_vec_90CW, translate, vector_slope, shape_vector } from "../geometry/utils";
+import { shape_center, clone, invert_vec, rotate_vec_90CW, translate, shape_vector, point2segment, segment_intersect } from "../geometry/logic";
 import { Aabb, createSpatialHash } from "../spatial_hash";
 import { GridParams, ObstacleTileData, SubGridParams } from "./types";
+import { normalize, multiply, vector_slope } from "../geometry/utils";
 
 
 export type ObstaclesGrid = ReturnType<typeof ObstaclesGridCreate>;
@@ -312,6 +311,7 @@ export function ObstaclesManager(hash_cell_size: number) {
     }
 
     function load_obstacles_from_data(obstacles_data: ObstacleTileData[], world_scalar: number) {
+        const all_obstacles: ISegment[] = [];
         for (const tile of obstacles_data) {
             let obstacles: ISegment[] = [];
             if (tile.polygon || tile.polyline) {
@@ -322,8 +322,10 @@ export function ObstaclesManager(hash_cell_size: number) {
                     obstacles = polyline_to_segments(tile.x, tile.y, tile.polyline, world_scalar);
                 }
             }
+            all_obstacles.push(...obstacles);
             if (obstacles.length > 0) add_object(obstacles);
         }
+        return all_obstacles;
     }
 
     return {

@@ -62,21 +62,3 @@ export interface IArc extends Shape {
     startAngle: number,
     endAngle: number,
 }
-
-/** @noSelf **/
-export interface IMatrix {
-    a: number,
-    b: number,
-    c: number,
-    d: number,
-    tx: number,
-    ty: number,
-    matrix: vmath.matrix4,
-    transform(x: number, y: number): PointLike,
-    multiply(other: IMatrix): IMatrix,
-    rotate(angle: number, center?: PointLike): IMatrix,
-    scale(sx: number, sy: number): IMatrix,
-    translate(x: number, y: number): IMatrix,
-    equalTo(matrix: IMatrix): boolean,
-    isIdentity(): boolean,
-}

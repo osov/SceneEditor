@@ -4,8 +4,9 @@ import { CAMERA_Z } from "../../config";
 import { GoContainer } from "../../render_engine/objects/sub_types";
 import { GridParams } from '../../modules/types';
 import { ISegment, IArc, PointLike } from '../geometry/types';
-import { arc_end, arc_start, shape_length, split_at_length } from '../geometry/utils';
 import { Segment, Point } from '../geometry/shapes';
+import { split_at_length, arc_start, arc_end } from '../geometry/logic';
+import { shape_length } from '../geometry/utils';
 
 
 export type TLinesDrawer = ReturnType<typeof LinesDrawer>;
