@@ -1,4 +1,4 @@
-import { Object3D, Vector2, Vector3, Vector3Tuple, Vector4Tuple } from "three";
+import { Object3D, Vector2, Vector2Tuple, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import { HistoryDataKeys } from "../controls/HistoryControl";
 
 export enum IObjectTypes {
@@ -68,7 +68,7 @@ export interface IBaseEntityData {
     visible: boolean;
     position: Vector3Tuple;
     rotation: Vector4Tuple;
-    scale: Vector3Tuple;
+    scale: Vector2Tuple;
     children?: IBaseEntityData[];
     other_data: any;
 }

@@ -1,18 +1,13 @@
-import { Mesh, MeshBasicMaterial, NormalBlending, ShaderMaterial, SkinnedMesh, Texture } from "three";
+import { Mesh, MeshBasicMaterial, NormalBlending, ShaderMaterial, SkinnedMesh, Texture, Vector2, Vector3 } from "three";
 import { EntityPlane } from "./entity_plane";
 import { MaterialUniformType } from "../resource_manager";
 import { get_file_name } from "../helpers/utils";
-import { WORLD_SCALAR } from "../../config";
+import { FLOAT_PRECISION, WORLD_SCALAR } from "../../config";
 import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils';
 import { hex2rgba, rgb2hex } from "@editor/defold/utils";
 
 export interface MultipleMaterialMeshSerializeData {
     mesh_name: string,
-    scales: {
-        x: number,
-        y: number,
-        z: number
-    }[],
     materials: {
         [key in number]: { name: string, blending?: number, changed_uniforms?: string[] }
     }
@@ -43,24 +38,36 @@ export class MultipleMaterialMesh extends EntityPlane {
         return this.textures[index];
     }
 
-    // NOTE: при сериализации и десериализации цвета может не быть материалов
+    // TODO: нету еще детей когда сериализуется
 
-    set_color(color: string, index = 0) {
-        if (this.materials.length == 0 || this.materials.length < index) return;
-        if (!this.materials[index].uniforms['u_color']) {
-            Log.warn('Material has no u_color uniform', this.materials[index].name);
-            return;
-        }
-        ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, 'u_color', color);
+    set_scale(x: number, y: number): void {
+        if (!this.children[0]) return;
+        this.children[0].scale.setScalar(Math.max(x, y) * WORLD_SCALAR);
+        this.transform_changed();
     }
 
-    get_color(index = 0) {
-        if (this.materials.length == 0 || this.materials.length < index) return;
-        if (!this.materials[index].uniforms['u_color']) {
-            Log.warn('Material has no u_color uniform', this.materials[index].name);
+    get_scale(): Vector2 {
+        if (!this.children[0]) return new Vector2(1 / WORLD_SCALAR, 1 / WORLD_SCALAR);
+        return new Vector2(this.children[0].scale.x / WORLD_SCALAR, this.children[0].scale.y / WORLD_SCALAR);
+    }
+
+    // NOTE: при сериализации и десериализации цвета может не быть материалов
+    set_color(color: string) {
+        if (this.materials.length == 0 || this.materials.length <= 0) return;
+        if (!this.materials[0].uniforms['u_color']) {
+            Log.warn('Material has no u_color uniform', this.materials[0].name);
+            return;
+        }
+        ResourceManager.set_material_uniform_for_multiple_material_mesh(this, 0, 'u_color', color);
+    }
+
+    get_color() {
+        if (this.materials.length == 0 || this.materials.length <= 0) return;
+        if (!this.materials[0].uniforms['u_color']) {
+            Log.warn('Material has no u_color uniform', this.materials[0].name);
             return "#fff";
         }
-        return rgb2hex(this.materials[index].uniforms['u_color'].value) as any;
+        return rgb2hex(this.materials[0].uniforms['u_color'].value) as any;
     }
 
     set_material(name: string, index = 0) {
@@ -112,10 +119,11 @@ export class MultipleMaterialMesh extends EntityPlane {
                 child.material = new_material;
             }
         });
-        m.scale.setScalar(1 * WORLD_SCALAR);
+
         if (this.children.length > 0)
             this.remove(this.children[0]);
         this.add(m);
+        this.set_scale(1, 1);
 
         old_maps.forEach((map, index) => {
             ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, 'u_texture', map);
@@ -125,11 +133,22 @@ export class MultipleMaterialMesh extends EntityPlane {
     }
 
     serialize() {
-        // NOTE: есть нюанс как минимум с сериализацией цвета, потому что может не быть материала
-        const data = super.serialize();
+        // NOTE: кусок serialize из EntityPlane, без get_color
+        const data: any = {};
+        const size = this.get_size();
+        const pivot = this.get_pivot();
+
+        // NOTE: только если не 32 * WORLD_SCALAR
+        if (size.x !== 32 * WORLD_SCALAR || size.y !== 32 * WORLD_SCALAR) {
+            data.size = size.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION)));
+        }
+
+        // NOTE: только если не (0.5, 0.5)
+        if (pivot.x !== 0.5 || pivot.y !== 0.5) {
+            data.pivot = pivot;
+        }
         data.materials = [];
         data.mesh_name = this.mesh_name;
-        data.scales = this.children.map(child => child.scale.clone());
 
         this.materials.forEach((material, idx) => {
             const info: { name: string, blending?: number, changed_uniforms?: { [key: string]: any } } = {
@@ -188,13 +207,6 @@ export class MultipleMaterialMesh extends EntityPlane {
             this.set_mesh(data.mesh_name);
         }
 
-        if (data.scales) {
-            data.scales.forEach((scale, idx) => {
-                if (this.children[idx])
-                    this.children[idx].scale.copy(scale);
-            });
-        }
-
         for (const [idx, info] of Object.entries(data.materials)) {
             const index = parseInt(idx);
 
@@ -233,7 +245,24 @@ export class MultipleMaterialMesh extends EntityPlane {
             });
         }
 
-        // NOTE: сериализуем в конце, так как внутри есть методы обращающиеся к материалам которые создаются тут
-        super.deserialize(data);
+        // NOTE: кусок deserialize из EntityPlane без set_color
+        this.set_pivot(0.5, 0.5, false);
+        this.set_size(32 * WORLD_SCALAR, 32 * WORLD_SCALAR);
+
+        if ((data as any).pivot) {
+            this.set_pivot((data as any).pivot.x, (data as any).pivot.y, false);
+        }
+        if ((data as any).size) {
+            this.set_size((data as any).size[0], (data as any).size[1]);
+        }
+
+        // NOTE: для обратной совместимости, после пересохранения всех сцен которые содежат модели, можно удалить
+        const scales = (data as any).scales;
+        if (scales) {
+            scales.forEach((scale: Vector3, idx: number) => {
+                if (this.children[idx])
+                    this.children[idx].scale.copy(scale);
+            });
+        }
     }
 } 

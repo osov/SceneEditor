@@ -1,4 +1,4 @@
-import { Object3D, Quaternion, Vector3, Vector3Tuple, Vector4Tuple } from "three";
+import { Object3D, Quaternion, Vector2, Vector2Tuple, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import { filter_list_base_mesh, is_base_mesh, is_label, is_sprite, is_text } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
 import { IBaseEntityAndThree, IBaseEntityData, IObjectTypes } from "./types";
@@ -12,6 +12,7 @@ import { FLOAT_PRECISION } from "../config";
 import { TDictionary } from "../modules_editor/modules_editor_const";
 import { Model } from "./objects/model";
 import { AudioMesh } from "./objects/audio_mesh";
+import { MultipleMaterialMesh } from "./objects/multiple_material_mesh";
 
 declare global {
     const SceneManager: ReturnType<typeof SceneManagerModule>;
@@ -170,11 +171,11 @@ export function SceneManagerModule() {
 
     function serialize_mesh(m: IBaseEntityAndThree, clean_id_pid = false, without_children = false) {
         const wp = new Vector3();
-        const ws = new Vector3();
         const wr = new Quaternion();
-        wp.copy(m.position);
-        ws.copy(m.scale);
+        const ws = new Vector2();
+        wp.copy(m.get_position());
         wr.copy(m.quaternion);
+        ws.copy(m.get_scale());
         const pid = m.parent ? (is_base_mesh(m.parent) ? (m.parent as IBaseEntityAndThree).mesh_data.id : -1) : -1;
         const data: IBaseEntityData = {
             id: m.mesh_data.id,
@@ -184,7 +185,7 @@ export function SceneManagerModule() {
             visible: m.get_active(),
             position: wp.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as Vector3Tuple,
             rotation: wr.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as Vector4Tuple,
-            scale: ws.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as Vector3Tuple,
+            scale: ws.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as Vector2Tuple,
             other_data: m.serialize(),
         };
         if (clean_id_pid) {
@@ -208,11 +209,11 @@ export function SceneManagerModule() {
         const mesh = create(data.type, data.other_data, with_id ? data.id : -1);
         if (data.position)
             mesh.position.set(data.position[0], data.position[1], data.position[2]);
-        if (data.rotation) {
+        if (data.rotation)
             mesh.quaternion.set(data.rotation[0], data.rotation[1], data.rotation[2], data.rotation[3]);
+        if (data.scale) {
+            mesh.set_scale(data.scale[0], data.scale[1]);
         }
-        if (data.scale)
-            mesh.scale.set(data.scale[0], data.scale[1], data.scale[2]);
         set_mesh_name(mesh, data.name);
         mesh.set_active(data.visible);
 
@@ -221,6 +222,11 @@ export function SceneManagerModule() {
             for (let i = 0; i < data.children.length; i++)
                 mesh.add(deserialize_mesh(data.children[i], with_id, mesh));
         }
+
+        if (data.scale && mesh instanceof MultipleMaterialMesh) {
+            mesh.set_scale(data.scale[0], data.scale[1]);
+        }
+
         return mesh;
     }
 

@@ -51,7 +51,7 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
     }
 
     set_scale(x: number, y: number): void {
-        this.scale.set(x * this.parameters.width, y * this.parameters.height, this.scale.z);
+        this.scale.set(x, y, this.scale.z);
         this.transform_changed();
     }
 

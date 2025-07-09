@@ -341,16 +341,15 @@ function MeshInspectorCreate() {
         });
 
         if (mesh instanceof MultipleMaterialMesh) {
-            const min_scale = 0.001;
-            const first_child = mesh.children[0];
-            const scale_factor = first_child ? Math.max(...first_child.scale.toArray()) : min_scale;
+            const scale = mesh.get_scale();
+            const scale_factor = Math.max(scale.x, scale.y);
             transform_fields.push({
                 key: MeshProperty.SCALE,
                 title: MeshPropertyTitle.SCALE,
                 value: scale_factor,
                 type: PropertyType.SLIDER,
                 params: {
-                    min: min_scale,
+                    min: 0.001,
                     max: 1,
                     step: 0.001,
                     format: (v: number) => v.toFixed(3)
@@ -2123,8 +2122,7 @@ function MeshInspectorCreate() {
             }
 
             if (mesh instanceof Slice9Mesh) {
-                mesh.scale.copy(item.value);
-                mesh.transform_changed();
+                mesh.set_scale(item.value.x, item.value.y);
             }
             else if (mesh instanceof TextMesh) {
                 mesh.set_scale(item.value.x, item.value.y);
@@ -2133,11 +2131,7 @@ function MeshInspectorCreate() {
                 mesh.fontSize * max_delta;
             }
             else if (mesh instanceof MultipleMaterialMesh) {
-                const first_child = mesh.children[0];
-                if (first_child) {
-                    first_child.scale.setScalar(Math.max(item.value.x, item.value.y) * WORLD_SCALAR);
-                }
-                mesh.transform_changed();
+                mesh.set_scale(item.value.x, item.value.y);
             }
         }
 
@@ -2156,7 +2150,7 @@ function MeshInspectorCreate() {
                 return;
             }
             if (mesh instanceof MultipleMaterialMesh) {
-                const scale_factor = Math.max(...mesh.children[0].scale.toArray());
+                const scale_factor = Math.max(...mesh.get_scale().toArray());
                 oldScales.push({ mesh_id: id, value: scale_factor });
             }
         });
@@ -2176,11 +2170,7 @@ function MeshInspectorCreate() {
                 continue;
             }
             if (mesh instanceof MultipleMaterialMesh) {
-                const firstChild = mesh.children[0];
-                if (firstChild) {
-                    firstChild.scale.setScalar(item.value);
-                    mesh.transform_changed();
-                }
+                mesh.set_scale(item.value, item.value);
             }
         }
     }
