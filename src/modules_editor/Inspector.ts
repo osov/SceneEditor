@@ -385,6 +385,8 @@ function InspectorModule() {
             const field_data = field.value as T;
             const unique_field_data = unique_fields[index].data.value as T;
 
+            if (typeof field_data !== typeof unique_field_data) return false;
+
             if ([PropertyType.VECTOR_2, PropertyType.POINT_2D, PropertyType.VECTOR_3, PropertyType.VECTOR_4].includes(field.type)) {
                 if (field_data.x != unique_field_data.x) {
                     const params = unique_fields[index].data.params;
