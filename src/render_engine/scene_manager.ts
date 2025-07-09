@@ -122,10 +122,10 @@ export function SceneManagerModule() {
         return mesh as IMeshTypes[T];
     }
 
-    function set_mesh_name(mesh: IBaseEntityAndThree, name: string) {
+    function update_mesh_url(mesh: IBaseEntityAndThree) {
         let fullPath = '';
-        if (is_text(mesh) || is_label(mesh) || is_sprite(mesh)) fullPath = '#' + name;
-        else fullPath = name;
+        if (is_text(mesh) || is_label(mesh) || is_sprite(mesh)) fullPath = '#' + mesh.name;
+        else fullPath = mesh.name;
         let parent = mesh.parent;
         while (parent && is_base_mesh(parent)) {
             fullPath = parent.name + (fullPath.startsWith('#') ? '' : '/') + fullPath;
@@ -138,7 +138,11 @@ export function SceneManagerModule() {
         }
         mesh_url_to_mesh_id[fullPath] = mesh.mesh_data.id;
         mesh_id_to_url[mesh.mesh_data.id] = fullPath;
+    }
+
+    function set_mesh_name(mesh: IBaseEntityAndThree, name: string) {
         mesh.name = name;
+        update_mesh_url(mesh);
         // NOTE: рекурсивно обновляем пути для всех детей
         mesh.children.forEach(child => {
             if (is_base_mesh(child)) {
@@ -219,8 +223,11 @@ export function SceneManagerModule() {
 
         mesh.deserialize(data.other_data);
         if (data.children) {
-            for (let i = 0; i < data.children.length; i++)
-                mesh.add(deserialize_mesh(data.children[i], with_id, mesh));
+            for (let i = 0; i < data.children.length; i++) {
+                const m = mesh.add(deserialize_mesh(data.children[i], with_id, mesh));
+                update_mesh_url(m);
+            }
+
         }
 
         if (data.scale && mesh instanceof MultipleMaterialMesh) {
@@ -427,6 +434,9 @@ export function SceneManagerModule() {
             old_scale.divide(parent_scale);
             mesh.scale.copy(old_scale);
         }
+
+        update_mesh_url(mesh);
+
         if (mesh instanceof GuiBox || mesh instanceof GuiText) {
             const gui_container = find_nearest_gui_container(mesh);
             if (gui_container) {
@@ -448,6 +458,9 @@ export function SceneManagerModule() {
     function add_to_mesh(mesh: IBaseEntityAndThree, parent_mesh: IBaseEntityAndThree) {
         const id_parent = parent_mesh.mesh_data.id;
         move_mesh(mesh, id_parent);
+
+        update_mesh_url(mesh);
+
         if (mesh instanceof GuiBox || mesh instanceof GuiText) {
             const gui_container = find_nearest_gui_container(mesh);
             if (gui_container) {
@@ -543,6 +556,7 @@ export function SceneManagerModule() {
         load_scene,
         get_scene_list,
         set_mesh_name,
+        update_mesh_url,
         get_mesh_id_by_url,
         get_mesh_url_by_id,
         get_mesh_by_name,
