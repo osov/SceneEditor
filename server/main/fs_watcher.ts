@@ -66,6 +66,7 @@ export function FSWatcher(dir: string, sockets: WsClient[]) {
                 const ext = path.extname(rel_path).replace(".", "");
                 if (ext)
                     event.ext = ext;
+                log('event dir name', _dir)
                 if (!is_copy(event))
                     events_cache.push(event);
             }

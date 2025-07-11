@@ -1,17 +1,16 @@
 import { AnimatedMesh } from '../render_engine/objects/animated_mesh';
 import { get_depth } from '../render_engine/parsers/tile_parser';
-import { EQ_0 } from '../modules/utils';
 import { IObjectTypes } from '../render_engine/types';
 import { WORLD_SCALAR } from '../config';
-import { PathFinder } from '../utils/physic/PathFinder';
 import { Line as GeomLine, LineBasicMaterial } from 'three';
 import { LinesDrawer } from '../utils/physic/LinesDrawer';
-import { PlayerMovementSettings, movement_default_settings, ControlType, PathData, COLORS } from '@editor/modules/types';
 import { IPoint, IArc, ISegment, PointLike } from '@editor/utils/geometry/types';
-import { shape_length, vector_slope } from '@editor/utils/geometry/utils';
+import { EQ_0, shape_length, vector_slope } from '@editor/utils/geometry/utils';
 import { Arc, Point } from '@editor/utils/geometry/shapes';
 import { clone, point, point2point, segment, shape_equal_to, split_at_length, vec_angle, vector_from_points as vector } from '@editor/utils/geometry/logic';
 import { POINT_EMPTY } from '@editor/utils/geometry/helpers';
+import { ShapeNames } from '@editor/utils/geometry/const';
+import { PlayerMovementSettings, movement_default_settings, PathData, COLORS, ControlType } from '@editor/utils/physic/types';
 
 
 function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
@@ -37,7 +36,7 @@ function interpolate_with_wrapping(start: number, end: number, percent: number, 
 }
 
 export function MovementControlCreate(settings: PlayerMovementSettings = movement_default_settings) {
-    let path_data: PathData = {length: 0, path: []};
+    let path_data: PathData = {length: 0, path: [], time: 0, path_points: []};
     const LD = LinesDrawer();
     const width = 50 * WORLD_SCALAR;
     const height = 50 * WORLD_SCALAR;
@@ -61,7 +60,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
     let update_t_interval = settings.update_interval;
     let min_update_t_interval = settings.min_update_interval;
     let min_find_path_interval = settings.min_find_path_interval;
-    let update_way_angle = settings.update_path_angle;
+    let min_angle_change = settings.min_angle_change;
     let min_stick_dist = settings.min_stick_dist;
     let pred_path_lenght_mult = settings.pred_path_lenght_mult;
     let speed = settings.speed;
@@ -74,7 +73,6 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
     let last_upd_time_elapsed = 0;
     let last_stop_time_elapsed = 0;
     let has_target = false;
-    let PF: PathFinder;
     let model: AnimatedMesh;
 
     const obstacles_lines: {[key: string]: GeomLine<any>[]} = {};
@@ -92,9 +90,8 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
     obstacles_container.name = 'obstacles';
     SceneManager.add(obstacles_container);
 
-    function init(init_data: { model: AnimatedMesh, path_finder: PathFinder }) {
+    function init(init_data: { model: AnimatedMesh }) {
         model = init_data.model;
-        PF = init_data.path_finder;
         target = Point(model.position.x, model.position.y);
 
         if (debug) draw_obstacles();
@@ -115,7 +112,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
         EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
             if (n_pressed && e.button == 0) {
                 const wp = Camera.screen_to_world(e.x, e.y);
-                const obj = PF.obstacles_manager.get_object_by_pos(wp.x, wp.y);
+                const obj = PathFinder.get_obstacles_manager()!.get_object_by_pos(wp.x, wp.y);
                 if (obj) {
                     let color = COLORS.RED;
                     if (obj.enabled) {
@@ -125,7 +122,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                     else {
                         log('Препятствие', obj.id, 'включено');
                     }
-                    PF.obstacles_manager.enable_object(obj.id, !obj.enabled);
+                    PathFinder.get_obstacles_manager()!.enable_object(obj.id, !obj.enabled);
                     const lines = obstacles_lines[obj.id];
                     for (const line of lines) {
                         const material = new LineBasicMaterial({ color });
@@ -136,8 +133,8 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
         })
         EventBus.on('SYS_VIEW_INPUT_KEY_UP', (e) => {
             if (e.key == 'ь' || e.key == 'm') {
-                if (PF.check_obstacles_enabled()) PF.enable_collision(false);
-                else PF.enable_collision(true);
+                if (PathFinder.check_obstacles_enabled()) PathFinder.enable_collision(false);
+                else PathFinder.enable_collision(true);
             }
         })
         
@@ -268,7 +265,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             }
             last_check_dir = clone(current_dir);
             last_check_target = clone(target);
-            path_data = PF.update_path(way_required, collision_radius, pointer_control);
+            path_data = PathFinder.update_path(way_required, collision_radius, pointer_control);
             
             LD.clear_container(player_way);
             if (debug) {
@@ -287,7 +284,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                     }
                 }
                 for (const interval of path_data.path) {
-                    if (interval.name == 'arc') 
+                    if (interval.name == ShapeNames.Arc) 
                         LD.draw_arc(interval as IArc, player_way, COLORS.GREEN);
                     else 
                         LD.draw_line(interval as ISegment, player_way, COLORS.GREEN);
@@ -307,7 +304,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             }
             if (pointer_control == ControlType.JS) {
                 if (!EQ_0(shape_length(current_dir))) {
-                    way_required = PF.path_from_angle(cp, vector_slope(current_dir), lenght_remains);
+                    way_required = PathUpdater.path_from_angle(cp, vector_slope(current_dir), lenght_remains);
                 }
                 else
                     way_required = segment(cp.x, cp.y, cp.x, cp.y);
@@ -351,7 +348,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
         }
 
         function clear_way() {
-            path_data = {length: 0, path: []};
+            path_data = {length: 0, path: [], time: 0, path_points: []};
         }
 
         function stop_movement() {
@@ -368,7 +365,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
 
         function update_position(dt: number) {
             const current_pos = Point(model.position.x, model.position.y);
-            const end_pos = PF.get_next_pos(path_data, current_pos, dt, current_speed);
+            const end_pos = PathFinder.get_next_pos(path_data, current_pos, dt, current_speed);
             if (!end_pos || (shape_equal_to(end_pos, current_pos))) {
                 stop_movement();
                 return;
@@ -399,12 +396,12 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
         }
 
         function draw_obstacles() {
-            const objects_dict = PF.obstacles_manager.objects;
+            const objects_dict = PathFinder.get_obstacles_manager()!.objects;
             for (const id in objects_dict) {
                 const obstacles = objects_dict[id].obstacles;
                 obstacles_lines[id] = [];
                 for (const obst_id of obstacles) {
-                    const obstacle = PF.obstacles_manager.get_obstacle_by_id(obst_id);
+                    const obstacle = PathFinder.get_obstacles_manager()!.get_obstacle_by_id(obst_id);
                     if (obstacle) {
                         const line = LD.draw_line(obstacle, obstacles_container, COLORS.RED);
                         obstacles_lines[id].push(line);             
@@ -428,7 +425,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             result = true;
         else if (shape_length(current_dir) != 0 && shape_length(last_check_dir) != 0) {
             const d_angle = Math.abs(vec_angle(current_dir, last_check_dir));
-            result = (d_angle > update_way_angle);
+            result = (d_angle > min_angle_change);
         }
         return result;
     }

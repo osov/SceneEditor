@@ -26,10 +26,6 @@ export function EQ(x: number, y: number) {
     return x - y < DP_TOL && x - y > -DP_TOL;
 }
 
-export function degToRad(degrees: number) {
-    return degrees * (Math.PI / 180);
-}
-
 export function normalize(v: IVector) {
     const L = shape_length(v);
     if (!EQ_0(L)) {

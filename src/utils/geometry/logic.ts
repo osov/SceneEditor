@@ -5,13 +5,6 @@ import { AnyShape, I_NULL_VALUE, IArc, IBox, ICircle, ILine, IPoint, ISegment, I
 import { arc_sweep, normalize, EQ_0, EQ, vector_slope, LE, shape_length, LT, GT, multiply, GE } from "./utils";
 
 
-const tm_trans = vmath.matrix4();
-const tm_trans2 = vmath.matrix4();
-const tm_rot = vmath.matrix4();
-const tm = vmath.matrix4();
-const tv = vmath.vector4();
-
-
 export function arc_start(a: IArc): IPoint {
     const p = Point(a.pc.x + a.r, a.pc.y);
     rotate(p, a.startAngle, a.pc);
@@ -345,21 +338,8 @@ export function rewrite<T extends AnyShape>(shape: T, data: T) {
     }
 }
 
-export function rotate_point_matrix(p: IPoint, angle: number, center: PointLike) {
-    tv.x = p.x; tv.y = p.y; tv.w = 1;
-    xmath.matrix_translation(tm_trans, vmath.vector3(center.x, center.y, 0));
-    xmath.matrix_rotation_z(tm_rot, angle);
-    let tm = vmath.mult_matrices(tm_trans, tm_rot);
-    xmath.matrix_translation(tm_trans, vmath.vector3(-center.x, -center.y, 0)); 
-    // xmath.matrix(tm, vmath.mult_matrices(tm, tm_trans)); 
-    tm = vmath.mult_matrices(tm, tm_trans);
-    const tmp = vmath.matrix_mult_vector(tm, tv);   
-    p.x = tmp.x;
-    p.y = tmp.y;
-}
-
-export function rotate_point_simple(p: IPoint, angle: number, center: PointLike) {
-    const c = math.cos(angle), s = math.sin(angle);
+export function rotate_simple(p: IPoint | IVector, angle: number, center: PointLike) {
+    const c = Math.cos(angle), s = Math.sin(angle);
     const x = p.x - center.x;
     const y = p.y - center.y;
     p.x = x * c - y * s + center.x;
@@ -371,16 +351,12 @@ export function rotate<T extends AnyShape>(shape: T, angle: number, _center: Poi
     if (shape.name == ShapeNames.Point) {
         const p = shape as IPoint;
         // rotate_point_matrix(p, angle, center);
-        rotate_point_simple(p, angle, center);
+        rotate_simple(p, angle, center);
     }
 
     else if (shape.name == ShapeNames.Vector) {
         const v = shape as IVector;
-        const c = math.cos(angle), s = math.sin(angle);
-        const x = v.x;
-        const y = v.y;
-        v.x = x * c - y * s;
-        v.y = x * s + y * c;
+        rotate_simple(v, angle, center);
     } 
 
     else if (shape.name == ShapeNames.Segment) {

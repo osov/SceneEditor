@@ -1,5 +1,6 @@
 import { WORLD_SCALAR } from "../../config";
 import { ISegment, IPoint, IArc, PointLike } from "../geometry/types";
+import { ArcLengthMap } from "../math_utils";
 
 
 /**
@@ -40,11 +41,17 @@ export type ClosestObstacleData = {
     is_vertice: boolean,
 };
 
-export type PathData = {
+export type PathDataBase = {
     path: (ISegment | IArc)[],
     length: number,
+    time: number;
+};
+
+export type PathData = PathDataBase & {
+    path_points: IPoint[],
     blocked_way_nodes?: PathNode[],
     clear_way_nodes?: PathNode[],
+    arc_table?: ArcLengthMap,
 };
 
 export type PathNode = {
@@ -71,7 +78,7 @@ export type PlayerMovementSettings = {
     animation_names: AnimationNames,
     update_interval: number,       // Интервал между обновлениями прогнозируемого пути по умолчанию 
     min_update_interval: number,   // Минимальный интервал между обновлениями прогнозируемого пути
-    update_path_angle: number,      // Минимальный угол изменения направления движения, при котором произойдёт обновление прогнозируемого пути
+    min_angle_change: number,      // Минимальный угол изменения направления движения, при котором произойдёт обновление прогнозируемого пути
     block_move_min_angle: number,  // Минимальный угол между нормалью к препятствию и направлением движения, при котором возможно движение вдоль препятствия
     speed: SpeedSettings,
     collision_radius: number,      // Радиус столкновения управляемого персонажа с препятствиями
@@ -142,7 +149,7 @@ export const movement_default_settings: PlayerMovementSettings = {
     animation_names: { IDLE: "Unarmed Idle", WALK: "Unarmed Run Forward" },
     update_interval: 2.5,
     min_update_interval: 0.2,
-    update_path_angle: 3 * Math.PI / 180,
+    min_angle_change: 3 * Math.PI / 180,
     block_move_min_angle: 15 * Math.PI / 180,
     speed: { WALK: 26 },
     collision_radius: 4,

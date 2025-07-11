@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prefer-const */
-import { ObstaclesManager } from "./obstacle_manager";
-import { ClosestObstacleData, ControlType, NextMoveType, PredictNextMoveData, PathData as PathData, PathNode, PathFinderSettings } from "./types";
+import { ObstaclesManager, ObstaclesManagerCreate } from "./obstacle_manager";
+import { ClosestObstacleData, ControlType, NextMoveType, PredictNextMoveData, PathData as PathData, PathNode, PathFinderSettings, PF_default_settings } from "./types";
 import { CCW, CW, DP_TOL, ShapeNames } from "../geometry/const";
 import { ISegment, IPoint, IArc, IVector } from "../geometry/types";
 import { vector_from_points, vec_angle, segment, clone, rotate_vec_90CW, 
@@ -12,18 +15,23 @@ import { Vector, Segment, Arc, Point } from "../geometry/shapes";
 import { shape_length, normalize, multiply, add, EQ_0, vector_slope, EQ } from "../geometry/utils";
 
 
-export type PathFinder = ReturnType<typeof PathFinderModule>;
-
-
 const path_tree_root: PathNode = {
     children: [],
     depth: 0,
     total_length: 0
 };
 
-export function PathFinderModule(settings: PathFinderSettings, obstacles_manager: ReturnType<typeof ObstaclesManager>) {
-    const logger = Log.get_with_prefix('pathfinder');
+declare global {
+    const PathFinder: ReturnType<typeof PathFinderModule>;
+}
 
+export function register_pathfinder() {
+    (window as any).PathFinder = PathFinderModule(PF_default_settings);
+}
+
+export function PathFinderModule(settings: PathFinderSettings) {
+    const logger = Log.get_with_prefix('pathfinder');
+    
     const max_intervals = settings.max_path_intervals;
     const collision_min_error = settings.collision_min_error;
     const move_min_angle = settings.block_move_min_angle;
@@ -35,7 +43,20 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
 
     const debug = settings.debug;
 
+    let obstacles_manager: ObstaclesManager | undefined = undefined;
     let checking_obstacles = true;
+
+    function set_obstacles_manager(manager: ObstaclesManager) {
+        obstacles_manager = manager;
+    }
+
+    function get_obstacles_manager() {
+        return obstacles_manager;
+    }
+
+    function clear_obstacles_manager() {
+        obstacles_manager = undefined;
+    }
 
     function enable_collision(enable = true) {
         checking_obstacles = enable;
@@ -46,9 +67,9 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     }
 
     function update_path(way_required: ISegment, collision_radius: number, control_type: ControlType, use_first_found = false) {
-        const path_data: PathData = { path: [], length: 0 };
+        const path_data: PathData = { path: [], length: 0, path_points: [], time: 0 };
         if (control_type == ControlType.JS || control_type == ControlType.FP)
-            path_data.path.push(...predict_way(way_required, collision_radius, control_type));
+            path_data.path = predict_way(way_required, collision_radius, control_type);
 
         if (control_type == ControlType.GP) {
             const data = find_way(way_required, collision_radius, use_first_found);
@@ -58,6 +79,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         }
         for (const elem of path_data.path)
             path_data.length += shape_length(elem);
+        path_data.time = System.now();
         return path_data;
     }
 
@@ -66,6 +88,8 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     }
 
     function find_clear_space(target: IPoint, collision_radius: number, checks_number = 4) {
+        if (obstacles_manager == undefined)
+            throw new Error('obstacles_manager is not set');
         let clear_target_pos = target;
         const R = collision_radius + collision_min_error;
         let i = 0;
@@ -174,7 +198,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
 
         nodes_to_check.push(path_required_node);
         let checks_number = 0;
-        const time = System.now_ms();
+        const time = System.now();
         let time_elapsed = 0;
 
         // Пока есть пути, которые нужно проверить, при этом не превысили ограничений по числу проверок:
@@ -187,7 +211,7 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
             clear_path_nodes.push(...result.clear_way_nodes);
             blocked_path_nodes.push(...result.blocked_way_nodes);
             checks_number++;
-            time_elapsed = System.now_ms() - time;
+            time_elapsed = System.now() - time;
 
             if (use_first_found && end_nodes.length > 0) break; 
         }
@@ -1047,6 +1071,8 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
     }
 
     function find_closest_obstacle(way_required: ISegment | IArc, collision_radius: number): ClosestObstacleData {
+        if (obstacles_manager == undefined)
+            throw new Error('obstacles_manager is not set');
         let shortest_distance = Infinity;
         let closest_point: IPoint | undefined = undefined;
         let closest_obstacle: ISegment | undefined = undefined;
@@ -1187,76 +1213,26 @@ export function PathFinderModule(settings: PathFinderSettings, obstacles_manager
         return _current_pos;
     }
 
-    function path_from_angle(cp: IPoint, angle: number, length: number) {
-        const dir = Vector(1, 0);
-        rotate(dir, angle);
-        multiply(dir, length);
-        const ep = clone(cp);
-        translate(ep, dir.x, dir.y);
-        return Segment(Point(cp.x, cp.y), Point(ep.x, ep.y));
-    }
-
-    function path_to_points_amount(path_data: PathData, amount: number) {
-        if (amount == 1 && path_data.path.length > 0) {
-            const first = path_data.path[0];
-            if (first.name == ShapeNames.Segment) return (first as ISegment).start;
-            else return arc_start(first as IArc);
-        }
-        else if (amount == 0) return false;
-        const step = path_data.length / (amount - 1);
-        return path_to_points_step(path_data, step);
-    }
-
-    function path_to_points_step(path_data: PathData, step: number) {
-        const path = path_data.path;
-        let length_left = 0;
-        const result: IPoint[] = [];
-        if (path_data.path.length == 0) return result;
-        const first = path[0];
-        result.push(point_at_length(first, 0) as IPoint);
-        for (let interval of path) {
-            const length = shape_length(interval);
-            if (length < step) {
-                length_left += length;
-            }
-            else if (length >= step) {
-                const first_interval = (EQ_0(step - length_left)) ? 0 : step - length_left;
-                const point = point_at_length(interval, first_interval) as IPoint;
-                result.push(point);
-                let total_length = step - length_left + step;
-                while (total_length < length && !EQ(total_length, length)) {
-                    const point = point_at_length(interval, total_length) as IPoint;
-                    result.push(point);
-                    total_length += step;
-                }
-                length_left = length - total_length + step;
-            }
-        }
-        const last = path[path.length - 1];
-        result.push(point_at_length(last, shape_length(last)) as IPoint);
-        return result;
-    }
-
     return {
         update_path, get_next_pos, get_pos_at_ratio,
         enable_collision, check_obstacles_enabled, 
-        build_path_tree, path_from_angle, path_to_points_step, path_to_points_amount,
-        obstacles_manager, find_clear_space,
+        build_path_tree,
+        get_obstacles_manager, find_clear_space, set_obstacles_manager, clear_obstacles_manager, 
         make_sideways, make_sideways_bypass_vertice, make_way_bypass_vertice, make_way,
     };
 }
 
-export function test_batch(PF: PathFinder, collision_radius: number, way_required: ISegment, obstacles: ISegment[], use_first_found = false) {
+export function test_batch(PF: typeof PathFinder, collision_radius: number, way_required: ISegment, obstacles: ISegment[], use_first_found: boolean) {
     const _obstacles: ISegment[] = [];
     for (const obstacle of obstacles) {
         const obst = clone(obstacle);
         _obstacles.push(obst);
     }
     const _way_required = clone(way_required);
-
-    PF.obstacles_manager.set_obstacles(_obstacles);
-    let path_data: PathData = { path: [], length: 0 };
-    path_data = PF.update_path(_way_required, collision_radius, ControlType.GP, use_first_found);
+    const obstacles_manager = PF.get_obstacles_manager();
+    if (!obstacles_manager) return;
+    obstacles_manager.set_obstacles(_obstacles);
+    const path_data = PF.update_path(_way_required, collision_radius, ControlType.GP, use_first_found);
     // log();
     // log('path_data.length', path_data.length);
     // log('path_data.path.length', path_data.path.length);
@@ -1264,6 +1240,5 @@ export function test_batch(PF: PathFinder, collision_radius: number, way_require
     // log('blocked_way_nodes', path_data.blocked_way_nodes?.length);
     // log('clear_way_nodes', path_data.clear_way_nodes?.length);
     // log();
-    let full_way = path_data.path;
     return path_data;
 }

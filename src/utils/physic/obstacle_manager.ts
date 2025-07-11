@@ -8,6 +8,7 @@ import { GridParams, ObstacleTileData, SubGridParams } from "./types";
 import { normalize, multiply, vector_slope } from "../geometry/utils";
 
 
+export type ObstaclesManager = ReturnType<typeof ObstaclesManagerCreate>;
 export type ObstaclesGrid = ReturnType<typeof ObstaclesGridCreate>;
 
 type OffsetBuildOption = "all" | "arc" | "segment";
@@ -88,7 +89,7 @@ function ObstaclesGridCreate(grid: number[][], pos_to_coord_grid: PointLike[][],
 }
 
 
-export function ObstaclesManager(hash_cell_size: number) {
+export function ObstaclesManagerCreate(hash_cell_size: number) {
     const all_obstacles: ISegment[] = [];
     const objects: { [key: string]: { id: string, obstacles: string[], enabled: boolean } } = {};
     const logger = Log.get_with_prefix('ObstaclesManager');
@@ -163,9 +164,9 @@ export function ObstaclesManager(hash_cell_size: number) {
     function add_obstacle(obstacle: ISegment, object_id?: string) {
         all_obstacles.push(obstacle);
         const pc = shape_center(obstacle);
-        const x = pc.x;
         const width = Math.abs(obstacle.end.x - obstacle.start.x);
         const height = Math.abs(obstacle.end.y - obstacle.start.y);
+        const x = pc.x;
         const y = pc.y;
         const id = 'obst_' + id_obstacle;
         id_obstacle++;
@@ -323,8 +324,10 @@ export function ObstaclesManager(hash_cell_size: number) {
                 }
             }
             all_obstacles.push(...obstacles);
-            if (obstacles.length > 0) add_object(obstacles);
-        }
+            if (obstacles.length > 0) {
+                add_object(obstacles);
+            }
+        }        
         return all_obstacles;
     }
 
@@ -332,6 +335,6 @@ export function ObstaclesManager(hash_cell_size: number) {
         add_obstacle, remove_obstacle, set_obstacles, clear_obstacles,
         get_obstacles, get_grid, init_grid, build_offsets,
         load_obstacles_from_data, enable_object, get_object_by_pos,
-        get_obstacle_by_id, objects
+        get_obstacle_by_id, objects, all_obstacles
     };
 }
