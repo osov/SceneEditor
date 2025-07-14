@@ -1,13 +1,15 @@
 import path from "path";
 
 
-export function do_response(data: any, stringify = true, status?: number) {
-    const options: ResponseInit = {
-        headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "*"
-        }
+export function do_response(data: any, stringify = true, status?: number, request?: Request) {
+    let origin = request?.headers.get("Origin");
+    const headers: Record<string, string> = {
+        "Access-Control-Allow-Headers": "Content-Type, X-Session-ID, Authorization",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Credentials": "true"
     };
+    if (origin) headers["Access-Control-Allow-Origin"] = origin;
+    const options: ResponseInit = { headers };
     if (status) options.status = status;
     const body = stringify ? JSON.stringify(data) : data;
     return new Response(body, options);
@@ -24,7 +26,7 @@ export function json_parsable(str: string) {
 
 export function now() {
     return Date.now();
-  }
+}
 
 export function get_incr_copy_name(name: string) {
     var match = name.match(/^(.+-copy-)(\d+)$/);

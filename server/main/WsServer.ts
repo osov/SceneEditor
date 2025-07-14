@@ -1,47 +1,80 @@
 import { ServerWebSocket } from "bun";
-import * as cookie_parser from 'cookie';
-
+import { ISessionManager } from "./session_manager";
 
 export function WsServer<T>(port: number,
     on_data: (client: ServerWebSocket<T>, data: String | Buffer) => void,
     on_client_connected: (client: ServerWebSocket<T>) => void,
-    on_client_disconnected: (client: ServerWebSocket<T>) => void) {
+    on_client_disconnected: (client: ServerWebSocket<T>) => void,
+    sessionManager?: ISessionManager) {
 
     type WsClient = ServerWebSocket<T>;
 
-    const server = Bun.serve<T>({
+    const server = Bun.serve<T, any>({
         port,
         fetch(req, server) {
-            const cookies_str = req.headers.get("Cookie") || '';
-            const cookies = cookie_parser.parse(cookies_str);
-            let id_session = '';
-            let headers;
-            if (cookies.SessionId == undefined) {
-                id_session = crypto.randomUUID();
-                headers = {
-                    "Set-Cookie": `SessionId=${id_session}`,
+            if (req.method === "OPTIONS") {
+                const origin = req.headers.get("Origin");
+                const headers: Record<string, string> = {
+                    "Access-Control-Allow-Headers": "Content-Type, X-Session-ID, Authorization",
+                    "Access-Control-Allow-Methods": "*",
+                    "Access-Control-Allow-Credentials": "true"
                 };
+                if (origin) headers["Access-Control-Allow-Origin"] = origin;
+                return new Response(null, {
+                    status: 200,
+                    headers
+                });
             }
-            else
-                id_session = cookies.SessionId;
 
+            const origin = req.headers.get("Origin");
+            const headers: Record<string, string> = {
+                "Access-Control-Allow-Headers": "Content-Type, X-Session-ID, Authorization",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Credentials": "true"
+            };
+            if (origin) headers["Access-Control-Allow-Origin"] = origin;
+
+            // NOTE: при создании вебсокета, пориписываем ему уникальный sessionId
             const success = server.upgrade(req, {
                 headers,
                 data: {
-                    id_session,
+                    id_session: crypto.randomUUID(),
                 },
             });
             if (success) return undefined;
 
-            // handle HTTP request normally
-            // ...
+            const responseHeaders: Record<string, string> = {
+                "Access-Control-Allow-Headers": "Content-Type, X-Session-ID, Authorization",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Credentials": "true"
+            };
+            if (origin) responseHeaders["Access-Control-Allow-Origin"] = origin;
+            return new Response("WebSocket server", {
+                status: 200,
+                headers: responseHeaders
+            });
         },
         websocket: {
             open(ws) {
+                const sessionId = ws.data.id_session;
+
+                const sessionMessage = JSON.stringify({
+                    id: 'SESSION_ID',
+                    message: { sessionId }
+                });
+                ws.send(sessionMessage);
+
+                if (sessionManager) {
+                    sessionManager.createSession(sessionId);
+                }
+
                 ws.subscribe("all");
                 on_client_connected(ws);
             },
             close(ws) {
+                if (sessionManager && ws.data && ws.data.id_session) {
+                    sessionManager.removeSession(ws.data.id_session);
+                }
                 on_client_disconnected(ws);
             },
             message(ws, msg) {

@@ -64,14 +64,6 @@ function AssetControlCreate() {
     async function load_project(data: ProjectLoadData, folder_content?: FSObject[], to_dir?: string) {
         current_project = data.name;
         localStorage.setItem("current_project", current_project);
-        if (folder_content && to_dir == undefined) {
-            current_dir = "";
-            draw_assets(folder_content);
-            generate_breadcrumbs(current_dir);
-        }
-        else if (to_dir != undefined) {
-            await go_to_dir(to_dir);
-        }
 
         const textures: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         const shaders: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
@@ -164,6 +156,15 @@ function AssetControlCreate() {
 
         await ResourceManager.update_from_metadata();
         await ResourceManager.write_metadata();
+
+        if (folder_content && to_dir == undefined) {
+            current_dir = "";
+            await draw_assets(folder_content);
+            generate_breadcrumbs(current_dir);
+        }
+        else if (to_dir != undefined) {
+            await go_to_dir(to_dir);
+        }
     }
 
     async function go_to_dir(path: string, renew = false) {
@@ -174,7 +175,7 @@ function AssetControlCreate() {
             localStorage.setItem("current_dir", path);
             const folder_content = resp.data;
             current_dir = path;
-            draw_assets(folder_content);
+            await draw_assets(folder_content);
             generate_breadcrumbs(current_dir);
             if (renew)
                 log("refresh current assets dir ok");
@@ -216,7 +217,7 @@ function AssetControlCreate() {
         await go_to_dir(current_dir, true);
     }
 
-    function draw_assets(list: FSObject[]) {
+    async function draw_assets(list: FSObject[]) {
         const scanned_folders: FSObject[] = [];
         const scanned_files: FSObject[] = [];
         list.forEach(function (d) {
@@ -271,15 +272,13 @@ function AssetControlCreate() {
         }
 
         if (scanned_files.length) {
-            scanned_files.forEach(function (f) {
+            for (const f of scanned_files) {
                 const file_size = bytesToSize(f.size);
                 const name = escapeHTML(f.name);
                 let file_type = getFileExt(name);
                 const ext = f.ext ? f.ext : "";
                 const _path = f.path.replaceAll('\\', '/');
                 let asset_type: AssetType = "other";
-                const src = f.src ? f.src.replaceAll('\\', '/') : '';
-                const src_url = new URL(src, SERVER_URL);
                 const file_elem = document.createElement("li");
                 let icon_elem = span_elem(`.${ext}`, ["icon", "file"]);
                 const details_elem = span_elem(file_size, ["details"]);
@@ -292,9 +291,38 @@ function AssetControlCreate() {
                 else if (fileIsImg(_path)) {
                     asset_type = ASSET_TEXTURE;
                     icon_elem = document.createElement("img");
-                    icon_elem.setAttribute("src", src_url.toString());
                     icon_elem.setAttribute("draggable", "false");
                     icon_elem.classList.add("icon", "img", "drag");
+
+                    const texture_name = get_file_name(_path);
+                    const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+
+                    if (atlas !== null) {
+                        const texture_data = ResourceManager.get_texture(texture_name, atlas);
+                        const texture = texture_data.texture;
+
+                        if (texture.image && texture.image.src) {
+                            icon_elem.setAttribute("src", texture.image.src);
+                        }
+                    }
+                    else {
+                        // NOTE: если не найли ресурс изображения, то рисуем ошибку
+                        const imageCanvas = document.createElement("canvas");
+                        const context = imageCanvas.getContext("2d")!;
+                        imageCanvas.width = imageCanvas.height = 128;
+                        context.fillStyle = "#444";
+                        context.fillRect(0, 0, 128, 128);
+                        context.strokeStyle = "#ff0000";
+                        context.lineWidth = 4;
+                        context.strokeRect(4, 4, 120, 120);
+                        context.beginPath();
+                        context.moveTo(32, 32);
+                        context.lineTo(96, 96);
+                        context.moveTo(96, 32);
+                        context.lineTo(32, 96);
+                        context.stroke();
+                        icon_elem.setAttribute("src", imageCanvas.toDataURL());
+                    }
                 }
                 else if (AUDIO_EXT.includes(ext)) {
                     asset_type = ASSET_AUDIO;
@@ -312,7 +340,7 @@ function AssetControlCreate() {
                     drag_asset_now = true;
                 })
                 assets_list.appendChild(file_elem);
-            });
+            }
         }
         const texture_files = document.querySelectorAll<HTMLElement>(`[data-type=${ASSET_TEXTURE}]`);
         texture_files.forEach((file) => {
@@ -736,6 +764,7 @@ function AssetControlCreate() {
         fileLink.href = fileURL;
         fileLink.download = name;
         fileLink.click();
+        URL.revokeObjectURL(fileURL);
     }
 
     async function remove_assets(remove_type: "selected" | "active" | undefined) {
@@ -818,7 +847,6 @@ function AssetControlCreate() {
         const resp_json = JSON.parse(resp_text) as ServerResponses[typeof FILE_UPLOAD_CMD];
         if (resp_json.result === 1 && resp_json.data) {
             const data = resp_json.data;
-            console.log(`file ${data.name} uploaded in dir ${data.path}`);
             EventBus.trigger("SYS_FILE_UPLOADED", data, false)
         }
     }
@@ -1298,6 +1326,12 @@ export async function run_debug_filemanager(project_to_load: string) {
     }
     if (server_ok) {
         WsClient.set_reconnect_timer(WS_SERVER_URL, WS_RECONNECT_INTERVAL);
+
+        const sessionResult = await ClientAPI.waitForSessionId();
+        if (!sessionResult.success) {
+            Log.warn('Не удалось получить sessionId:', sessionResult.error);
+        }
+
         const projects = await ClientAPI.get_projects();
         const names: string[] = [];
         // Ищем проект с именем project_to_load и пробуем его загрузить
@@ -1322,14 +1356,16 @@ export async function run_debug_filemanager(project_to_load: string) {
                     go_to_dir = current_dir;
                 }
                 await AssetControl.load_project(data, assets, go_to_dir);
-                log('Project loaded', data.name);
+                log('Загружен проект', data.name);
                 return;
+            } else {
+                log(`Не удалось загрузить проект ${project_to_load}, result: ${r.result}, message: ${r.message}`);
             }
         }
-        log(`Failed to load project ${project_to_load}`);
+        log(`Не удалось загрузить проект ${project_to_load}`);
     }
     else {
-        log('Server does not respond, cannot run debug filemanager');
+        log('Сервер не отвечает, невозможно запустить отладчик файлового менеджера');
         await AssetControl.draw_empty_project();
     }
 }

@@ -36,6 +36,8 @@ import { deepClone, getObjectHash, hexToRGB, rgbToHex } from '../modules/utils';
 import { Slice9Mesh } from './objects/slice9';
 import { IBaseEntityData } from './types';
 import { MultipleMaterialMesh } from './objects/multiple_material_mesh';
+import { api } from '../modules_editor/ClientAPI';
+import { URL_PATHS } from '../modules_editor/modules_editor_const';
 
 
 declare global {
@@ -458,18 +460,34 @@ export function ResourceManagerModule() {
     }
 
     async function load_texture(path: string) {
-        path = project_path + path;
-        const texture = await texture_loader.loadAsync(path);
+        const response = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
+        if (!response || !response.ok) {
+            Log.error('Failed to load texture:', path, 'Status:', response?.status);
+            return;
+        }
+
+        const blob = await response.blob();
+        const objectURL = URL.createObjectURL(blob);
+
+        const texture = await texture_loader.loadAsync(objectURL);
+
         // TODO: лучше добавить в Texture.userData
-        (texture as any).path = path;
+        (texture as any).path = project_path + path;
         return texture;
     }
 
     async function preload_audio(path: string) {
-        path = project_path + path;
-        console.log('preload_audio', path);
-        const audio_buffer = await audio_loader.loadAsync(path);
-        audios[get_file_name(path)] = audio_buffer;
+        const response = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
+        if (!response || !response.ok) {
+            Log.error('Failed to load audio:', path, 'Status:', response?.status);
+            return;
+        }
+
+        const blob = await response.blob();
+        const objectURL = URL.createObjectURL(blob);
+
+        const audio_buffer = await audio_loader.loadAsync(objectURL);
+        audios[get_file_name(project_path + path)] = audio_buffer;
     }
 
     function get_all_sounds() {
@@ -514,6 +532,10 @@ export function ResourceManagerModule() {
             return atlases[atlas][name].data;
         }
         const texture = await load_texture(path);
+
+        if (!texture)
+            return;
+
         if (!has_atlas(atlas)) {
             add_atlas(atlas);
         }
@@ -572,8 +594,17 @@ export function ResourceManagerModule() {
             }
         }
 
-        const data = await (await fetch(project_path + atlas_path)).text();
+        const response = await api.GET(`${URL_PATHS.ASSETS}/${atlas_path}`);
+        if (!response || !response.ok) {
+            Log.error('Failed to load atlas:', atlas_path, 'Status:', response?.status);
+            return;
+        }
+
+        const data = await response.text();
         const texture = await load_texture(texture_path);
+        if (!texture)
+            return;
+
         const texture_data = parse_tp_data_to_uv(data, texture.image.width, texture.image.height);
 
         if (!has_atlas(name)) {
@@ -597,24 +628,32 @@ export function ResourceManagerModule() {
     }
 
     async function preload_font(path: string, override = false) {
-        path = project_path + path;
         const name = get_file_name(path);
         if (!override && fonts[name]) {
             Log.warn('font exists', name, path);
             return true;
         }
+
+        const response = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
+        if (!response || !response.ok) {
+            Log.error('Failed to load font:', path, 'Status:', response?.status);
+            return;
+        }
+
+        const blob = await response.blob();
+        const objectURL = URL.createObjectURL(blob);
+
         return new Promise<boolean>((resolve, _reject) => {
             preloadFont({
-                font: path,
+                font: objectURL,
                 characters: font_characters
             }, () => {
                 if (fonts[name])
                     Log.warn('font exists already', name, path);
-                fonts[name] = path;
-                //log('Font preloaded:', path);
+                fonts[name] = project_path + path;
                 resolve(true);
             });
-        })
+        });
     }
 
     function has_vertex_program(path: string) {
@@ -1461,15 +1500,24 @@ export function ResourceManagerModule() {
     }
 
     async function preload_model(path: string) {
-        path = project_path + path;
         let model_name = get_model_name(path);
+
+        const response = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
+        if (!response || !response.ok) {
+            Log.error('Failed to load model:', path, 'Status:', response?.status);
+            return;
+        }
+
+        const blob = await response.blob();
+        const objectURL = URL.createObjectURL(blob);
+
         if (path.toLowerCase().endsWith('.fbx')) {
             return new Promise<Group>(async (resolve, _) => {
                 const loader = new FBXLoader(manager);
-                loader.load(path, (mesh) => {
+                loader.load(objectURL, (mesh) => {
                     if (model_name != '')
                         models[model_name] = mesh;
-                    add_animations(mesh.animations, path);
+                    add_animations(mesh.animations, project_path + path);
                     resolve(mesh);
                 });
             })
@@ -1477,12 +1525,12 @@ export function ResourceManagerModule() {
         else if (path.toLowerCase().endsWith('.gltf') || path.toLowerCase().endsWith('.glb')) {
             return new Promise<Group>(async (resolve, _) => {
                 const loader = new GLTFLoader(manager);
-                loader.load(path, (gltf) => {
+                loader.load(objectURL, (gltf) => {
                     //log(gltf)
                     const has_mesh = has_skinned_mesh(gltf.scene);
                     if (has_mesh && model_name != '')
                         models[model_name] = gltf.scene;
-                    add_animations(gltf.animations, path);
+                    add_animations(gltf.animations, project_path + path);
                     resolve(gltf.scene);
                 });
             })
@@ -1490,7 +1538,7 @@ export function ResourceManagerModule() {
         else if (path.toLowerCase().endsWith('.dae')) {
             return new Promise<Scene>(async (resolve, _) => {
                 const loader = new ColladaLoader(manager);
-                loader.load(path, (collada) => {
+                loader.load(objectURL, (collada) => {
                     //log(collada)
                     const has_mesh = has_skinned_mesh(collada.scene);
                     if (has_mesh)
@@ -1500,6 +1548,7 @@ export function ResourceManagerModule() {
             })
         }
         Log.error('Model not supported', path);
+        URL.revokeObjectURL(objectURL);
         return null;
     }
 
@@ -1517,14 +1566,19 @@ export function ResourceManagerModule() {
     }
 
     async function load_asset(path: string) {
-        path = project_path + path;
-        return await (await fetch(path)).json();
+        const response = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
+        if (!response || !response.ok) {
+            Log.error('Failed to load asset:', path, 'Status:', response?.status);
+            return;
+        }
+        return await response.json();
     }
 
     function free_texture(name: string, atlas = '') {
         if (has_texture_name(name, atlas)) {
             const tex_data = atlases[atlas][name].data;
             delete atlases[atlas][name];
+            URL.revokeObjectURL(tex_data.texture.image.src);
             tex_data.texture.dispose();
             log('Texture free', name, atlas);
         }

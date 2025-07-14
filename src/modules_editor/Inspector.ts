@@ -212,9 +212,11 @@ function InspectorModule() {
             if (img.style.backgroundImage) {
                 img.style.cursor = 'pointer';
                 img.addEventListener('click', () => {
-                    const path = img.style.backgroundImage
-                        .replace(/^url\(".*?\/assets\//, '')
-                        .replace('")', '');
+                    const path = img.getAttribute('path')
+                        ?.replace(/.*?\/assets\//, '')
+                        .replace('")', '') ?? '';
+
+                    log(img.getAttribute('path'), path);
                     AssetControl.select_file(path);
                 });
             }

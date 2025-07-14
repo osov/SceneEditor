@@ -19,7 +19,7 @@ function WsClientModule() {
     let _is_connected = false;
     let cb_on_message: CbOnMessage;
     let is_message_callback = false;
-    let timer: NodeJS.Timeout | undefined;
+    let timer: Timer | undefined;
 
     function set_on_message_callback(callback: CbOnMessage) {
         is_message_callback = true;
@@ -35,17 +35,17 @@ function WsClientModule() {
             EventBus.trigger('ON_WS_CONNECTED', {});
             //client.send(json.encode({ }));
         }
-        
+
         client.onclose = (e) => {
             logger.log('close');
             _is_connected = false;
             EventBus.trigger('ON_WS_DISCONNECTED', {});
         }
-        
+
         client.onerror = (e) => {
             logger.log('error', e);
         }
-        
+
         client.onmessage = (e) => {
             // logger.log('message', e.data.toString());
             if (is_message_callback)
@@ -79,7 +79,7 @@ function WsClientModule() {
     function set_reconnect_timer(url: string, time: number) {
         stop_reconnect_timer();
         connect(url);
-        timer = setInterval(() => connect(url), WS_RECONNECT_INTERVAL * 1000);
+        timer = setInterval(() => connect(url), time * 1000);
     }
 
     function stop_reconnect_timer() {
@@ -90,5 +90,5 @@ function WsClientModule() {
     //     WsClient.send_message('CS_Command', {id: id_message, message});
     // };
 
-    return {connect, disconnect, send_message, send_raw, is_connected, set_reconnect_timer, stop_reconnect_timer}
+    return { connect, disconnect, send_message, send_raw, is_connected, set_reconnect_timer, stop_reconnect_timer }
 }

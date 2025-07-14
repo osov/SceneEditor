@@ -37,8 +37,8 @@ function CameraControlCreate() {
             RenderEngine.scene.add(control_perspective.getObject());
             EventBus.on('SYS_ON_UPDATE', (e) => control_perspective.update(e.dt * 3));
             setInterval(() => save_state(), 1000); // todo
-         //   const gridHelper = new GridHelper(1000, 50);
-          //  RenderEngine.scene.add(gridHelper);
+            //   const gridHelper = new GridHelper(1000, 50);
+            //  RenderEngine.scene.add(gridHelper);
         }
         else {
             control_orthographic = new CameraControls(RenderEngine.camera, RenderEngine.renderer.domElement);
@@ -70,13 +70,13 @@ function CameraControlCreate() {
         }
     }
 
-    function save_state() {
+    async function save_state() {
         const state = save();
         const key = 'camera_control_orthographic-' + active_scene;
         localStorage.setItem(key, JSON.stringify(state));
     }
 
-    function load_state(name: string) {
+    async function load_state(name: string) {
         active_scene = name;
         const key = 'camera_control_orthographic-' + active_scene;
         const state = localStorage.getItem(key);
@@ -93,20 +93,19 @@ function CameraControlCreate() {
                 target: ctr.getDir()
             };
         }
-        else {
-            const up = new Vector3();
-            const target = new Vector3();
-            const pos = new Vector3();
-            const zoom = (control_orthographic as any)._zoom;
-            const focal = new Vector3();
 
-            up.copy(control_orthographic.camera.up);
-            control_orthographic.getTarget(target);
-            control_orthographic.getPosition(pos);
-            control_orthographic.getFocalOffset(focal, false);
+        const up = new Vector3();
+        const target = new Vector3();
+        const pos = new Vector3();
+        const zoom = (control_orthographic as any)._zoom;
+        const focal = new Vector3();
 
-            return { up, target, pos, zoom, focal };
-        }
+        up.copy(control_orthographic.camera.up);
+        control_orthographic.getTarget(target);
+        control_orthographic.getPosition(pos);
+        control_orthographic.getFocalOffset(focal, false);
+
+        return { up, target, pos, zoom, focal };
     }
 
     function restore(data: { up: Vector3, target: Vector3, pos: Vector3, zoom: number, focal: Vector3 }) {

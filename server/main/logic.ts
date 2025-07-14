@@ -17,6 +17,7 @@ import {
 } from "../../src/modules_editor/modules_editor_const";
 import { PromiseChains } from "./PromiseChains";
 import { log } from "console";
+import { ISessionManager, SessionData } from "./session_manager";
 
 
 const project_name_required_commands = [
@@ -42,22 +43,27 @@ const loaded_project_required_commands = [
 ];
 
 
-export function Logic(use_queues: boolean) {
+export function Logic(use_queues: boolean, sessionManager: ISessionManager) {
     const _write = (use_queues) ? PromiseChains(Bun.write).push : Bun.write;
 
-    async function handle_command<T extends CommandId>(cmd_id: T, params: ServerCommands[T] | { current_project?: string }) {
+    async function handle_command<T extends CommandId>(cmd_id: T, params: ServerCommands[T] | { current_project?: string }, sessionId?: string) {
         log('cmd_id:', cmd_id);
 
-        const err_resp = await project_name_required(cmd_id, params);
+        let session: SessionData | undefined;
+        if (sessionId) {
+            session = sessionManager.getSession(sessionId);
+        }
+
+        const err_resp = await project_name_required(cmd_id, params, session);
         if (err_resp) return err_resp;
 
-        if (loaded_project_required_commands.includes(cmd_id) && !current.project)
+        if (loaded_project_required_commands.includes(cmd_id) && session && !session.project)
             return { message: ERROR_TEXT.PROJECT_NOT_LOADED, result: 0 };
 
-        const project = current.project as string;
+        const project = session?.project as string;
 
         async function on_get_server_data() {
-            const response: ServerResponses[typeof GET_SERVER_DATA_CMD] = { data: current, result: 1 };
+            const response: ServerResponses[typeof GET_SERVER_DATA_CMD] = { data: session || { project: undefined, dir: "", scene: {} }, result: 1 };
             return response;
         }
 
@@ -78,16 +84,20 @@ export function Logic(use_queues: boolean) {
             const root_folder_assets = await read_dir_assets(assets_folder_path);
             const all_assets = await read_dir_assets(assets_folder_path, assets_folder_path, true);
             const paths: ProjectPathsData = await gather_paths(cmd.project, all_assets);
-            current.project = cmd.project;
-            log(`${current.project} is current loaded project`);
-            current.dir = "";
+
+            if (session) {
+                session.project = cmd.project;
+                session.dir = "";
+                sessionManager.updateSession(sessionId!, { project: cmd.project, dir: "" });
+            }
+
             return { result: 1, data: { assets: root_folder_assets, name: cmd.project, paths } };
         }
 
         async function gather_paths(project: string, assets: FSObject[]) {
             const paths: ProjectPathsData = { textures: [], atlases: [], models: [], fonts: [], materials: [], vertex_programs: [], fragment_programs: [], scenes: [], audios: [] };
             const atlases_textures: string[] = [];
-            assets.forEach(async element => {
+            for (const element of assets) {
                 if (element.ext && model_ext.includes(element.ext))
                     paths.models.push(element.path);
                 if (element.ext == FONT_EXT)
@@ -117,11 +127,13 @@ export function Logic(use_queues: boolean) {
                 if (element.ext && AUDIO_EXT.includes(element.ext)) {
                     paths.audios.push(element.path);
                 }
-            });
-            assets.forEach(element => {
+            }
+
+            for (const element of assets) {
                 if (element.ext && texture_ext.includes(element.ext) && !(atlases_textures.includes(element.path)))
                     paths.textures.push(element.path);
-            })
+            }
+
             return paths;
         }
 
@@ -138,14 +150,18 @@ export function Logic(use_queues: boolean) {
             const scene_exists = await exists(asset_path);
             if (!scene_exists) return { message: ERROR_TEXT.SCENE_NOT_EXIST, result: 0 };
             const name = path.basename(asset_path, `.${SCENE_EXT}`);
-            if (current.scene.path != cmd.path) {
-                current.scene.path = cmd.path as string;
-                current.scene.name = name as string;
+            if (session?.scene.path != cmd.path) {
+                session!.scene.path = cmd.path as string;
+                session!.scene.name = name as string;
+                sessionManager.updateSession(sessionId!, { scene: session!.scene });
             }
             return { result: 1, data: { name, path: cmd.path } };
         }
 
         async function on_save_data(cmd: ServerCommands[typeof SAVE_DATA_CMD]): Promise<ServerResponses[typeof SAVE_DATA_CMD]> {
+            if (!project) {
+                return { message: ERROR_TEXT.PROJECT_NOT_LOADED, result: 0 };
+            }
             const data_path = get_data_file_path(project, cmd.path);
             const data_format = cmd.format
             const ext = path.extname(data_path).slice(1);
@@ -181,6 +197,9 @@ export function Logic(use_queues: boolean) {
         }
 
         async function on_get_data(cmd: ServerCommands[typeof GET_DATA_CMD]): Promise<ServerResponses[typeof GET_DATA_CMD]> {
+            if (!project) {
+                return { message: ERROR_TEXT.PROJECT_NOT_LOADED, result: 0 };
+            }
             const data_path = get_data_file_path(project, cmd.path);
             const file_exists = await exists(data_path);
             if (!file_exists)
@@ -208,8 +227,9 @@ export function Logic(use_queues: boolean) {
                 return { message: `${ERROR_TEXT.DIR_NOT_EXIST}: ${folder_path}`, result: 0 };
             const root_folder = get_assets_folder_path(project);
             const dir_content = await read_dir_assets(folder_path, root_folder);
-            if (current.dir != cmd.path) {
-                current.dir = cmd.path as string;
+            if (session?.dir != cmd.path) {
+                session!.dir = cmd.path as string;
+                sessionManager.updateSession(sessionId!, { dir: cmd.path as string });
             }
             return { result: 1, data: dir_content };
         }
@@ -436,7 +456,7 @@ export function Logic(use_queues: boolean) {
         }
 
         if (cmd_id == GET_DATA_CMD) {
-            return await on_get_data(params as ServerCommands[typeof SAVE_DATA_CMD]);
+            return await on_get_data(params as ServerCommands[typeof GET_DATA_CMD]);
         }
 
         if (cmd_id == OPEN_EXPLORER_CMD) {
@@ -497,10 +517,15 @@ export function Logic(use_queues: boolean) {
             return file;
     }
 
-    async function project_name_required(cmd_id: CommandId, params: any) {
+    async function project_name_required(cmd_id: CommandId, params: any, session: SessionData | undefined) {
         if (!project_name_required_commands.includes(cmd_id))
             return;
-        const project_name = params[PROJECT_PARAM_NAME];
+
+        let project_name = params[PROJECT_PARAM_NAME];
+        if (!project_name && session) {
+            project_name = session.project;
+        }
+
         if (!project_name)
             return { message: ERROR_TEXT.NO_PROJECT_NAME, result: 0 };
 
@@ -560,4 +585,3 @@ export function Logic(use_queues: boolean) {
 
     return { handle_command, get_file, project_name_required }
 }
-

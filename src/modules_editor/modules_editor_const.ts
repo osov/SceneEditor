@@ -120,6 +120,7 @@ export type NetMessagesEditor = {
     GET_LOADED_PROJECT: VoidMessage,
     LOADED_PROJECT: { name: string | undefined, current_dir: string },
     SERVER_FILE_SYSTEM_EVENTS: { events: FSEvent[] },
+    SESSION_ID: { sessionId: string },
 }
 
 export type FileUploadedData = { size: number, path: string, name: string, project: string, ext: string };
@@ -222,6 +223,7 @@ export enum HistoryOwner {
     SIZE_CONTROL,
     MESH_INSPECTOR,
     ASSET_INSPECTOR,
+    ASSET_CONTROL,
     MATERIAL_CONTROL,
     TEXTURE_CONTROL,
     TEXT_CONTROL,

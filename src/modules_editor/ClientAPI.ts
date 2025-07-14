@@ -10,6 +10,32 @@ export function register_client_api() {
     (window as any).ClientAPI = ClientAPIModule();
 }
 function ClientAPIModule() {
+    function waitForSessionId(): Promise<{ success: boolean; sessionId?: string; error?: string }> {
+        return new Promise<{ success: boolean; sessionId?: string; error?: string }>((resolve) => {
+            if ((window as any).currentSessionId) {
+                resolve({ success: true, sessionId: (window as any).currentSessionId });
+                return;
+            }
+
+            const checkSessionId = () => {
+                if ((window as any).currentSessionId) {
+                    resolve({ success: true, sessionId: (window as any).currentSessionId });
+                } else {
+                    setTimeout(checkSessionId, 100);
+                }
+            };
+
+            checkSessionId();
+
+            setTimeout(() => {
+                if (!(window as any).currentSessionId) {
+                    Popups.toast.error('Не удалось подключиться к серверу. Проверьте соединение.');
+                    resolve({ success: false, error: 'Не удалось подключиться к серверу. Проверьте соединение.' });
+                }
+            }, 10000);
+        });
+    }
+
     async function set_current_scene(path: string): Promise<AssetsResponses[typeof SET_CURRENT_SCENE_CMD]> {
         const command_id = SET_CURRENT_SCENE_CMD;
         return await api.command<typeof command_id>(URL_PATHS.API, command_id, { path });
@@ -95,7 +121,8 @@ function ClientAPIModule() {
     }
 
     async function test_server_ok() {
-        return await api.GET(URL_PATHS.TEST, {});
+        const result = await api.GET(URL_PATHS.TEST, {});
+        return result;
     }
 
     function on_message_socket<T extends keyof NetMessagesEditor>(id_message: T, _message: NetMessagesEditor[T]) {
@@ -103,6 +130,10 @@ function ClientAPIModule() {
         if (id_message == 'SERVER_FILE_SYSTEM_EVENTS') {
             const message = _message as NetMessagesEditor['SERVER_FILE_SYSTEM_EVENTS'];
             EventBus.trigger('SERVER_FILE_SYSTEM_EVENTS', message);
+        } else if (id_message == 'SESSION_ID') {
+            const message = _message as NetMessagesEditor['SESSION_ID'];
+            (window as any).currentSessionId = message.sessionId;
+            Log.log(`Получен SessionId от сервера: ${message.sessionId}`);
         }
     }
 
@@ -114,7 +145,7 @@ function ClientAPIModule() {
         on_message_socket(data.id as keyof NetMessagesEditor, data.message);
     });
 
-    return { set_current_scene, get_projects, load_project, new_project, new_folder, get_folder, copy, move, rename, remove, test_server_ok, save_info, get_info, del_info, save_data, get_data, open_explorer }
+    return { set_current_scene, get_projects, load_project, new_project, new_folder, get_folder, copy, move, rename, remove, test_server_ok, save_info, get_info, del_info, save_data, get_data, open_explorer, waitForSessionId }
 }
 
 
@@ -124,8 +155,17 @@ export const api = {
         params: any = [],
     ) {
         const string_params = new URLSearchParams(params).toString();
+        const headers: Record<string, string> = {};
+        const sessionId = (window as any).currentSessionId;
+
+        if (sessionId) {
+            headers['X-Session-ID'] = sessionId;
+        }
+
         const resp = await try_fetch(`${SERVER_URL}${path}?${string_params}`, {
             method: 'GET',
+            credentials: 'include',
+            headers
         });
         return resp;
     },
@@ -136,8 +176,17 @@ export const api = {
         body?: any,
     ): Promise<Response | undefined> {
         const string_params = new URLSearchParams(params).toString();
+        const headers: Record<string, string> = {};
+        const sessionId = (window as any).currentSessionId;
+
+        if (sessionId) {
+            headers['X-Session-ID'] = sessionId;
+        }
+
         const init: RequestInit | undefined = {
             method: 'POST',
+            credentials: 'include',
+            headers
         };
         if (body) init.body = body;
         const resp = await try_fetch(`${SERVER_URL}${path}?${string_params}`, init);
@@ -149,8 +198,19 @@ export const api = {
         command_id: T,
         command: ServerCommands[T],
     ): Promise<ServerResponses[T]> {
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        };
+        const sessionId = (window as any).currentSessionId;
+
+        if (sessionId) {
+            headers['X-Session-ID'] = sessionId;
+        }
+
         const resp = await fetch(`${SERVER_URL}${path}${command_id}`, {
             method: 'POST',
+            credentials: 'include',
+            headers,
             body: JSON.stringify(command)
         });
         return await resp.json() as ServerResponses[T];
@@ -159,7 +219,8 @@ export const api = {
 
 async function try_fetch(input: string | URL | globalThis.Request, init?: RequestInit): Promise<Response | undefined> {
     try {
-        return await fetch(input, init);
+        const result = await fetch(input, init);
+        return result;
     } catch (e) {
         Log.error(e);
     }
