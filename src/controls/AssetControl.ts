@@ -6,6 +6,8 @@ import {
     FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses,
     TDictionary, texture_ext, URL_PATHS, AUDIO_EXT,
     FSEvent,
+    HistoryOwner,
+    THistoryUndo,
 } from "../modules_editor/modules_editor_const";
 import { span_elem, json_parsable, get_keys } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
@@ -59,6 +61,11 @@ function AssetControlCreate() {
 
         EventBus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
         EventBus.on('ON_WS_CONNECTED', reload_current_project);
+
+        EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
+            if (event.owner != HistoryOwner.ASSET_CONTROL) return;
+            undo(event);
+        });
     }
 
     async function load_project(data: ProjectLoadData, folder_content?: FSObject[], to_dir?: string) {
@@ -1187,6 +1194,7 @@ function AssetControlCreate() {
         if (SelectControl.get_selected_list().length == 1)
             id_parent = SelectControl.get_selected_list()[0].mesh_data.id;
         SceneManager.add(root, id_parent);
+        HistoryControl.add('MESH_DELETE', [{ id_mesh: root.mesh_data.id }], HistoryOwner.ASSET_CONTROL);
         root.position.z = 0;
         return root;
     }
@@ -1283,6 +1291,16 @@ function AssetControlCreate() {
             if (current_scene.path)
                 await set_current_scene(current_scene.path);
         }
+    }
+
+    function undo(event: THistoryUndo) {
+        const data = event.data;
+        if (event.type == 'MESH_DELETE') {
+            const mesh_id = data[0].id_mesh;
+            SceneManager.remove(mesh_id);
+        }
+        SizeControl.detach();
+        ControlManager.update_graph();
     }
 
     init();
