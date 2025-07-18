@@ -40,5 +40,6 @@
     "../SceneEditor_TicTac/src",
     "../SceneEditor_Kopateli/src",
     "../SceneEditor_Water/src",
+    "../SceneEditor_Shader/src",
   ]
 }
