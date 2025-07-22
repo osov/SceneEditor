@@ -1,6 +1,6 @@
 import { Slice9Mesh } from "@editor/render_engine/objects/slice9";
 import { IBaseEntityAndThree } from "@editor/render_engine/types";
-import { AdditiveBlending, Color, CustomBlending, MultiplyBlending, NormalBlending } from "three";
+import { AdditiveBlending, Color, CustomBlending, MultiplyBlending, NoColorSpace, NormalBlending } from "three";
 import * as TWEEN from '@tweenjs/tween.js';
 
 
@@ -41,7 +41,7 @@ export function get_nested_property(obj: any, path: string): any {
         return obj.rotation.z;
     }
     if (path == 'tint') {
-        const clr = new Color(obj.get_color());
+        const clr = new Color().setStyle(obj.get_color(), NoColorSpace);
         const v = vmath.vector4(clr.r, clr.g, clr.b, obj.get_alpha());
         return v;
     }

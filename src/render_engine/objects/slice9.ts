@@ -1,4 +1,4 @@
-import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute, Texture, NormalBlending } from "three";
+import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute, Texture, NormalBlending, NoColorSpace } from "three";
 import { IBaseParameters, IObjectTypes } from "../types";
 import { convert_width_height_to_pivot_bb, get_file_name, set_pivot_with_sync_pos } from "../helpers/utils";
 import { EntityPlane } from "./entity_plane";
@@ -207,7 +207,7 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
 
     function set_color(hex_color: string) {
         parameters.color = hex_color;
-        const clr = new Color(hex_color);
+        const clr = new Color().setStyle(hex_color, NoColorSpace);
         for (let i = 0; i < 4; i++) {
             geometry.attributes['color'].array[3 * i] = clr.r;
             geometry.attributes['color'].array[3 * i + 1] = clr.g;
