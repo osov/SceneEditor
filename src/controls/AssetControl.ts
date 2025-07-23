@@ -9,7 +9,7 @@ import {
     HistoryOwner,
     THistoryUndo,
 } from "../modules_editor/modules_editor_const";
-import { span_elem, json_parsable, get_keys } from "../modules/utils";
+import { span_elem, json_parsable, get_keys, clearParentSelection } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
 import { NodeAction } from "./ActionsControl";
@@ -1193,9 +1193,16 @@ function AssetControlCreate() {
         let id_parent = -1;
         if (SelectControl.get_selected_list().length == 1)
             id_parent = SelectControl.get_selected_list()[0].mesh_data.id;
+
+        // NOTE: Очищаем выделение родителя перед добавлением нового элемента
+        clearParentSelection(id_parent);
+
         SceneManager.add(root, id_parent);
         HistoryControl.add('MESH_DELETE', [{ id_mesh: root.mesh_data.id }], HistoryOwner.ASSET_CONTROL);
         root.position.z = 0;
+
+        SelectControl.set_selected_list([root]);
+
         return root;
     }
 

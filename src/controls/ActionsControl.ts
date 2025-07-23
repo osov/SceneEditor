@@ -6,6 +6,7 @@ import { DEFOLD_LIMITS, WORLD_SCALAR } from "../config";
 import { Vector2 } from "three";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
 import { ComponentType } from "../render_engine/components/container_component";
+import { clearParentSelection } from '../modules/utils';
 
 declare global {
     const ActionsControl: ReturnType<typeof ActionsControlCreate>;
@@ -145,6 +146,9 @@ function ActionsControlCreate() {
 
         if (!is_valid_action(target, copy_mesh_list, asChild, false, true)) return;
 
+        // NOTE: Очищаем выделение target перед вставкой элементов
+        clearParentSelection(target.mesh_data?.id);
+
         if (is_cut) {
             const id_mlist: number[] = [];
             copy_mesh_list.forEach(i => id_mlist.push(i.id));
@@ -273,6 +277,10 @@ function ActionsControlCreate() {
 
     function sceneAddItem(item: any, pid: number = -1) {
         if (!item) return;
+
+        // NOTE: Очищаем выделение родителя перед созданием нового элемента
+        clearParentSelection(pid);
+
         const parent = SceneManager.get_mesh_by_id(pid);
         parent ? parent.add(item) : SceneManager.add(item, pid);
         HistoryControl.add('MESH_DELETE', [{ id_mesh: item.mesh_data.id }], HistoryOwner.ACTIONS_CONTROL);
@@ -386,8 +394,6 @@ function ActionsControlCreate() {
             return false;
         }
 
-
-
         if (!DEFOLD_LIMITS) return true;
 
         // внутрь sprite\label\model ничего добавлять нельзя
@@ -448,6 +454,10 @@ function ActionsControlCreate() {
                         Log.error('parent is null', mesh_data);
                         return;
                     }
+
+                    // NOTE: Очищаем выделение родителя перед восстановлением элемента
+                    clearParentSelection(mesh_data.pid);
+
                     const m = SceneManager.deserialize_mesh(mesh_data, true, parent);
                     parent.add(m);
                     SceneManager.move_mesh(m, mesh_data.pid, data.next_id);

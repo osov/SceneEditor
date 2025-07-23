@@ -297,3 +297,14 @@ export function euler_to_quat(x: number, y: number, z: number): [number, number,
         -s1 * s2_s3 + c1_c2 * c3         // w
     ];
 }
+
+export function clearParentSelection(parentId: number) {
+    if (parentId !== -1) {
+        const currentSelected = SelectControl.get_selected_list();
+        const parentInSelected = currentSelected.find((mesh: any) => mesh.mesh_data.id === parentId);
+        if (parentInSelected) {
+            const filteredSelected = currentSelected.filter((mesh: any) => mesh.mesh_data.id !== parentId);
+            SelectControl.set_selected_list(filteredSelected);
+        }
+    }
+}

@@ -84,6 +84,7 @@ function TreeControlCreate() {
     let ddVisible: boolean = false; //  видимость div перетаскивания 
 
     let elementCache: TDictionary<HTMLElement> = {}; // кэш элементов по ID
+    let currentDropPosition: string | null = null; // текущая позиция drop (top, bottom, bg)
 
 
     function init() {
@@ -128,6 +129,14 @@ function TreeControlCreate() {
         EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
         EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', onKeyDown);
+
+        EventBus.on('SYS_MESH_REMOVE_AFTER', () => {
+            treeList.forEach(item => {
+                const parent = getElementById(item.id)?.closest('li') as HTMLElement;
+                if (parent == undefined) return;
+                cleanupEmptyParent(parent);
+            });
+        });
     }
 
     function draw_graph(list: Item[], scene_name?: string, is_hide_allSub = false, is_clear_state = false, is_load_scene = false) {
@@ -298,12 +307,6 @@ function TreeControlCreate() {
         });
 
         const changes = getChanges(list, oldList);
-        if (changes.structureChanged) updateStructure(list);
-        else {
-            changes.modifiedItems.forEach(item => {
-                updateItem(item);
-            });
-        }
 
         if (changes.deletedItems.length > 0) {
             removeDeletedItems(list);
@@ -312,6 +315,13 @@ function TreeControlCreate() {
         changes.newItems.forEach(item => {
             createNewTreeItem(item);
         });
+
+        if (changes.structureChanged) updateStructure(list);
+        else {
+            changes.modifiedItems.forEach(item => {
+                updateItem(item);
+            });
+        }
 
         openTreeWithSelected();
 
@@ -357,6 +367,7 @@ function TreeControlCreate() {
         for (const id in oldMap) {
             if (!newMap[id]) {
                 deletedItems.push(Number(id));
+                structureChanged = true;
             }
         }
 
@@ -656,6 +667,12 @@ function TreeControlCreate() {
                 updateParentStructure(Number(parentId), parentGroups[parentId]!, itemMap);
             }
         }
+
+        list.forEach(item => {
+            const parent = getElementById(item.id)?.closest('li') as HTMLElement;
+            if (parent == undefined) return;
+            cleanupEmptyParent(parent);
+        });
     }
 
     function getTopologicalOrder(parentGroups: TDictionary<Item[]>, itemMap: TDictionary<Item>): number[] {
@@ -788,6 +805,8 @@ function TreeControlCreate() {
                 delete elementCache[itemId];
             }
         });
+
+        cleanupEmptyParent(parentElement);
     }
 
     function getTreeHtml(e: any) {
@@ -1227,6 +1246,7 @@ function TreeControlCreate() {
         _is_moveItemDrag = false;
         _is_editItem = false;
         _is_currentOnly = false;
+        currentDropPosition = null;
         treeItem = null;
         itemDrag = null;
         itemDrop = null;
@@ -1270,15 +1290,15 @@ function TreeControlCreate() {
         } else {
             if (drag?.pid !== drop?.pid) return true;
 
-            const siblings = treeList.filter(item => item.pid === drag.pid);
-            const dragIndex = siblings.findIndex(item => item.id === drag.id);
-            const dropIndex = siblings.findIndex(item => item.id === drop.id);
+            // const siblings = treeList.filter(item => item.pid === drag.pid);
+            // const dragIndex = siblings.findIndex(item => item.id === drag.id);
+            // const dropIndex = siblings.findIndex(item => item.id === drop.id);
 
-            if (type === 'top') {
-                return dropIndex < dragIndex;
-            } else if (type === 'bottom') {
-                return dropIndex > dragIndex;
-            }
+            // if (type === 'top') {
+            //     return dropIndex < dragIndex;
+            // } else if (type === 'bottom') {
+            //     return dropIndex > dragIndex;
+            // }
         }
 
         return true;
@@ -1312,11 +1332,14 @@ function TreeControlCreate() {
         const posInItem = getPosMouseInBlock(elem, pageX, pageY);
         if (!posInItem) {
             elem.classList.remove('top', 'bg', 'bottom');
+            currentDropPosition = null;
             return;
         }
 
         elem.classList.add(posInItem);
+        currentDropPosition = posInItem;
         canBeOpened = false;
+        log('posInItem', posInItem);
         if (posInItem === 'top' || posInItem === 'bottom') putAround();
         if (posInItem === 'bg') {
             canBeOpened = true;
@@ -1471,11 +1494,14 @@ function TreeControlCreate() {
         else {
             if (ddVisible) boxDD.classList.add('pos');
 
-            if (
+            const shouldBlockDrop =
                 itemDrop?.pid === -2 // root
                 || (isChild(treeList, itemDrag.id, itemDrop.pid) && listSelected?.length == 1)
-                || isParentNoDrop(treeList, itemDrag, itemDrop)
-            ) {
+                || (currentDropPosition === 'bottom' && isParentNoDrop(treeList, itemDrag, itemDrop));
+
+            log('shouldBlockDrop', shouldBlockDrop);
+
+            if (shouldBlockDrop) {
                 boxDD.classList.remove('active');
                 currentDroppable.classList.remove('success');
                 isDrop = false;
@@ -2290,6 +2316,22 @@ function TreeControlCreate() {
 
     function clearCache() {
         elementCache = {};
+    }
+
+
+    function cleanupEmptyParent(parentElement: HTMLElement) {
+        console.log('cleanupEmptyParent', parentElement);
+        const treeSub = parentElement.querySelector('.tree_sub');
+        if (treeSub && treeSub.children.length === 0) {
+            treeSub.remove();
+            const btn = parentElement.querySelector('.tree__btn');
+            if (btn) btn.remove();
+            parentElement.classList.remove('active');
+            const itemId = parentElement.querySelector('.tree__item')?.getAttribute('data-id');
+            if (itemId && contexts[currentSceneName]) {
+                contexts[currentSceneName][+itemId] = false;
+            }
+        }
     }
 
     function onKeyDown(event: KeyboardEvent) {
