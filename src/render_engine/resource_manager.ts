@@ -170,6 +170,7 @@ export function ResourceManagerModule() {
     const manager = new LoadingManager();
     let bad_texture: CanvasTexture;
     let project_path = '';
+    let project_name = '';
 
     function init() {
         gen_textures();
@@ -190,6 +191,22 @@ export function ResourceManagerModule() {
             case 'fp': await on_fragment_shader_change(event.path); break;
             case 'mtr': await on_material_file_change(event.path); break;
         }
+    }
+
+    function get_project_url(path: string): string {
+        if (project_name) {
+            return `${project_path}/${project_name}${path}`;
+        }
+
+        return project_path + path;
+    }
+
+    function set_project_path(path: string) {
+        project_path = path;
+    }
+
+    function set_project_name(name: string) {
+        project_name = name;
     }
 
     async function on_vertex_shader_change(path: string) {
@@ -433,10 +450,6 @@ export function ResourceManagerModule() {
 
 
 
-    function set_project_path(path: string) {
-        project_path = path;
-    }
-
     function gen_textures() {
         var imageCanvas = document.createElement("canvas");
         var context = imageCanvas.getContext("2d")!;
@@ -460,34 +473,18 @@ export function ResourceManagerModule() {
     }
 
     async function load_texture(path: string) {
-        const response = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
-        if (!response || !response.ok) {
-            Log.error('Failed to load texture:', path, 'Status:', response?.status);
-            return;
-        }
-
-        const blob = await response.blob();
-        const objectURL = URL.createObjectURL(blob);
-
-        const texture = await texture_loader.loadAsync(objectURL);
+        const full_path = get_project_url(path);
+        const texture = await texture_loader.loadAsync(full_path);
 
         // TODO: лучше добавить в Texture.userData
-        (texture as any).path = project_path + path;
+        (texture as any).path = full_path;
         return texture;
     }
 
     async function preload_audio(path: string) {
-        const response = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
-        if (!response || !response.ok) {
-            Log.error('Failed to load audio:', path, 'Status:', response?.status);
-            return;
-        }
-
-        const blob = await response.blob();
-        const objectURL = URL.createObjectURL(blob);
-
-        const audio_buffer = await audio_loader.loadAsync(objectURL);
-        audios[get_file_name(project_path + path)] = audio_buffer;
+        const full_path = get_project_url(path);
+        const audio_buffer = await audio_loader.loadAsync(full_path);
+        audios[get_file_name(full_path)] = audio_buffer;
     }
 
     function get_all_sounds() {
@@ -594,13 +591,7 @@ export function ResourceManagerModule() {
             }
         }
 
-        const response = await api.GET(`${URL_PATHS.ASSETS}/${atlas_path}`);
-        if (!response || !response.ok) {
-            Log.error('Failed to load atlas:', atlas_path, 'Status:', response?.status);
-            return;
-        }
-
-        const data = await response.text();
+        const data = await (await fetch(project_path + '/' + project_name + atlas_path)).text();
         const texture = await load_texture(texture_path);
         if (!texture)
             return;
@@ -628,29 +619,22 @@ export function ResourceManagerModule() {
     }
 
     async function preload_font(path: string, override = false) {
+        path = get_project_url(path);
+
         const name = get_file_name(path);
         if (!override && fonts[name]) {
             Log.warn('font exists', name, path);
             return true;
         }
 
-        const response = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
-        if (!response || !response.ok) {
-            Log.error('Failed to load font:', path, 'Status:', response?.status);
-            return;
-        }
-
-        const blob = await response.blob();
-        const objectURL = URL.createObjectURL(blob);
-
         return new Promise<boolean>((resolve, _reject) => {
             preloadFont({
-                font: objectURL,
+                font: path,
                 characters: font_characters
             }, () => {
                 if (fonts[name])
                     Log.warn('font exists already', name, path);
-                fonts[name] = project_path + path;
+                fonts[name] = path;
                 resolve(true);
             });
         });
@@ -715,6 +699,7 @@ export function ResourceManagerModule() {
         }
 
         const data = JSON.parse(response);
+
         const material_info = {} as MaterialInfo;
         const name = get_file_name(path);
 
@@ -1502,22 +1487,19 @@ export function ResourceManagerModule() {
     async function preload_model(path: string) {
         let model_name = get_model_name(path);
 
-        const response = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
+        const response = await api.GET(URL_PATHS.ASSETS + `/${project_name}${path}`);
         if (!response || !response.ok) {
             Log.error('Failed to load model:', path, 'Status:', response?.status);
             return;
         }
 
-        const blob = await response.blob();
-        const objectURL = URL.createObjectURL(blob);
-
         if (path.toLowerCase().endsWith('.fbx')) {
             return new Promise<Group>(async (resolve, _) => {
                 const loader = new FBXLoader(manager);
-                loader.load(objectURL, (mesh) => {
+                loader.load(get_project_url(path), (mesh) => {
                     if (model_name != '')
                         models[model_name] = mesh;
-                    add_animations(mesh.animations, project_path + path);
+                    add_animations(mesh.animations, path);
                     resolve(mesh);
                 });
             })
@@ -1525,12 +1507,12 @@ export function ResourceManagerModule() {
         else if (path.toLowerCase().endsWith('.gltf') || path.toLowerCase().endsWith('.glb')) {
             return new Promise<Group>(async (resolve, _) => {
                 const loader = new GLTFLoader(manager);
-                loader.load(objectURL, (gltf) => {
+                loader.load(get_project_url(path), (gltf) => {
                     //log(gltf)
                     const has_mesh = has_skinned_mesh(gltf.scene);
                     if (has_mesh && model_name != '')
                         models[model_name] = gltf.scene;
-                    add_animations(gltf.animations, project_path + path);
+                    add_animations(gltf.animations, path);
                     resolve(gltf.scene);
                 });
             })
@@ -1538,7 +1520,7 @@ export function ResourceManagerModule() {
         else if (path.toLowerCase().endsWith('.dae')) {
             return new Promise<Scene>(async (resolve, _) => {
                 const loader = new ColladaLoader(manager);
-                loader.load(objectURL, (collada) => {
+                loader.load(get_project_url(path), (collada) => {
                     //log(collada)
                     const has_mesh = has_skinned_mesh(collada.scene);
                     if (has_mesh)
@@ -1548,7 +1530,6 @@ export function ResourceManagerModule() {
             })
         }
         Log.error('Model not supported', path);
-        URL.revokeObjectURL(objectURL);
         return null;
     }
 
@@ -1566,12 +1547,8 @@ export function ResourceManagerModule() {
     }
 
     async function load_asset(path: string) {
-        const response = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
-        if (!response || !response.ok) {
-            Log.error('Failed to load asset:', path, 'Status:', response?.status);
-            return;
-        }
-        return await response.json();
+        path = get_project_url(path);
+        return await (await fetch(path)).json();
     }
 
     function free_texture(name: string, atlas = '') {
@@ -1848,6 +1825,8 @@ export function ResourceManagerModule() {
         get_all_models,
         get_all_model_animations,
         set_project_path,
+        set_project_name,
+        get_project_url,
         preload_model,
         get_model,
         find_animation,

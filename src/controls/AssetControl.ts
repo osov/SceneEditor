@@ -8,6 +8,7 @@ import {
     FSEvent,
     HistoryOwner,
     THistoryUndo,
+    PUBLIC,
 } from "../modules_editor/modules_editor_const";
 import { span_elem, json_parsable, get_keys, clearParentSelection } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
@@ -71,6 +72,8 @@ function AssetControlCreate() {
     async function load_project(data: ProjectLoadData, folder_content?: FSObject[], to_dir?: string) {
         current_project = data.name;
         localStorage.setItem("current_project", current_project);
+
+        ResourceManager.set_project_name(current_project);
 
         const textures: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         const shaders: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
@@ -244,12 +247,12 @@ function AssetControlCreate() {
         //     nothing_found_elem.hidden = true;
 
         if (scanned_folders.length) {
-            scanned_folders.forEach(function (f) {
-                const num_files = f.num_files as number;
-                const _path = f.path.replaceAll('\\', '/');
+            for (const folder of scanned_folders) {
+                const num_files = folder.num_files as number;
+                const _path = folder.path.replaceAll('\\', '/');
                 const asset_type: AssetType = "folder";
                 let items_length = '';
-                let name = escapeHTML(f.name);
+                let name = escapeHTML(folder.name);
                 const icon_elem = span_elem("", ["icon", "folder"]);
                 if (num_files) {
                     icon_elem.classList.add("full");
@@ -275,17 +278,19 @@ function AssetControlCreate() {
                         await handle_asset_drop(_path);
                 });
                 assets_list.appendChild(folder_elem);
-            });
+            }
         }
 
         if (scanned_files.length) {
-            for (const f of scanned_files) {
-                const file_size = bytesToSize(f.size);
-                const name = escapeHTML(f.name);
+            for (const file of scanned_files) {
+                const file_size = bytesToSize(file.size);
+                const name = escapeHTML(file.name);
                 let file_type = getFileExt(name);
-                const ext = f.ext ? f.ext : "";
-                const _path = f.path.replaceAll('\\', '/');
+                const ext = file.ext ? file.ext : "";
+                const _path = file.path.replaceAll('\\', '/');
                 let asset_type: AssetType = "other";
+                const src = file.path ? file.path.replaceAll('\\', '/') : '';
+                const src_url = new URL(URL_PATHS.ASSETS + `/${current_project}/${src}`, SERVER_URL);
                 const file_elem = document.createElement("li");
                 let icon_elem = span_elem(`.${ext}`, ["icon", "file"]);
                 const details_elem = span_elem(file_size, ["details"]);
@@ -298,38 +303,9 @@ function AssetControlCreate() {
                 else if (fileIsImg(_path)) {
                     asset_type = ASSET_TEXTURE;
                     icon_elem = document.createElement("img");
+                    icon_elem.setAttribute("src", src_url.toString());
                     icon_elem.setAttribute("draggable", "false");
                     icon_elem.classList.add("icon", "img", "drag");
-
-                    const texture_name = get_file_name(_path);
-                    const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
-
-                    if (atlas !== null) {
-                        const texture_data = ResourceManager.get_texture(texture_name, atlas);
-                        const texture = texture_data.texture;
-
-                        if (texture.image && texture.image.src) {
-                            icon_elem.setAttribute("src", texture.image.src);
-                        }
-                    }
-                    else {
-                        // NOTE: если не найли ресурс изображения, то рисуем ошибку
-                        const imageCanvas = document.createElement("canvas");
-                        const context = imageCanvas.getContext("2d")!;
-                        imageCanvas.width = imageCanvas.height = 128;
-                        context.fillStyle = "#444";
-                        context.fillRect(0, 0, 128, 128);
-                        context.strokeStyle = "#ff0000";
-                        context.lineWidth = 4;
-                        context.strokeRect(4, 4, 120, 120);
-                        context.beginPath();
-                        context.moveTo(32, 32);
-                        context.lineTo(96, 96);
-                        context.moveTo(96, 32);
-                        context.lineTo(32, 96);
-                        context.stroke();
-                        icon_elem.setAttribute("src", imageCanvas.toDataURL());
-                    }
                 }
                 else if (AUDIO_EXT.includes(ext)) {
                     asset_type = ASSET_AUDIO;

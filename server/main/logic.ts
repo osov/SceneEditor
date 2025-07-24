@@ -2,7 +2,7 @@ import path from "path";
 import { PATH_PARAM_NAME, ERROR_TEXT, NAME_PARAM_NAME, PROJECT_PARAM_NAME, DATA_PARAM_NAME, NEW_PATH_PARAM_NAME } from "./const";
 import {
     exists, get_asset_path, get_full_path, get_assets_folder_path, get_metadata_path, read_dir_assets,
-    rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir, open_explorer
+    rename, get_data_file_path, remove_path, copy, new_project, is_folder, mk_dir, open_explorer, working_folder_path
 } from "./fs_utils";
 import {
     ServerResponses, ServerCommands, CommandId, TRecursiveDict, DEL_INFO_CMD, LOAD_PROJECT_CMD, NEW_PROJECT_CMD, GET_DATA_CMD,
@@ -47,7 +47,7 @@ export function Logic(use_queues: boolean, sessionManager: ISessionManager) {
     const _write = (use_queues) ? PromiseChains(Bun.write).push : Bun.write;
 
     async function handle_command<T extends CommandId>(cmd_id: T, params: ServerCommands[T] | { current_project?: string }, sessionId?: string) {
-        log('cmd_id:', cmd_id);
+        // log('cmd_id:', cmd_id);
 
         let session: SessionData | undefined;
         if (sessionId) {
@@ -81,9 +81,12 @@ export function Logic(use_queues: boolean, sessionManager: ISessionManager) {
 
         async function on_load_project(cmd: ServerCommands[typeof LOAD_PROJECT_CMD]): Promise<ServerResponses[typeof LOAD_PROJECT_CMD]> {
             const assets_folder_path = get_assets_folder_path(cmd.project);
+            // const project_folder_path = path.join(path.resolve(working_folder_path), cmd.project);
             const root_folder_assets = await read_dir_assets(assets_folder_path);
             const all_assets = await read_dir_assets(assets_folder_path, assets_folder_path, true);
+            // log('all_assets: ', all_assets);
             const paths: ProjectPathsData = await gather_paths(cmd.project, all_assets);
+            // log('paths: ', paths);
 
             if (session) {
                 session.project = cmd.project;
@@ -201,7 +204,9 @@ export function Logic(use_queues: boolean, sessionManager: ISessionManager) {
                 return { message: ERROR_TEXT.PROJECT_NOT_LOADED, result: 0 };
             }
             const data_path = get_data_file_path(project, cmd.path);
+            // log('data_path: ', data_path);
             const file_exists = await exists(data_path);
+            // log('file_exists: ', file_exists);
             if (!file_exists)
                 return { message: ERROR_TEXT.FILE_NOT_EXIST, result: 0 };
             const data_file = Bun.file(data_path);
@@ -392,6 +397,7 @@ export function Logic(use_queues: boolean, sessionManager: ISessionManager) {
                 await clear_metadata(project, cmd.path);
             return { result: 1, data: {} };
         }
+
         const resp = check_fields(cmd_id, params);
         if (resp) return resp;
 
@@ -511,8 +517,10 @@ export function Logic(use_queues: boolean, sessionManager: ISessionManager) {
 
     async function get_file(project_name: string, asset_path: string) {
         const full_path = get_asset_path(project_name, asset_path);
+        // log('Looking for file:', { project_name, asset_path, full_path });
         const file = Bun.file(full_path);
         const exists = await file.exists();
+        // log('File exists:', exists);
         if (exists)
             return file;
     }

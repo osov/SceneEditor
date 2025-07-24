@@ -70,8 +70,26 @@ export async function Server(server_port: number, ws_server_port: number) {
     router.add("GET", `${URL_PATHS.ASSETS}/*`, async (request, params) => {
         const uri = params[0];
         const asset_path = decodeURIComponent(uri ? uri : "");
+
+        const pathParts = asset_path.split('/');
+        if (pathParts.length >= 1) {
+            const project = pathParts[0];
+            const filePath = pathParts.slice(1).join('/');
+
+            // log('Project file request:', { project, filePath, full_path: `${filePath}` });
+
+            if (project) {
+                const file = await logic.get_file(project, `${filePath}`);
+                if (file) {
+                    return do_response(file, false, undefined, request);
+                }
+            }
+            return do_response("404 Not Found", false, 404, request);
+        }
+
         const sessionId = request.headers.get('X-Session-ID');
         const session = sessionId ? sessionManager.getSession(sessionId) : undefined;
+
         if (session?.project) {
             const file = await logic.get_file(session.project, asset_path);
             if (file) {
@@ -190,4 +208,3 @@ export async function Server(server_port: number, ws_server_port: number) {
 
     return {}
 }
-

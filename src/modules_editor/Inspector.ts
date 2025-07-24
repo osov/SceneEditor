@@ -215,8 +215,6 @@ function InspectorModule() {
                     const path = img.getAttribute('path')
                         ?.replace(/.*?\/assets\//, '')
                         .replace('")', '') ?? '';
-
-                    log(img.getAttribute('path'), path);
                     AssetControl.select_file(path);
                 });
             }

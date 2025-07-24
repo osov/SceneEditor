@@ -30,14 +30,14 @@ export function FSWatcher(dir: string, sockets: WsClient[]) {
     function send_events() {
         if (events_cache.length === 0) return;
         for (const soc of sockets)
-            send_message_socket(soc, "SERVER_FILE_SYSTEM_EVENTS", {events: events_cache});
+            send_message_socket(soc, "SERVER_FILE_SYSTEM_EVENTS", { events: events_cache });
         events_cache.splice(0);
     }
 
     const timer = setInterval(send_events, send_fs_events_interval * 1000);
     const watcher = watch(
         dir,
-        { recursive: true }, 
+        { recursive: true },
         async (_event, filename) => {
             if (filename !== null) {
                 const _dir = get_full_path(filename);
@@ -57,19 +57,18 @@ export function FSWatcher(dir: string, sockets: WsClient[]) {
                 const rel_path = path.relative(path.join(project, PUBLIC), full_rel_path);  // Путь относительно папки public этого проекта
                 const rel_folder_path = path.relative(path.join(project, PUBLIC), full_folder_path);
                 const event: FSEvent = {
-                    path: rel_path.replaceAll(path.sep, "/"), 
-                    folder_path: rel_folder_path.replaceAll(path.sep, "/"), 
-                    project, 
-                    obj_type, 
+                    path: rel_path.replaceAll(path.sep, "/"),
+                    folder_path: rel_folder_path.replaceAll(path.sep, "/"),
+                    project,
+                    obj_type,
                     event_type,
                 };
                 const ext = path.extname(rel_path).replace(".", "");
                 if (ext)
                     event.ext = ext;
-                log('event dir name', _dir)
                 if (!is_copy(event))
                     events_cache.push(event);
             }
         }
-    );    
+    );
 }
