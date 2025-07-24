@@ -295,7 +295,9 @@ function InspectorModule() {
         const tmp: number[] = [];
         unique_fields.forEach((unique_field, index) => {
             const result = fields.findIndex((field) => {
-                return field.key == unique_field.data.key;
+                const is_equal_by_key = field.key == unique_field.data.key;
+                const is_equal_by_type = field.type == unique_field.data.type;
+                return is_equal_by_key && is_equal_by_type;
             });
 
             // NOTE: запоминаем поля которые не найдены

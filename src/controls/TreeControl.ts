@@ -1339,7 +1339,7 @@ function TreeControlCreate() {
         elem.classList.add(posInItem);
         currentDropPosition = posInItem;
         canBeOpened = false;
-        log('posInItem', posInItem);
+        // log('posInItem', posInItem);
         if (posInItem === 'top' || posInItem === 'bottom') putAround();
         if (posInItem === 'bg') {
             canBeOpened = true;
@@ -1498,8 +1498,6 @@ function TreeControlCreate() {
                 itemDrop?.pid === -2 // root
                 || (isChild(treeList, itemDrag.id, itemDrop.pid) && listSelected?.length == 1)
                 || (currentDropPosition === 'bottom' && isParentNoDrop(treeList, itemDrag, itemDrop));
-
-            log('shouldBlockDrop', shouldBlockDrop);
 
             if (shouldBlockDrop) {
                 boxDD.classList.remove('active');

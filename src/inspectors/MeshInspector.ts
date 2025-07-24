@@ -358,7 +358,6 @@ function MeshInspectorCreate() {
                 onChange: handleModelScaleChange,
                 onRefresh: refreshModelScale
             });
-
         } else {
             transform_fields.push({
                 key: MeshProperty.SCALE,
