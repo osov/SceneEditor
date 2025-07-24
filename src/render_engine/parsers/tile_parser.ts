@@ -110,7 +110,7 @@ export function set_correction_xy(x: number, y: number) {
 }
 
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
-    return id_layer * 600 - (y - height / 2 - cor_y) * 5;
+    return id_layer * 650 - (y - height / 2 - cor_y) * 5;
 }
 
 

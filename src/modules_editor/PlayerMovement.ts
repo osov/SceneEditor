@@ -36,7 +36,7 @@ function interpolate_with_wrapping(start: number, end: number, percent: number, 
 }
 
 export function MovementControlCreate(settings: PlayerMovementSettings = movement_default_settings) {
-    let path_data: PathData = {length: 0, path: [], time: 0, path_points: []};
+    let path_data: PathData = { length: 0, path: [], time: 0, path_points: [] };
     const LD = LinesDrawer();
     const width = 50 * WORLD_SCALAR;
     const height = 50 * WORLD_SCALAR;
@@ -64,7 +64,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
     let min_stick_dist = settings.min_stick_dist;
     let pred_path_lenght_mult = settings.pred_path_lenght_mult;
     let speed = settings.speed;
-    let debug =  settings.debug;
+    let debug = settings.debug;
     let current_speed: number = speed.WALK;
     let is_moving = false;
     let is_pointer_down = false;
@@ -73,9 +73,10 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
     let last_upd_time_elapsed = 0;
     let last_stop_time_elapsed = 0;
     let has_target = false;
+    let sort_layer = 0;
     let model: AnimatedMesh;
 
-    const obstacles_lines: {[key: string]: GeomLine<any>[]} = {};
+    const obstacles_lines: { [key: string]: GeomLine<any>[] } = {};
 
     const joystick = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     joystick.name = 'joystick';
@@ -90,12 +91,33 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
     obstacles_container.name = 'obstacles';
     SceneManager.add(obstacles_container);
 
+    function get_angle() {
+        let angle = -1;
+        if ((Input.keys_state['d'] || Input.keys_state['в']) && (Input.keys_state['w'] || Input.keys_state['ц']))
+            angle = 45;
+        else if ((Input.keys_state['a'] || Input.keys_state['ф']) && (Input.keys_state['w'] || Input.keys_state['ц']))
+            angle = 135;
+        else if ((Input.keys_state['a'] || Input.keys_state['ф']) && (Input.keys_state['s'] || Input.keys_state['ы']))
+            angle = 225;
+        else if ((Input.keys_state['d'] || Input.keys_state['в']) && (Input.keys_state['s'] || Input.keys_state['ы']))
+            angle = 315;
+        else if (Input.keys_state['d'] || Input.keys_state['в'])
+            angle = 0;
+        else if (Input.keys_state['w'] || Input.keys_state['ц'])
+            angle = 90;
+        else if (Input.keys_state['a'] || Input.keys_state['ф'])
+            angle = 180;
+        else if (Input.keys_state['s'] || Input.keys_state['ы'])
+            angle = 270;
+        return angle;
+    }
+    
     function init(init_data: { model: AnimatedMesh }) {
         model = init_data.model;
         target = Point(model.position.x, model.position.y);
 
         if (debug) draw_obstacles();
-        
+
         // Управление препятствиями
 
         let n_pressed = false
@@ -137,7 +159,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                 else PathFinder.enable_collision(true);
             }
         })
-        
+
         ////
 
         if (pointer_control == ControlType.GP) {
@@ -219,6 +241,26 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
 
         // Используем мышь вместо реального джойстика
         else if (pointer_control == ControlType.JS) {
+
+
+            let is_pressed = false;
+            const update_keys = () => {
+                const src_angle = get_angle();
+                const angle = src_angle * Math.PI / 180;
+                if (src_angle > -1) {
+                    is_pressed = true;
+                    stick_start = point(0, 0);
+                    current_dir = vector(point(0, 0), point(Math.cos(angle), Math.sin(angle)));
+                }
+                else{
+                    is_pressed = false;
+                    current_dir = vector(point(0, 0), point(0, 0));
+                    stick_start = undefined;
+                }
+            };
+            EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', update_keys);
+            EventBus.on('SYS_VIEW_INPUT_KEY_UP', update_keys);
+
             EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
                 if (e.button != 0 || n_pressed)
                     return;
@@ -226,7 +268,8 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             });
 
             EventBus.on('SYS_INPUT_POINTER_MOVE', (e) => {
-                update_stick_direction(e);
+                if (!is_pressed)
+                    update_stick_direction(e);
             });
 
             EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
@@ -236,6 +279,9 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                 stick_end = undefined;
                 current_dir = vector(point(0, 0), point(0, 0));
             });
+
+
+
 
             // Отрисовка джойстика
             EventBus.on('SYS_ON_UPDATE', (e) => {
@@ -266,27 +312,27 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             last_check_dir = clone(current_dir);
             last_check_target = clone(target);
             path_data = PathFinder.update_path(way_required, collision_radius, pointer_control);
-            
+
             LD.clear_container(player_way);
             if (debug) {
                 if (path_data.clear_way_nodes && path_data.blocked_way_nodes) {
                     for (const way of path_data.blocked_way_nodes) {
-                        if (way.arc) 
+                        if (way.arc)
                             LD.draw_arc(way.arc, player_way, COLORS.ORANGE);
-                        if (way.segment) 
+                        if (way.segment)
                             LD.draw_line(way.segment, player_way, COLORS.ORANGE);
                     }
                     for (const way of path_data.clear_way_nodes) {
-                        if (way.arc) 
+                        if (way.arc)
                             LD.draw_arc(way.arc, player_way, COLORS.LIGHT_BLUE);
-                        if (way.segment) 
+                        if (way.segment)
                             LD.draw_line(way.segment, player_way, COLORS.LIGHT_BLUE);
                     }
                 }
                 for (const interval of path_data.path) {
-                    if (interval.name == ShapeNames.Arc) 
+                    if (interval.name == ShapeNames.Arc)
                         LD.draw_arc(interval as IArc, player_way, COLORS.GREEN);
-                    else 
+                    else
                         LD.draw_line(interval as ISegment, player_way, COLORS.GREEN);
                 }
             }
@@ -348,7 +394,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
         }
 
         function clear_way() {
-            path_data = {length: 0, path: [], time: 0, path_points: []};
+            path_data = { length: 0, path: [], time: 0, path_points: [] };
         }
 
         function stop_movement() {
@@ -373,7 +419,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             if (point2point(current_pos, end_pos)[0] > blocked_max_dist) {
                 model.position.x = end_pos.x;
                 model.position.y = end_pos.y;
-                model.position.z = get_depth(end_pos.x, end_pos.y, 9, width, height);
+                model.position.z = get_depth(end_pos.x, end_pos.y, sort_layer, width, height);
                 CameraControl.set_position(model.position.x, model.position.y, true);
             }
             else {
@@ -404,7 +450,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                     const obstacle = PathFinder.get_obstacles_manager()!.get_obstacle_by_id(obst_id);
                     if (obstacle) {
                         const line = LD.draw_line(obstacle, obstacles_container, COLORS.RED);
-                        obstacles_lines[id].push(line);             
+                        obstacles_lines[id].push(line);
                     }
                 }
             }
@@ -446,7 +492,11 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             current_dir = vector(stick_start, stick_end);
     }
 
-    return { init }
+    function set_sort_layer(layer: number) {
+        sort_layer = layer;
+    }
+
+    return { init, set_sort_layer }
 }
 
 

@@ -2320,7 +2320,7 @@ function TreeControlCreate() {
 
 
     function cleanupEmptyParent(parentElement: HTMLElement) {
-        console.log('cleanupEmptyParent', parentElement);
+        //console.log('cleanupEmptyParent', parentElement);
         const treeSub = parentElement.querySelector('.tree_sub');
         if (treeSub && treeSub.children.length === 0) {
             treeSub.remove();
