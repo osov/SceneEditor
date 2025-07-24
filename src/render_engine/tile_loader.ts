@@ -1,5 +1,5 @@
 import { Vector3, Vector2, Line, BufferGeometry, LineBasicMaterial } from "three";
-import { CAMERA_Z, WORLD_SCALAR } from "../config";
+import { CAMERA_Z } from "../config";
 import { make_ramk, rotate_point } from "./helpers/utils";
 import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo, preload_tiled_textures, TileInfo, set_correction_xy, set_tileset, RenderMapData } from "./parsers/tile_parser";
 import { IObjectTypes } from "./types";
@@ -20,8 +20,7 @@ export function get_id_by_tile(tile: RenderTileData | RenderTileObject, id_layer
         return tile.id_object + '';
 }
 
-export function TileLoader(world: GoContainer, tileSize = 256) {
-
+export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
     function calc_bb(render_data: RenderMapData) {
         const bb_min = vmath.vector3(1E10, 1E10, 1E10);
         const bb_max = vmath.vector3(-1E10, -1E10, -1E10);
@@ -35,10 +34,10 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                         Log.warn('fix tile_info.h', tile_info);
                     }
                     // Вычисляем коррекцию
-                    const tile_w = tile_info.w * WORLD_SCALAR;
-                    const tile_h = tile_info.h * WORLD_SCALAR;
-                    let x = tile.x * tileSize * WORLD_SCALAR;
-                    let y = tile.y * tileSize * WORLD_SCALAR - tileSize * WORLD_SCALAR;
+                    const tile_w = tile_info.w * SUB_SCALAR;
+                    const tile_h = tile_info.h * SUB_SCALAR;
+                    let x = tile.x * tileSize * SUB_SCALAR;
+                    let y = tile.y * tileSize * SUB_SCALAR - tileSize * SUB_SCALAR;
                     const new_pos = rotate_point(new Vector3(x, y, 0), new Vector2(tile_w, tile_h), 0);
                     x = new_pos.x + tile_w / 2;
                     y = new_pos.y + tile_h / 2;
@@ -59,10 +58,10 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                 if (tile.tile_id != -1) {
                     const tile_info = get_tile_texture(tile_id);
                     if (tile_info != undefined) {
-                        const tile_w = tile.width * WORLD_SCALAR;
-                        const tile_h = tile.height * WORLD_SCALAR;
-                        let x = tile.x * WORLD_SCALAR;
-                        let y = tile.y * WORLD_SCALAR;
+                        const tile_w = tile.width * SUB_SCALAR;
+                        const tile_h = tile.height * SUB_SCALAR;
+                        let x = tile.x * SUB_SCALAR;
+                        let y = tile.y * SUB_SCALAR;
                         bb_min.x = Math.min(bb_min.x, x - tile_w / 2);
                         bb_min.y = Math.min(bb_min.y, y - tile_h / 2);
                         bb_max.x = Math.max(bb_max.x, x + tile_w / 2);
@@ -108,10 +107,10 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                     }
 
                     // Вычисляем коррекцию
-                    const tile_w = tile_info.w * WORLD_SCALAR;
-                    const tile_h = tile_info.h * WORLD_SCALAR;
-                    let x = tile.x * tileSize * WORLD_SCALAR;
-                    let y = tile.y * tileSize * WORLD_SCALAR - tileSize * WORLD_SCALAR;
+                    const tile_w = tile_info.w * SUB_SCALAR;
+                    const tile_h = tile_info.h * SUB_SCALAR;
+                    let x = tile.x * tileSize * SUB_SCALAR;
+                    let y = tile.y * tileSize * SUB_SCALAR - tileSize * SUB_SCALAR;
                     const new_pos = rotate_point(new Vector3(x, y, 0), new Vector2(tile_w, tile_h), 0);
                     x = new_pos.x + tile_w / 2;
                     y = new_pos.y + tile_h / 2;
@@ -142,18 +141,18 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
             for (let tile of object_layer.objects) {
                 id_object++;
                 if (tile.polygon || tile.polyline) {
-                    const cx = tile.x * WORLD_SCALAR;
-                    const cy = tile.y * WORLD_SCALAR;
+                    const cx = tile.x * SUB_SCALAR;
+                    const cy = tile.y * SUB_SCALAR;
                     const points = [];
                     if (tile.polygon) {
                         for (let point of tile.polygon) {
-                            points.push(new Vector2(cx + point.x * WORLD_SCALAR, cy - point.y * WORLD_SCALAR));
+                            points.push(new Vector2(cx + point.x * SUB_SCALAR, cy - point.y * SUB_SCALAR));
                         }
                         points.push(points[0]);
                     }
                     if (tile.polyline) {
                         for (let point of tile.polyline) {
-                            points.push(new Vector2(cx + point.x * WORLD_SCALAR, cy - point.y * WORLD_SCALAR));
+                            points.push(new Vector2(cx + point.x * SUB_SCALAR, cy - point.y * SUB_SCALAR));
                         }
                     }
                     if (debug_lines) {
@@ -167,10 +166,10 @@ export function TileLoader(world: GoContainer, tileSize = 256) {
                     const tile_id = tile.tile_id & TILE_FLIP_MASK;
                     const tile_info = get_tile_texture(tile_id);
                     if (tile_info != undefined) {
-                        const tile_w = tile.width * WORLD_SCALAR;
-                        const tile_h = tile.height * WORLD_SCALAR;
-                        const x = tile.x * WORLD_SCALAR;
-                        const y = tile.y * WORLD_SCALAR;
+                        const tile_w = tile.width * SUB_SCALAR;
+                        const tile_h = tile.height * SUB_SCALAR;
+                        const x = tile.x * SUB_SCALAR;
+                        const y = tile.y * SUB_SCALAR;
                         const z = get_depth(x, y, id_layer, tile_w, tile_h);
                         const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
                         plane.position.set(x, y, z);
