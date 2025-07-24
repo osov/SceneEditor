@@ -90,6 +90,10 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
     const obstacles_container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     obstacles_container.name = 'obstacles';
     SceneManager.add(obstacles_container);
+    joystick.no_saving = true; joystick.no_removing = true;
+    player_geometry.no_saving = true; player_geometry.no_removing = true;
+    player_way.no_saving = true; player_way.no_removing = true;
+    obstacles_container.no_saving = true; obstacles_container.no_removing = true;
 
     function get_angle() {
         let angle = -1;
@@ -111,7 +115,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
             angle = 270;
         return angle;
     }
-    
+
     function init(init_data: { model: AnimatedMesh }) {
         model = init_data.model;
         target = Point(model.position.x, model.position.y);
@@ -252,7 +256,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
                     stick_start = point(0, 0);
                     current_dir = vector(point(0, 0), point(Math.cos(angle), Math.sin(angle)));
                 }
-                else{
+                else {
                     is_pressed = false;
                     current_dir = vector(point(0, 0), point(0, 0));
                     stick_start = undefined;
