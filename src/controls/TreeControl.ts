@@ -316,12 +316,12 @@ function TreeControlCreate() {
             createNewTreeItem(item);
         });
 
-        if (changes.structureChanged) updateStructure(list);
-        else {
-            changes.modifiedItems.forEach(item => {
-                updateItem(item);
-            });
-        }
+        if (changes.structureChanged)
+            updateStructure(list);
+
+        changes.modifiedItems.forEach(item => {
+            updateItem(item);
+        });
 
         openTreeWithSelected();
 
