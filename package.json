@@ -27,6 +27,7 @@
     "bun-serve-router": "^0.0.3",
     "camera-controls": "^2.10.0",
     "cookie": "^1.0.2",
+    "detect-collisions": "^9.27.6",
     "explorer-opener": "^1.0.1",
     "protobufjs": "^7.4.0",
     "stats.js": "^0.17.0",

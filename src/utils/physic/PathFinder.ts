@@ -2,17 +2,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prefer-const */
-import { ObstaclesManager, ObstaclesManagerCreate } from "./obstacle_manager";
-import { ClosestObstacleData, ControlType, NextMoveType, PredictNextMoveData, PathData as PathData, PathNode, PathFinderSettings, PF_default_settings } from "./types";
+import { ObstaclesManager } from "./obstacle_manager";
+import { ClosestObstacleData, ControlType, NextMoveType, PredictNextMoveData, PathData as PathData, PathNode, PathFinderSettings, PF_default_settings, COLORS } from "./types";
 import { CCW, CW, DP_TOL, ShapeNames } from "../geometry/const";
 import { ISegment, IPoint, IArc, IVector } from "../geometry/types";
 import { vector_from_points, vec_angle, segment, clone, rotate_vec_90CW, 
     rotate_vec_90CCW, invert_vec, rotate, translate, shape_equal_to, 
-    shape_contains, transform, shape_center, arc_start, arc_end, arc_start_tangent, 
+    shape_contains, shape_center, arc_start, arc_end, arc_start_tangent, 
     shape_box, point_at_length, split_at_length, split, shape_vector, intersect, point2point, point2segment 
 } from "../geometry/logic";
 import { Vector, Segment, Arc, Point } from "../geometry/shapes";
 import { shape_length, normalize, multiply, add, EQ_0, vector_slope, EQ } from "../geometry/utils";
+import { GoContainer } from "@editor/render_engine/objects/sub_types";
+import { TLinesDrawer } from "./LinesDrawer";
+import { TDictionary } from "@editor/modules_editor/modules_editor_const";
 
 
 const path_tree_root: PathNode = {
@@ -67,7 +70,7 @@ export function PathFinderModule(settings: PathFinderSettings) {
     }
 
     function update_path(way_required: ISegment, collision_radius: number, control_type: ControlType, use_first_found = false) {
-        const path_data: PathData = { path: [], length: 0, path_points: [], time: 0 };
+        const path_data: PathData = { path: [], length: 0, path_points: [], time: 0, cur_time: 0 };
         if (control_type == ControlType.JS || control_type == ControlType.FP)
             path_data.path = predict_way(way_required, collision_radius, control_type);
 
@@ -80,6 +83,7 @@ export function PathFinderModule(settings: PathFinderSettings) {
         for (const elem of path_data.path)
             path_data.length += shape_length(elem);
         path_data.time = System.now();
+        path_data.cur_time = path_data.time;
         return path_data;
     }
 
@@ -1152,27 +1156,6 @@ export function PathFinderModule(settings: PathFinderSettings) {
         }
     }
 
-    function get_pos_at_ratio(path_data: PathData, _ratio: number) {
-        if (path_data.path.length == 0) {
-            logger.warn("No path to get the next waypoint!");
-            return undefined;
-        }
-        let ratio = (_ratio > 1) ? 1 : _ratio;
-        ratio = (_ratio < 0) ? 0 : _ratio;
-        let length_remains = path_data.length * ratio;
-        for (const interval of path_data.path) {
-            if (length_remains < shape_length(interval)) {
-                return point_at_length(interval, length_remains);
-            }
-            else {
-                length_remains -= shape_length(interval);
-            }
-        }
-        let interval = path_data.path[0];
-        let start = (interval.name == ShapeNames.Segment) ? (interval as ISegment).start : arc_start((interval as IArc));
-        return start;
-    }
-
     function find_current_interval(path: (ISegment | IArc)[], current_pos: IPoint) {
         for (let i = 0; i < path.length; i++) {
             if (shape_contains(path[i], current_pos))
@@ -1212,33 +1195,54 @@ export function PathFinderModule(settings: PathFinderSettings) {
         }
         return _current_pos;
     }
+    
+    function draw_obstacles(LD: TLinesDrawer, obstacles_lines: TDictionary<any>, obstacles_container: GoContainer) {
+        const objects_dict = get_obstacles_manager()!.objects;
+        for (const id in objects_dict) {
+            const obstacles = objects_dict[id].obstacles;
+            obstacles_lines[id] = [];
+            for (const obst_id of obstacles) {
+                const obstacle = get_obstacles_manager()!.get_obstacle_by_id(obst_id);
+                if (obstacle) {
+                    const line = LD.draw_line(obstacle, obstacles_container, COLORS.RED);
+                    obstacles_lines[id].push(line);             
+                }
+            }
+        }
+    }
+
+    function draw_path(LD: TLinesDrawer, player_way: GoContainer, path_data: PathData) {
+        LD.clear_container(player_way);
+        if (debug) {
+            if (path_data.clear_way_nodes && path_data.blocked_way_nodes) {
+                for (const way of path_data.blocked_way_nodes) {
+                    if (way.arc) 
+                        LD.draw_arc(way.arc, player_way, COLORS.ORANGE);
+                    if (way.segment) 
+                        LD.draw_line(way.segment, player_way, COLORS.ORANGE);
+                }
+                for (const way of path_data.clear_way_nodes) {
+                    if (way.arc) 
+                        LD.draw_arc(way.arc, player_way, COLORS.LIGHT_BLUE);
+                    if (way.segment) 
+                        LD.draw_line(way.segment, player_way, COLORS.LIGHT_BLUE);
+                }
+            }
+            for (const interval of path_data.path) {
+                if (interval.name == ShapeNames.Arc) 
+                    LD.draw_arc(interval as IArc, player_way, COLORS.GREEN);
+                else 
+                    LD.draw_line(interval as ISegment, player_way, COLORS.GREEN);
+            }
+        }
+    }
 
     return {
-        update_path, get_next_pos, get_pos_at_ratio,
+        update_path, get_next_pos,
         enable_collision, check_obstacles_enabled, 
         build_path_tree,
         get_obstacles_manager, find_clear_space, set_obstacles_manager, clear_obstacles_manager, 
-        make_sideways, make_sideways_bypass_vertice, make_way_bypass_vertice, make_way,
+        make_sideways, make_sideways_bypass_vertice, make_way_bypass_vertice, make_way, 
+        draw_obstacles, draw_path
     };
-}
-
-export function test_batch(PF: typeof PathFinder, collision_radius: number, way_required: ISegment, obstacles: ISegment[], use_first_found: boolean) {
-    const _obstacles: ISegment[] = [];
-    for (const obstacle of obstacles) {
-        const obst = clone(obstacle);
-        _obstacles.push(obst);
-    }
-    const _way_required = clone(way_required);
-    const obstacles_manager = PF.get_obstacles_manager();
-    if (!obstacles_manager) return;
-    obstacles_manager.set_obstacles(_obstacles);
-    const path_data = PF.update_path(_way_required, collision_radius, ControlType.GP, use_first_found);
-    // log();
-    // log('path_data.length', path_data.length);
-    // log('path_data.path.length', path_data.path.length);
-    // if (path_data.path.length > 0) log('путь найден!', );
-    // log('blocked_way_nodes', path_data.blocked_way_nodes?.length);
-    // log('clear_way_nodes', path_data.clear_way_nodes?.length);
-    // log();
-    return path_data;
 }

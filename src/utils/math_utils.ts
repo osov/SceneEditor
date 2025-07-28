@@ -126,3 +126,25 @@ export function rotate_point_pivot(point: vmath.vector3, pivot: {x:number,y:numb
 export function degToRad(degrees: number) {
     return degrees * (Math.PI / 180);
 }
+
+function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
+    const wrap_test = wrap_max - wrap_min;
+    if (start - end > wrap_test / 2) end += wrap_test;
+    else if (end - start > wrap_test / 2) start += wrap_test;
+    return (end - start) * percent;
+}
+
+export function interpolate_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number, is_range = false) {
+    let interpolated_val = start + interpolate_delta_with_wrapping(start, end, percent, wrap_min, wrap_max);
+    if (is_range) {
+        const wrap_length = (wrap_max - wrap_min) / 2;
+        if (interpolated_val >= wrap_length) interpolated_val -= 2 * wrap_length;
+        if (interpolated_val <= -wrap_length) interpolated_val += 2 * wrap_length;
+    }
+    else {
+        const wrap_length = wrap_max - wrap_min;
+        if (interpolated_val >= wrap_length) interpolated_val -= wrap_length;
+        if (interpolated_val < 0) interpolated_val += wrap_length;
+    }
+    return interpolated_val;
+}

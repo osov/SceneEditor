@@ -45,6 +45,7 @@ export type PathDataBase = {
     path: (ISegment | IArc)[],
     length: number,
     time: number;
+    cur_time: number;
 };
 
 export type PathData = PathDataBase & {
@@ -79,12 +80,11 @@ export type PlayerMovementSettings = {
     update_interval: number,       // Интервал между обновлениями прогнозируемого пути по умолчанию 
     min_update_interval: number,   // Минимальный интервал между обновлениями прогнозируемого пути
     min_angle_change: number,      // Минимальный угол изменения направления движения, при котором произойдёт обновление прогнозируемого пути
-    block_move_min_angle: number,  // Минимальный угол между нормалью к препятствию и направлением движения, при котором возможно движение вдоль препятствия
     speed: SpeedSettings,
     collision_radius: number,      // Радиус столкновения управляемого персонажа с препятствиями
     pred_path_lenght_mult: number,  // Множитель длины пути для построения пути с запасом
     max_blocked_move_time: number, // Время нахождения застрявшего игрока в одной позиции, после которого движение приостановится
-    blocked_move_min_dist: number, // Минимальное расстояние для перемещения, меньше него позиция остаётся прежней.
+    blocked_max_dist: number, // Минимальное расстояние для перемещения, меньше него позиция остаётся прежней.
     min_stick_dist: number,
     min_find_path_interval: number,
     debug?: boolean,
@@ -138,7 +138,7 @@ export type ObstacleTileData = {
 };
 
 export const movement_default_settings: PlayerMovementSettings = {
-    pred_path_lenght_mult: 1.5,
+    pred_path_lenght_mult: 2,
     min_required_path: 0.8,
     min_awailable_path: 0.8,
     min_idle_time: 0.7,
@@ -148,13 +148,12 @@ export const movement_default_settings: PlayerMovementSettings = {
     target_stop_distance: 0.5,
     animation_names: { IDLE: "Unarmed Idle", WALK: "Unarmed Run Forward" },
     update_interval: 2.5,
-    min_update_interval: 0.2,
+    min_update_interval: 0.5,
     min_angle_change: 3 * Math.PI / 180,
-    block_move_min_angle: 15 * Math.PI / 180,
     speed: { WALK: 26 },
-    collision_radius: 4,
+    collision_radius: 2,
     max_blocked_move_time: 5,
-    blocked_move_min_dist: 0.006,
+    blocked_max_dist: 0.006,
     min_stick_dist: 15,
 
     min_find_path_interval: 0.5,
@@ -165,17 +164,17 @@ export const PF_default_settings: PathFinderSettings = {
     collision_min_error: 0.01,
     max_path_intervals: 13,
     obstacles_space_cell_size: 150 * WORLD_SCALAR,
-    block_move_min_angle: 15 * Math.PI / 180,
+    block_move_min_angle: 15 * Math.PI / 180,   // угол конуса трения
 
 
     // Настройки геометрического поиска пути
-    target_max_correction: 20 * WORLD_SCALAR,
+    target_max_correction: 10 * WORLD_SCALAR,
     max_checks_number: 100,
     max_depth: 15,
     max_way_length: 2100 * WORLD_SCALAR,
     max_update_time: 150,
 
-    debug: true,
+    debug: false,
 };
 
 export const COLORS = {

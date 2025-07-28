@@ -1,12 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { ShapeNames } from "./geometry/const";
-import { arc_start, clone, point2point, point_at_length, rotate, translate } from "./geometry/logic";
+import { TDictionary } from "@editor/modules_editor/modules_editor_const";
+import { IObjectTypes } from "@editor/render_engine/types";
+import { NULL_VALUE, ShapeNames } from "./geometry/const";
+import { arc_end, arc_start, clone, point2point, point_at_length, rotate, shape_vector, translate } from "./geometry/logic";
 import { Point, Segment, Vector } from "./geometry/shapes";
 import { IArc, IPoint, ISegment, PointLike } from "./geometry/types";
-import { EQ, EQ_0, multiply, shape_length } from "./geometry/utils";
+import { EQ, EQ_0, multiply, shape_length, vector_slope } from "./geometry/utils";
 import { compute_arc_length_table, degToRad, get_position_by_time } from "./math_utils";
+import { LinesDrawer } from "./physic/LinesDrawer";
+import { ObstaclesManagerCreate } from "./physic/obstacle_manager";
+import { PathFinderModule } from "./physic/PathFinder";
 import { ControlType, movement_default_settings, PathData, PlayerMovementSettings } from "./physic/types";
+import { radToDeg } from "./physic/utils";
 
 
 export type ControlsState = {
@@ -33,7 +39,6 @@ declare global {
 export function register_path_updater() {
     (window as any).PathUpdater = PathUpdaterModule(movement_default_settings);
 }
-
 
 export function PathUpdaterModule(settings: PlayerMovementSettings) {
     const collision_radius = settings.collision_radius;
@@ -113,21 +118,32 @@ export function PathUpdaterModule(settings: PlayerMovementSettings) {
     }
 
     
-    function get_user_pos(out_result: PointLike, speed: number, path_data: PathData, now: number) {
-        if (path_data.path.length == 0) return;
-        const arc_table = path_data.arc_table;
-        if (arc_table == undefined) return;
-        const pos_point = vmath.vector3();
+    const pos_point = vmath.vector3();
+
+    function get_user_pos(out_result: PointLike, speed: number, path_data: PathData, dt: number) {
+        if (path_data.path.length == 0) return false;
         const start_time = path_data.time;
-        const points = path_data.path_points;
-        get_position_by_time(now, start_time, speed, points, arc_table, pos_point);
-        const dist = Math.sqrt(Math.pow(pos_point.x - out_result.x, 2) + Math.pow(pos_point.x - out_result.x, 2))
-        const p0 = points[0];
-        const px = points[points.length - 1]
-        const dist2 = Math.sqrt(Math.pow(p0.x - px.x, 2) + Math.pow(p0.x - px.x, 2))
-        log(start_time, now, p0.y,  pos_point.y,  px.y, dist, dist2)
-        out_result.x = pos_point.x; 
-        out_result.y = pos_point.y; 
+        path_data.cur_time += dt;
+        const now = path_data.cur_time;
+        pos_point.x = out_result.x; pos_point.y = out_result.y;
+        const elapsed = (now - start_time);
+        const distance_traveled = speed * elapsed;
+        const ratio = distance_traveled / path_data.length;
+        const pos_at_ratio = get_pos_at_ratio(path_data, ratio);
+        if (!('null' in pos_at_ratio)) {
+            out_result.x = pos_at_ratio.x;
+            out_result.y = pos_at_ratio.y;
+            return true;
+        }
+        // get_position_by_time(now, start_time, speed, points, arc_table, pos_point);
+        // const dist = Math.sqrt(Math.pow(pos_point.y - out_result.y, 2) + Math.pow(pos_point.x - out_result.x, 2));
+        // const p0 = points[0];
+        // const px = points[points.length - 1];
+        // const dist2 = Math.sqrt(Math.pow(p0.y - px.y, 2) + Math.pow(p0.x - px.x, 2));
+        // log(p0.y,  pos_point.y,  px.y, ' || ', dist, dist2, ' || ', dt, dist / dt, speed);
+        // out_result.x = pos_point.x; 
+        // out_result.y = pos_point.y;
+        return true;
     }
 
     function check_state_changed(state: ControlsState, last_check_state: ControlsState) {
@@ -200,16 +216,99 @@ export function PathUpdaterModule(settings: PlayerMovementSettings) {
         return result;
     }
 
-    function prepare_path_data(path_data: PathData, renew_time = false, step = 0.5) {
-        log('new data')
+    function prepare_path_data(path_data: PathData, renew_time = false, step = 1) {
         if (path_data.length == 0) return;
         const points = path_to_points_step(path_data.path, step);
         path_data.path_points = points;
         path_data.arc_table = compute_arc_length_table(points);
         if (renew_time)
             path_data.time = System.now();
-
+    }  
+      
+    function get_pos_at_ratio(path_data: PathData, _ratio: number) {
+        if (path_data.path.length == 0) {
+            return NULL_VALUE;
+        }
+        let ratio = (_ratio > 1) ? 1 : _ratio;
+        ratio = (_ratio < 0) ? 0 : _ratio;
+        if (ratio == 0) {
+            let interval = path_data.path[0];
+            let start = (interval.name == ShapeNames.Segment) ? (interval as ISegment).start : arc_start((interval as IArc));
+            return start;
+        }
+        if (ratio == 1) {
+            let interval = path_data.path[path_data.path.length - 1];
+            let end = (interval.name == ShapeNames.Segment) ? (interval as ISegment).end : arc_end((interval as IArc));
+            return end;
+        }
+        let length_remains = path_data.length * ratio;
+        for (const interval of path_data.path) {
+            if (length_remains < shape_length(interval)) {
+                return point_at_length(interval, length_remains);
+            }
+            else {
+                length_remains -= shape_length(interval);
+            }
+        }
+        return NULL_VALUE;
     }
 
     return { on_input, update_user_path, get_user_pos, prepare_path_data, path_from_angle };
+}
+
+export function get_angle() {
+    let angle = -1;
+    if ((Input.keys_state['d'] || Input.keys_state['ArrowRight']) && (Input.keys_state['w'] || Input.keys_state['ArrowUp']))
+        angle = 45;
+    else if ((Input.keys_state['a'] || Input.keys_state['ArrowLeft']) && (Input.keys_state['w'] || Input.keys_state['ArrowUp']))
+        angle = 135;
+    else if ((Input.keys_state['a'] || Input.keys_state['ArrowLeft']) && (Input.keys_state['s'] || Input.keys_state['ArrowDown']))
+        angle = 225;
+    else if ((Input.keys_state['d'] || Input.keys_state['ArrowRight']) && (Input.keys_state['s'] || Input.keys_state['ArrowDown']))
+        angle = 315;
+    else if (Input.keys_state['d'] || Input.keys_state['ArrowRight'])
+        angle = 0;
+    else if (Input.keys_state['w'] || Input.keys_state['ArrowUp'])
+        angle = 90;
+    else if (Input.keys_state['a'] || Input.keys_state['ArrowLeft'])
+        angle = 180;
+    else if (Input.keys_state['s'] || Input.keys_state['ArrowDown'])
+        angle = 270;
+    return angle;
+}
+
+
+export function test_path_updater(
+    obstacles: ISegment[], 
+    path: ISegment, 
+    collision_radius: number, 
+    move: number, 
+    update_move_times: number, 
+    updates: number
+) {
+    log('test pathfinder')
+    const obstacles_manager = ObstaclesManagerCreate(5);
+    obstacles_manager.set_obstacles(obstacles);
+    PathFinder.set_obstacles_manager(obstacles_manager);
+    const angle = vector_slope(shape_vector(path));
+    const points: IPoint[] = [];
+    const dt = 1 / 60;
+    points.push(path.start);
+    const update_distance = move * update_move_times * 2;
+    let path_to_check = PathUpdater.path_from_angle(path.start, angle, update_distance);
+    const pos = Point(path.start.x, path.start.y)
+    const t1 = System.now_ms()
+    let n = 0;
+    for (n; n < updates; n++) {
+        const path_data = PathFinder.update_path(path_to_check, collision_radius, ControlType.JS, true);
+        for (let i = 0; i < update_move_times; i++) {
+            PathUpdater.get_user_pos(pos, move, path_data, dt)
+            points.push(Point(pos.x, pos.y));
+        }
+        path_to_check = PathUpdater.path_from_angle(pos, angle, update_distance);
+    }
+    const t2 = System.now_ms()
+    log('time', t2 - t1)
+    log('points', points.length, 'updates', n)
+    return points;
 }

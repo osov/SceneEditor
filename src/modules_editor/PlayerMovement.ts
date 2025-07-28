@@ -11,32 +11,11 @@ import { clone, point, point2point, segment, shape_equal_to, split_at_length, ve
 import { POINT_EMPTY } from '@editor/utils/geometry/helpers';
 import { ShapeNames } from '@editor/utils/geometry/const';
 import { PlayerMovementSettings, movement_default_settings, PathData, COLORS, ControlType } from '@editor/utils/physic/types';
+import { interpolate_with_wrapping } from '@editor/utils/math_utils';
 
-
-function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
-    const wrap_test = wrap_max - wrap_min;
-    if (start - end > wrap_test / 2) end += wrap_test;
-    else if (end - start > wrap_test / 2) start += wrap_test;
-    return (end - start) * percent;
-}
-
-function interpolate_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number, is_range = false) {
-    let interpolated_val = start + interpolate_delta_with_wrapping(start, end, percent, wrap_min, wrap_max);
-    if (is_range) {
-        const wrap_length = (wrap_max - wrap_min) / 2;
-        if (interpolated_val >= wrap_length) interpolated_val -= 2 * wrap_length;
-        if (interpolated_val <= -wrap_length) interpolated_val += 2 * wrap_length;
-    }
-    else {
-        const wrap_length = wrap_max - wrap_min;
-        if (interpolated_val >= wrap_length) interpolated_val -= wrap_length;
-        if (interpolated_val < 0) interpolated_val += wrap_length;
-    }
-    return interpolated_val;
-}
 
 export function MovementControlCreate(settings: PlayerMovementSettings = movement_default_settings) {
-    let path_data: PathData = { length: 0, path: [], time: 0, path_points: [] };
+    let path_data: PathData = { length: 0, path: [], time: 0, path_points: [], cur_time: 0 };
     const LD = LinesDrawer();
     const width = 50 * WORLD_SCALAR;
     const height = 50 * WORLD_SCALAR;
@@ -56,7 +35,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
     let min_awailable_path = settings.min_awailable_path;
     let min_idle_time = settings.min_idle_time;
     let min_target_change = settings.min_target_change;
-    let blocked_max_dist = settings.blocked_move_min_dist;
+    let blocked_max_dist = settings.blocked_max_dist;
     let update_t_interval = settings.update_interval;
     let min_update_t_interval = settings.min_update_interval;
     let min_find_path_interval = settings.min_find_path_interval;
@@ -398,7 +377,7 @@ export function MovementControlCreate(settings: PlayerMovementSettings = movemen
         }
 
         function clear_way() {
-            path_data = { length: 0, path: [], time: 0, path_points: [] };
+            path_data = { length: 0, path: [], time: 0, path_points: [], cur_time: 0 };
         }
 
         function stop_movement() {

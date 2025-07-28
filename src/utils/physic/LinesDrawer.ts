@@ -23,13 +23,13 @@ export function LinesDrawer() {
         const geometry = new BufferGeometry().setFromPoints(points);
         const material = new LineBasicMaterial({ color });
         const line = new GeomLine(geometry, material);
-        line.position.z = CAMERA_Z - 0.01;
+        line.position.z = CAMERA_Z  - 5;
         container.add(line);
         return line;
     }
 
-    function draw_arc(arc: IArc, container: GoContainer, color = 0x22ff77) {
-        const step = 2 * Math.PI * arc.r / DRAWN_ARC_EDGES_AMOUNT;
+    function draw_arc(arc: IArc, container: GoContainer, color = 0x22ff77, arc_edges = DRAWN_ARC_EDGES_AMOUNT) {
+        const step = 2 * Math.PI * arc.r / arc_edges;
         const list = [];
         let lenght_remains = shape_length(arc);
         let _allowed_way = arc;
