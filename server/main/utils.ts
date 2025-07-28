@@ -6,7 +6,8 @@ export function do_response(data: any, stringify = true, status?: number, reques
     const headers: Record<string, string> = {
         "Access-Control-Allow-Headers": "Content-Type, X-Session-ID, Authorization",
         "Access-Control-Allow-Methods": "*",
-        "Access-Control-Allow-Credentials": "true"
+        "Access-Control-Allow-Credentials": "true",
+         "Cache-Control": "public, max-age=31536000"
     };
     if (origin) headers["Access-Control-Allow-Origin"] = origin;
     const options: ResponseInit = { headers };

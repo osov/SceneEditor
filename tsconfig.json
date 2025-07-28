@@ -41,5 +41,6 @@
     "../SceneEditor_Kopateli/src",
     "../SceneEditor_Water/src",
     "../SceneEditor_Shader/src",
+    "../SceneEditor_Kopateli_physic/src",
   ]
 }
