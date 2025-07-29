@@ -51,6 +51,8 @@ export function MovementManagerCreate(model: AnimatedMesh, obstacles: Line<any>[
     player_geometry.no_saving = true; player_geometry.no_removing = true;
     player_way.no_saving = true; player_way.no_removing = true;
     obstacles_container.no_saving = true; obstacles_container.no_removing = true;
+    const user_visible = !(new URLSearchParams(document.location.search).get('user') == '0');
+    player_geometry.set_active(user_visible);
     let is_moving = false;
 
     for (const obst of obstacles) {
