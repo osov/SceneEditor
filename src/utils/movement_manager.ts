@@ -47,7 +47,10 @@ export function MovementManagerCreate(model: AnimatedMesh, obstacles: Line<any>[
     const obstacles_container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
     obstacles_container.name = 'obstacles';
     SceneManager.add(obstacles_container);
-
+    joystick.no_saving = true; joystick.no_removing = true;
+    player_geometry.no_saving = true; player_geometry.no_removing = true;
+    player_way.no_saving = true; player_way.no_removing = true;
+    obstacles_container.no_saving = true; obstacles_container.no_removing = true;
     let is_moving = false;
 
     for (const obst of obstacles) {
