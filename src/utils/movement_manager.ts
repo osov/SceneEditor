@@ -3,7 +3,7 @@ import { IObjectTypes } from "@editor/render_engine/types";
 import { LinesDrawer } from "./physic/LinesDrawer";
 import { get_angle } from "./PathUpdater";
 import { AnimationNames, COLORS, ObstacleTileData, PlayerMovementSettings } from "@editor/modules/types";
-import { BodyOptions, Circle, deg2rad, Line, Polygon, System } from "detect-collisions";
+import { BodyGroup, BodyOptions, Circle, CollisionCallback, deg2rad, Line, Polygon, returnTrue, System, Response } from "detect-collisions";
 import { get_depth, MapData, parse_tiled } from "@editor/render_engine/parsers/tile_parser";
 import { IPoint, ISegment, PointLike } from "./geometry/types";
 import { polygon_to_segments, polyline_to_segments } from "./physic/utils";
@@ -22,7 +22,7 @@ export type MovementSettings = {
 
 const obstacle_options: BodyOptions = {
     isStatic: true,
-    
+
 }
 
 export function MovementManagerCreate(model: AnimatedMesh, obstacles: Line<any>[], start_pos: PointLike, settings: MovementSettings) {
@@ -55,7 +55,7 @@ export function MovementManagerCreate(model: AnimatedMesh, obstacles: Line<any>[
     }
 
     // if (debug) draw_obstacles();
-    
+
     const player = new Circle(start_pos, collision_radius);
     system.insert(player);
     model
@@ -72,12 +72,19 @@ export function MovementManagerCreate(model: AnimatedMesh, obstacles: Line<any>[
         const angle_rad = deg2rad(angle);
         player.setAngle(angle_rad, true);
         player.move(move, true);
-        system.checkOne(player, () => {
-            system.separateBody(player)
+        system.checkOne(player, (r) => {
+            const { a, b, overlapV } = r;
+            if (a === player)
+                a.setPosition(a.pos.x - overlapV.x, a.pos.y - overlapV.y)
+            if (b === player)
+                b.setPosition(b.pos.x + overlapV.x, b.pos.y + overlapV.y)
         })
+
         const pos = point(player.x, player.y)
         update_position(pos);
+        model.rotation.y = interpolate_with_wrapping(model.rotation.y, angle_rad + Math.PI / 2, 0.1, 0, 2 * Math.PI);
     })
+
 
     function stop_movement() {
         is_moving = false;
@@ -94,8 +101,8 @@ export function MovementManagerCreate(model: AnimatedMesh, obstacles: Line<any>[
         model.position.x = end_pos.x;
         model.position.y = end_pos.y;
         CameraControl.set_position(model.position.x, model.position.y, true);
-        const dir = vector_from_points(current_pos, end_pos);
-        model.rotation.y = interpolate_with_wrapping(model.rotation.y, Math.atan2(dir.y, dir.x) + Math.PI / 2, 0.1, 0, 2 * Math.PI);
+        // const dir = vector_from_points(current_pos, end_pos);
+        // model.rotation.y = interpolate_with_wrapping(model.rotation.y, Math.atan2(dir.y, dir.x) + Math.PI / 2, 0.1, 0, 2 * Math.PI);
         model.transform_changed();
         if (player_geometry.children.length == 0) {
             LD.draw_arc(Arc(point(0, 0), settings.collision_radius, 0, Math.PI * 2), player_geometry, COLORS.RED);
@@ -130,7 +137,7 @@ export function make_geometry_from_data(obstacles_data: ObstacleTileData[], worl
             }
         }
         all_obstacles.push(...obstacles);
-    }        
+    }
     return all_obstacles;
 }
 
@@ -149,7 +156,7 @@ export function make_obstacles_from_data(map_data: MapData, world_scalar: number
     for (const layer of obstacles_data.objects_layers) {
         for (const tile of layer.objects) {
             if (tile.polygon || tile.polyline) {
-                
+
                 if (tile.polyline) {
                     const lines = make_collision_polyline(tile.x, tile.y, tile.polyline, world_scalar);
                     all_obstacles.push(...lines);

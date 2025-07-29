@@ -81,7 +81,7 @@ export async function Server(server_port: number, ws_server_port: number) {
             if (project) {
                 const file = await logic.get_file(project, `${filePath}`);
                 if (file) {
-                    return do_response(file, false, undefined, request);
+                    return do_response(file, false, undefined, request, !filePath.includes('.json'));
                 }
             }
             return do_response("404 Not Found", false, 404, request);
@@ -93,7 +93,7 @@ export async function Server(server_port: number, ws_server_port: number) {
         if (session?.project) {
             const file = await logic.get_file(session.project, asset_path);
             if (file) {
-                return do_response(file, false, undefined, request);
+                return do_response(file, false, undefined, request, !asset_path.includes('.json'));
             }
         }
         return do_response("404 Not Found", false, 404, request);

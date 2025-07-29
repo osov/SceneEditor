@@ -1,13 +1,13 @@
 import path from "path";
 
 
-export function do_response(data: any, stringify = true, status?: number, request?: Request) {
+export function do_response(data: any, stringify = true, status?: number, request?: Request, cached = false) {
     let origin = request?.headers.get("Origin");
     const headers: Record<string, string> = {
         "Access-Control-Allow-Headers": "Content-Type, X-Session-ID, Authorization",
         "Access-Control-Allow-Methods": "*",
         "Access-Control-Allow-Credentials": "true",
-         "Cache-Control": "public, max-age=31536000"
+         "Cache-Control": "public, max-age=" + (cached ? 31536000 : 0)
     };
     if (origin) headers["Access-Control-Allow-Origin"] = origin;
     const options: ResponseInit = { headers };
