@@ -1089,7 +1089,7 @@ function AssetControlCreate() {
             if (ext === SCENE_EXT && new_path != current_path) {
                 if (current_path != undefined && history_length_cache[current_path] != HistoryControl.get_history(current_scene.path).length)
                     open_scene_exit_popup(current_path, new_path)
-                else
+                else if (new_path != undefined)
                     await open_scene(new_path)
             }
         }
@@ -1100,7 +1100,7 @@ function AssetControlCreate() {
             type: "Confirm",
             params: { title: "", text: `У сцены "${current_path}" есть несохранённые изменения, закрыть без сохранения?`, button: "Да", buttonNo: "Нет", auto_close: true },
             callback: async (success) => {
-                if (success) {
+                if (success && new_path != undefined) {
                     HistoryControl.clear(current_scene.path);
                     await open_scene(new_path);
                 }
