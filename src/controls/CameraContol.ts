@@ -70,6 +70,13 @@ function CameraControlCreate() {
         }
     }
 
+    function get_zoom() {
+        if (!is_perspective) {
+            return (control_orthographic as any)._zoom;
+        }
+        return 1;
+    }
+
     async function save_state() {
         const state = save();
         const key = 'camera_control_orthographic-' + active_scene;
@@ -160,5 +167,5 @@ function CameraControlCreate() {
     }
 
     init();
-    return { set_position, set_zoom, load_state, focus };
+    return { set_position, set_zoom, get_zoom, load_state, focus };
 }

@@ -419,9 +419,12 @@ function SizeControlCreate() {
             ControlManager.update_graph();
         });
 
+        EventBus.on('SYS_ON_UPDATE_END', () => {
+            draw();
+        });
     }
 
-    function get_cursor_dir(wp: Vector3, bounds: number[], range = 5) {
+    function get_cursor_dir(wp: Vector3, bounds: number[], range = 15) {
         const dist = Math.abs(bounds[2] - bounds[0]);
         range *= (dist / 300);
         const tmp_dir = [0, 0];
@@ -517,11 +520,18 @@ function SizeControlCreate() {
 
     function draw_debug_bb(bb: number[]) {
         const dist = Math.abs(bb[2] - bb[0]);
-        const SUB_SCALAR = Math.max(Math.min(dist / 250, 0.2), 0.05);
-        for (let i = 0; i < bb_points.length; i++)
+        const min_size = 0.05;
+        const max_size = Math.min(dist / 30, 3);
+        const zoom_depended_size = dist / (250 * (CameraControl.get_zoom() / 30));
+        const SUB_SCALAR = Math.max(Math.min(zoom_depended_size, max_size), min_size);
+        log('SUB:', dist / 250, CameraControl.get_zoom(), SUB_SCALAR, min_size, max_size, zoom_depended_size);
+
+        for (let i = 0; i < bb_points.length; i++) {
             bb_points[i].scale.setScalar(SUB_SCALAR);
-        for (let i = 0; i < pivot_points.length; i++)
+        }
+        for (let i = 0; i < pivot_points.length; i++) {
             pivot_points[i].scale.setScalar(SUB_SCALAR);
+        }
         debug_center.scale.setScalar(SUB_SCALAR);
 
         // left top, right top, right bottom, left bottom
