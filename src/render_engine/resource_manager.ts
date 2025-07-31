@@ -38,6 +38,7 @@ import { IBaseEntityData } from './types';
 import { MultipleMaterialMesh } from './objects/multiple_material_mesh';
 import { api } from '../modules_editor/ClientAPI';
 import { URL_PATHS } from '../modules_editor/modules_editor_const';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 
 
 declare global {
@@ -168,7 +169,11 @@ export function ResourceManagerModule() {
     const models: { [name: string]: Object3D } = {};
     const animations: AnimationInfo[] = [];
     const manager = new LoadingManager();
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('/libs/draco/');
+
     let bad_texture: CanvasTexture;
+
     let project_path = '';
     let project_name = '';
 
@@ -1507,6 +1512,7 @@ export function ResourceManagerModule() {
         else if (path.toLowerCase().endsWith('.gltf') || path.toLowerCase().endsWith('.glb')) {
             return new Promise<Group>(async (resolve, _) => {
                 const loader = new GLTFLoader(manager);
+                loader.setDRACOLoader( dracoLoader );
                 loader.load(get_project_url(path), (gltf) => {
                     //log(gltf)
                     const has_mesh = has_skinned_mesh(gltf.scene);
