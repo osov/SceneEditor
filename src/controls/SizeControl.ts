@@ -15,6 +15,10 @@ export function register_size_control() {
     (window as any).SizeControl = SizeControlCreate();
 }
 
+const DEBUG_BB_POINT_SIZE_MIN = 0.1; // NOTE: минимальный размер точки (не зависит от растояния)
+const DEBUG_BB_POINT_MAX_SIZE_PERCENT = 0.15; // NOTE: максимальный размер точки в процентах от растояния
+const DEBUG_BB_POINT_SIZE_MAX = 3; // NOTE: самый большой возможный размер точки (не от растояния)
+
 // todo
 // модуль не умеет правильно работать если сделан scale в минус или rotation(точки не строит правильно)
 
@@ -424,7 +428,7 @@ function SizeControlCreate() {
         });
     }
 
-    function get_cursor_dir(wp: Vector3, bounds: number[], range = 15) {
+    function get_cursor_dir(wp: Vector3, bounds: number[], range = 7) {
         const dist = Math.abs(bounds[2] - bounds[0]);
         range *= (dist / 300);
         const tmp_dir = [0, 0];
@@ -518,14 +522,16 @@ function SizeControlCreate() {
         return bb;
     }
 
-    function draw_debug_bb(bb: number[]) {
-        const dist = Math.abs(bb[2] - bb[0]);
-        const min_size = 0.05;
-        const max_size = Math.min(dist / 30, 3);
-        const zoom_depended_size = dist / (250 * (CameraControl.get_zoom() / 30));
-        const SUB_SCALAR = Math.max(Math.min(zoom_depended_size, max_size), min_size);
-        log('SUB:', dist / 250, CameraControl.get_zoom(), SUB_SCALAR, min_size, max_size, zoom_depended_size);
+    function calc_debug_sub_scalar(bb: number[]) {
+        const height = Math.abs(bb[3] - bb[1]);
+        const width = Math.abs(bb[2] - bb[0]);
+        const dist = Math.min(width, height);
+        const size = ((dist * DEBUG_BB_POINT_MAX_SIZE_PERCENT) / bb_points[0].geometry.parameters.radius * 2);
+        return Math.max(Math.min(size, DEBUG_BB_POINT_SIZE_MAX), DEBUG_BB_POINT_SIZE_MIN);
+    }
 
+    function draw_debug_bb(bb: number[]) {
+        const SUB_SCALAR = calc_debug_sub_scalar(bb);
         for (let i = 0; i < bb_points.length; i++) {
             bb_points[i].scale.setScalar(SUB_SCALAR);
         }
