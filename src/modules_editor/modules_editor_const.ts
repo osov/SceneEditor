@@ -13,6 +13,7 @@ export type _SystemMessagesEditor = {
     SYS_SELECTED_MESH: { mesh: IBaseMeshAndThree },
     SYS_SELECTED_MESH_LIST: { list: IBaseMeshAndThree[] },
     SYS_UNSELECTED_MESH_LIST: {},
+    SYS_CLEAR_SELECT_MESH_LIST: VoidMessage,
     SYS_GRAPH_SELECTED: { list: number[] },
     SYS_GRAPH_CHANGE_NAME: { id: number, name: string },
     SYS_GRAPH_MOVED_TO: { pid: number, next_id: number, id_mesh_list: number[] },

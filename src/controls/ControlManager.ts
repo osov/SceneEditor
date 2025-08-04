@@ -52,6 +52,7 @@ function ControlManagerCreate() {
                     list.push(m);
             }
             SelectControl.set_selected_list(list);
+            TreeControl.set_selected_items(e.list);
             if (list.length == 0)
                 EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
         });

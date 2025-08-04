@@ -130,6 +130,7 @@ function SelectControlCreate() {
     function set_selected_list(list: IBaseMeshAndThree[], clear_old = true) {
         if (clear_old) {
             selected_list = [];
+            EventBus.trigger('SYS_CLEAR_SELECT_MESH_LIST');
         }
         if (list.length == 0) {
             if (!Input.is_control())
@@ -159,6 +160,7 @@ function SelectControlCreate() {
                 break;
             }
         }
+
         if (!is_breaked) {
             // ситуация когда что-то было выбрано, но в этом списке не оказалось
             selected = list[0];

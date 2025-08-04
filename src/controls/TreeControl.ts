@@ -137,6 +137,24 @@ function TreeControlCreate() {
                 cleanupEmptyParent(parent);
             });
         });
+
+        // NOTE: очищаем выделение items которые не являются IBaseMeshAndThree когда очищается список в SelectControl
+        EventBus.on('SYS_CLEAR_SELECT_MESH_LIST', () => {
+            for (const item_id of listSelected) {
+                const element = document.querySelector(`.tree__item[data-id="${item_id}"]`) as HTMLElement;
+                if (element) element.classList.remove('selected');
+            }
+            listSelected = [];
+        });
+    }
+
+    // NOTE: нужно для items которые не являются IBaseMeshAndThree, так как SceneManager.get_mesh_by_id при SYS_GRAPH_SELECTED в ControlManager не найдет их и они не будут выбраны для SelectControl потому что он с ними и не работает, как следствие они не передадуться в отрисовку дерева, поэтому их контролируем отдельно/дополнительно
+    function set_selected_items(list: number[]) {
+        for (const item_id of list) {
+            const element = document.querySelector(`.tree__item[data-id="${item_id}"]`) as HTMLElement;
+            if (element) element.classList.add('selected');
+        }
+        listSelected = list;
     }
 
     function draw_graph(list: Item[], scene_name?: string, is_hide_allSub = false, is_clear_state = false, is_load_scene = false) {
@@ -2498,5 +2516,5 @@ function TreeControlCreate() {
     }
 
     init();
-    return { draw_graph, preRename, setCutList, paintIdentical };
+    return { set_selected_items, draw_graph, preRename, setCutList, paintIdentical };
 }

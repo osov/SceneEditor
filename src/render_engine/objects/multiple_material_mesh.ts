@@ -38,8 +38,6 @@ export class MultipleMaterialMesh extends EntityPlane {
         return this.textures[index];
     }
 
-    // TODO: нету еще детей когда сериализуется
-
     set_scale(x: number, y: number): void {
         if (!this.children[0]) return;
         this.children[0].scale.setScalar(Math.max(x, y) * WORLD_SCALAR);
