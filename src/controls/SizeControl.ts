@@ -15,9 +15,9 @@ export function register_size_control() {
     (window as any).SizeControl = SizeControlCreate();
 }
 
-const DEBUG_BB_POINT_SIZE_MIN = 0.1; // NOTE: минимальный размер точки (не зависит от растояния)
-const DEBUG_BB_POINT_MAX_SIZE_PERCENT = 0.15; // NOTE: максимальный размер точки в процентах от растояния
-const DEBUG_BB_POINT_SIZE_MAX = 3; // NOTE: самый большой возможный размер точки (не от растояния)
+const DEBUG_BB_POINT_SIZE_MIN = 0.03; // NOTE: минимальный размер точки (не зависит от растояния)
+const DEBUG_BB_POINT_MAX_SIZE_PERCENT = 0.04; // NOTE: максимальный размер точки в процентах от растояния
+const DEBUG_BB_POINT_SIZE_MAX = 0.1; // NOTE: самый большой возможный размер точки (не от растояния)
 
 // todo
 // модуль не умеет правильно работать если сделан scale в минус или rotation(точки не строит правильно)
