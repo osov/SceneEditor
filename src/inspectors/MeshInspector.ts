@@ -1394,12 +1394,10 @@ function MeshInspectorCreate() {
                     if (is_playing) {
                         mesh.stop();
                     } else {
-                        // NOTE: для того чтобы сменить кнопку по окончанию проигрывания звука
-                        AudioManager.set_end_callback(mesh.get_id(), () => {
+                        mesh.play(() => {
+                            // NOTE: для того чтобы сменить кнопку по окончанию проигрывания звука
                             set_selected_meshes(_selected_meshes);
                         });
-
-                        mesh.play();
                     }
 
                     // NOTE: для того чтобы сменить кнопку

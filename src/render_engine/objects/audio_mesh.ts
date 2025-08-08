@@ -279,10 +279,13 @@ export class AudioMesh extends EntityBase {
         return this.fadeOutTime;
     }
 
-    play() {
+    play(complete_function?: () => void) {
         if (this.sound == '' || !this.get_active()) return;
 
-        Sound.play(SceneManager.get_mesh_url_by_id(this.get_id()));
+        Sound.play(SceneManager.get_mesh_url_by_id(this.get_id()), () => {
+            if (this.loop) this.play(complete_function);
+            else if (complete_function) complete_function();
+        });
         MeshInspector.force_refresh();
     }
 

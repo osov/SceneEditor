@@ -13,7 +13,7 @@ declare global {
                 pan?: number,
                 speed?: number
             },
-            complete_function?: (self: IBaseEntityAndThree, message_id: string, message: { play_id: number }, sender: string) => void
+            complete_function?: (self: unknown, message_id: string, message: { play_id: number }, sender: string) => void
         ): number;
         export function stop(url: string | hash): void;
         export function pause(url: string | hash, pause: boolean): void;
@@ -66,8 +66,6 @@ export function sound_module() {
         } else {
             AudioManager.play(id, false, properties.gain, properties.speed, properties.pan);
         }
-
-        MeshInspector.force_refresh();
 
         return id;
     }

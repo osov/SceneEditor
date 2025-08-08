@@ -1,3 +1,4 @@
+import { IBaseEntityAndThree } from '@editor/render_engine/types';
 import '../defold/vmath';
 import { calculate_distance_2d } from './utils';
 
@@ -362,7 +363,7 @@ function SoundModule() {
         }
     }
 
-    function play(url: string | hash): void {
+    function play(url: string | hash, complete_function?: () => void): void {
         const instance = instances.get(url);
         if (!instance || instance.isActive) return;
 
@@ -382,6 +383,13 @@ function SoundModule() {
             gain: 0,
             pan: instance.data.pan,
             speed: instance.data.speed
+        }, (self: unknown, message_id: string, message: {
+            play_id: number;
+        }, sender: string) => {
+            instance.isActive = false;
+            if (message_id == "sound_done" && complete_function) {
+                complete_function();
+            }
         });
     }
 
