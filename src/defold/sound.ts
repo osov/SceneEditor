@@ -73,7 +73,6 @@ export function sound_module() {
     function stop(url: string | hash): void {
         const id = uh_to_id(url);
         AudioManager.stop(id);
-        MeshInspector.force_refresh();
     }
 
     function pause(url: string | hash, pause: boolean): void {

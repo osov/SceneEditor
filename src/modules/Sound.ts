@@ -56,6 +56,7 @@ interface SoundInstance {
     forceControl: boolean;
     isActive: boolean;
     isEnabled: boolean;
+    off: boolean;
 }
 
 declare global {
@@ -119,7 +120,8 @@ function SoundModule() {
             fadeDuration: 0,
             forceControl: false,
             isActive: false,
-            isEnabled: true
+            isEnabled: true,
+            off: true
         };
 
         // NOTE: мы же можем использовать этот ивент для обновления ? как вариант вручную где-то потом вызывать update_sound
@@ -143,6 +145,10 @@ function SoundModule() {
     function update(url: string | hash): void {
         const instance = instances.get(url);
         if (!instance) {
+            return;
+        }
+
+        if (instance.off) {
             return;
         }
 
@@ -626,6 +632,22 @@ function SoundModule() {
         instance.isEnabled = active;
     }
 
+    function set_off(url: string | hash, state: boolean): void {
+        const instance = instances.get(url);
+        if (!instance) return;
+
+        instance.off = state;
+
+        if (state) {
+            stop(url);
+        }
+    }
+
+    function is_off(url: string | hash): boolean {
+        const instance = instances.get(url);
+        return !instance || instance.off;
+    }
+
     return {
         create,
         remove,
@@ -662,6 +684,8 @@ function SoundModule() {
         set_sound_pan,
         set_sound_speed,
         set_sound_loop,
-        set_active
+        set_active,
+        set_off,
+        is_off
     };
 } 

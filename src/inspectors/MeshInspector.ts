@@ -1385,26 +1385,43 @@ function MeshInspectorCreate() {
             onChange: handleSoundFunctionChange
         });
 
-        if (mesh.get_sound() != '' && !mesh.is_spatial()) {
-            const is_playing = mesh.is_playing();
-            audio_fields.push({
-                key: is_playing ? MeshProperty.STOP : MeshProperty.PLAY,
-                title: is_playing ? MeshPropertyTitle.STOP : MeshPropertyTitle.PLAY,
-                value: () => {
-                    if (is_playing) {
-                        mesh.stop();
-                    } else {
-                        mesh.play(() => {
-                            // NOTE: для того чтобы сменить кнопку по окончанию проигрывания звука
-                            set_selected_meshes(_selected_meshes);
-                        });
-                    }
+        if (mesh.get_sound() != '') {
+            if (!mesh.is_spatial()) {
+                const sound_url = SceneManager.get_mesh_url_by_id(mesh.get_id());
+                const is_playing = mesh.is_playing();
+                audio_fields.push({
+                    key: is_playing ? MeshProperty.STOP : MeshProperty.PLAY,
+                    title: is_playing ? MeshPropertyTitle.STOP : MeshPropertyTitle.PLAY,
+                    value: () => {
+                        if (is_playing) {
+                            mesh.stop();
+                            Sound.set_off(sound_url, true);
+                        } else {
+                            Sound.set_off(sound_url, false);
+                            mesh.play(() => {
+                                // NOTE: для того чтобы сменить кнопку по окончанию проигрывания звука
+                                set_selected_meshes(_selected_meshes);
+                            });
+                        }
 
-                    // NOTE: для того чтобы сменить кнопку
-                    set_selected_meshes(_selected_meshes);
-                },
-                type: PropertyType.BUTTON,
-            });
+                        // NOTE: для того чтобы сменить кнопку
+                        set_selected_meshes(_selected_meshes);
+                    },
+                    type: PropertyType.BUTTON,
+                });
+            } else {
+                const sound_url = SceneManager.get_mesh_url_by_id(mesh.get_id());
+                const is_off = Sound.is_off(sound_url);
+                audio_fields.push({
+                    key: !is_off ? MeshProperty.STOP : MeshProperty.PLAY,
+                    title: !is_off ? MeshPropertyTitle.STOP : MeshPropertyTitle.PLAY,
+                    value: () => {
+                        Sound.set_off(sound_url, !is_off);
+                        set_selected_meshes(_selected_meshes);
+                    },
+                    type: PropertyType.BUTTON,
+                });
+            }
         }
 
         fields.push({
