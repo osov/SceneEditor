@@ -118,6 +118,7 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
 
                     const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
                     plane.position.set(x, y, z);
+                    (plane as any).tile_z = z;
                     plane.set_texture(tile_info.name, tile_info.atlas);
                     used_textures.push(tile_info.name);
                     apply_tile_transform(plane, tile.id);
@@ -173,6 +174,7 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                         const z = get_depth(x, y, id_layer, tile_w, tile_h);
                         const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
                         plane.position.set(x, y, z);
+                        (plane as any).tile_z = z;
                         plane.set_texture(tile_info.name, tile_info.atlas);
                         used_textures.push(tile_info.name);
                         apply_tile_transform(plane, tile.tile_id);

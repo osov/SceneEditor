@@ -8,9 +8,11 @@ import { MaterialUniformType } from "./resource_manager";
 import { get_hash_by_mesh } from "@editor/inspectors/ui_utils";
 import { convertThreeJSBlendingToBlendMode, convertBlendModeToThreeJS } from "@editor/inspectors/helpers";
 import { BlendMode } from "@editor/inspectors/MeshInspector";
+import { get_depth } from "./parsers/tile_parser";
 
 export type TilesInfo =
-    TDictionary<{ texture?: string, layers_mask?: number, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }>;
+    TDictionary<{ texture?: string, layers_mask?: number, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any>, z?: number }>;
+
 
 export function TilePatcher(tilemap_path: string) {
     const tilemap_name = get_file_name(tilemap_path);
@@ -27,7 +29,7 @@ export function TilePatcher(tilemap_path: string) {
         const path = `${dir}/${tilemap_name}.${TILES_INFO_EXT}`
 
         const filename = get_file_name(path);
-        const tiles_data: TDictionary<{ texture?: string, layers_mask?: number, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any> }> = {};
+        const tiles_data: TilesInfo = {};
         SceneManager.get_scene_list().forEach(mesh => {
             if (!is_tile(mesh)) return;
 
@@ -105,6 +107,14 @@ export function TilePatcher(tilemap_path: string) {
                     tiles_data[hash].uniforms = uniforms;
                 }
             }
+
+            if ((mesh as any).tile_z != undefined){
+                const src_z = (mesh as any).tile_z as number;
+                if (math.abs(src_z - mesh.position.z) > 0.0001){
+                    if (!tiles_data[hash]) tiles_data[hash] = {};
+                    tiles_data[hash].z = mesh.position.z;
+                }
+            }
         });
 
         const r = await ClientAPI.save_data(path, JSON.stringify(tiles_data));
@@ -171,6 +181,9 @@ export function TilePatcher(tilemap_path: string) {
                     });
                 }
             }
+
+            if (info.z != undefined)
+                sprite.position.z = info.z;
         });
     }
 
