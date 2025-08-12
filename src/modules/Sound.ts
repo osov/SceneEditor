@@ -1,4 +1,3 @@
-import { IBaseEntityAndThree } from '@editor/render_engine/types';
 import '../defold/vmath';
 import { calculate_distance_2d } from './utils';
 
@@ -89,7 +88,7 @@ function SoundModule() {
     ): string | hash {
 
         // TODO: нужен лучший способ проверки существования звука
-        if (!sound.get_gain(url)) {
+        if (!go.get(url, "gain")) {
             Log.error('Sound not found or not set');
             return -1;
         }
@@ -104,8 +103,8 @@ function SoundModule() {
                 soundFunction,
                 fadeInTime: Math.max(0, fadeInTime),
                 fadeOutTime: Math.max(0, fadeOutTime),
-                speed: sound.get_speed(url),
-                pan: sound.get_pan(url),
+                speed: go.get(url, "speed"),
+                pan: go.get(url, "pan"),
                 loop: false,
                 zoneType,
                 rectangleWidth: Math.max(0, rectangleWidth),
@@ -611,7 +610,7 @@ function SoundModule() {
         if (!instance) return;
 
         instance.data.speed = speed;
-        sound.set_speed(url, speed);
+        go.set(url, "speed", speed);
     }
 
     function set_sound_loop(url: string | hash, loop: boolean): void {
@@ -619,10 +618,7 @@ function SoundModule() {
         if (!instance) return;
 
         instance.data.loop = loop;
-        const id = SceneManager.get_mesh_id_by_url(url as string);
-        if (id != -1) {
-            AudioManager.set_loop(id, loop);
-        }
+        go.set(url, "loop", loop);
     }
 
     function set_active(url: string | hash, active: boolean): void {

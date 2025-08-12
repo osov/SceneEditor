@@ -89,29 +89,9 @@ export function sound_module() {
         AudioManager.set_volume(id, gain);
     }
 
-    function get_gain(url: string | hash): number {
-        const id = uh_to_id(url);
-        return AudioManager.get_volume(id);
-    }
-
     function set_pan(url: string | hash, pan: number): void {
         const id = uh_to_id(url);
         AudioManager.set_pan(id, pan);
-    }
-
-    function get_pan(url: string | hash): number {
-        const id = uh_to_id(url);
-        return AudioManager.get_pan(id);
-    }
-
-    function set_speed(url: string | hash, speed: number): void {
-        const id = uh_to_id(url);
-        AudioManager.set_speed(id, speed);
-    }
-
-    function get_speed(url: string | hash): number {
-        const id = uh_to_id(url);
-        return AudioManager.get_speed(id);
     }
 
     return {
@@ -119,10 +99,6 @@ export function sound_module() {
         stop,
         pause,
         set_gain,
-        get_gain,
         set_pan,
-        get_pan,
-        set_speed,
-        get_speed
     };
 }

@@ -253,6 +253,18 @@ export function go_module() {
             Log.error(`Mesh with url ${url} not found`);
             return null;
         }
+        if (property == 'gain') {
+            const id = uh_to_id(url);
+            return AudioManager.get_volume(id);
+        }
+        if (property == 'pan') {
+            const id = uh_to_id(url);
+            return AudioManager.get_pan(id);
+        }
+        if (property == 'speed') {
+            const id = uh_to_id(url);
+            return AudioManager.get_speed(id);
+        }
         return get_nested_property(mesh, property);
     }
 
@@ -265,6 +277,17 @@ export function go_module() {
         if (['position', 'rotation', 'scale', 'euler.z'].includes(property) && mesh.type != IObjectTypes.GO_CONTAINER) {
             Log.error(`Mesh with id ${url} is not go property:`, property);
             return;
+        }
+        if (property == 'speed') {
+            const id = uh_to_id(url);
+            AudioManager.set_speed(id, value);
+            return;
+        }
+        if (property == 'loop') {
+            const id = SceneManager.get_mesh_id_by_url(url as string);
+            if (id != -1) {
+                AudioManager.set_loop(id, value);
+            }
         }
         set_nested_property(mesh, property, value);
     }

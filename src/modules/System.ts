@@ -12,8 +12,8 @@ function SystemModule() {
         return Math.floor(Date.now() / 1000);
     }
 
-    function now_ms () {
-        return Date.now() ;
+    function now_ms() {
+        return Date.now();
     }
 
     function now_with_ms() {
@@ -21,5 +21,5 @@ function SystemModule() {
     }
 
 
-    return { now, now_ms,now_with_ms  };
+    return { now, now_ms, now_with_ms };
 }
