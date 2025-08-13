@@ -27,6 +27,10 @@ const DEFAULT_RECTANGLE_MAX_VOLUME_WIDTH = DEFAULT_RECTANGLE_WIDTH;
 const DEFAULT_RECTANGLE_MAX_VOLUME_HEIGHT = DEFAULT_RECTANGLE_HEIGHT;
 
 interface SoundData {
+    position: vmath.vector3;
+    speed: number;
+    pan: number;
+    loop: boolean;
     soundRadius: number;
     maxVolume: number;
     maxVolumeRadius: number;
@@ -34,9 +38,6 @@ interface SoundData {
     soundFunction: SoundFunctionType;
     fadeInTime: number;
     fadeOutTime: number;
-    speed: number;
-    pan: number;
-    loop: boolean;
     zoneType: SoundZoneType;
     rectangleWidth: number;
     rectangleHeight: number;
@@ -73,6 +74,10 @@ function SoundModule() {
 
     function create(
         url: string | hash,
+        position: vmath.vector3 = vmath.vector3(0, 0, 0),
+        speed: number = 1,
+        pan: number = 0,
+        loop: boolean = false,
         soundRadius: number = DEFAULT_SOUND_RADIUS,
         maxVolume: number = DEFAULT_MAX_VOLUME,
         maxVolumeRadius: number = DEFAULT_MAX_VOLUME_RADIUS,
@@ -96,6 +101,10 @@ function SoundModule() {
         const instance: SoundInstance = {
             url,
             data: {
+                position,
+                speed,
+                pan,
+                loop,
                 soundRadius: Math.max(0, soundRadius),
                 maxVolume: Math.max(0, maxVolume),
                 maxVolumeRadius: Math.max(0, maxVolumeRadius),
@@ -103,9 +112,6 @@ function SoundModule() {
                 soundFunction,
                 fadeInTime: Math.max(0, fadeInTime),
                 fadeOutTime: Math.max(0, fadeOutTime),
-                speed: go.get(url, "speed"),
-                pan: go.get(url, "pan"),
-                loop: false,
                 zoneType,
                 rectangleWidth: Math.max(0, rectangleWidth),
                 rectangleHeight: Math.max(0, rectangleHeight),
@@ -165,7 +171,7 @@ function SoundModule() {
                 instance.data.rectangleWidth == 0 && instance.data.rectangleHeight == 0);
 
         const listenerPosition = get_listener_position();
-        const soundPosition = go.get_world_position(url);
+        const soundPosition = instance.data.position;
 
         if (!soundPosition) {
             if (instance.isActive) {
@@ -448,6 +454,13 @@ function SoundModule() {
         }
     }
 
+    function set_sound_position(url: string | hash, position: vmath.vector3): void {
+        const instance = instances.get(url);
+        if (!instance) return;
+
+        instance.data.position = position;
+    }
+
     function set_sound_radius(url: string | hash, radius: number): void {
         const instance = instances.get(url);
         if (!instance) return;
@@ -618,7 +631,6 @@ function SoundModule() {
         if (!instance) return;
 
         instance.data.loop = loop;
-        go.set(url, "loop", loop);
     }
 
     function set_active(url: string | hash, active: boolean): void {
@@ -663,6 +675,7 @@ function SoundModule() {
         set_fade_in_time,
         set_fade_out_time,
         set_max_volume,
+        set_sound_position,
         get_max_volume,
         get_sound_radius,
         get_zone_type,

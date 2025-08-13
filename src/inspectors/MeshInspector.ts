@@ -1,5 +1,4 @@
-import { Euler, Quaternion, ShaderMaterial, Vector2, Vector3, Vector4 } from "three";
-import { degToRad, radToDeg } from "three/src/math/MathUtils";
+import { Quaternion, ShaderMaterial, Vector2, Vector3, Vector4 } from "three";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { GoSprite, FlipMode, GuiBox, GuiText } from "../render_engine/objects/sub_types";
 import { TextMesh } from "../render_engine/objects/text";
@@ -1387,7 +1386,6 @@ function MeshInspectorCreate() {
 
         if (mesh.get_sound() != '') {
             if (!mesh.is_spatial()) {
-                const sound_url = SceneManager.get_mesh_url_by_id(mesh.get_id());
                 const is_playing = mesh.is_playing();
                 audio_fields.push({
                     key: is_playing ? MeshProperty.STOP : MeshProperty.PLAY,
@@ -1395,9 +1393,7 @@ function MeshInspectorCreate() {
                     value: () => {
                         if (is_playing) {
                             mesh.stop();
-                            Sound.set_off(sound_url, true);
                         } else {
-                            Sound.set_off(sound_url, false);
                             mesh.play(() => {
                                 // NOTE: для того чтобы сменить кнопку по окончанию проигрывания звука
                                 set_selected_meshes(_selected_meshes);

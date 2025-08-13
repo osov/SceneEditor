@@ -1,10 +1,11 @@
 import { IObjectTypes } from "../types";
 import { EntityBase } from "./entity_base";
 import { DEFAULT_PAN_NORMALIZATION_DISTANCE, DEFAULT_MAX_VOLUME_RADIUS, DEFAULT_SOUND_RADIUS, DEFAULT_FADE_IN_TIME, DEFAULT_FADE_OUT_TIME } from "../../config";
-import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, CircleGeometry, Mesh, MeshBasicMaterial, BoxHelper } from "three";
+import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, CircleGeometry, Mesh, MeshBasicMaterial } from "three";
 
 // NOTE: чтобы использовать без (window as any)
 import "../../modules/Sound";
+import { uh_to_id } from "@editor/defold/utils";
 
 export enum SoundFunctionType {
     LINEAR = 'linear',
@@ -93,6 +94,10 @@ export class AudioMesh extends EntityBase {
         AudioManager.create_audio(name, this.get_id());
         Sound.create(
             SceneManager.get_mesh_url_by_id(this.get_id()),
+            this.position,
+            this.speed,
+            this.pan,
+            this.loop,
             this.soundRadius,
             this.volume,
             this.maxVolumeRadius,
@@ -111,6 +116,12 @@ export class AudioMesh extends EntityBase {
 
     get_sound() {
         return this.sound;
+    }
+
+    set_position(x: number, y: number, z?: number) {
+        z = z == undefined ? this.position.z : z;
+        super.set_position(x, y, z);
+        Sound.set_sound_position(SceneManager.get_mesh_url_by_id(this.get_id()), vmath.vector3(x, y, z));
     }
 
     set_speed(speed: number) {
@@ -142,7 +153,9 @@ export class AudioMesh extends EntityBase {
 
     set_loop(loop: boolean) {
         this.loop = loop;
-        Sound.set_sound_loop(SceneManager.get_mesh_url_by_id(this.get_id()), loop);
+        const url = SceneManager.get_mesh_url_by_id(this.get_id());
+        Sound.set_sound_loop(url, loop);
+        AudioManager.set_loop(uh_to_id(url), loop);
     }
 
     get_loop() {
@@ -281,7 +294,7 @@ export class AudioMesh extends EntityBase {
 
     play(complete_function?: () => void) {
         if (this.sound == '' || !this.get_active()) return;
-
+        Sound.set_off(SceneManager.get_mesh_url_by_id(this.get_id()), false);
         Sound.play(SceneManager.get_mesh_url_by_id(this.get_id()), () => {
             if (this.loop) this.play(complete_function);
             else if (complete_function) complete_function();
@@ -304,6 +317,7 @@ export class AudioMesh extends EntityBase {
     stop() {
         if (this.sound == '' || !this.get_active()) return;
         Sound.stop(SceneManager.get_mesh_url_by_id(this.get_id()));
+        Sound.set_off(SceneManager.get_mesh_url_by_id(this.get_id()), true);
         MeshInspector.force_refresh();
     }
 
@@ -683,6 +697,10 @@ export class AudioMesh extends EntityBase {
     after_deserialize() {
         Sound.create(
             SceneManager.get_mesh_url_by_id(this.get_id()),
+            this.position,
+            this.speed,
+            this.pan,
+            this.loop,
             this.soundRadius,
             this.volume,
             this.maxVolumeRadius,

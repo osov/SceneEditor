@@ -283,12 +283,6 @@ export function go_module() {
             AudioManager.set_speed(id, value);
             return;
         }
-        if (property == 'loop') {
-            const id = SceneManager.get_mesh_id_by_url(url as string);
-            if (id != -1) {
-                AudioManager.set_loop(id, value);
-            }
-        }
         set_nested_property(mesh, property, value);
     }
 
