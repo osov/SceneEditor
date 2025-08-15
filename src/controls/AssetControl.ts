@@ -644,7 +644,11 @@ function AssetControlCreate() {
             callback: async (success, name) => {
                 if (success && name) {
                     const scene_path = await new_scene(current_path, name);
-                    if (scene_path != undefined && set_scene_current) {
+                    if (set_scene_current) {
+                        if (scene_path == undefined) {
+                            Popups.toast.error('Не удалось создать сцену, путь undefined');
+                            return;
+                        }
                         const scene_is_set = await set_current_scene(scene_path);
                         if (scene_is_set && save_scene)
                             save_current_scene();
@@ -662,16 +666,15 @@ function AssetControlCreate() {
             callback: async (success, name) => {
                 if (success && name) {
                     const path = `${current_path}/${name}.${SCENE_EXT}`;
-
                     ResourceManager.cache_scene(path, data);
-
                     // NOTE: для чего сохраянем как IBaseEntityData[] ?
                     const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: [data] }))
                     if (r && r.result)
-                        Popups.toast.success(`Объект ${name} сохранён, путь: ${path}`);
+                        return Popups.toast.success(`Объект ${name} сохранён, путь: ${path}`);
                     else
                         return Popups.toast.error(`Не удалось сохранить объект ${name}`);
                 }
+                return Popups.toast.error(`Не удалось сохранить объект ${name}`);
             }
         });
     }
@@ -1074,6 +1077,10 @@ function AssetControlCreate() {
     }
 
     async function open_scene(path: string) {
+        if (path == undefined) {
+            Log.warn('[open_scene] Попытка открыть сцену, но путь undefined');
+            return;
+        }
         const result = await set_current_scene(path);
         if (result) {
             await load_scene(path);
@@ -1109,6 +1116,10 @@ function AssetControlCreate() {
     }
 
     async function set_current_scene(path: string) {
+        if (path == undefined) {
+            Log.warn('[set_current_scene] Попытка установить сцену, но путь undefined');
+            return false;
+        }
         const resp = await ClientAPI.set_current_scene(path);
         if (!resp || resp.result === 0) {
             Popups.toast.error(`Серверу не удалось установить сцену текущей: ${resp.message}`);
@@ -1268,8 +1279,11 @@ function AssetControlCreate() {
             let to_dir = (current_dir) ? current_dir : "";
 
             await load_project(data, undefined, to_dir);
-            if (current_scene.path)
-                await set_current_scene(current_scene.path);
+            if (current_scene.path == undefined) {
+                Log.warn('[reload_current_project] Не удалось установить сцену, путь undefined');
+                return;
+            }
+            await set_current_scene(current_scene.path);
         }
     }
 
