@@ -337,7 +337,7 @@ function SizeControlCreate() {
                 if (dir[0] == 0 && dir[1] == 0) {
                     // если маленькое смещение и при этом не выделен никакой меш
                     // тк объект выделенный определяем по отпусканию кнопки, то тут мы зажимаем и либо что-то тащим либо нет
-                    if (offset_move < 1 * WORLD_SCALAR) {
+                    if (offset_move < 0.1 * WORLD_SCALAR) {
                         let is_select = false;
                         for (let i = 0; i < selected_list.length; i++) {
                             const selected_go = selected_list[i];
@@ -347,6 +347,7 @@ function SizeControlCreate() {
                             }
                         }
                         if (!is_select) {
+                            //log('Unselect', offset_move, WORLD_SCALAR);
                             if (!Input.is_control())
                                 EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
                             return;
