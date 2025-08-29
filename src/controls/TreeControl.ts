@@ -923,7 +923,7 @@ function TreeControlCreate() {
     }
 
     function scrollToElemInParent(parentBlock: HTMLElement, elem: any) {
-        if (!parentBlock || !elem) return;
+        if (!parentBlock || !elem || isElementInViewport(parentBlock, elem)) return;
 
         if (parentBlock.scrollHeight + 52 > window.innerHeight) {
             elem.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -936,8 +936,10 @@ function TreeControlCreate() {
         const parentRect = parentBlock.getBoundingClientRect();
         const elemRect = elem.getBoundingClientRect();
 
-        return elemRect.top >= parentRect.top &&
-            elemRect.bottom <= parentRect.bottom;
+        const padding = 20;
+
+        return elemRect.top >= parentRect.top + padding &&
+            elemRect.bottom <= parentRect.bottom - padding;
     }
 
     function scrollToLastSelected() {
