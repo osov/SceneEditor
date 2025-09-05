@@ -56,28 +56,32 @@ export function RenderEngineModule() {
         camera_gui.layers.enable(DC_LAYERS.GUI_LAYER)
     }
 
+    let ticks = 0;
     function animate() {
+        ticks++;
         requestAnimationFrame(animate)
-        const delta = clock.getDelta();
-        if (resize_renderer_to_display_size(renderer))
-            on_resize();
-        EventBus.trigger('SYS_ON_UPDATE', { dt: delta }, false);
-        if (_is_active_render) {
-            renderer.clear();
-            renderer.render(scene, camera);
-            if (is_active_gui_camera) {
-                renderer.clearDepth();
-                renderer.render(scene, camera_gui);
+        if (ticks % 2 == 0) {
+            const delta = clock.getDelta();
+            if (resize_renderer_to_display_size(renderer))
+                on_resize();
+            EventBus.trigger('SYS_ON_UPDATE', { dt: delta }, false);
+            if (_is_active_render) {
+                renderer.clear();
+                renderer.render(scene, camera);
+                if (is_active_gui_camera) {
+                    renderer.clearDepth();
+                    renderer.render(scene, camera_gui);
+                }
             }
-        }
-        EventBus.trigger('SYS_ON_UPDATE_END', { dt: delta }, false);
-        // controls рисуем позже чем тригер чтобы верно посчитать DC
-        if (_is_active_render) {
-            const mask = camera.layers.mask;
-            camera.layers.set(DC_LAYERS.CONTROLS_LAYER);
-            renderer.clearDepth();
-            renderer.render(scene, camera);
-            camera.layers.mask = mask;
+            EventBus.trigger('SYS_ON_UPDATE_END', { dt: delta }, false);
+            // controls рисуем позже чем тригер чтобы верно посчитать DC
+            if (_is_active_render) {
+                const mask = camera.layers.mask;
+                camera.layers.set(DC_LAYERS.CONTROLS_LAYER);
+                renderer.clearDepth();
+                renderer.render(scene, camera);
+                camera.layers.mask = mask;
+            }
         }
     }
 

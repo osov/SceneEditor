@@ -76,7 +76,7 @@ export function MovementManagerCreate(model: AnimatedMesh, obstacles: Line<any>[
         }
         const angle_rad = deg2rad(angle);
         player.setAngle(angle_rad, true);
-        player.move(move, true);
+        player.move(speed * e.dt, true);
         system.checkOne(player, (r) => {
             const { a, b, overlapV } = r;
             if (a === player)
