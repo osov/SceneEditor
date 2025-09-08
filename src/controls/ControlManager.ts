@@ -110,9 +110,10 @@ function ControlManagerCreate() {
         if (params.has("stats")) {
             const div = document.createElement('div');
             div.style.cssText = ' position: absolute;z-index: 10000;top: 50px;left: 45px;font-size: 12px;';
-            div.innerHTML = 'Draw Call: <span id="draw_call">100</span>';
+            div.innerHTML = 'Draw Call: <span id="draw_call">100</span><br>Zoom: <span id="zoom">' + CameraControl.get_zoom().toFixed(2) + '</span>';
             document.body.appendChild(div);
             const div_dc = document.getElementById('draw_call')!;
+            const div_zoom = document.getElementById('zoom')!;
             const stats = new Stats();
             stats.dom.style.cssText = 'position:fixed;top:0;left:45px;cursor:pointer;opacity:0.9;z-index:10000';
             stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
@@ -124,6 +125,7 @@ function ControlManagerCreate() {
                     div_dc.innerHTML = RenderEngine.renderer.info.render.calls.toString();
                 else
                     div_dc.innerHTML = current_draw_call.toString();
+                    div_zoom.innerHTML = CameraControl.get_zoom().toFixed(2);
             });
         }
     }
