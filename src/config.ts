@@ -2,7 +2,7 @@ export const TARGET_DISPLAY_WIDTH = 960;
 export const TARGET_DISPLAY_HEIGHT = 540;
 
 export const IS_CAMERA_ORTHOGRAPHIC = new URLSearchParams(document.location.search).get('perspective') == null ? true : false;
-export const CAMERA_FAR = new URLSearchParams(document.location.search).get('far') ? parseInt(new URLSearchParams(document.location.search).get('far')!) : 15000;
+export const CAMERA_FAR = new URLSearchParams(document.location.search).get('far') ? parseInt(new URLSearchParams(document.location.search).get('far')!) : 20000;
 export const CAMERA_Z = CAMERA_FAR - 1;
 export const WORLD_SCALAR = new URLSearchParams(document.location.search).get('ws') ? parseFloat(new URLSearchParams(document.location.search).get('ws')!) : 1 / 10;
 export const DEFOLD_LIMITS = !true;
