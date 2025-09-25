@@ -174,7 +174,7 @@ export function createCameraPerspectiveControl(camera: PerspectiveCamera, domEle
 
     function update(delta = 0.03) {
         if (!enabled) return;
-       // if (delta > 0.1) delta = 0.1;
+        // if (delta > 0.1) delta = 0.1;
         _eye.subVectors(getObject().position, target);
         const velocity = new Vector3();
         delta *= 0.7;

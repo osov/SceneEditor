@@ -101,18 +101,50 @@ export interface RenderMapData {
     objects_layers: RenderObjectLayer[]
 }
 
+let bb_min = vmath.vector3();
+let bb_max = vmath.vector3();
 
-let cor_x = 0;
-let cor_y = 0;
-export function set_correction_xy(x: number, y: number) {
-    cor_x = x;
-    cor_y = y;
+export function set_world_bounds(min: vmath.vector3, max: vmath.vector3) {
+    bb_min = min;
+    bb_max = max;
+}
+
+export function get_world_bounds() {
+    return { min: bb_min, max: bb_max };
 }
 
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
-    return id_layer * 1000 - (y - height / 2 - cor_y) * 5;
+    const sort_layer = parseInt(new URLSearchParams(document.location.search).get('layer') || '0');
+    return get_depth_fix(y, height, id_layer, sort_layer);
 }
 
+const Y_MIN = -1000;
+const Y_MAX = 1000;
+const STEP_BASE = 0.1;
+const STEP_SORT = 5;
+function calculate_depth(y: number, step: number, id_layer = 0) {
+    const size = Y_MAX - Y_MIN;
+    const cur_y = Y_MAX + y; // 0..size
+    const norm_y = 1 - cur_y / size; // 1..0
+    const val = norm_y * step * size; // 0..size * step
+    const layer_depth = id_layer * step * size;
+    return layer_depth + val;
+}
+
+export function get_depth_fix(y: number, height: number, id_layer: number, sort_layer: number) {
+    y -= height / 2;
+    const cor_y = calculate_depth(Y_MIN, STEP_BASE, 0) * 0;
+    if (id_layer < sort_layer)
+        return calculate_depth(y, STEP_BASE, id_layer) + cor_y;
+    const max_y_before_sort = calculate_depth(Y_MIN, STEP_BASE, sort_layer - 1) + cor_y;
+    if (id_layer == sort_layer)
+        return max_y_before_sort + calculate_depth(y, STEP_SORT, 0);
+    const max_sort_layer = calculate_depth(Y_MIN, STEP_SORT, 0) + max_y_before_sort;
+    return max_sort_layer + calculate_depth(y, STEP_BASE, id_layer - sort_layer) + cor_y;
+}
+(window as any).calculate_depth = calculate_depth;
+(window as any).get_depth_fix = get_depth_fix;
+(window as any).get_depth = get_depth;
 
 const tiled_textures_data: { [atlas: string]: { [id: string]: LoadedTileInfo } } = {};
 let tile_sets_data: TileSets = [];
@@ -120,7 +152,7 @@ function preload_tile_texture(id: string, path: string, atlas: string, w: number
     atlas = get_file_name(atlas);
     if (!tiled_textures_data[atlas])
         tiled_textures_data[atlas] = {};
-    tiled_textures_data[atlas][id] = { name: get_file_name(path), w, h, atlas:'' }; // todo debug
+    tiled_textures_data[atlas][id] = { name: get_file_name(path), w, h, atlas: '' }; // todo debug
 }
 
 
@@ -159,7 +191,7 @@ export function set_tileset(tilesets: TileSets) {
     for (let i = 0; i < tilesets.length; i++) {
         const ts = tilesets[i];
         tile_sets_data.push([ts[0], ts[1]]);
-        
+
     }
 }
 

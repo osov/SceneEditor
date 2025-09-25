@@ -1,7 +1,7 @@
 import { Vector3, Vector2, Line, BufferGeometry, LineBasicMaterial } from "three";
 import { CAMERA_Z } from "../config";
 import { make_ramk, rotate_point } from "./helpers/utils";
-import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo, preload_tiled_textures, TileInfo, set_correction_xy, set_tileset, RenderMapData } from "./parsers/tile_parser";
+import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo, preload_tiled_textures, TileInfo, set_world_bounds, set_tileset, RenderMapData } from "./parsers/tile_parser";
 import { IObjectTypes } from "./types";
 import { GoContainer, GoSprite } from "./objects/sub_types";
 
@@ -75,7 +75,7 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
         //r.position.set(bb_min.x + (bb_max.x - bb_min.x) / 2, bb_min.y + (bb_max.y - bb_min.y) / 2, 0);
         //log(bb_min, bb_max)
         //log(bb_min.x, bb_max.y)
-        return [bb_min.x, bb_max.y];
+        return [bb_min, bb_max];
     }
 
     function load(map_data: MapData, tiles_data: TileInfo, debug_lines = true) {
@@ -83,9 +83,9 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
         const render_data = parse_tiled(map_data);
         set_tileset(map_data.tilesets);
         preload_tiled_textures(tiles_data);
-        const [cor_x, cor_y] = calc_bb(render_data);
-        set_correction_xy(cor_x, cor_y);
-        log("correction XY:", cor_x, cor_y);
+        const [min, max] = calc_bb(render_data);
+        set_world_bounds(min, max);
+        log("correction:", min, max);
         const used_textures = [];
         // TILES
         for (let layer of render_data.layers) {
