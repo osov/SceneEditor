@@ -80,6 +80,7 @@ interface RenderLayer {
 export interface RenderTileObject {
     x: number;
     y: number;
+    y_src: number;
     width: number;
     height: number
     tile_id: number
@@ -245,6 +246,7 @@ function create_objects(obj_layer: ObjectLayer) {
             const data: RenderTileObject = {
                 x: new_pos.x,
                 y: new_pos.y,
+                y_src: 0,
                 width: 0,
                 height: 0,
                 tile_id: -1,
@@ -258,10 +260,12 @@ function create_objects(obj_layer: ObjectLayer) {
             objects.push(data);
         }
         else {
+            const new_pos_tmp = rotate_point(new Vector3(obj.x, -obj.y, 0), new Vector2(obj.w, obj.h), 0);
             const new_pos = rotate_point(new Vector3(obj.x, -obj.y, 0), new Vector2(obj.w, obj.h), obj.r != undefined ? -obj.r : 0);
             const data: RenderTileObject = {
                 x: new_pos.x + obj.w / 2,
                 y: new_pos.y + obj.h / 2,
+                y_src: new_pos_tmp.y + obj.h / 2,
                 width: obj.w,
                 height: obj.h,
                 tile_id: obj.tid,

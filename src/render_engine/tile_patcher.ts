@@ -108,9 +108,9 @@ export function TilePatcher(tilemap_path: string) {
                 }
             }
 
-            if ((mesh as any).tile_z != undefined){
+            if ((mesh as any).tile_z != undefined) {
                 const src_z = (mesh as any).tile_z as number;
-                if (math.abs(src_z - mesh.position.z) > 0.0001){
+                if (math.abs(src_z - mesh.position.z) > 0.0001) {
                     if (!tiles_data[hash]) tiles_data[hash] = {};
                     tiles_data[hash].z = mesh.position.z;
                 }
@@ -182,8 +182,11 @@ export function TilePatcher(tilemap_path: string) {
                 }
             }
 
-            if (info.z != undefined)
+            if (info.z != undefined) {
                 sprite.position.z = info.z;
+                //sprite.set_color('#f00');
+                //log('other Z', sprite.name);
+            }
         });
     }
 

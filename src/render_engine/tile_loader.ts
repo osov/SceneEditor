@@ -115,7 +115,6 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                     x = new_pos.x + tile_w / 2;
                     y = new_pos.y + tile_h / 2;
                     const z = get_depth(x, y, id_layer, tile_w, tile_h);
-
                     const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
                     plane.position.set(x, y, z);
                     (plane as any).tile_z = z;
@@ -171,7 +170,8 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                         const tile_h = tile.height * SUB_SCALAR;
                         const x = tile.x * SUB_SCALAR;
                         const y = tile.y * SUB_SCALAR;
-                        const z = get_depth(x, y, id_layer, tile_w, tile_h);
+                        const y_depth = tile.y_src * SUB_SCALAR;
+                        const z = get_depth(x, y_depth, id_layer, tile_w, tile_h);
                         const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
                         plane.position.set(x, y, z);
                         (plane as any).tile_z = z;
