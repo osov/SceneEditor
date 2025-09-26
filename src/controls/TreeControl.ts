@@ -2352,13 +2352,9 @@ function TreeControlCreate() {
         }
     }
 
-    function onKeyDown(event: KeyboardEvent) {
-        const hasSelectedItems = listSelected.length > 0;
-        if (!hasSelectedItems) {
-            if (!(event.target as HTMLElement)?.closest('.tree_div') && document.activeElement?.tagName !== 'BODY') {
-                return;
-            }
-        }
+    function onKeyDown(event: any) {
+        if (!((event.target as HTMLElement)!.closest('.tree_div') || (event.target as HTMLElement)!.tagName == 'BODY'))
+            return;
 
         if ((event.target as HTMLElement)?.closest('.tree__item_name[contenteditable="true"]')) {
             return;

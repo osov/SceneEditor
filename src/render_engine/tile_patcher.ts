@@ -185,7 +185,7 @@ export function TilePatcher(tilemap_path: string) {
             if (info.z != undefined) {
                 sprite.position.z = info.z;
                 //sprite.set_color('#f00');
-                //log('other Z', sprite.name);
+                log('other Z', sprite.name);
             }
         });
     }

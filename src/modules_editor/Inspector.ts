@@ -204,6 +204,13 @@ function InspectorModule() {
         const tp_to = document.querySelector('.tp-thumbv_ovl') as HTMLDivElement;
         if (tp_to) tp_to.classList.add('my_scroll');
 
+        document.querySelectorAll(".tp-lblv").forEach(el => {
+            const label = el.querySelector(".tp-lblv_l")! as HTMLElement;
+            const value = el.querySelector(".tp-lblv_v")! as HTMLElement;
+            if (label && value && label.textContent!.trim() === "Позиция")
+                value.style.width = "225px";
+        });
+
         // Find all texture preview thumbnails and add click handlers
         // TODO: перенести в плагин как колбэк
         const thumbnails = document.querySelectorAll('.tp-thumbv_sopt .tp-thumbv_sthmb .tp-thumbv_img');
