@@ -8,16 +8,16 @@ import "../../modules/Sound";
 import { uh_to_id } from "@editor/defold/utils";
 
 export enum SoundFunctionType {
-    LINEAR = 'linear',
-    EXPONENTIAL = 'exponential',
-    QUADRATIC = 'quadratic',
-    INVERSE_QUADRATIC = 'inverse_quadratic',
-    SMOOTH_STEP = 'smooth_step'
+    LINEAR,
+    EXPONENTIAL,
+    QUADRATIC,
+    INVERSE_QUADRATIC,
+    SMOOTH_STEP
 }
 
 export enum SoundZoneType {
-    CIRCULAR = 'circular',
-    RECTANGULAR = 'rectangular'
+    CIRCULAR,
+    RECTANGULAR
 }
 
 export interface AudioSerializeData {

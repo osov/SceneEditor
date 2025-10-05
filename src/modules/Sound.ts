@@ -3,16 +3,16 @@ import { calculate_distance_2d } from './utils';
 
 
 export enum SoundFunctionType {
-    LINEAR = 'linear',
-    EXPONENTIAL = 'exponential',
-    QUADRATIC = 'quadratic',
-    INVERSE_QUADRATIC = 'inverse_quadratic',
-    SMOOTH_STEP = 'smooth_step'
+    LINEAR,
+    EXPONENTIAL,
+    QUADRATIC,
+    INVERSE_QUADRATIC,
+    SMOOTH_STEP
 }
 
 export enum SoundZoneType {
-    CIRCULAR = 'circular',
-    RECTANGULAR = 'rectangular'
+    CIRCULAR,
+    RECTANGULAR
 }
 
 const DEFAULT_SOUND_RADIUS = 0;
