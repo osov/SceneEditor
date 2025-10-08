@@ -5,8 +5,9 @@ export function do_response(data: any, stringify = true, status?: number, reques
     let origin = request?.headers.get("Origin");
     const headers: Record<string, string> = {
         "Access-Control-Allow-Headers": "Content-Type, X-Session-ID, Authorization",
-        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
         "Access-Control-Allow-Credentials": "true",
+        "Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
          "Cache-Control": "public, max-age=" + (cached ? 31536000 : 0)
     };
     if (origin) headers["Access-Control-Allow-Origin"] = origin;

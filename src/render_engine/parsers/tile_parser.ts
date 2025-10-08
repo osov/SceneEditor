@@ -3,14 +3,12 @@ import { get_file_name, rotate_point } from "../helpers/utils";
 import { IBaseEntityAndThree } from "../types";
 import { FlipMode, GoSprite } from "../objects/sub_types";
 
-
 // Флаги Tiled для отражения и вращения
-const FLIP_HORIZONTALLY_FLAG = 0x80000000;
-const FLIP_VERTICALLY_FLAG = 0x40000000;
-const FLIP_DIAGONALLY_FLAG = 0x20000000;
+export const FLIP_HORIZONTALLY_FLAG = 0x80000000;
+export const FLIP_VERTICALLY_FLAG = 0x40000000;
+export const FLIP_DIAGONALLY_FLAG = 0x20000000;
 export const TILE_FLIP_MASK = 0x1FFFFFFF;
 
-// Интерфейсы данных JSON
 interface Chunk {
     x: number;
     y: number;
@@ -38,16 +36,25 @@ export interface LoadedTileInfo {
     h: number;
 }
 
+export interface TextData{
+    value:string
+    wrap?:boolean
+    bold?:boolean
+    halign?:string
+    fontfamily?:string // default "sans-serif"
+    pixelsize?:number // default 16
+}
 export interface TileObject {
-    x: number;
-    y: number;
-    w: number;
+    x: number
+    y: number
+    w: number
     h: number
     tid: number
     id: number
     r?: number
     polygon?: number[]
     polyline?: number[]
+    text?:TextData
 }
 
 interface ObjectLayer {
@@ -57,11 +64,14 @@ interface ObjectLayer {
 }
 
 export type TileInfo = { [tile_set: string]: { [id: string]: TileData } };
+
 export type TileSets = [string, number][];
+
 export interface MapData {
-    tilesets: TileSets;
+    tilesets: TileSets
     layers: Layer[]
     objects: ObjectLayer[]
+    sort_layer: number
 }
 
 
@@ -87,7 +97,16 @@ export interface RenderTileObject {
     id_object: number;
     rotation?: number
     polygon?: Vector2[]
-    polyline?: Vector2[]
+    polyline?:Vector2[]
+}
+
+export interface RenderTextObject {
+    x: number;
+    y: number;
+    width: number;
+    height: number
+    rotation?: number
+    text:TextData
 }
 
 interface RenderObjectLayer {
@@ -96,10 +115,16 @@ interface RenderObjectLayer {
     id_order: number;
 }
 
+interface RenderTextLayer {
+    layer_name: string;
+    texts: RenderTextObject[]
+    id_order: number;
+}
 
 export interface RenderMapData {
     layers: RenderLayer[]
     objects_layers: RenderObjectLayer[]
+    text_layers:RenderTextLayer[]
 }
 
 let bb_min = vmath.vector3();
@@ -115,10 +140,10 @@ export function get_world_bounds() {
 }
 
 export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
-    const sort_layer = parseInt(new URLSearchParams(document.location.search).get('layer') || '0');
-    return get_depth_fix(y, height, id_layer, sort_layer);
+    return get_depth_fix(y, height, id_layer, SORT_LAYER);
 }
 
+let SORT_LAYER = 0;
 const Y_MIN = -1000;
 const Y_MAX = 1000;
 const STEP_BASE = 0.1;
@@ -155,7 +180,6 @@ function preload_tile_texture(id: string, path: string, atlas: string, w: number
         tiled_textures_data[atlas] = {};
     tiled_textures_data[atlas][id] = { name: get_file_name(path), w, h, atlas: '' }; // todo debug
 }
-
 
 export function get_tile_texture(gid: number) {
     let max_firstgid = -1;
@@ -207,9 +231,11 @@ export function preload_tiled_textures(tile_info: TileInfo) {
 }
 
 export function parse_tiled(data: MapData) {
+    SORT_LAYER = data.sort_layer;
     const render_data: RenderMapData = {
         layers: [],
-        objects_layers: []
+        objects_layers: [],
+        text_layers: []
     };
 
     for (const layer of data.layers) {
@@ -224,6 +250,14 @@ export function parse_tiled(data: MapData) {
         render_data.objects_layers.push({
             layer_name: obj_layer.layer_name,
             objects: create_objects(obj_layer),
+            id_order: obj_layer.id_order
+        });
+    }
+
+    for (const obj_layer of data.objects) {
+        render_data.text_layers.push({
+            layer_name: obj_layer.layer_name,
+            texts: create_texts(obj_layer),
             id_order: obj_layer.id_order
         });
     }
@@ -259,7 +293,7 @@ function create_objects(obj_layer: ObjectLayer) {
                 data.polyline = make_polygon(obj.polyline);
             objects.push(data);
         }
-        else {
+        else if (obj.w != undefined && obj.h != undefined && obj.tid != undefined) {
             const new_pos_tmp = rotate_point(new Vector3(obj.x, -obj.y, 0), new Vector2(obj.w, obj.h), 0);
             const new_pos = rotate_point(new Vector3(obj.x, -obj.y, 0), new Vector2(obj.w, obj.h), obj.r != undefined ? -obj.r : 0);
             const data: RenderTileObject = {
@@ -277,6 +311,23 @@ function create_objects(obj_layer: ObjectLayer) {
     }
     return objects;
 }
+
+function create_texts(obj_layer: ObjectLayer) {
+    const objects: RenderTextObject[] = [];
+    for (const obj of obj_layer.objects) {
+        if (obj.w != undefined && obj.h != undefined && obj.text != undefined) {
+            objects.push({
+                x: obj.x,
+                y: obj.y,
+                width: obj.w,
+                height: obj.h,
+                text: obj.text
+            });
+        }
+    }
+    return objects;
+}
+
 
 function create_layer(layer: Layer) {
     const chunks = [];
