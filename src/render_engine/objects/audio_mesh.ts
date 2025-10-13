@@ -327,7 +327,7 @@ export class AudioMesh extends EntityBase {
     }
 
     private createVisual() {
-        this.createListenerVisual();
+        // this.createListenerVisual();
 
         this.removeSoundRadiusVisual();
         this.removeMaxVolumeRadiusVisual();
