@@ -7,11 +7,13 @@ export function WsWrap(on_open: () => void, on_close: () => void, on_error: () =
     let client: WebSocket;
     let _is_connected = false;
     let timer: Timer | undefined;
-
+    let is_binary = false;
 
     function connect(url: string) {
         if (is_connected()) return;
         client = new WebSocket(url);
+        if (is_binary)
+            client.binaryType = 'arraybuffer';
         client.onopen = (e) => {
             _is_connected = true;
             on_open();
@@ -29,6 +31,10 @@ export function WsWrap(on_open: () => void, on_close: () => void, on_error: () =
         client.onmessage = (e) => {
             on_message(e.data);
         }
+    }
+
+    function set_binary(){
+        is_binary = true;
     }
 
     function disconnect() {
@@ -61,5 +67,5 @@ export function WsWrap(on_open: () => void, on_close: () => void, on_error: () =
         clearInterval(timer);
     }
 
-    return { connect, disconnect, send_message, send_raw, is_connected, set_reconnect_timer, stop_reconnect_timer }
+    return { connect, disconnect, send_message, send_raw, is_connected, set_reconnect_timer, stop_reconnect_timer, set_binary }
 }

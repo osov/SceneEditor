@@ -39,6 +39,7 @@ import { MultipleMaterialMesh } from './objects/multiple_material_mesh';
 import { api } from '../modules_editor/ClientAPI';
 import { URL_PATHS } from '../modules_editor/modules_editor_const';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { IS_LOGGING } from '@editor/config';
 
 
 declare global {
@@ -48,6 +49,9 @@ declare global {
 export function register_resource_manager() {
     (window as any).ResourceManager = ResourceManagerModule();
 }
+
+
+
 interface AssetData<T> {
     [k: string]: { data: T };
 }
@@ -530,7 +534,7 @@ export function ResourceManagerModule() {
     async function preload_texture(path: string, atlas = '', override = false) {
         const name = get_file_name(path);
         if (!override && has_texture_name(name, atlas)) {
-            Log.warn('texture exists', name, atlas);
+            IS_LOGGING && Log.warn('texture exists', name, atlas);
             return atlases[atlas][name].data;
         }
         const texture = await load_texture(path);
@@ -660,7 +664,7 @@ export function ResourceManagerModule() {
 
     async function preload_vertex_program(path: string) {
         if (has_vertex_program(path)) {
-            Log.warn('vertex program exists', path);
+            IS_LOGGING && Log.warn('vertex program exists', path);
             return;
         }
         const shader_program = await AssetControl.get_file_data(path);
@@ -686,7 +690,7 @@ export function ResourceManagerModule() {
 
     async function preload_fragment_program(path: string) {
         if (has_fragment_program(path)) {
-            Log.warn('fragment program exists', path);
+            IS_LOGGING && Log.warn('fragment program exists', path);
             return;
         }
         const shader_program = await AssetControl.get_file_data(path);
@@ -792,7 +796,7 @@ export function ResourceManagerModule() {
     async function preload_material(path: string) {
         let name = get_file_name(path);
         if (has_material(name)) {
-            Log.warn('Material already exists', name, path);
+            IS_LOGGING && Log.warn('Material already exists', name, path);
             return materials[name];
         }
 
@@ -1512,7 +1516,7 @@ export function ResourceManagerModule() {
         else if (path.toLowerCase().endsWith('.gltf') || path.toLowerCase().endsWith('.glb')) {
             return new Promise<Group>(async (resolve, _) => {
                 const loader = new GLTFLoader(manager);
-                loader.setDRACOLoader( dracoLoader );
+                loader.setDRACOLoader(dracoLoader);
                 loader.load(get_project_url(path), (gltf) => {
                     //log(gltf)
                     const has_mesh = has_skinned_mesh(gltf.scene);

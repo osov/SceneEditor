@@ -22,7 +22,9 @@ function WsClientModule() {
         (e) =>  EventBus.trigger('ON_WS_DATA', { data: e })
     );
 
-
+    function set_binary(){
+        ws_wrap.set_binary();
+    }
     function connect(url: string) {
         ws_wrap.connect(url);
     }
@@ -45,5 +47,5 @@ function WsClientModule() {
 
   
 
-    return { connect, disconnect, send_message, send_raw, is_connected }
+    return { connect, disconnect, send_message, send_raw, is_connected, set_binary }
 }

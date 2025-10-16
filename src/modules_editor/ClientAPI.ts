@@ -1,4 +1,4 @@
-import { SERVER_URL } from "../config";
+import { IS_LOGGING, SERVER_URL } from "../config";
 import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, ProtocolWrapper, TRecursiveDict, DEL_INFO_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, OPEN_EXPLORER_CMD, DataFormatType } from "./modules_editor_const";
 
 
@@ -126,14 +126,14 @@ function ClientAPIModule() {
     }
 
     function on_message_socket<T extends keyof NetMessagesEditor>(id_message: T, _message: NetMessagesEditor[T]) {
-        Log.log('on_message_socket', id_message, _message);
+        //Log.log('on_message_socket', id_message, _message);
         if (id_message == 'SERVER_FILE_SYSTEM_EVENTS') {
             const message = _message as NetMessagesEditor['SERVER_FILE_SYSTEM_EVENTS'];
             EventBus.trigger('SERVER_FILE_SYSTEM_EVENTS', message);
         } else if (id_message == 'SESSION_ID') {
             const message = _message as NetMessagesEditor['SESSION_ID'];
             (window as any).currentSessionId = message.sessionId;
-            Log.log(`Получен SessionId от сервера: ${message.sessionId}`);
+            IS_LOGGING && Log.log(`Получен SessionId от сервера: ${message.sessionId}`);
         }
     }
 
