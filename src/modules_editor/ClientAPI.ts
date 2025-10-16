@@ -137,15 +137,8 @@ function ClientAPIModule() {
         }
     }
 
-    EventBus.on('ON_WS_CONNECTED', (m) => {
 
-    });
-    EventBus.on('ON_WS_DATA', (m) => {
-        const data = JSON.parse(m.data) as ProtocolWrapper;
-        on_message_socket(data.id as keyof NetMessagesEditor, data.message);
-    });
-
-    return { set_current_scene, get_projects, load_project, new_project, new_folder, get_folder, copy, move, rename, remove, test_server_ok, save_info, get_info, del_info, save_data, get_data, open_explorer, waitForSessionId }
+    return { set_current_scene, get_projects, load_project, new_project, new_folder, get_folder, copy, move, rename, remove, test_server_ok, save_info, get_info, del_info, save_data, get_data, open_explorer, waitForSessionId, on_message_socket }
 }
 
 

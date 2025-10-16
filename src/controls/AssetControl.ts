@@ -9,6 +9,8 @@ import {
     HistoryOwner,
     THistoryUndo,
     PUBLIC,
+    ProtocolWrapper,
+    NetMessagesEditor,
 } from "../modules_editor/modules_editor_const";
 import { span_elem, json_parsable, get_keys } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
@@ -18,6 +20,7 @@ import { api } from "../modules_editor/ClientAPI";
 import { IBaseEntityData } from "../render_engine/types";
 import { error_popup, get_file_name } from "../render_engine/helpers/utils";
 import { Quaternion, Vector3 } from "three";
+import { WsWrap } from "@editor/modules/ws_wrap";
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
 }
@@ -61,7 +64,6 @@ function AssetControlCreate() {
         EventBus.on('SYS_GRAPH_DROP_IN_ASSETS', on_graph_drop);
 
         EventBus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
-        EventBus.on('ON_WS_CONNECTED', reload_current_project);
 
         EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
             if (event.owner != HistoryOwner.ASSET_CONTROL) return;
@@ -1299,7 +1301,7 @@ function AssetControlCreate() {
 
     init();
     return {
-        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene, select_file, loadPartOfSceneInPos, go_to_dir
+        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene, select_file, loadPartOfSceneInPos, go_to_dir, reload_current_project
     };
 }
 
@@ -1337,7 +1339,17 @@ export async function run_debug_filemanager(project_to_load: string) {
         server_ok = resp_data.result === 1;
     }
     if (server_ok) {
-        WsClient.set_reconnect_timer(WS_SERVER_URL, WS_RECONNECT_INTERVAL);
+        const ws_client = WsWrap(
+            () => {
+                EventBus.on('ON_WS_CONNECTED', () => AssetControl.reload_current_project());
+            },
+            () => { }, () => { },
+            (m) => {
+                const data = JSON.parse(m) as ProtocolWrapper;
+                ClientAPI.on_message_socket(data.id as keyof NetMessagesEditor, data.message);
+            }
+        );
+        ws_client.set_reconnect_timer(WS_SERVER_URL, WS_RECONNECT_INTERVAL);
 
         const sessionResult = await ClientAPI.waitForSessionId();
         if (!sessionResult.success) {

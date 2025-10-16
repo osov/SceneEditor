@@ -20,7 +20,7 @@ export type _SystemMessages = {
   
     ON_WS_CONNECTED: VoidMessage,
     ON_WS_DISCONNECTED: VoidMessage,
-    ON_WS_DATA: { data: string },
+    ON_WS_DATA: { data: string | Uint8Array },
     TRY_WS_CONNECT: VoidMessage,
     TRY_WS_DISCONNECT: VoidMessage,
 };
