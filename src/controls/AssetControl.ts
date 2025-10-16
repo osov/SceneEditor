@@ -1,6 +1,6 @@
 // TODO: если перемещаем файл материала, то нужно обновить путь до него в ResourceManager
 
-import { SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
+import { PROJECT_NAME, SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
 import {
     ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, ASSET_AUDIO, AssetType, DataFormatType, FILE_UPLOAD_CMD,
     FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses,
@@ -333,7 +333,7 @@ function AssetControlCreate() {
                 event.dataTransfer.clearData();
                 const path = file.getAttribute("data-path") || '';
                 const data = ResourceManager.get_all_textures().find((info) => {
-                    return (info.data.texture as any).path == `${SERVER_URL}${URL_PATHS.ASSETS}/${path}`;
+                    return (info.data.texture as any).path == `${SERVER_URL}${URL_PATHS.ASSETS}/${PROJECT_NAME}/${path}`;
                 });
                 event.dataTransfer.setData("text/plain", `${data?.atlas}/${data?.name}`);
                 event.dataTransfer.setData("textureSize", `${data?.data?.size?.x}x${data?.data?.size?.y}`);
