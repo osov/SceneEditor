@@ -1345,7 +1345,7 @@ export async function run_debug_filemanager(project_to_load: string) {
             },
             () => { }, () => { },
             (m) => {
-                const data = JSON.parse(m) as ProtocolWrapper;
+                const data = JSON.parse(m as string) as ProtocolWrapper;
                 ClientAPI.on_message_socket(data.id as keyof NetMessagesEditor, data.message);
             }
         );
