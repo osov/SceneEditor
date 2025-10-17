@@ -9,7 +9,7 @@ https://stackoverflow.com/questions/76514035/how-to-render-1000-2d-text-labels-u
 */
 import { Clock, Color, Object3D, OrthographicCamera, PerspectiveCamera, Raycaster, Scene, Vector2, WebGLRenderer, ReplaceStencilOp, NoColorSpace } from 'three'
 import { resize_renderer_to_display_size } from './helpers/window_utils'
-import { CAMERA_FAR, CAMERA_Z, IS_CAMERA_ORTHOGRAPHIC } from '../config';
+import { CAMERA_FAR, CAMERA_Z, HALF_FPS, IS_CAMERA_ORTHOGRAPHIC } from '../config';
 
 declare global {
     const RenderEngine: ReturnType<typeof RenderEngineModule>;
@@ -60,7 +60,7 @@ export function RenderEngineModule() {
     function animate() {
         ticks++;
         requestAnimationFrame(animate)
-        if (ticks % 2 == 0) {
+        if (!HALF_FPS || (HALF_FPS && ticks % 2 == 0)) {
             const delta = clock.getDelta();
             if (resize_renderer_to_display_size(renderer))
                 on_resize();

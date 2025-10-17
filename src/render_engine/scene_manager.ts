@@ -406,8 +406,11 @@ export function SceneManagerModule() {
         const has_old_parent = mesh.parent != null;
         const old_parent = mesh.parent ? mesh.parent : scene;
         const old_index = old_parent.children.indexOf(mesh);
-        const new_parent = (pid == -1) ? scene : get_mesh_by_id(pid);
-        if (!new_parent) return Log.error('new_parent is null, mesh:', mesh.mesh_data.id, 'pid:' + pid);
+        let new_parent = (pid == -1) ? scene : get_mesh_by_id(pid);
+        if (!new_parent) {
+            new_parent = scene;
+            Log.error('new_parent is null, mesh:', mesh.mesh_data.id, 'pid:' + pid);
+        }
         const old_pos = new Vector3();
         mesh.getWorldPosition(old_pos);
         const old_scale = new Vector3();

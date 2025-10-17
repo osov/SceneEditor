@@ -2,6 +2,8 @@ export const TARGET_DISPLAY_WIDTH = 960;
 export const TARGET_DISPLAY_HEIGHT = 540;
 
 export const IS_LOGGING = false;
+export const HALF_FPS = true;
+
 export const IS_CAMERA_ORTHOGRAPHIC = new URLSearchParams(document.location.search).get('perspective') == null ? true : false;
 export const CAMERA_FAR = new URLSearchParams(document.location.search).get('far') ? parseInt(new URLSearchParams(document.location.search).get('far')!) : 15000;
 export const CAMERA_Z = CAMERA_FAR - 1;
