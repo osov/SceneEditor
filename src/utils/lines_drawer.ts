@@ -1,20 +1,44 @@
 import { LineBasicMaterial, Vector2, Line as GeomLine, BufferGeometry, Vector2Like } from 'three';
 
-import { CAMERA_Z } from "../../config";
-import { GoContainer } from "../../render_engine/objects/sub_types";
-import { GridParams } from '../../modules/types';
-import { ISegment, IArc, PointLike } from '../geometry/types';
-import { Segment, Point } from '../geometry/shapes';
-import { split_at_length, arc_start, arc_end } from '../geometry/logic';
-import { shape_length } from '../geometry/utils';
+import { CAMERA_Z } from "../config";
+import { GoContainer } from "../render_engine/objects/sub_types";
+import { IArc, PointLike } from './geometry/types';
+import { Segment, Point, Arc } from './geometry/shapes';
+import { split_at_length, arc_start, arc_end } from './geometry/logic';
+import { shape_length } from './geometry/utils';
+import { COLORS } from './old_pathfinder/types';
 
-
+type SegmentLike = {start: PointLike, end: PointLike};
+type PolyPoints = PointLike[];
 export type TLinesDrawer = ReturnType<typeof LinesDrawer>;
 
 export function LinesDrawer() {
     const DRAWN_ARC_EDGES_AMOUNT = 40;
+    const POINT_R = 0.1;
+    const POINTS_COLOR = COLORS.PURPLE;
 
-    function draw_line(segment: ISegment, container: GoContainer, color = 0x22ff77) {
+    function draw_multiline(points: PolyPoints, container: GoContainer, color = 0x22ff77, draw_points = false, points_radius = POINT_R) {
+        if (draw_points) {
+            const p = points[0];
+            draw_arc(Arc(Point(p.x, p.y), points_radius, 0, Math.PI * 2), container, POINTS_COLOR);
+
+        }
+        for (let i = 0; i < points.length - 1; i++) {
+            const p1 = points[i];
+            const p2 = points[i + 1];
+            draw_line({start: Point(p1.x, p1.y), end: Point(p2.x, p2.y)}, container, color);
+            if (draw_points) {
+                draw_arc(Arc(Point(p2.x, p2.y), points_radius, 0, Math.PI * 2), container, POINTS_COLOR);
+            }
+        }
+    }
+
+    function draw_polygon(points: PolyPoints, container: GoContainer, color = 0x22ff77) {
+        draw_multiline(points, container, color);
+        draw_line({start: points[0], end: points[points.length - 1]}, container, color);
+    }
+
+    function draw_line(segment: SegmentLike, container: GoContainer, color = 0x22ff77) {
         const a = segment.start;
         const b = segment.end;
         const point_a = new Vector2(a.x,  a.y);
@@ -75,23 +99,6 @@ export function LinesDrawer() {
         lines.splice(0, lines.length);    
     }
 
-    function draw_grid(grid: number[][], params: GridParams, container: GoContainer, color = 0x88eeff) {
-        for (let y = 0; y < grid.length; y ++) {
-            for (let x = 0; x < grid[y].length; x ++) {
-                if (grid[y][x] == 1) {
-                    const box_xmin = params.start.x + params.cell_size * x;
-                    const box_xmax = box_xmin + params.cell_size;
-                    const box_ymin = params.start.y + params.cell_size * y;
-                    const box_ymax = box_ymin + params.cell_size;
-                    draw_line(Segment(Point(box_xmax, box_ymax), Point(box_xmax, box_ymin)), container, color);
-                    draw_line(Segment(Point(box_xmax, box_ymax), Point(box_xmin, box_ymax)), container, color);
-                    draw_line(Segment(Point(box_xmin, box_ymax), Point(box_xmin, box_ymin)), container, color);
-                    draw_line(Segment(Point(box_xmax, box_ymin), Point(box_xmin, box_ymin)), container, color);                 
-                }
-            }
-        }
-    }
-
     function clear_container(container: GoContainer) {
         const children = container.children as GeomLine[];
         if (children.length == 0) return;
@@ -103,5 +110,5 @@ export function LinesDrawer() {
         container.clear()
     }
 
-    return { draw_line, draw_arc, clear_container, draw_grid, move_lines, clear_lines, translate_lines }
+    return { draw_polygon, draw_multiline, draw_line, draw_arc, clear_container, move_lines, clear_lines, translate_lines }
 }

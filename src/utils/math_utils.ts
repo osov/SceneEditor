@@ -122,11 +122,6 @@ export function rotate_point_pivot(point: vmath.vector3, pivot: {x:number,y:numb
     return { x: xNew, y: yNew };
 }
 
-
-export function degToRad(degrees: number) {
-    return degrees * (Math.PI / 180);
-}
-
 function interpolate_delta_with_wrapping(start: number, end: number, percent: number, wrap_min: number, wrap_max: number) {
     const wrap_test = wrap_max - wrap_min;
     if (start - end > wrap_test / 2) end += wrap_test;

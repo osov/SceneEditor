@@ -2,8 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prefer-const */
-import { ObstaclesManager } from "./obstacle_manager";
-import { ClosestObstacleData, ControlType, NextMoveType, PredictNextMoveData, PathData as PathData, PathNode, PathFinderSettings, PF_default_settings, COLORS } from "./types";
+import { ObstaclesManager } from "./obstacles_manager";
+import { ClosestObstacleData, ControlType, NextMoveType, PredictNextMoveData, PathData, PathNode, PathFinderSettings, COLORS } from "./types";
 import { CCW, CW, DP_TOL, ShapeNames } from "../geometry/const";
 import { ISegment, IPoint, IArc, IVector } from "../geometry/types";
 import { vector_from_points, vec_angle, segment, clone, rotate_vec_90CW, 
@@ -11,11 +11,10 @@ import { vector_from_points, vec_angle, segment, clone, rotate_vec_90CW,
     shape_contains, shape_center, arc_start, arc_end, arc_start_tangent, 
     shape_box, point_at_length, split_at_length, split, shape_vector, intersect, point2point, point2segment 
 } from "../geometry/logic";
-import { Vector, Segment, Arc, Point } from "../geometry/shapes";
+import { Vector, Segment, Arc } from "../geometry/shapes";
 import { shape_length, normalize, multiply, add, EQ_0, vector_slope, EQ } from "../geometry/utils";
 import { GoContainer } from "@editor/render_engine/objects/sub_types";
-import { TLinesDrawer } from "./LinesDrawer";
-import { TDictionary } from "@editor/modules_editor/modules_editor_const";
+import { TLinesDrawer } from "../lines_drawer";
 
 
 const path_tree_root: PathNode = {
@@ -24,15 +23,7 @@ const path_tree_root: PathNode = {
     total_length: 0
 };
 
-declare global {
-    const PathFinder: ReturnType<typeof PathFinderModule>;
-}
-
-export function register_pathfinder() {
-    (window as any).PathFinder = PathFinderModule(PF_default_settings);
-}
-
-export function PathFinderModule(settings: PathFinderSettings) {
+export function PathFinder(settings: PathFinderSettings) {
     const logger = Log.get_with_prefix('pathfinder');
     
     const max_intervals = settings.max_path_intervals;
@@ -69,13 +60,13 @@ export function PathFinderModule(settings: PathFinderSettings) {
         return checking_obstacles;
     }
 
-    function update_path(way_required: ISegment, collision_radius: number, control_type: ControlType, use_first_found = false) {
+    function update_path(path_required: ISegment, collision_radius: number, control_type: ControlType, use_first_found = false) {
         const path_data: PathData = { path: [], length: 0, path_points: [], time: 0, cur_time: 0 };
         if (control_type == ControlType.JS || control_type == ControlType.FP)
-            path_data.path = predict_way(way_required, collision_radius, control_type);
+            path_data.path = predict_way(path_required, collision_radius, control_type);
 
         if (control_type == ControlType.GP) {
-            const data = find_way(way_required, collision_radius, use_first_found);
+            const data = find_way(path_required, collision_radius, use_first_found);
             path_data.path = data.path;
             path_data.clear_way_nodes = data.clear_way_nodes;
             path_data.blocked_way_nodes = data.blocked_way_nodes;
@@ -1195,21 +1186,6 @@ export function PathFinderModule(settings: PathFinderSettings) {
         }
         return _current_pos;
     }
-    
-    function draw_obstacles(LD: TLinesDrawer, obstacles_lines: TDictionary<any>, obstacles_container: GoContainer) {
-        const objects_dict = get_obstacles_manager()!.objects;
-        for (const id in objects_dict) {
-            const obstacles = objects_dict[id].obstacles;
-            obstacles_lines[id] = [];
-            for (const obst_id of obstacles) {
-                const obstacle = get_obstacles_manager()!.get_obstacle_by_id(obst_id);
-                if (obstacle) {
-                    const line = LD.draw_line(obstacle, obstacles_container, COLORS.RED);
-                    obstacles_lines[id].push(line);             
-                }
-            }
-        }
-    }
 
     function draw_path(LD: TLinesDrawer, player_way: GoContainer, path_data: PathData) {
         LD.clear_container(player_way);
@@ -1243,6 +1219,6 @@ export function PathFinderModule(settings: PathFinderSettings) {
         build_path_tree,
         get_obstacles_manager, find_clear_space, set_obstacles_manager, clear_obstacles_manager, 
         make_sideways, make_sideways_bypass_vertice, make_way_bypass_vertice, make_way, 
-        draw_obstacles, draw_path
+        draw_path
     };
 }

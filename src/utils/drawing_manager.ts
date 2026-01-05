@@ -1,0 +1,105 @@
+import { TDictionary } from "@editor/modules_editor/modules_editor_const";
+import { GoContainer } from "@editor/render_engine/objects/sub_types";
+import { IObjectTypes } from "@editor/render_engine/types";
+import { PolyPoints } from "navmesh";
+import { ISegment } from "./geometry/types";
+import { LinesDrawer } from "./lines_drawer";
+import { vec2_distance_to } from "./math_utils";
+import { COLORS } from "./old_pathfinder/types";
+import { DynamicEntity } from "./physic/physic_system";
+import { Arc } from "./geometry/shapes";
+import { point } from "./geometry/logic";
+
+
+export function DrawingManager(player: DynamicEntity, entities: DynamicEntity[], obstacles: ISegment[], passable_polygons: PolyPoints[], debug = false, navmesh: any) {
+    
+    const LD = LinesDrawer();
+    const obstacles_lines: TDictionary<any> = {};
+
+    const joystick = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    joystick.name = 'joystick';
+    SceneManager.add(joystick);
+    const player_way = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    player_way.name = 'player_way';
+    SceneManager.add(player_way);
+    const pathfinder_path = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    pathfinder_path.name = 'pathfinder_path';
+    SceneManager.add(pathfinder_path);
+    const obstacles_container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    obstacles_container.name = 'obstacles';
+    SceneManager.add(obstacles_container);
+
+    joystick.no_saving = true; joystick.no_removing = true;
+    player_way.no_saving = true; player_way.no_removing = true;
+    pathfinder_path.no_saving = true; pathfinder_path.no_removing = true;
+    obstacles_container.no_saving = true; obstacles_container.no_removing = true;
+    const user_visible = !(new URLSearchParams(document.location.search).get('user') == '0');
+
+    const entities_containers: Dict<GoContainer> = {};
+
+    if (passable_polygons) {
+        for (const poly of passable_polygons) {
+            // for (const poly of cell.rectangle) {
+            //     LD.draw_polygon(poly, obstacles_container, COLORS.GREEN)
+            // }
+            LD.draw_polygon(poly, obstacles_container, COLORS.GREEN)
+        }
+    }
+
+    EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
+        if (Input.is_shift() && navmesh) {
+            const pos = Camera.screen_to_world(e.x, e.y);
+            const dist = vec2_distance_to(player.model.position, pos)
+            const t1 = Date.now()
+            const way = navmesh.findPath(player.model.position, pos);
+            const t2 = Date.now()
+            log('time', t2 - t1, dist)
+            if (way && way.length > 0) {
+                LD.draw_multiline(way, obstacles_container, COLORS.WHITE);
+            }
+        }
+    })
+
+    for (const entity of entities) {
+        const geometry = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+        geometry.name = `entity ${entity.id} collision circle`;
+        SceneManager.add(geometry);
+        geometry.no_saving = true; geometry.no_removing = true;
+        geometry.set_active(user_visible);
+        entities_containers[entity.id] = geometry;
+    }
+
+    function update(dt: number) {
+        if (pathfinder_path.children.length != 0) {
+            for (const child of pathfinder_path.children) {
+                child.remove();
+            }
+            pathfinder_path.clear();
+        }
+        for (const entity of entities) {
+            const container = entities_containers[entity.id];
+            if (container) {
+                if (container.children.length == 0) {
+                    LD.draw_arc(Arc(point(0, 0), entity.shape.r, 0, Math.PI * 2), container, COLORS.RED);
+                }
+                for (const line of container.children) {
+                    line.position.x = entity.shape.x;
+                    line.position.y = entity.shape.y;
+                }
+                
+            }
+            if (entity.path_points) {
+                // LD.draw_multiline([entity.shape.pos, ...entity.path_points], pathfinder_path, COLORS.WHITE)
+            }
+        }
+        if (player_way.children.length == 0) {
+            LD.draw_arc(Arc(point(0, 0), player.shape.r, 0, Math.PI * 2), player_way, COLORS.PURPLE);
+        }
+        for (const line of player_way.children) {
+            line.position.x = player.shape.x;
+            line.position.y = player.shape.y;
+        }
+    }
+    
+    return {update}
+}

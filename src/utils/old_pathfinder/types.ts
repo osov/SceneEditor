@@ -131,6 +131,7 @@ export type SubGridParams = {
 };
 
 export type ObstacleTileData = {
+    id: number;
     x: number;
     y: number;
     polygon?: PointLike[],

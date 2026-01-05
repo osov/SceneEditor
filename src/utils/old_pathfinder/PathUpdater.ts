@@ -1,18 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { TDictionary } from "@editor/modules_editor/modules_editor_const";
-import { IObjectTypes } from "@editor/render_engine/types";
-import { NULL_VALUE, ShapeNames } from "./geometry/const";
-import { arc_end, arc_start, clone, point2point, point_at_length, rotate, shape_vector, translate } from "./geometry/logic";
-import { Point, Segment, Vector } from "./geometry/shapes";
-import { IArc, IPoint, ISegment, PointLike } from "./geometry/types";
-import { EQ, EQ_0, multiply, shape_length, vector_slope } from "./geometry/utils";
-import { compute_arc_length_table, degToRad, get_position_by_time } from "./math_utils";
-import { LinesDrawer } from "./physic/LinesDrawer";
-import { ObstaclesManagerCreate } from "./physic/obstacle_manager";
-import { PathFinderModule } from "./physic/PathFinder";
-import { ControlType, movement_default_settings, PathData, PlayerMovementSettings } from "./physic/types";
-import { radToDeg } from "./physic/utils";
+import { NULL_VALUE, ShapeNames } from "../geometry/const";
+import { arc_end, arc_start, clone, point2point, point_at_length, rotate, translate } from "../geometry/logic";
+import { Point, Segment, Vector } from "../geometry/shapes";
+import { IArc, IPoint, ISegment, PointLike } from "../geometry/types";
+import { EQ, EQ_0, multiply, shape_length } from "../geometry/utils";
+import { compute_arc_length_table } from "../math_utils";
+import { ControlType, PathData, PathFinderSettings, PlayerMovementSettings } from "./types";
+import { degToRad } from "@editor/modules/utils";
+import { PathFinder } from "./PathFinder";
 
 
 export type ControlsState = {
@@ -32,20 +28,14 @@ export type MovementData = {
     speed: number;
 };
 
-declare global {
-    const PathUpdater: ReturnType<typeof PathUpdaterModule>;
-}
 
-export function register_path_updater() {
-    (window as any).PathUpdater = PathUpdaterModule(movement_default_settings);
-}
-
-export function PathUpdaterModule(settings: PlayerMovementSettings) {
+export function PathUpdater(settings: PlayerMovementSettings, pathfinder_settings: PathFinderSettings) {
     const collision_radius = settings.collision_radius;
     const update_interval = settings.min_update_interval;
     const min_target_change = settings.min_target_change;
     const min_angle_change = settings.min_angle_change;
     const path_mult = settings.pred_path_lenght_mult;
+    const pathfinder = PathFinder(pathfinder_settings);
 
 
     function on_input(movement_data: MovementData, new_state: ControlsState) {
@@ -112,7 +102,7 @@ export function PathUpdaterModule(settings: PlayerMovementSettings) {
                 path_to_check = Segment(pos, target);
         }
         if (shape_length(path_to_check) == 0) return false;
-        movement_data.path_data = PathFinder.update_path(path_to_check, collision_radius, control_type);
+        movement_data.path_data = pathfinder.update_path(path_to_check, collision_radius, control_type);
         movement_data.last_upd_controls_state = movement_data.controls_state;
         return movement_data.path_data.path.length != 0;
     }
@@ -254,61 +244,4 @@ export function PathUpdaterModule(settings: PlayerMovementSettings) {
     }
 
     return { on_input, update_user_path, get_user_pos, prepare_path_data, path_from_angle };
-}
-
-export function get_angle() {
-    let angle = -1;
-    if ((Input.keys_state['d'] || Input.keys_state['ArrowRight']) && (Input.keys_state['w'] || Input.keys_state['ArrowUp']))
-        angle = 45;
-    else if ((Input.keys_state['a'] || Input.keys_state['ArrowLeft']) && (Input.keys_state['w'] || Input.keys_state['ArrowUp']))
-        angle = 135;
-    else if ((Input.keys_state['a'] || Input.keys_state['ArrowLeft']) && (Input.keys_state['s'] || Input.keys_state['ArrowDown']))
-        angle = 225;
-    else if ((Input.keys_state['d'] || Input.keys_state['ArrowRight']) && (Input.keys_state['s'] || Input.keys_state['ArrowDown']))
-        angle = 315;
-    else if (Input.keys_state['d'] || Input.keys_state['ArrowRight'])
-        angle = 0;
-    else if (Input.keys_state['w'] || Input.keys_state['ArrowUp'])
-        angle = 90;
-    else if (Input.keys_state['a'] || Input.keys_state['ArrowLeft'])
-        angle = 180;
-    else if (Input.keys_state['s'] || Input.keys_state['ArrowDown'])
-        angle = 270;
-    return angle;
-}
-
-
-export function test_path_updater(
-    obstacles: ISegment[], 
-    path: ISegment, 
-    collision_radius: number, 
-    move: number, 
-    update_move_times: number, 
-    updates: number
-) {
-    log('test pathfinder')
-    const obstacles_manager = ObstaclesManagerCreate(5);
-    obstacles_manager.set_obstacles(obstacles);
-    PathFinder.set_obstacles_manager(obstacles_manager);
-    const angle = vector_slope(shape_vector(path));
-    const points: IPoint[] = [];
-    const dt = 1 / 60;
-    points.push(path.start);
-    const update_distance = move * update_move_times * 2;
-    let path_to_check = PathUpdater.path_from_angle(path.start, angle, update_distance);
-    const pos = Point(path.start.x, path.start.y)
-    const t1 = System.now_ms()
-    let n = 0;
-    for (n; n < updates; n++) {
-        const path_data = PathFinder.update_path(path_to_check, collision_radius, ControlType.JS, true);
-        for (let i = 0; i < update_move_times; i++) {
-            PathUpdater.get_user_pos(pos, move, path_data, dt)
-            points.push(Point(pos.x, pos.y));
-        }
-        path_to_check = PathUpdater.path_from_angle(pos, angle, update_distance);
-    }
-    const t2 = System.now_ms()
-    log('time', t2 - t1)
-    log('points', points.length, 'updates', n)
-    return points;
 }

@@ -1,21 +1,16 @@
-import { MapData, parse_tiled, RenderMapData } from "@editor/render_engine/parsers/tile_parser";
+import { MapData, parse_tiled } from "@editor/render_engine/parsers/tile_parser";
 import { 
     System as CollisionSystem,
-    Box,
     Circle,
-    Ellipse,
     Line,
-    Point,
     Polygon, 
     BodyOptions
 } from "detect-collisions"
-import { ILine, IPoint, ISegment, PointLike, Shape } from "../geometry/types";
-import { Segment, Vector } from "../geometry/shapes";
-import { point, segment, shape_vector } from "../geometry/logic";
+import { IPoint, ISegment, PointLike } from "../geometry/types";
+import { point, shape_vector } from "../geometry/logic";
 import { vector_slope } from "../geometry/utils";
-import { ObstacleTileData } from "./types";
+import { ObstacleTileData } from "../old_pathfinder/types";
 import { polygon_to_segments, polyline_to_segments } from "./utils";
-
 
 
 const obstacle_options: BodyOptions = {
