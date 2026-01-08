@@ -1,8 +1,8 @@
 import { SpatialHashManagerCreate, SpatialHashManagerUtils } from "./spatial_hash_manager";
-import { PointLike } from "../geometry/types";
-import { vec2_distance_to } from "../math_utils";
-import { ObstacleTileData } from "../old_pathfinder/types";
-import { Point } from "../geometry/shapes";
+import { PointLike } from "./geometry/types";
+import { vec2_distance_to } from "./math_utils";
+import { ObstacleTileData } from "./old_pathfinder/types";
+import { Point } from "./geometry/shapes";
 
 import NavMesh from "navmesh";
 import * as martinez from 'martinez-polygon-clipping';
@@ -76,7 +76,7 @@ export const cells_utils: SpatialHashManagerUtils<LevelCell> = {
 }
 
 export function CellsManagerCreate(hash_cell_size = 20) {
-    const base = SpatialHashManagerCreate<LevelCell>(hash_cell_size, cells_utils);
+    const base = SpatialHashManagerCreate<LevelCell>(cells_utils, hash_cell_size);
     
     function make_cells(start: PointLike, end: PointLike, step = hash_cell_size) {
         for (let y = start.y; y < end.y; y += step) {
@@ -126,7 +126,7 @@ export function CellsManagerCreate(hash_cell_size = 20) {
 
 
 export function ObstraclePolygonsManagerCreate(hash_cell_size = 40, obst_padding = 10, offset_arc_segments = 3) {
-    const base = SpatialHashManagerCreate<Polygon>(hash_cell_size, polygon_utils);
+    const base = SpatialHashManagerCreate<Polygon>(polygon_utils, hash_cell_size);
 
     function get_obstacles_data_polygon(poly: Polygon) {
         const elements = base.get_elements_in_zone(poly);

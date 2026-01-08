@@ -1,6 +1,7 @@
 import NavMeshGenerator from "navmesh-generator";
-import { PointLike } from "../geometry/types";
+import { PointLike } from "./geometry/types";
 import { Polygon, PolyPoints } from "./polygon_manager";
+import { SpriteTileInfo } from "@editor/render_engine/tile_loader";
 
 
 export enum PolygonWinding {
@@ -74,3 +75,33 @@ export function build_navnmesh_polygons(level_size: {start: PointLike, end: Poin
     );
     return navMeshPolygons;
     }
+
+export function get_level_range(obstacles: Polygon[], padding: number) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const obst of obstacles) {
+        const border = obst[0];
+        for (const point of border) {
+            minX = Math.min(point.x, minX);
+            minY = Math.min(point.y, minY);
+            maxX = Math.max(point.x, maxX);
+            maxY = Math.max(point.y, maxY);
+        }
+    }
+    const diag_padding = Math.sqrt(padding ** 2 + padding ** 2)
+    minX -= diag_padding;
+    minY -= diag_padding;
+    maxX += diag_padding;
+    maxY += diag_padding;
+    return {start: {x: minX, y: minY}, end: {x: maxX, y: maxY}};
+}
+
+export function get_level_tiles_range(tiles: SpriteTileInfo[]) {
+    let minX = Math.min(...tiles.map(tile => tile.data.x - tile.data.width / 2));
+    let minY = Math.min(...tiles.map(tile => tile.data.y - tile.data.height / 2));
+    let maxX = Math.max(...tiles.map(tile => tile.data.y + tile.data.width / 2));
+    let maxY = Math.max(...tiles.map(tile => tile.data.y + tile.data.height / 2));
+    return {start: {x: minX, y: minY}, end: {x: maxX, y: maxY}};
+}

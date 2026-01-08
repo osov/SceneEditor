@@ -11,7 +11,7 @@ import { Arc } from "./geometry/shapes";
 import { point } from "./geometry/logic";
 
 
-export function DrawingManager(player: DynamicEntity, entities: DynamicEntity[], obstacles: ISegment[], passable_polygons: PolyPoints[], debug = false, navmesh: any) {
+export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEntity[], obstacles: ISegment[], passable_polygons: PolyPoints[], navmesh: any) {
     
     const LD = LinesDrawer();
     const obstacles_lines: TDictionary<any> = {};

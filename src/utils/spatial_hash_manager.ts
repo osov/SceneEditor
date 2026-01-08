@@ -1,6 +1,6 @@
-import { Point } from "../geometry/shapes";
-import { IPoint, PointLike } from "../geometry/types";
-import { Aabb, createSpatialHash } from "../spatial_hash";
+import { Point } from "./geometry/shapes";
+import { IPoint, PointLike } from "./geometry/types";
+import { Aabb, createSpatialHash } from "./spatial_hash";
 
 
 export type SpatialHashManagerUtils<T> = {
@@ -13,7 +13,7 @@ export type SpatialHashManagerUtils<T> = {
 export type HashObject = { id: string | number, elements_ids: string | number[], enabled: boolean, data?: any };
 
 
-export function SpatialHashManagerCreate<T>(hash_cell_size: number, utils: SpatialHashManagerUtils<T>) {
+export function SpatialHashManagerCreate<T>(utils: SpatialHashManagerUtils<T>, hash_cell_size: number = 20) {
     const all_elements: T[] = [];
     const objects: { [key: string | number]: HashObject } = {};
     const sp = createSpatialHash(hash_cell_size);

@@ -19,7 +19,6 @@
     "vite-multiple-assets": "^2.2.5"
   },
   "dependencies": {
-    "2d-geometry": "^3.0.0",
     "@pangenerator/tweakpane-textarea-plugin": "^2.0.0",
     "@tweakpane/core": "^2.0.5",
     "@tweenjs/tween.js": "^25.0.0",
@@ -32,7 +31,6 @@
     "detect-collisions": "^9.27.6",
     "earcut": "^3.0.2",
     "explorer-opener": "^1.0.1",
-    "fernandez-polygon-decomposition": "^2.0.0",
     "martinez-polygon-clipping": "^0.7.4",
     "navmesh": "^2.3.1",
     "navmesh-generator": "^1.0.3",

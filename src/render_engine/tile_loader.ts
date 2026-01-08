@@ -5,10 +5,24 @@ import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_tr
 import { IObjectTypes } from "./types";
 import { GoContainer, GoSprite } from "./objects/sub_types";
 
+
+export interface ParsedObject {
+    x: number;
+    y: number;
+    z: number;
+    atlas: string;
+    texture: string;
+    width: number;
+    height: number;
+    rotation: number | undefined;
+    name?: string;  // Опциональное имя объекта из Tiled
+}
+
 export interface SpriteTileInfo {
     tile: RenderTileData | RenderTileObject;
     tile_info: LoadedTileInfo;
     _hash: GoSprite;
+    data: ParsedObject;
 }
 
 export type SpriteTileInfoDict = { [k: string]: SpriteTileInfo };
@@ -124,7 +138,8 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                     container.add(plane);
                     plane.name = tile_info.name + '' + plane.mesh_data.id;
                     plane.userData = { tile, id_layer };
-                    tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
+                    const data: ParsedObject = { x, y, z, atlas: "", texture: tile_info.name, width: tile_w, height: tile_h, rotation: 0 };
+                    tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane, data };
                 }
             }
         }
@@ -183,7 +198,8 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                         container.add(plane);
                         plane.name = tile_info.name + '' + plane.mesh_data.id;
                         plane.userData = { tile, id_layer };
-                        tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane };
+                        const data = { x, y, z, atlas: "", texture: tile_info.name, width: tile_w, height: tile_h, rotation: tile.rotation };
+                        tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane, data };
                     }
                     else {
                         Log.warn('tile not found', object_layer.layer_name, tile_id, tile);

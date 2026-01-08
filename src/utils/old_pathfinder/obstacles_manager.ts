@@ -5,7 +5,7 @@ import { ISegment, IArc } from "../geometry/types";
 import { shape_center, clone, invert_vec, rotate_vec_90CW, translate, shape_vector, point2segment } from "../geometry/logic";
 import { normalize, multiply, vector_slope } from "../geometry/utils";
 import { Line } from "detect-collisions";
-import { SpatialHashManagerCreate, SpatialHashManagerUtils } from "../navmesh/spatial_hash_manager";
+import { SpatialHashManagerCreate, SpatialHashManagerUtils } from "../spatial_hash_manager";
 
 
 export type ObstaclesManager = ReturnType<typeof ObstaclesManagerCreate>;
@@ -22,7 +22,7 @@ export function ObstaclesManagerCreate(hash_cell_size: number) {
         get_distance: (p, elem) => point2segment(p, elem)[0]
     }
 
-    const base = SpatialHashManagerCreate<ISegment>(hash_cell_size, utils);
+    const base = SpatialHashManagerCreate<ISegment>(utils, hash_cell_size);
 
 
     function build_offsets(obstacle: ISegment, offset: number, build_option: OffsetBuildOption = "all") {

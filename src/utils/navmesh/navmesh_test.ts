@@ -1,11 +1,11 @@
-import earcut from "earcut";
+// import earcut from "earcut";
 import NavMesh from "navmesh";
 import { ISegment, PointLike } from "../geometry/types";
 import * as martinez from 'martinez-polygon-clipping';
 import { clone, rotate, shape_vector, translate } from "../geometry/logic";
 import { multiply, normalize } from "../geometry/utils";
 import { vec2_distance_to } from "../math_utils";
-import { SpatialHashManagerCreate, SpatialHashManagerUtils } from "./spatial_hash_manager";
+import { SpatialHashManagerCreate, SpatialHashManagerUtils } from "../spatial_hash_manager";
 
 
 export type PolyPoints = PointLike[];   // Массив точек для описания полигонов
@@ -19,35 +19,35 @@ export type TPolygon = TLinearRing[];
 export type TGeometry = TPolygon | TPolygon[];
 
 
-export function get_polygon_earcut(vertices: PointLike[], holes?: PolyPoints[], dimensions?: number): PolyPoints[] {
-    const vertices_flatten: number[] = [];
-    const vertices_copy = vertices.slice();
-    if (isConvex(vertices_copy) && (holes?.length == 0)) return [vertices_copy];
-    for (const vertex of vertices) {
-        vertices_flatten.push(vertex.x, vertex.y);
-    }
-    let start_index = vertices.length;
-    const holes_indexes: number[] = [];
-    if (holes) {
-        for (const hole of holes) {
-            holes_indexes.push(start_index);
-            start_index += hole.length;
-            for (const vertex of hole) {
-                vertices_flatten.push(vertex.x, vertex.y);
-                vertices_copy.push(vertex);
-            }
-        }
-    }
-    const indexes = earcut(vertices_flatten, holes_indexes, dimensions);
-    const triangles: PolyPoints[] = [];
-    for (let i = 0; i <= indexes.length - 3; i += 3) {
-        const a = vertices_copy[indexes[i]];
-        const b = vertices_copy[indexes[i + 1]];
-        const c = vertices_copy[indexes[i + 2]];
-        triangles.push([a, b, c]);
-    }
-    return triangles;
-}
+// export function get_polygon_earcut(vertices: PointLike[], holes?: PolyPoints[], dimensions?: number): PolyPoints[] {
+//     const vertices_flatten: number[] = [];
+//     const vertices_copy = vertices.slice();
+//     if (isConvex(vertices_copy) && (holes?.length == 0)) return [vertices_copy];
+//     for (const vertex of vertices) {
+//         vertices_flatten.push(vertex.x, vertex.y);
+//     }
+//     let start_index = vertices.length;
+//     const holes_indexes: number[] = [];
+//     if (holes) {
+//         for (const hole of holes) {
+//             holes_indexes.push(start_index);
+//             start_index += hole.length;
+//             for (const vertex of hole) {
+//                 vertices_flatten.push(vertex.x, vertex.y);
+//                 vertices_copy.push(vertex);
+//             }
+//         }
+//     }
+//     const indexes = earcut(vertices_flatten, holes_indexes, dimensions);
+//     const triangles: PolyPoints[] = [];
+//     for (let i = 0; i <= indexes.length - 3; i += 3) {
+//         const a = vertices_copy[indexes[i]];
+//         const b = vertices_copy[indexes[i + 1]];
+//         const c = vertices_copy[indexes[i + 2]];
+//         triangles.push([a, b, c]);
+//     }
+//     return triangles;
+// }
 
 export function get_navmesh(meshPolygonPoints: PolyPoints[]) {
     const navmesh = new NavMesh(meshPolygonPoints);
@@ -285,40 +285,4 @@ export const polygon_utils: SpatialHashManagerUtils<PolyPoints[]> = {
         const c = polygon_utils.get_center(elem);
         return vec2_distance_to(p, c);
     }
-}
-
-export function PolygonsManagerCreate(hash_cell_size: number, utils: SpatialHashManagerUtils<PolyPoints[]>) {
-
-    function get_obstacles_data_polygon(x: number, y: number, width: number, height: number) {
-        const elements = base.get_elements(x, y, width, height);
-        if (elements.length == 0) return;
-        const data_polygons: TGeometry[] = [];
-        for (const elem of elements) {
-            data_polygons.push(polygon_to_data(elem));
-        }
-        const polygon_sum = polygon_union_mult(data_polygons);
-        return polygon_sum;
-    }
-
-    const base = SpatialHashManagerCreate<PolyPoints[]>(hash_cell_size, utils);
-
-    function add_obstacle(obstacle: ISegment) {
-        const poly = make_padding_rect(obstacle);
-        base.add_element(poly);
-    }
-
-    return {
-        add_element: base.add_element, 
-        remove_element: base.remove_element, 
-        clear_elements: base.clear_elements,
-        get_elements: base.get_elements, 
-        enable_object: base.enable_object, 
-        get_object_by_pos: base.get_object_by_pos,
-        get_element_by_id: base.get_element_by_id, 
-        objects: base.objects, 
-        all_elements: base.all_elements,
-
-        get_obstacles_data_polygon,
-        add_obstacle
-    };
 }
