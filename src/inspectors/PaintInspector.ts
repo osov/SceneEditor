@@ -1,7 +1,10 @@
 import { Slice9Mesh } from "@editor/render_engine/objects/slice9";
 import { ChangeInfo, ObjectData, PropertyData, PropertyType } from "../modules_editor/Inspector";
-import { AllowedMeshType, PAINT_MODE, PaintProperty } from "@editor/controls/PaintControl";
+import { PAINT_MODE, PaintProperty } from "@editor/shared";
 import { MultipleMaterialMesh } from "@editor/render_engine/objects/multiple_material_mesh";
+
+/** Допустимые типы мешей для рисования */
+export type AllowedMeshType = Slice9Mesh | MultipleMaterialMesh;
 
 
 export function register_paint_inspector() {

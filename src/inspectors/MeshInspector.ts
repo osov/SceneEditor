@@ -5,7 +5,7 @@ import { TextMesh } from "../render_engine/objects/text";
 import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { ChangeInfo, PropertyType, BeforeChangeInfo, PropertyData } from "../modules_editor/Inspector";
 import { deepClone, euler_to_quat, hexToRGB, quat_to_euler, swap } from "../modules/utils";
-import { MeshMaterialPropertyInfo, MeshMaterialUniformInfo, MeshPropertyInfo } from "../controls/types";
+import type { MeshMaterialPropertyInfo, MeshMaterialUniformInfo, MeshPropertyInfo } from "@editor/shared";
 import { anchorToScreenPreset, convertBlendModeToThreeJS, convertThreeJSBlendingToBlendMode, generateMaterialOptions, generateModelOptions, generateTextureOptions, getChangedInfo, getDraggedInfo, pivotToScreenPreset, screenPresetToAnchorValue, screenPresetToPivotValue } from "./helpers";
 import { IUniform, Texture } from "three";
 import { Color } from "three";

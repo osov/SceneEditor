@@ -2,7 +2,7 @@ import { BufferGeometry, Mesh, Object3DEventMap, PlaneGeometry, ShaderMaterial, 
 import { IBaseEntity, IBaseParameters, IObjectTypes, OnTransformChanged } from "../types";
 import { convert_width_height_to_pivot_bb, is_base_mesh } from "../helpers/utils";
 import { WORLD_SCALAR } from "../../config";
-import { HistoryDataKeys } from "../../controls/HistoryControl";
+import type { HistoryDataKeys } from "@editor/shared";
 
 export const shader = new ShaderMaterial({
     vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);}',

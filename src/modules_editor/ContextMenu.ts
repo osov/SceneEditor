@@ -1,5 +1,5 @@
 // import { deepClone } from "../modules/utils";
-import { NodeAction } from "../controls/ActionsControl";
+import { NodeAction } from "@editor/shared";
 
 declare global {
     const ContextMenu: ReturnType<typeof ContextMenuCreate>;

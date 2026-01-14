@@ -1,0 +1,290 @@
+/**
+ * SceneService - сервис управления объектами сцены
+ *
+ * Управляет созданием, добавлением, удалением объектов.
+ * Сериализация и десериализация сцены.
+ */
+
+import { Object3D } from 'three';
+import type { ObjectTypes, BaseEntityData } from '@editor/core/render/types';
+import type {
+    ISceneService,
+    ISceneObject,
+    SceneServiceParams,
+} from './types';
+
+/** Проверить является ли объект ISceneObject */
+function is_scene_object(obj: Object3D): obj is ISceneObject {
+    return 'mesh_data' in obj && typeof (obj as ISceneObject).mesh_data?.id === 'number';
+}
+
+/** Создать SceneService */
+export function create_scene_service(params: SceneServiceParams): ISceneService {
+    const { logger, event_bus, render_service } = params;
+
+    // Внутреннее состояние
+    let id_counter = 0;
+    const mesh_url_to_id = new Map<string, number>();
+    const mesh_id_to_url = new Map<number, string>();
+
+    function get_unique_id(): number {
+        while (true) {
+            id_counter++;
+            if (get_by_id(id_counter) === undefined) {
+                return id_counter;
+            }
+        }
+    }
+
+    function create<T extends ObjectTypes>(type: T, params_obj?: Record<string, unknown>): ISceneObject {
+        // Базовая реализация - создаём простой Object3D с mesh_data
+        // В реальном проекте здесь будет фабрика для разных типов
+        logger.debug(`Создание объекта типа ${type}`);
+
+        const id = get_unique_id();
+        const obj = new Object3D() as Object3D & { mesh_data: ISceneObject['mesh_data'] };
+
+        // Добавляем mesh_data
+        obj.mesh_data = {
+            id,
+            type,
+            name: `${type}_${id}`,
+            ...params_obj,
+        };
+
+        obj.name = obj.mesh_data.name as string;
+
+        event_bus.emit('scene:object_created', { id, type });
+
+        return obj as ISceneObject;
+    }
+
+    function add(object: ISceneObject): void {
+        const scene = render_service.scene;
+        scene.add(object);
+        update_mesh_url(object);
+
+        logger.debug(`Объект ${object.mesh_data.id} добавлен в сцену`);
+        event_bus.emit('scene:object_added', { id: object.mesh_data.id });
+    }
+
+    function remove(object: ISceneObject): void {
+        const id = object.mesh_data.id;
+
+        event_bus.emit('scene:object_removing', { id });
+
+        // Удаляем из URL маппинга
+        const url = mesh_id_to_url.get(id);
+        if (url !== undefined) {
+            mesh_url_to_id.delete(url);
+            mesh_id_to_url.delete(id);
+        }
+
+        // Удаляем из сцены
+        if (object.parent !== null) {
+            object.parent.remove(object);
+        }
+
+        logger.debug(`Объект ${id} удалён из сцены`);
+        event_bus.emit('scene:object_removed', { id });
+    }
+
+    function get_by_id(id: number): ISceneObject | undefined {
+        const scene = render_service.scene;
+        let result: ISceneObject | undefined;
+
+        scene.traverse((child) => {
+            if (is_scene_object(child) && child.mesh_data.id === id) {
+                result = child;
+            }
+        });
+
+        return result;
+    }
+
+    function get_all(): ISceneObject[] {
+        const scene = render_service.scene;
+        const result: ISceneObject[] = [];
+
+        scene.traverse((child) => {
+            if (is_scene_object(child)) {
+                result.push(child);
+            }
+        });
+
+        return result;
+    }
+
+    function clear(): void {
+        const scene = render_service.scene;
+
+        // Удаляем все объекты сцены
+        for (let i = scene.children.length - 1; i >= 0; i--) {
+            const child = scene.children[i];
+            if (is_scene_object(child)) {
+                scene.remove(child);
+            }
+        }
+
+        // Очищаем маппинги
+        mesh_url_to_id.clear();
+        mesh_id_to_url.clear();
+        id_counter = 0;
+
+        logger.info('Сцена очищена');
+        event_bus.emit('scene:cleared', {});
+    }
+
+    function serialize(): BaseEntityData[] {
+        const result: BaseEntityData[] = [];
+        const scene = render_service.scene;
+
+        for (const child of scene.children) {
+            if (is_scene_object(child)) {
+                result.push(serialize_object(child));
+            }
+        }
+
+        return result;
+    }
+
+    function deserialize(data: BaseEntityData[]): void {
+        clear();
+
+        for (const item of data) {
+            deserialize_object(item);
+        }
+
+        logger.info(`Десериализовано ${data.length} объектов`);
+        event_bus.emit('scene:loaded', { count: data.length });
+    }
+
+    function serialize_object(object: ISceneObject): BaseEntityData {
+        const position = object.position.toArray() as [number, number, number];
+        const rotation = object.quaternion.toArray() as [number, number, number, number];
+        const scale: [number, number] = [object.scale.x, object.scale.y];
+
+        const data: BaseEntityData = {
+            id: object.mesh_data.id,
+            pid: get_parent_id(object),
+            type: (object.mesh_data.type as ObjectTypes) ?? ('empty' as ObjectTypes),
+            name: object.name,
+            visible: object.visible,
+            position,
+            rotation,
+            scale,
+            other_data: { ...object.mesh_data },
+        };
+
+        // Сериализуем детей
+        const children: BaseEntityData[] = [];
+        for (const child of object.children) {
+            if (is_scene_object(child)) {
+                children.push(serialize_object(child));
+            }
+        }
+
+        if (children.length > 0) {
+            data.children = children;
+        }
+
+        return data;
+    }
+
+    function deserialize_object(data: BaseEntityData, parent?: ISceneObject): ISceneObject {
+        const object = create(data.type, data.other_data);
+
+        // Восстанавливаем трансформацию
+        if (data.position !== undefined) {
+            object.position.set(data.position[0], data.position[1], data.position[2]);
+        }
+        if (data.rotation !== undefined) {
+            object.quaternion.set(data.rotation[0], data.rotation[1], data.rotation[2], data.rotation[3]);
+        }
+        if (data.scale !== undefined) {
+            object.scale.set(data.scale[0], data.scale[1], 1);
+        }
+
+        object.name = data.name;
+        object.visible = data.visible;
+
+        // Добавляем к родителю или в сцену
+        if (parent !== undefined) {
+            parent.add(object);
+        } else {
+            add(object);
+        }
+
+        // Десериализуем детей
+        if (data.children !== undefined) {
+            for (const childData of data.children) {
+                deserialize_object(childData, object);
+            }
+        }
+
+        return object;
+    }
+
+    function get_parent_id(object: ISceneObject): number | undefined {
+        if (object.parent !== null && is_scene_object(object.parent)) {
+            return object.parent.mesh_data.id;
+        }
+        return undefined;
+    }
+
+    function update_mesh_url(mesh: ISceneObject): void {
+        // Строим полный путь
+        let fullPath = mesh.name;
+        let parent = mesh.parent;
+
+        while (parent !== null && is_scene_object(parent)) {
+            fullPath = parent.name + '/' + fullPath;
+            parent = parent.parent;
+        }
+
+        fullPath = ':/' + fullPath;
+
+        // Удаляем старый путь
+        const oldUrl = mesh_id_to_url.get(mesh.mesh_data.id);
+        if (oldUrl !== undefined) {
+            mesh_url_to_id.delete(oldUrl);
+        }
+
+        // Сохраняем новый
+        mesh_url_to_id.set(fullPath, mesh.mesh_data.id);
+        mesh_id_to_url.set(mesh.mesh_data.id, fullPath);
+    }
+
+    function get_by_url(url: string): ISceneObject | undefined {
+        const id = mesh_url_to_id.get(url);
+        if (id === undefined) {
+            return undefined;
+        }
+        return get_by_id(id);
+    }
+
+    function get_url_by_id(id: number): string | undefined {
+        return mesh_id_to_url.get(id);
+    }
+
+    function dispose(): void {
+        clear();
+        logger.info('SceneService освобождён');
+    }
+
+    return {
+        create,
+        add,
+        remove,
+        get_by_id,
+        get_by_url,
+        get_url_by_id,
+        get_all,
+        clear,
+        serialize,
+        deserialize,
+        serialize_object,
+        get_unique_id,
+        dispose,
+    };
+}

@@ -1,5 +1,5 @@
 import { Object3D, Vector2, Vector2Tuple, Vector3, Vector3Tuple, Vector4Tuple } from "three";
-import { HistoryDataKeys } from "../controls/HistoryControl";
+import type { HistoryDataKeys } from "@editor/shared";
 
 export enum IObjectTypes {
     EMPTY = '',

@@ -3,9 +3,12 @@ import { DynamicPublicDirectory } from "vite-multiple-assets";
 import { defineConfig } from 'vite';
 import { resolve } from "path"
 
+// Путь к проекту можно передать через переменную окружения
+const projectPath = process.env.PROJECT_PATH || '../test-project';
+
 const dirAssets = [
   { input: "public/**", output: "/", watch: true },
-  { input: "../ExampleProject/{\x01,assets}/**", output: "/", watch: false }
+  { input: `${projectPath}/{public,assets}/**`, output: "/", watch: true }
 ];
 
 const mimeTypes = {

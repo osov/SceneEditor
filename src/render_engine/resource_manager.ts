@@ -183,7 +183,77 @@ export function ResourceManagerModule() {
 
     function init() {
         gen_textures();
+        create_default_materials();
         subscribe();
+    }
+
+    /**
+     * Создаёт встроенные материалы, которые всегда доступны без загрузки из файлов проекта.
+     * Это позволяет редактору работать даже без загруженного проекта.
+     */
+    function create_default_materials() {
+        // Создаём default материал 'slice9' используя встроенные шейдеры
+        const slice9_material = new ShaderMaterial({
+            vertexShader: shader.vertexShader,
+            fragmentShader: shader.fragmentShader,
+            transparent: true,
+            uniforms: {
+                u_texture: { value: null },
+                alpha: { value: 1.0 },
+            },
+        });
+        slice9_material.name = 'slice9';
+
+        const slice9_info: MaterialInfo = {
+            name: 'slice9',
+            path: '__builtin__/slice9.mtr',
+            vertexShader: '__builtin__',
+            fragmentShader: '__builtin__',
+            uniforms: {
+                u_texture: {
+                    type: MaterialUniformType.SAMPLER2D,
+                    params: {},
+                    readonly: false,
+                    hide: true,
+                },
+                alpha: {
+                    type: MaterialUniformType.RANGE,
+                    params: { min: 0, max: 1, step: 0.01 },
+                    readonly: false,
+                    hide: false,
+                },
+            },
+            origin: '',
+            instances: {},
+            mesh_info_to_material_hashes: {},
+            material_hash_to_meshes_info: {},
+            material_hash_to_changed_uniforms: {},
+        };
+
+        // Вычисляем hash оригинального материала
+        const not_readonly_uniforms: Record<string, IUniform> = {};
+        Object.entries(slice9_material.uniforms).forEach(([key, uniform]) => {
+            if (slice9_info.uniforms[key]?.readonly) {
+                return;
+            }
+            not_readonly_uniforms[key] = uniform;
+        });
+
+        slice9_info.origin = getObjectHash({
+            uniforms: not_readonly_uniforms,
+            defines: slice9_material.defines,
+            depthTest: slice9_material.depthTest,
+            stencilWrite: slice9_material.stencilWrite,
+            stencilRef: slice9_material.stencilRef,
+            stencilFunc: slice9_material.stencilFunc,
+            stencilZPass: slice9_material.stencilZPass,
+            colorWrite: slice9_material.colorWrite,
+        });
+
+        slice9_info.instances[slice9_info.origin] = slice9_material;
+        slice9_info.material_hash_to_meshes_info[slice9_info.origin] = [];
+
+        materials['slice9'] = slice9_info;
     }
 
     function subscribe() {

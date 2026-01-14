@@ -175,6 +175,9 @@ function TreeControlCreate() {
         if (!isTreeExists() || is_clear_state || is_load_scene) setupTree(treeList, is_hide_allSub);
         else updateTree(treeList, oldTreeList);
 
+        // Синхронизация с новым SceneGraphService через bridge
+        EventBus.trigger('SYS_TREE_DRAW_GRAPH', { list: treeList });
+
         scrollToLastSelected();
     }
 

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(curl:*)",
+      "Bash(ls -la \"D:\\\\TS_EDITOR_DEFOLD\\\\SceneEditor\\\\src\\\\utils\\\\physic\"\" 2>/dev/null || echo \"Directory does not exist \")",
+      "mcp__playwright__browser_wait_for",
+      "Bash(bun:*)",
+      "Bash(netstat:*)",
+      "Bash(xargs:*)",
+      "mcp__playwright__browser_click",
+      "Bash(ls:*)",
+      "Bash(timeout:*)",
+      "mcp__playwright__browser_press_key"
+    ]
+  }
+}

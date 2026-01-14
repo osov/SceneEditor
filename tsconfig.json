@@ -18,6 +18,8 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "baseUrl": ".",
     "paths": {
       "@tweenjs/tween.js": [
@@ -26,6 +28,18 @@
       "@editor/*": [
         "./src/*"
       ],
+      "@editor/core": [
+        "./src/core/index.ts"
+      ],
+      "@editor/core/*": [
+        "./src/core/*"
+      ],
+      "@editor/shared": [
+        "./src/shared/index.ts"
+      ],
+      "@editor/shared/*": [
+        "./src/shared/*"
+      ]
     },
     "typeRoots": [
       "@types",
@@ -34,7 +48,8 @@
   },
   "include": [
     "src",
+    "@types",
     "../SceneEditor_Kopateli/src",
-    "../SceneEditor_Djam/src",
+    "../SceneEditor_Djam/src"
   ]
 }

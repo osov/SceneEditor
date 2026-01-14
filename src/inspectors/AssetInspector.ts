@@ -6,7 +6,7 @@ import { get_file_name, updateEachMaterialWhichHasTexture } from "../render_engi
 import { MaterialUniformParams, MaterialUniformType } from "../render_engine/resource_manager";
 import { IObjectTypes, IBaseMesh } from "../render_engine/types";
 import { PropertyData, PropertyType, ChangeInfo, BeforeChangeInfo, ObjectData } from "../modules_editor/Inspector";
-import { AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo } from "../controls/types";
+import type { AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo } from "@editor/shared";
 import { hexToRGB, rgbToHex } from "../modules/utils";
 import { convertFilterModeToThreeJS, convertThreeJSFilterToFilterMode, convertWrappingModeToThreeJS, convertThreeJSWrappingToWrappingMode, generateAtlasOptions, generateFragmentProgramOptions, generateTextureOptions, generateVertexProgramOptions } from "./helpers";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
