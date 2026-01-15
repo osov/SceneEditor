@@ -19,7 +19,9 @@ export const CORE_TOKENS = {
 
 /** Сервисы ввода */
 export const INPUT_TOKENS = {
-    /** Менеджер ввода (клавиатура, мышь) */
+    /** Сервис ввода (DI) */
+    Input: Symbol('Input'),
+    /** Менеджер ввода (клавиатура, мышь) - legacy */
     InputManager: Symbol('InputManager'),
     /** Данные и конфигурация камеры */
     Camera: Symbol('Camera'),
@@ -77,10 +79,14 @@ export const EDITOR_TOKENS = {
     Actions: Symbol('Actions'),
     /** Сервис иерархии */
     Hierarchy: Symbol('Hierarchy'),
+    /** Сервис ассетов */
+    Assets: Symbol('Assets'),
     /** Сервис горячих клавиш */
     Keybindings: Symbol('Keybindings'),
     /** Мост EventBus */
     EventBusBridge: Symbol('EventBusBridge'),
+    /** Сервис UI */
+    UI: Symbol('UI'),
 } as const;
 
 /** Сервисы контролов редактора */

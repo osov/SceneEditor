@@ -1,12 +1,10 @@
 /**
- * Legacy InputManager - обёртка для ввода
+ * Legacy InputManager - обёртка для DI InputService
  *
- * Управляет событиями клавиатуры и мыши.
- * Использует DI EventBus для эмиссии событий.
+ * Делегирует к DI InputService для обратной совместимости.
  */
 
-import { Vector2 } from "three";
-import type { IEventBus } from '../core/di/types';
+import type { IInputService } from '../core/services/InputService';
 import { get_container } from '../core/di/Container';
 import { TOKENS } from '../core/di/tokens';
 
@@ -23,129 +21,65 @@ interface ILegacyInput {
     keys_state: Record<string, boolean>;
 }
 
+/** Кэш для InputService */
+let _input_service: IInputService | undefined;
+
+/** Получить InputService из DI */
+function get_input_service(): IInputService | undefined {
+    if (_input_service !== undefined) {
+        return _input_service;
+    }
+    const container = get_container();
+    if (container !== undefined) {
+        _input_service = container.try_resolve<IInputService>(TOKENS.Input);
+    }
+    return _input_service;
+}
+
 /** Регистрация глобального Input */
 export function register_input(): void {
     (window as unknown as Record<string, unknown>).Input = create_input_module();
 }
 
-/** Получить DI EventBus */
-function get_event_bus(): IEventBus | undefined {
-    const container = get_container();
-    return container?.try_resolve<IEventBus>(TOKENS.EventBus);
-}
-
-/** Создать модуль ввода */
+/** Создать модуль ввода - делегирует к DI InputService */
 function create_input_module(): ILegacyInput {
-    const keys_state: Record<string, boolean> = {};
-    let _is_control = false;
-    let _is_shift = false;
-    let _is_alt = false;
-    const mouse_pos = new Vector2();
-    const mouse_pos_normalized = new Vector2();
+    // Fallback состояние если DI недоступен
+    const fallback_keys_state: Record<string, boolean> = {};
 
-    function update_state_ext_keys(e: KeyboardEvent | MouseEvent): void {
-        _is_control = e.ctrlKey;
-        _is_shift = e.shiftKey;
-        _is_alt = e.altKey;
-    }
-
-    function emit_event(event: string, data: unknown): void {
-        const event_bus = get_event_bus();
-        if (event_bus !== undefined) {
-            event_bus.emit(event, data);
+    function bind_events(): void {
+        const service = get_input_service();
+        if (service !== undefined) {
+            // Получаем canvas из глобального RenderEngine
+            const canvas = typeof RenderEngine !== 'undefined'
+                ? RenderEngine.renderer.domElement
+                : document.querySelector('canvas') as HTMLCanvasElement;
+            service.bind_events(canvas);
         }
     }
 
-    function bind_events(): void {
-        // Получаем canvas из глобального RenderEngine (пока legacy)
-        const canvas = typeof RenderEngine !== 'undefined'
-            ? RenderEngine.renderer.domElement
-            : document.querySelector('canvas') as HTMLCanvasElement;
+    function is_control(): boolean {
+        const service = get_input_service();
+        return service?.is_control() ?? false;
+    }
 
-        const body = document.body;
+    function is_shift(): boolean {
+        const service = get_input_service();
+        return service?.is_shift() ?? false;
+    }
 
-        body.addEventListener('keydown', (e) => {
-            update_state_ext_keys(e);
-            keys_state[e.key] = true;
-            if (e.repeat) return;
-            emit_event('SYS_VIEW_INPUT_KEY_DOWN', { key: e.key, target: e.target });
-            if (e.ctrlKey && (e.key === 'd' || e.key === 'в')) {
-                e.preventDefault(); // ctrl+d перехватывал браузер
-            }
-            if (_is_alt) {
-                e.preventDefault(); // alt перехватывал браузер
-            }
-            if (e.ctrlKey && (e.key === 's' || e.key === 'ы')) {
-                e.preventDefault();
-            }
-        });
-
-        body.addEventListener('keyup', (e) => {
-            update_state_ext_keys(e);
-            keys_state[e.key] = false;
-            emit_event('SYS_VIEW_INPUT_KEY_UP', { key: e.key, target: e.target });
-        });
-
-        body.addEventListener('pointermove', (e) => {
-            update_state_ext_keys(e);
-            mouse_pos.set(e.pageX, e.pageY);
-            const canvas_width = canvas?.clientWidth ?? window.innerWidth;
-            const canvas_height = canvas?.clientHeight ?? window.innerHeight;
-            mouse_pos_normalized.set(
-                (e.pageX / canvas_width) * 2 - 1,
-                -(e.pageY / canvas_height) * 2 + 1
-            );
-            emit_event('SYS_INPUT_POINTER_MOVE', {
-                x: mouse_pos_normalized.x,
-                y: mouse_pos_normalized.y,
-                offset_x: mouse_pos.x,
-                offset_y: mouse_pos.y,
-                target: e.target,
-            });
-        });
-
-        body.addEventListener('mousedown', (e) => {
-            update_state_ext_keys(e);
-            emit_event('SYS_INPUT_POINTER_DOWN', {
-                x: mouse_pos_normalized.x,
-                y: mouse_pos_normalized.y,
-                offset_x: mouse_pos.x,
-                offset_y: mouse_pos.y,
-                button: e.button,
-                target: e.target,
-            });
-        });
-
-        body.addEventListener('mouseup', (e) => {
-            update_state_ext_keys(e);
-            emit_event('SYS_INPUT_POINTER_UP', {
-                x: mouse_pos_normalized.x,
-                y: mouse_pos_normalized.y,
-                offset_x: mouse_pos.x,
-                offset_y: mouse_pos.y,
-                button: e.button,
-                target: e.target,
-            });
-        });
-
-        body.addEventListener('dblclick', (e) => {
-            update_state_ext_keys(e);
-            emit_event('SYS_INPUT_DBL_CLICK', {
-                x: mouse_pos_normalized.x,
-                y: mouse_pos_normalized.y,
-                offset_x: mouse_pos.x,
-                offset_y: mouse_pos.y,
-                button: e.button,
-                target: e.target,
-            });
-        });
+    function is_alt(): boolean {
+        const service = get_input_service();
+        return service?.is_alt() ?? false;
     }
 
     return {
         bind_events,
-        is_control: () => _is_control,
-        is_shift: () => _is_shift,
-        is_alt: () => _is_alt,
-        keys_state,
+        is_control,
+        is_shift,
+        is_alt,
+        get keys_state(): Record<string, boolean> {
+            const service = get_input_service();
+            return service?.keys_state ?? fallback_keys_state;
+        },
     };
 }

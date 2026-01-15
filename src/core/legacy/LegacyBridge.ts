@@ -6,9 +6,9 @@
  */
 
 import type { IContainer } from '../di/types';
-import { TOKENS, ENGINE_TOKENS } from '../di/tokens';
-import type { ISelectionService, IHistoryService, IActionsService, ITransformService } from '@editor/editor/types';
-import type { ISceneObject, ICameraService } from '@editor/engine/types';
+import { TOKENS } from '../di/tokens';
+import type { ISelectionService, IHistoryService, IActionsService } from '@editor/editor/types';
+import type { ISceneObject } from '@editor/engine/types';
 import { ObjectTypes } from '@editor/core/render/types';
 
 /**
@@ -242,30 +242,10 @@ export function register_legacy_actions_control(container: IContainer): void {
 }
 
 /**
- * Регистрация ControlManager как глобального объекта (stub)
- */
-export function register_legacy_control_manager(): void {
-    const ControlManager = {
-        draw_graph(): void {
-            // Триггерим событие для обновления дерева
-            if (typeof EventBus !== 'undefined') {
-                EventBus.trigger('SYS_GRAPH_REDRAW', {});
-            }
-        },
-
-        update_graph(): void {
-            // Триггерим событие для обновления дерева
-            if (typeof EventBus !== 'undefined') {
-                EventBus.trigger('SYS_GRAPH_REDRAW', {});
-            }
-        },
-    };
-
-    (window as unknown as Record<string, unknown>).ControlManager = ControlManager;
-}
-
-/**
  * Регистрация AssetControl как глобального объекта (stub)
+ *
+ * Примечание: Реальный AssetControl был удалён, этот stub предоставляет
+ * минимальный интерфейс для legacy кода.
  */
 export function register_legacy_asset_control(): void {
     const AssetControl = {
@@ -288,97 +268,15 @@ export function register_legacy_asset_control(): void {
 }
 
 /**
- * Регистрация TransformControl как глобального объекта (stub)
- */
-export function register_legacy_transform_control(container: IContainer): void {
-    const transform = container.resolve<ITransformService>(TOKENS.Transform);
-
-    const TransformControl = {
-        set_selected_list(_list: unknown[]): void {
-            // TODO: Связать с TransformService
-        },
-
-        detach(): void {
-            transform.detach();
-        },
-
-        set_active(_active: boolean): void {
-            // TODO: Реализовать
-        },
-
-        set_mode(mode: string): void {
-            transform.set_mode(mode as 'translate' | 'rotate' | 'scale');
-        },
-
-        set_proxy_in_average_point(_list: unknown[]): void {
-            // TODO: Реализовать для множественного выделения
-        },
-
-        draw(): void {
-            // TODO: Реализовать перерисовку гизмо
-        },
-    };
-
-    (window as unknown as Record<string, unknown>).TransformControl = TransformControl;
-}
-
-/**
- * Регистрация SizeControl как глобального объекта (stub)
- */
-export function register_legacy_size_control(): void {
-    const SizeControl = {
-        set_selected_list(_list: unknown[]): void {
-            // TODO: Реализовать через сервис
-        },
-
-        detach(): void {
-            // TODO: Реализовать
-        },
-
-        set_active(_active: boolean): void {
-            // TODO: Реализовать
-        },
-
-        set_proxy_in_average_point(_list: unknown[]): void {
-            // TODO: Реализовать для множественного выделения
-        },
-
-        draw(): void {
-            // TODO: Реализовать перерисовку размерного контрола
-        },
-    };
-
-    (window as unknown as Record<string, unknown>).SizeControl = SizeControl;
-}
-
-/**
- * Регистрация CameraControl как глобального объекта (stub)
- */
-export function register_legacy_camera_control(container: IContainer): void {
-    const camera = container.resolve<ICameraService>(ENGINE_TOKENS.Camera);
-
-    const CameraControl = {
-        load_state(_name: string): void {
-            // TODO: Реализовать загрузку состояния камеры
-        },
-
-        get_zoom(): number {
-            return camera.get_zoom();
-        },
-    };
-
-    (window as unknown as Record<string, unknown>).CameraControl = CameraControl;
-}
-
-/**
  * Регистрация всех legacy контролов
+ *
+ * Создаёт глобальные объекты (window.*), которые делегируют вызовы DI сервисам.
+ * TransformControl, SizeControl, CameraControl регистрируются отдельно
+ * из src/controls/ - там содержится реальная логика Three.js.
  */
 export function register_all_legacy_controls(container: IContainer): void {
     register_legacy_select_control(container);
     register_legacy_history_control(container);
     register_legacy_actions_control(container);
-    register_legacy_transform_control(container);
-    register_legacy_size_control();
-    register_legacy_camera_control(container);
     register_legacy_asset_control();
 }

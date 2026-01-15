@@ -11,6 +11,7 @@ import { TOKENS, INIT_ORDER } from './di/tokens';
 import { create_logger, LogLevel } from './services/LoggerService';
 import type { LoggerConfig } from './services/LoggerService';
 import { create_event_bus } from './events/EventBus';
+import { create_input_service } from './services/InputService';
 import type { IPluginManager, PluginConfig, PluginFactory } from './plugins/types';
 import { create_plugin_manager } from './plugins/PluginManager';
 import { EXTENSION_POINTS } from './plugins/ExtensionPoints';
@@ -31,6 +32,8 @@ import {
     create_transform_service,
     create_actions_service,
     create_hierarchy_service,
+    create_asset_service,
+    create_ui_service,
 } from '../editor';
 
 // Legacy регистрации для обратной совместимости
@@ -110,6 +113,20 @@ function register_core_services(container: IContainer, options: BootstrapOptions
         init_order: INIT_ORDER.EVENT_BUS,
         dependencies: [TOKENS.Logger],
         name: 'EventBus',
+    });
+
+    // Сервис ввода
+    container.register_singleton(TOKENS.Input, (c) => {
+        const logger = c.resolve<ILogger>(TOKENS.Logger);
+        const event_bus = c.resolve<IEventBus>(TOKENS.EventBus);
+        return create_input_service({
+            logger: logger.create_child('InputService'),
+            event_bus,
+        });
+    }, {
+        init_order: INIT_ORDER.INPUT,
+        dependencies: [TOKENS.Logger, TOKENS.EventBus],
+        name: 'InputService',
     });
 
     // Менеджер плагинов
@@ -320,27 +337,66 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
             name: 'HierarchyService',
         });
 
-        // === Legacy регистрации для обратной совместимости ===
-        // TODO: Постепенно мигрировать код на использование DI сервисов
-        register_system();
-        register_log();
-        register_event_bus();  // EventBus должен быть первым из критичных, т.к. используется остальными
-        register_input();
-        // Привязываем обработчики событий ввода
+        // AssetService
+        const asset_service = create_asset_service({
+            logger: logger.create_child('AssetService'),
+            event_bus,
+        });
+
+        container.register_singleton(TOKENS.Assets, () => asset_service, {
+            init_order: INIT_ORDER.EDITOR_ACTIONS + 5,
+            name: 'AssetService',
+        });
+
+        // UIService - создаётся сейчас, но инициализируется после legacy модулей
+        const ui_service = create_ui_service({
+            logger: logger.create_child('UIService'),
+            event_bus,
+            selection_service,
+            hierarchy_service,
+        });
+
+        container.register_singleton(TOKENS.UI, () => ui_service, {
+            init_order: INIT_ORDER.UI,
+            name: 'UIService',
+        });
+
+        // === Legacy глобальные объекты (window.*) ===
+        // Эти модули регистрируют глобальные объекты для обратной совместимости.
+        // Новый код должен использовать DI сервисы напрямую.
+
+        // 1. Базовые утилиты
+        register_system();  // window.System - время, delta
+        register_log();     // window.Log - делегирует к LoggerService
+
+        // 2. Коммуникация и ввод
+        register_event_bus();  // window.EventBus - делегирует к DI EventBus
+        register_input();      // window.Input - делегирует к InputService
+        register_camera();     // window.Camera - данные камеры
+
+        // 3. Render engine (Three.js)
+        register_engine();           // window.RenderEngine
+        register_scene_manager();    // window.SceneManager
+        register_resource_manager(); // window.ResourceManager
+
+        // 4. Привязка событий ввода (после register_engine для canvas)
         Input.bind_events();
-        register_camera();
-        register_engine();
-        register_scene_manager();
-        register_resource_manager();
-        // LegacyBridge должен регистрироваться ДО editor_modules,
-        // т.к. ControlManager использует TransformControl, SizeControl и т.д.
+
+        // 5. Контролы редактора
+        // LegacyBridge создаёт глобальные объекты, делегирующие к DI сервисам
         register_all_legacy_controls(container);
-        // Регистрируем реальные контролы (перезаписывают заглушки из LegacyBridge)
+        // Реальные контролы (Three.js логика) перезаписывают заглушки
         register_size_control();
         register_transform_control();
         register_camera_control();
+
+        // 6. UI модули редактора
         register_editor_modules();
+
         logger.info('Legacy глобальные объекты зарегистрированы');
+
+        // 7. Инициализируем UIService (после legacy модулей для доступа к InspectorControl, ControlManager)
+        ui_service.init();
 
         // Запускаем цикл рендеринга
         render_service.start();

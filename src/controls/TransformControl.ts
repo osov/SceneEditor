@@ -1,5 +1,5 @@
 import { TransformControls, TransformControlsMode } from 'three/examples/jsm/controls/TransformControls.js';
-import { Euler, Object3D, Quaternion, Vector3 } from 'three';
+import { Object3D, Quaternion, Vector3 } from 'three';
 import { MeshPropertyInfo } from './types';
 import { IBaseEntityAndThree } from '../render_engine/types';
 import { MeshProperty } from '../inspectors/MeshInspector';
@@ -10,6 +10,23 @@ import { euler_to_quat } from '@editor/modules/utils';
 declare global {
     const TransformControl: ReturnType<typeof TransformControlCreate>;
 }
+
+// Декларации глобальных объектов
+declare const HistoryControl: {
+    add(type: string, data: MeshPropertyInfo<unknown>[], owner: HistoryOwner): void;
+};
+declare const SelectControl: {
+    set_selected_list(list: IBaseEntityAndThree[]): void;
+};
+declare const ControlManager: {
+    update_graph(): void;
+};
+declare const SceneManager: {
+    get_mesh_by_id(id: number): (IBaseEntityAndThree & { transform_changed(): void }) | undefined;
+};
+declare const Inspector: {
+    refresh(properties: MeshProperty[]): void;
+};
 
 export function register_transform_control() {
     (window as any).TransformControl = TransformControlCreate();
@@ -278,6 +295,15 @@ function TransformControlCreate() {
         }
 
     }
+
+    // Subscribe to mode change events from DI TransformService
+    (EventBus as { on: (event: string, cb: (data: unknown) => void) => void }).on(
+        'SYS_TRANSFORM_MODE_CHANGED',
+        (event: unknown) => {
+            const data = event as { mode: TransformControlsMode };
+            set_mode(data.mode);
+        }
+    );
 
     // Subscribe to undo events
     EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {

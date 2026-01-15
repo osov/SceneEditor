@@ -41,14 +41,54 @@ import { URL_PATHS } from '../modules_editor/modules_editor_const';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { IS_LOGGING } from '@editor/config';
 import { get_file_data, save_file_data } from '@editor/defold/runtime_stubs';
+import { get_container } from '../core/di/Container';
+import { TOKENS } from '../core/di/tokens';
 
+/** Тип возвращаемого значения ResourceManagerModule для DI */
+export type ILegacyResourceManager = ReturnType<typeof ResourceManagerModule>;
 
 declare global {
-    const ResourceManager: ReturnType<typeof ResourceManagerModule>;
+    const ResourceManager: ILegacyResourceManager;
+}
+
+/** Кэш для DI ResourceManager */
+let _resource_manager: ILegacyResourceManager | undefined;
+
+/** Получить ResourceManager из DI или создать новый */
+export function get_resource_manager(): ILegacyResourceManager {
+    if (_resource_manager !== undefined) {
+        return _resource_manager;
+    }
+
+    // Пробуем получить из DI контейнера
+    const container = get_container();
+    if (container !== undefined) {
+        const from_di = container.try_resolve<ILegacyResourceManager>(TOKENS.ResourceManager);
+        if (from_di !== undefined) {
+            _resource_manager = from_di;
+            return from_di;
+        }
+    }
+
+    // Создаём новый если DI недоступен
+    _resource_manager = ResourceManagerModule();
+    return _resource_manager;
 }
 
 export function register_resource_manager() {
-    (window as any).ResourceManager = ResourceManagerModule();
+    // Создаём ResourceManager
+    const resource_manager = get_resource_manager();
+
+    // Регистрируем в глобальный scope
+    (window as unknown as Record<string, unknown>).ResourceManager = resource_manager;
+
+    // Регистрируем в DI контейнер если он доступен
+    const container = get_container();
+    if (container !== undefined && container.try_resolve(TOKENS.ResourceManager) === undefined) {
+        container.register_singleton(TOKENS.ResourceManager, () => resource_manager, {
+            name: 'ResourceManager',
+        });
+    }
 }
 
 

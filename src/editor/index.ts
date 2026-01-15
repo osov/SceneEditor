@@ -46,3 +46,20 @@ export {
     type EventBusBridgeParams,
     type IEventBusBridge,
 } from './EventBusBridge';
+
+// Assets
+export {
+    create_asset_service,
+    type AssetServiceParams,
+    type IAssetService,
+    type AssetOperationResult,
+    type AssetDataResult,
+    type SceneLoadResult,
+} from './AssetService';
+
+// UI
+export {
+    create_ui_service,
+    type UIServiceParams,
+    type IUIService,
+} from './UIService';

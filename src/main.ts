@@ -20,7 +20,6 @@ import { TOKENS } from './core/di/tokens';
 // === Типы сервисов ===
 import type {
     ISelectionService,
-    ITransformService,
     IActionsService,
     IHistoryService,
 } from './editor/types';
@@ -28,6 +27,11 @@ import type {
 // === Новые сервисы редактора ===
 import { create_keybindings_service, create_event_bus_bridge } from './editor';
 import type { IKeybindingsService, IEventBusBridge } from './editor';
+
+// Декларация глобального ControlManager для активации контролов
+declare const ControlManager: {
+    set_active_control(name: string): void;
+};
 
 /** Загрузка сцены проекта */
 async function load_project_scene(logger: { error: (msg: string, ...args: unknown[]) => void }): Promise<void> {
@@ -59,23 +63,23 @@ let event_bus_bridge: IEventBusBridge | undefined;
  */
 function register_default_keybindings(keybindings: IKeybindingsService, container: IContainer): void {
     // Получаем сервисы из DI контейнера
-    const transform = container.resolve<ITransformService>(TOKENS.Transform);
     const actions = container.resolve<IActionsService>(TOKENS.Actions);
     const history = container.resolve<IHistoryService>(TOKENS.History);
     const selection = container.resolve<ISelectionService>(TOKENS.Selection);
     const event_bus = container.resolve<IEventBus>(TOKENS.EventBus);
 
     // === Режимы трансформации ===
+    // ControlManager активирует контрол и устанавливает режим напрямую
     keybindings.register({ key: 'w', description: 'Перемещение' }, () => {
-        transform.set_mode('translate');
+        ControlManager.set_active_control('translate_transform_btn');
     });
 
     keybindings.register({ key: 'e', description: 'Вращение' }, () => {
-        transform.set_mode('rotate');
+        ControlManager.set_active_control('rotate_transform_btn');
     });
 
     keybindings.register({ key: 'r', description: 'Масштаб' }, () => {
-        transform.set_mode('scale');
+        ControlManager.set_active_control('scale_transform_btn');
     });
 
     // === Операции с объектами ===

@@ -51,9 +51,22 @@ const LEGACY_TO_NEW_EVENTS: Record<string, string> = {
     'SYS_CLICK_ON_ASSET': 'assets:clicked',
     'SYS_ASSETS_SELECTED_TEXTURES': 'assets:textures_selected',
     'SYS_ASSETS_SELECTED_MATERIALS': 'assets:materials_selected',
+    'SYS_CHANGED_ATLAS_DATA': 'assets:atlas_changed',
+    'SYS_CHANGED_LAYER_DATA': 'assets:layer_changed',
 
     // Инспектор
     'SYS_INSPECTOR_UPDATE': 'inspector:update_requested',
+    'SYS_INSPECTOR_REFRESH': 'inspector:refresh_requested',
+
+    // UI
+    'SYS_VIEW_INPUT_KEY_DOWN': 'ui:key_down',
+    'SYS_VIEW_INPUT_KEY_UP': 'ui:key_up',
+    'SYS_VIEW_INPUT_MOUSE_DOWN': 'ui:mouse_down',
+    'SYS_VIEW_INPUT_MOUSE_UP': 'ui:mouse_up',
+
+    // Контролы
+    'SYS_TRANSFORM_STARTED': 'controls:transform_started',
+    'SYS_TRANSFORM_ENDED': 'controls:transform_ended',
 };
 
 /** Маппинг событий new → legacy */
@@ -76,10 +89,20 @@ const NEW_TO_LEGACY_EVENTS: Record<string, string> = {
 
     // Сцена
     'scene:save_requested': 'SYS_INPUT_SAVE',
+    'scene:object_added': 'SYS_GRAPH_ADD',
+    'scene:object_removed': 'SYS_GRAPH_REMOVE',
 
     // Цикл рендеринга (для CameraControl и др.)
     'engine:update': 'SYS_ON_UPDATE',
     'engine:update_end': 'SYS_ON_UPDATE_END',
+
+    // Инспектор
+    'inspector:update_requested': 'SYS_INSPECTOR_UPDATE',
+    'inspector:refresh_requested': 'SYS_INSPECTOR_REFRESH',
+
+    // Ассеты
+    'assets:atlas_changed': 'SYS_CHANGED_ATLAS_DATA',
+    'assets:layer_changed': 'SYS_CHANGED_LAYER_DATA',
 };
 
 /** Интерфейс моста */
