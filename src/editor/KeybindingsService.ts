@@ -54,13 +54,29 @@ interface KeybindingEntry {
     action: () => void;
 }
 
+/** Маппинг русских клавиш на латинские */
+const RU_TO_EN_MAP: Record<string, string> = {
+    'а': 'f', 'ф': 'a', 'и': 'b', 'с': 'c', 'в': 'd', 'у': 'e',
+    'ч': 'x', 'м': 'v', 'ш': 'i', 'к': 'r', 'ц': 'w', 'щ': 'o',
+    'з': 'p', 'й': 'q', 'г': 'u', 'х': '[', 'ъ': ']', 'э': "'",
+    'ж': ';', 'д': 'l', 'л': 'k', 'о': 'j', 'р': 'h', 'п': 'g',
+    'н': 'y', 'е': 't', 'т': 'n', 'ь': 'm', 'б': ',', 'ю': '.',
+    'я': 'z',
+};
+
+/** Нормализовать клавишу (конвертация русской раскладки) */
+function normalize_key(key: string): string {
+    const lower = key.toLowerCase();
+    return RU_TO_EN_MAP[lower] ?? lower;
+}
+
 /** Создать уникальный ключ для сочетания клавиш */
 function create_binding_key(binding: Keybinding): string {
     const parts: string[] = [];
     if (binding.ctrl === true) parts.push('ctrl');
     if (binding.shift === true) parts.push('shift');
     if (binding.alt === true) parts.push('alt');
-    parts.push(binding.key.toLowerCase());
+    parts.push(normalize_key(binding.key));
     return parts.join('+');
 }
 

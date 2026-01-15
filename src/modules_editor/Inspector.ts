@@ -9,6 +9,7 @@ import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plu
 import { Vector2, Vector3, Vector4 } from 'three';
 import { FLOAT_PRECISION } from '../config';
 import { Refreshable } from '@tweakpane/core/dist/blade/common/api/refreshable';
+import { select_file } from '@editor/defold/runtime_stubs';
 
 
 declare global {
@@ -140,7 +141,7 @@ type Entity = Folder | Button | Property;
 function InspectorModule() {
     let _inspector: Pane;
     let _data: ObjectData[];
-    let _unique_fields: { ids: number[], data: PropertyData<PropertyType> }[];
+    let _unique_fields: { ids: number[], data: PropertyData<PropertyType> }[] = [];
     // NOTE: Track vector fields that need to be checked for different values
     let _vector_fields: PropertyData<PropertyType>[] = [];
     let _field_name_to_pane: { [key: string]: Refreshable } = {};
@@ -222,7 +223,7 @@ function InspectorModule() {
                     const path = img.getAttribute('path')
                         ?.replace(/.*?\/assets\//, '')
                         .replace('")', '') ?? '';
-                    AssetControl.select_file(path);
+                    select_file(path);
                 });
             }
         });

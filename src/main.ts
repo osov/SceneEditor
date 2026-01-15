@@ -4,11 +4,8 @@
  * Архитектура:
  * - DI контейнер для управления зависимостями (src/core/di/)
  * - Система плагинов для расширяемости (src/core/plugins/)
- * - EventBusBridge для совместимости legacy и новых событий
+ * - Сервисы движка и редактора без legacy кода
  * - KeybindingsService для горячих клавиш
- *
- * Legacy код остаётся для обратной совместимости и будет
- * постепенно мигрирован на новые сервисы.
  */
 
 import '@/assets/css/style.css';
@@ -17,85 +14,25 @@ import { PROJECT_NAME } from './config';
 // === DI система ===
 import { bootstrap, shutdown } from './core/bootstrap';
 import { LogLevel } from './core/services/LoggerService';
+import type { IContainer, IEventBus } from './core/di/types';
+import { TOKENS } from './core/di/tokens';
+
+// === Типы сервисов ===
+import type {
+    ISelectionService,
+    ITransformService,
+    IActionsService,
+    IHistoryService,
+} from './editor/types';
 
 // === Новые сервисы редактора ===
 import { create_keybindings_service, create_event_bus_bridge } from './editor';
 import type { IKeybindingsService, IEventBusBridge } from './editor';
 
-// === Legacy: Движок ===
-import { register_manager } from './modules/Manager';
-import { register_engine } from './render_engine/engine';
-import { register_scene_manager } from './render_engine/scene_manager';
-import { register_resource_manager } from './render_engine/resource_manager';
-import { register_tween_manager } from './render_engine/tween_manager';
-import { register_audio_manager } from './render_engine/AudioManager';
-import { register_lua_core } from './defold/core';
-
-// === Legacy: UI ===
-import { register_popups } from './modules_editor/Popups';
-import { register_contextmenu } from './modules_editor/ContextMenu';
-import { register_mesh_inspector } from './inspectors/MeshInspector';
-import { register_asset_inspector } from './inspectors/AssetInspector';
-import { register_paint_inspector } from './inspectors/PaintInspector';
-import { register_cmp_mover_inspector } from './inspectors/ComponentMoverInspector';
-
-// === Legacy: Контролы ===
-import { register_tree_control } from './controls/TreeControl';
-import { register_select_control } from './controls/SelectControl';
-import { register_camera_control } from './controls/CameraContol';
-import { register_size_control } from './controls/SizeControl';
-import { register_transform_control } from './controls/TransformControl';
-import { register_control_manager } from './controls/ControlManager';
-import { register_history_control } from './controls/HistoryControl';
-import { register_actions_control } from './controls/ActionsControl';
-import { register_view_control } from './controls/ViewControl';
-import { register_asset_control } from './controls/AssetControl';
-import { register_grass_tree_control } from './controls/GrassTreeControl';
-import { register_paint_control } from './controls/PaintControl';
-import { register_components_control } from './controls/ComponentsControl';
-
-/** Регистрация менеджеров движка (legacy) */
-function register_engine_managers(): void {
-    register_manager();
-    register_engine();
-    register_resource_manager();
-    register_scene_manager();
-    register_tween_manager();
-    register_audio_manager();
-    RenderEngine.init();
-}
-
-/** Регистрация legacy контролов */
-function register_legacy_controls(): void {
-    register_camera_control();
-    register_select_control();
-    register_size_control();
-    register_transform_control();
-    register_actions_control();
-    register_view_control();
-    register_asset_control();
-    register_tree_control();
-    register_popups();
-    register_contextmenu();
-    register_control_manager();
-    register_history_control();
-    register_grass_tree_control();
-    register_paint_control();
-    register_components_control();
-}
-
-/** Регистрация legacy инспекторов */
-function register_legacy_inspectors(): void {
-    register_mesh_inspector();
-    register_asset_inspector();
-    register_paint_inspector();
-    register_cmp_mover_inspector();
-}
-
 /** Загрузка сцены проекта */
-async function load_project_scene(): Promise<void> {
+async function load_project_scene(logger: { error: (msg: string, ...args: unknown[]) => void }): Promise<void> {
     if (PROJECT_NAME === '') {
-        Log.error('Не передано имя проекта');
+        logger.error('Не передано имя проекта');
         return;
     }
 
@@ -104,7 +41,7 @@ async function load_project_scene(): Promise<void> {
         main_file.main();
     } catch (e) {
         console.error(e);
-        Log.error('Проект не загружен:', PROJECT_NAME);
+        logger.error('Проект не загружен:', PROJECT_NAME);
     }
 }
 
@@ -115,42 +52,92 @@ let event_bus_bridge: IEventBusBridge | undefined;
 /**
  * Регистрация горячих клавиш
  *
- * ПРИМЕЧАНИЕ: Многие горячие клавиши уже обрабатываются в legacy контролах:
- * - ViewControl: f, Ctrl+C/X/V/B/D, Delete, F2, i
- * - InputManager: Ctrl+Z, Ctrl+S
+ * Централизованное управление всеми горячими клавишами редактора.
+ * Поддерживает русскую раскладку автоматически через KeybindingsService.
  *
- * Здесь регистрируем только дополнительные клавиши,
- * чтобы избежать двойного срабатывания.
+ * Использует сервисы из DI контейнера.
  */
-function register_default_keybindings(keybindings: IKeybindingsService): void {
-    // Режимы трансформации (не обрабатываются в legacy)
+function register_default_keybindings(keybindings: IKeybindingsService, container: IContainer): void {
+    // Получаем сервисы из DI контейнера
+    const transform = container.resolve<ITransformService>(TOKENS.Transform);
+    const actions = container.resolve<IActionsService>(TOKENS.Actions);
+    const history = container.resolve<IHistoryService>(TOKENS.History);
+    const selection = container.resolve<ISelectionService>(TOKENS.Selection);
+    const event_bus = container.resolve<IEventBus>(TOKENS.EventBus);
+
+    // === Режимы трансформации ===
     keybindings.register({ key: 'w', description: 'Перемещение' }, () => {
-        if (typeof TransformControl !== 'undefined') {
-            TransformControl.set_mode('translate');
-        }
+        transform.set_mode('translate');
     });
 
     keybindings.register({ key: 'e', description: 'Вращение' }, () => {
-        if (typeof TransformControl !== 'undefined') {
-            TransformControl.set_mode('rotate');
-        }
+        transform.set_mode('rotate');
     });
 
     keybindings.register({ key: 'r', description: 'Масштаб' }, () => {
-        if (typeof TransformControl !== 'undefined') {
-            TransformControl.set_mode('scale');
-        }
+        transform.set_mode('scale');
     });
 
-    // Escape для сброса режима (если нужно)
+    // === Операции с объектами ===
+    keybindings.register({ key: 'c', ctrl: true, description: 'Копировать' }, () => {
+        actions.copy();
+    });
+
+    keybindings.register({ key: 'x', ctrl: true, description: 'Вырезать' }, () => {
+        actions.cut();
+    });
+
+    keybindings.register({ key: 'v', ctrl: true, description: 'Вставить' }, () => {
+        actions.paste();
+    });
+
+    keybindings.register({ key: 'd', ctrl: true, description: 'Дублировать' }, () => {
+        actions.duplicate();
+    });
+
+    keybindings.register({ key: 'Delete', description: 'Удалить' }, () => {
+        actions.delete_selected();
+    });
+
+    keybindings.register({ key: 'a', ctrl: true, description: 'Выделить всё' }, () => {
+        selection.select_all();
+    });
+
+    // === Камера и навигация ===
+    keybindings.register({ key: 'f', description: 'Фокус на объекте' }, () => {
+        // Используем CameraControl.focus() т.к. он работает с реальной камерой рендеринга
+        CameraControl.focus();
+    });
+
+    // === История ===
+    keybindings.register({ key: 'z', ctrl: true, description: 'Отменить' }, () => {
+        history.undo();
+    });
+
+    keybindings.register({ key: 'y', ctrl: true, description: 'Повторить' }, () => {
+        history.redo();
+    });
+
+    // === Сохранение ===
+    keybindings.register({ key: 's', ctrl: true, description: 'Сохранить' }, () => {
+        event_bus.emit('editor:save', {});
+    });
+
+    // === Отмена операции ===
     keybindings.register({ key: 'Escape', description: 'Отмена' }, () => {
-        // Можно добавить логику отмены операции
+        selection.clear();
     });
 }
 
 /** Главная функция инициализации */
 async function main(): Promise<void> {
     console.log('[SceneEditor] Запуск v3.0...');
+
+    // Получаем canvas для рендеринга
+    const canvas = document.querySelector<HTMLCanvasElement>('canvas#scene');
+    if (canvas === null) {
+        throw new Error('Canvas элемент не найден');
+    }
 
     // 1. Инициализация DI системы
     const result = await bootstrap({
@@ -161,47 +148,40 @@ async function main(): Promise<void> {
         },
     });
 
-    const { logger, event_bus, plugin_manager } = result;
+    const { container, logger, event_bus, plugin_manager, register_services } = result;
 
     logger.info('DI система инициализирована');
     logger.info(`Активные плагины: ${plugin_manager.get_active_plugins().map(p => p.plugin.manifest.id).join(', ')}`);
 
-    // 2. Legacy инициализация (временно)
-    // TODO: мигрировать на новые сервисы
-    register_engine_managers();
-    register_legacy_controls();
-    register_legacy_inspectors();
-    register_lua_core();
+    // 2. Регистрация сервисов движка и редактора
+    register_services(canvas);
 
-    logger.info('Legacy модули загружены');
-
-    // 3. Инициализация новых сервисов редактора
+    // 3. Инициализация KeybindingsService
     keybindings_service = create_keybindings_service({
         logger: logger.create_child('Keybindings'),
         event_bus,
     });
-    register_default_keybindings(keybindings_service);
-    logger.info('KeybindingsService инициализирован');
+    register_default_keybindings(keybindings_service, container);
 
-    // 4. Запуск моста EventBus
+    // Регистрируем KeybindingsService в DI контейнере
+    container.register_singleton(TOKENS.Keybindings, () => keybindings_service!, {
+        name: 'KeybindingsService',
+    });
+
+    // 4. Запуск моста EventBus (для совместимости с legacy событиями если нужно)
     event_bus_bridge = create_event_bus_bridge({
         logger: logger.create_child('EventBusBridge'),
         new_event_bus: event_bus,
     });
     event_bus_bridge.start();
-    logger.info('EventBusBridge запущен');
 
-    // 5. Запуск рендеринга
-    const game_mode = new URLSearchParams(document.location.search).get('is_game') === '1';
-    RenderEngine.animate();
-    Input.bind_events();
+    // Регистрируем EventBusBridge в DI контейнере
+    container.register_singleton(TOKENS.EventBusBridge, () => event_bus_bridge!, {
+        name: 'EventBusBridge',
+    });
 
-    if (!game_mode) {
-        SelectControl.init();
-    }
-
-    // 6. Загрузка проекта
-    await load_project_scene();
+    // 5. Загрузка проекта
+    await load_project_scene(logger);
 
     logger.info('SceneEditor готов к работе');
 

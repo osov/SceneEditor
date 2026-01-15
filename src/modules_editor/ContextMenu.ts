@@ -1,5 +1,6 @@
 // import { deepClone } from "../modules/utils";
 import { NodeAction } from "@editor/shared";
+import { new_scene_popup, save_current_scene } from "@editor/defold/runtime_stubs";
 
 declare global {
     const ContextMenu: ReturnType<typeof ContextMenuCreate>;
@@ -200,15 +201,15 @@ function ContextMenuCreate() {
         const current_dir = localStorage.getItem("current_dir") || '';
 
         if (action == NodeAction.new_scene) {
-            AssetControl.new_scene_popup(current_dir);
+            new_scene_popup(current_dir);
         }
 
         if (action == NodeAction.scene_save) {
-            AssetControl.save_current_scene();
+            save_current_scene();
         }
 
         if (action == NodeAction.scene_save_as) {
-            AssetControl.new_scene_popup(current_dir, true, true);
+            new_scene_popup(current_dir, true, true);
         }
     }
 

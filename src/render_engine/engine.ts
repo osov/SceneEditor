@@ -1,134 +1,197 @@
-/* 
-TODO:
-на старом телефоне не работает движок, тк WebGL2 недоступен, а он последний раз был в версии 0.162
+/**
+ * Legacy RenderEngine - обёртка над DI RenderService
+ *
+ * Сохраняет обратную совместимость с существующим кодом,
+ * делегируя работу к DI RenderService.
+ */
 
-инфа по пулам:
-ParticlePool - нельзя задать прямоугольный размер, при вращении захватывает края чужих текстур если из атласа
-InstanceBufferPool - нет Z сортировки
-https://stackoverflow.com/questions/76514035/how-to-render-1000-2d-text-labels-using-three-js - хороший пример InstancedBufferGeometry для создания текста из атлас текстуры
-*/
-import { Clock, Color, Object3D, OrthographicCamera, PerspectiveCamera, Raycaster, Scene, Vector2, WebGLRenderer, ReplaceStencilOp, NoColorSpace } from 'three'
-import { resize_renderer_to_display_size } from './helpers/window_utils'
-import { CAMERA_FAR, CAMERA_Z, HALF_FPS, IS_CAMERA_ORTHOGRAPHIC } from '../config';
+import { Object3D, OrthographicCamera, Raycaster, Vector2 } from 'three';
+import type { Camera, Scene, WebGLRenderer } from 'three';
+import type { IRenderService } from '../engine/types';
+import { get_container } from '../core/di/Container';
+import { TOKENS } from '../core/di/tokens';
+import { CAMERA_Z } from '../config';
 
 declare global {
-    const RenderEngine: ReturnType<typeof RenderEngineModule>;
+    const RenderEngine: ILegacyRenderEngine;
 }
 
-export function register_engine() {
-    (window as any).RenderEngine = RenderEngineModule();
+/** Слои рендеринга */
+const DC_LAYERS = {
+    GO_LAYER: 0,        // Сцена
+    GUI_LAYER: 1,       // Гуи камера
+    CONTROLS_LAYER: 30, // Контролы
+    RAYCAST_LAYER: 31,  // Можно рейкастить
+} as const;
+
+/** Интерфейс legacy RenderEngine */
+interface ILegacyRenderEngine {
+    DC_LAYERS: typeof DC_LAYERS;
+    init(): void;
+    animate(): void;
+    get_render_size(): { width: number; height: number };
+    raycast_scene(n_pos: Vector2): ReturnType<Raycaster['intersectObjects']>;
+    is_intersected_mesh(n_pos: Vector2, mesh: Object3D): boolean;
+    set_active_gui_camera(is_active: boolean): void;
+    set_active_render(is_active: boolean): void;
+    is_active_render(): boolean;
+    scene: Scene;
+    camera: Camera;
+    camera_gui: OrthographicCamera;
+    raycaster: Raycaster;
+    renderer: WebGLRenderer;
+    raycast_list: Object3D[];
 }
 
+/** Кэш для DI RenderService */
+let _render_service: IRenderService | undefined;
 
-export function RenderEngineModule() {
-    const canvas = document.querySelector(`canvas#scene`)!;
-    const renderer = new WebGLRenderer({ canvas, antialias: !true, stencil: true, alpha: false, preserveDrawingBuffer: true });
-    const scene = new Scene();
-    scene.background = new Color().setStyle('#222', NoColorSpace);
-    const clock = new Clock();
-    const camera =
-        IS_CAMERA_ORTHOGRAPHIC ?
-            new OrthographicCamera(-1, 1, -1, 1, 0, CAMERA_FAR) :
-            new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, CAMERA_FAR);
-
-    const camera_gui = new OrthographicCamera(-1, 1, -1, 1, 0, 100);
-    const raycaster = new Raycaster();
-    let is_active_gui_camera = false;
-    const raycast_list: Object3D[] = [];
-    let _is_active_render = true;
-
-    enum DC_LAYERS {
-        GO_LAYER = 0, // Сцена
-        GUI_LAYER = 1, // Гуи камера
-        CONTROLS_LAYER = 30, // контролы
-        RAYCAST_LAYER = 31, // можно рейкастить
-    }
-
-    function init() {
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-        // renderer.autoClear = false;
-        renderer.autoClearColor = false
-        //  renderer.autoClearDepth = false
-        // renderer.autoClearStencil = false
-        camera.position.set(0, 0, CAMERA_Z)
-        camera_gui.position.set(0, 0, CAMERA_Z)
-        camera_gui.layers.disable(DC_LAYERS.GO_LAYER)
-        camera_gui.layers.enable(DC_LAYERS.GUI_LAYER)
-    }
-
-    let ticks = 0;
-    function animate() {
-        ticks++;
-        requestAnimationFrame(animate)
-        if (!HALF_FPS || (HALF_FPS && ticks % 2 == 0)) {
-            const delta = clock.getDelta();
-            if (resize_renderer_to_display_size(renderer))
-                on_resize();
-            EventBus.trigger('SYS_ON_UPDATE', { dt: delta }, false);
-            if (_is_active_render) {
-                renderer.clear();
-                renderer.render(scene, camera);
-                if (is_active_gui_camera) {
-                    renderer.clearDepth();
-                    renderer.render(scene, camera_gui);
-                }
-            }
-            EventBus.trigger('SYS_ON_UPDATE_END', { dt: delta }, false);
-            // controls рисуем позже чем тригер чтобы верно посчитать DC
-            if (_is_active_render) {
-                const mask = camera.layers.mask;
-                camera.layers.set(DC_LAYERS.CONTROLS_LAYER);
-                renderer.clearDepth();
-                renderer.render(scene, camera);
-                camera.layers.mask = mask;
-            }
+/** Получить DI RenderService */
+function get_render_service(): IRenderService | undefined {
+    if (_render_service === undefined) {
+        const container = get_container();
+        if (container !== undefined) {
+            _render_service = container.try_resolve<IRenderService>(TOKENS.Render);
         }
     }
+    return _render_service;
+}
 
-    function on_resize() {
-        EventBus.trigger('SYS_ON_RESIZED', get_render_size(), false);
+/** Регистрация глобального RenderEngine */
+export function register_engine(): void {
+    (window as unknown as Record<string, unknown>).RenderEngine = create_legacy_render_engine();
+}
+
+/** Создать legacy RenderEngine обёртку */
+function create_legacy_render_engine(): ILegacyRenderEngine {
+    // Создаём GUI камеру (она не часть DI RenderService)
+    const camera_gui = new OrthographicCamera(-1, 1, -1, 1, 0, 100);
+    camera_gui.position.set(0, 0, CAMERA_Z);
+    camera_gui.layers.disable(DC_LAYERS.GO_LAYER);
+    camera_gui.layers.enable(DC_LAYERS.GUI_LAYER);
+
+    // Создаём raycaster
+    const raycaster = new Raycaster();
+
+    // Дополнительный список для raycast
+    const raycast_list: Object3D[] = [];
+
+    // Геттеры для объектов из DI
+    const get_scene = (): Scene => {
+        const svc = get_render_service();
+        if (svc === undefined) {
+            throw new Error('RenderService не инициализирован');
+        }
+        return svc.scene;
+    };
+
+    const get_camera = (): Camera => {
+        const svc = get_render_service();
+        if (svc === undefined) {
+            throw new Error('RenderService не инициализирован');
+        }
+        return svc.camera;
+    };
+
+    const get_renderer = (): WebGLRenderer => {
+        const svc = get_render_service();
+        if (svc === undefined) {
+            throw new Error('RenderService не инициализирован');
+        }
+        return svc.renderer;
+    };
+
+    // Методы
+
+    function init(): void {
+        // Инициализация уже выполнена в DI RenderService
+        // Настраиваем только GUI камеру
+        camera_gui.position.set(0, 0, CAMERA_Z);
     }
 
-    function get_render_size() {
-        const width = canvas.clientWidth
-        const height = canvas.clientHeight
-        return { width, height }
+    function animate(): void {
+        // Цикл рендеринга управляется DI RenderService.start()
+        // Этот метод оставлен для совместимости, но ничего не делает
     }
 
-    function raycast_scene(n_pos: Vector2) {
+    function get_render_size(): { width: number; height: number } {
+        const svc = get_render_service();
+        if (svc !== undefined) {
+            return svc.get_render_size();
+        }
+        return { width: window.innerWidth, height: window.innerHeight };
+    }
+
+    function raycast_scene(n_pos: Vector2): ReturnType<Raycaster['intersectObjects']> {
+        const camera = get_camera();
+        const scene = get_scene();
+
         raycaster.setFromCamera(n_pos, camera);
         raycaster.layers.enable(DC_LAYERS.RAYCAST_LAYER);
+
         const list = raycaster.intersectObjects(scene.children);
-        if (raycast_list.length > 0) {
-            for (let i = 0; i < raycast_list.length; i++) {
-                const tmp = raycaster.intersectObject(raycast_list[i], true);
-                if (tmp.length > 0)
-                    list.push(...tmp);
+
+        // Добавляем результаты из дополнительного списка
+        for (const obj of raycast_list) {
+            const tmp = raycaster.intersectObject(obj, true);
+            if (tmp.length > 0) {
+                list.push(...tmp);
             }
         }
+
         return list;
     }
 
-    function is_intersected_mesh(n_pos: Vector2, mesh: Object3D) {
+    function is_intersected_mesh(n_pos: Vector2, mesh: Object3D): boolean {
         const list = raycast_scene(n_pos);
-        for (let i = 0; i < list.length; i++) {
-            if (list[i].object === mesh)
+        for (const intersection of list) {
+            if (intersection.object === mesh) {
                 return true;
+            }
         }
         return false;
     }
 
-    function set_active_gui_camera(is_active: boolean) {
-        is_active_gui_camera = is_active;
+    function set_active_gui_camera(is_active: boolean): void {
+        const svc = get_render_service();
+        if (svc !== undefined) {
+            svc.set_gui_camera_active(is_active);
+        }
     }
 
-    function set_active_render(is_active: boolean) {
-        _is_active_render = is_active;
+    function set_active_render(is_active: boolean): void {
+        const svc = get_render_service();
+        if (svc !== undefined) {
+            svc.set_active(is_active);
+        }
     }
 
-    function is_active_render() {
-        return _is_active_render;
+    function is_active_render_fn(): boolean {
+        const svc = get_render_service();
+        return svc?.is_active() ?? true;
     }
 
-    return { DC_LAYERS, init, animate, get_render_size, raycast_scene, is_intersected_mesh, set_active_gui_camera, set_active_render, is_active_render, scene, camera, camera_gui, raycaster, renderer, raycast_list };
+    // Создаём объект с геттерами для scene/camera/renderer
+    return {
+        DC_LAYERS,
+        init,
+        animate,
+        get_render_size,
+        raycast_scene,
+        is_intersected_mesh,
+        set_active_gui_camera,
+        set_active_render,
+        is_active_render: is_active_render_fn,
+        get scene() { return get_scene(); },
+        get camera() { return get_camera(); },
+        camera_gui,
+        raycaster,
+        get renderer() { return get_renderer(); },
+        raycast_list,
+    };
+}
+
+/** Сброс кэша (для тестов) */
+export function reset_render_engine_cache(): void {
+    _render_service = undefined;
 }

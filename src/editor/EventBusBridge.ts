@@ -19,8 +19,9 @@ export interface EventBusBridgeParams {
 /** Маппинг событий legacy → new */
 const LEGACY_TO_NEW_EVENTS: Record<string, string> = {
     // Выделение
-    'SYS_SELECTED_MESH': 'selection:changed',
-    'SYS_SELECTED_MESH_LIST': 'selection:changed',
+    // ВАЖНО: НЕ маппим SYS_SELECTED_MESH_LIST → selection:changed,
+    // т.к. selection:changed → SYS_SELECTED_MESH_LIST создаст цикл.
+    // SelectionService уже эмитит selection:changed напрямую.
     'SYS_CLEAR_SELECT_MESH_LIST': 'selection:cleared',
     'SYS_UNSELECTED_MESH_LIST': 'selection:cleared',
 
@@ -75,6 +76,10 @@ const NEW_TO_LEGACY_EVENTS: Record<string, string> = {
 
     // Сцена
     'scene:save_requested': 'SYS_INPUT_SAVE',
+
+    // Цикл рендеринга (для CameraControl и др.)
+    'engine:update': 'SYS_ON_UPDATE',
+    'engine:update_end': 'SYS_ON_UPDATE_END',
 };
 
 /** Интерфейс моста */
@@ -103,6 +108,12 @@ export function create_event_bus_bridge(params: EventBusBridgeParams): IEventBus
     const legacy_to_new = { ...LEGACY_TO_NEW_EVENTS };
     const new_to_legacy = { ...NEW_TO_LEGACY_EVENTS };
 
+    // Защита от рекурсии: отслеживаем события, которые сейчас в процессе трансляции
+    const events_in_flight = new Set<string>();
+
+    // События, которые не нужно логировать (слишком частые)
+    const SILENT_EVENTS = new Set(['engine:update', 'engine:update_end', 'SYS_ON_UPDATE', 'SYS_ON_UPDATE_END']);
+
     /** Подписаться на legacy события */
     function subscribe_to_legacy(): void {
         // Проверяем наличие legacy EventBus
@@ -116,8 +127,21 @@ export function create_event_bus_bridge(params: EventBusBridgeParams): IEventBus
 
         for (const [legacy_event, new_event] of Object.entries(legacy_to_new)) {
             const callback = (data: unknown) => {
-                logger.debug(`[Bridge] Legacy → New: ${legacy_event} → ${new_event}`);
-                new_event_bus.emit(new_event, transform_legacy_data(legacy_event, data));
+                // Защита от рекурсии: если это событие уже транслируется - пропускаем
+                const bridge_key = `legacy:${legacy_event}`;
+                if (events_in_flight.has(bridge_key)) {
+                    return;
+                }
+
+                events_in_flight.add(bridge_key);
+                try {
+                    if (!SILENT_EVENTS.has(legacy_event)) {
+                        logger.debug(`[Bridge] Legacy → New: ${legacy_event} → ${new_event}`);
+                    }
+                    new_event_bus.emit(new_event, transform_legacy_data(legacy_event, data));
+                } finally {
+                    events_in_flight.delete(bridge_key);
+                }
             };
 
             try {
@@ -139,9 +163,18 @@ export function create_event_bus_bridge(params: EventBusBridgeParams): IEventBus
 
         for (const [new_event, legacy_event] of Object.entries(new_to_legacy)) {
             const subscription = new_event_bus.on(new_event, (data) => {
-                logger.debug(`[Bridge] New → Legacy: ${new_event} → ${legacy_event}`);
+                // Защита от рекурсии: если соответствующее legacy событие уже транслируется - пропускаем
+                const bridge_key = `legacy:${legacy_event}`;
+                if (events_in_flight.has(bridge_key)) {
+                    return;
+                }
+
+                if (!SILENT_EVENTS.has(new_event)) {
+                    logger.debug(`[Bridge] New → Legacy: ${new_event} → ${legacy_event}`);
+                }
 
                 if (legacy_bus !== undefined) {
+                    events_in_flight.add(bridge_key);
                     try {
                         legacy_bus.trigger(
                             legacy_event,
@@ -150,6 +183,8 @@ export function create_event_bus_bridge(params: EventBusBridgeParams): IEventBus
                         );
                     } catch {
                         logger.debug(`Не удалось отправить legacy событие: ${legacy_event}`);
+                    } finally {
+                        events_in_flight.delete(bridge_key);
                     }
                 }
             });

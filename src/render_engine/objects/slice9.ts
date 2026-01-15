@@ -4,7 +4,6 @@ import { convert_width_height_to_pivot_bb, get_file_name, set_pivot_with_sync_po
 import { EntityPlane } from "./entity_plane";
 import { MaterialUniformType } from "../resource_manager";
 import { hex2rgba, rgb2hex } from "@editor/defold/utils";
-import { BlendMode } from "@editor/inspectors/MeshInspector";
 
 // todo optimize material list
 

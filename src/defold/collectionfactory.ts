@@ -1,5 +1,6 @@
 import { IBaseEntityAndThree, IObjectTypes } from "@editor/render_engine/types";
 import { Vector3, Quaternion } from "three";
+import { load_part_of_scene_in_pos } from "./runtime_stubs";
 
 declare global {
     namespace collectionfactory {
@@ -15,7 +16,7 @@ export function collectionfactory_module() {
         properties?: any,
         scale?: vmath.vector3
     ) {
-        const part = AssetControl.loadPartOfSceneInPos(
+        const part = load_part_of_scene_in_pos(
             url,
             position ? new Vector3().copy(position) : undefined,
             rotation ? new Quaternion().copy(rotation) : undefined,

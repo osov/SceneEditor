@@ -44,6 +44,9 @@ export type _SystemMessagesEditor = {
     SYS_MATERIAL_CHANGED: TMaterialChanged,
     SYS_MESH_MATERIAL_CHANGED: TMeshMaterialChanged,
     SYS_HISTORY_UNDO: THistoryUndo,
+    SYS_TREE_DRAW_GRAPH: { list: unknown[] },
+    SYS_GRAPH_REDRAW: {},
+    SYS_INSPECTOR_UPDATE: {},
 };
 
 export type AssetsCommands = {

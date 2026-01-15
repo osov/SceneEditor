@@ -6,7 +6,7 @@
  */
 
 import type { ILogger, IEventBus } from '@editor/core/di/types';
-import type { ISceneObject, ISceneService, IRenderService } from '@editor/engine/types';
+import type { ISceneObject, ISceneService } from '@editor/engine/types';
 import type { ObjectTypes } from '@editor/core/render/types';
 
 // ============================================================================
@@ -139,9 +139,6 @@ export interface ITransformService {
 export interface TransformServiceParams {
     logger: ILogger;
     event_bus: IEventBus;
-    render_service: IRenderService;
-    selection_service: ISelectionService;
-    history_service: IHistoryService;
 }
 
 // ============================================================================

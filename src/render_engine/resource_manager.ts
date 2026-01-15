@@ -40,6 +40,7 @@ import { api } from '../modules_editor/ClientAPI';
 import { URL_PATHS } from '../modules_editor/modules_editor_const';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { IS_LOGGING } from '@editor/config';
+import { get_file_data, save_file_data } from '@editor/defold/runtime_stubs';
 
 
 declare global {
@@ -289,7 +290,7 @@ export function ResourceManagerModule() {
     }
 
     async function on_vertex_shader_change(path: string) {
-        const vertexShader = await AssetControl.get_file_data(path);
+        const vertexShader = await get_file_data(path);
         if (!vertexShader) return;
 
         vertex_programs[path] = vertexShader;
@@ -315,7 +316,7 @@ export function ResourceManagerModule() {
     }
 
     async function on_fragment_shader_change(path: string) {
-        const fragmentShader = await AssetControl.get_file_data(path);
+        const fragmentShader = await get_file_data(path);
         if (!fragmentShader) return;
 
         fragment_programs[path] = fragmentShader;
@@ -575,7 +576,7 @@ export function ResourceManagerModule() {
     }
 
     async function preload_scene(path: string) {
-        const response = await AssetControl.get_file_data(path);
+        const response = await get_file_data(path);
         if (!response) {
             return;
         }
@@ -737,7 +738,7 @@ export function ResourceManagerModule() {
             IS_LOGGING && Log.warn('vertex program exists', path);
             return;
         }
-        const shader_program = await AssetControl.get_file_data(path);
+        const shader_program = await get_file_data(path);
         if (!shader_program) {
             return;
         }
@@ -763,7 +764,7 @@ export function ResourceManagerModule() {
             IS_LOGGING && Log.warn('fragment program exists', path);
             return;
         }
-        const shader_program = await AssetControl.get_file_data(path);
+        const shader_program = await get_file_data(path);
         if (!shader_program) {
             return;
         }
@@ -772,7 +773,7 @@ export function ResourceManagerModule() {
     }
 
     async function load_material(path: string) {
-        const response = await AssetControl.get_file_data(path);
+        const response = await get_file_data(path);
         if (!response) {
             return;
         }
@@ -1154,7 +1155,7 @@ export function ResourceManagerModule() {
 
         if (is_save && !is_readonly) {
             // NOTE: обновляем значение в файле
-            const response = await AssetControl.get_file_data(material_info.path);
+            const response = await get_file_data(material_info.path);
             if (!response) return;
 
             const material_data = JSON.parse(response);
@@ -1170,7 +1171,7 @@ export function ResourceManagerModule() {
                 material_data.data[uniform_name] = value;
             }
 
-            await AssetControl.save_file_data(material_info.path, JSON.stringify(material_data, null, 2));
+            await save_file_data(material_info.path, JSON.stringify(material_data, null, 2));
             // TODO: нужно сделать так чтобы не обновляли повторно, после того как файл запишеться
         }
     }

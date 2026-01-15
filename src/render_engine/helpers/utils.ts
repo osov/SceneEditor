@@ -4,6 +4,7 @@ import { deepClone, getObjectHash } from "../../modules/utils";
 import { TextMesh } from "../objects/text";
 import { GoText, GoSprite, GuiBox, GuiText } from "../objects/sub_types";
 import { MaterialUniformType } from "../resource_manager";
+import type { RenderTileData, RenderTileObject } from "../parsers/tile_parser";
 
 
 export function get_basename(path: string) {
@@ -375,4 +376,20 @@ export function has_nearest_clipping_parent(mesh: GuiBox | GuiText) {
         return has_nearest_clipping_parent(mesh.parent);
     }
     return false;
+}
+
+/**
+ * Получить хэш-ключ для меша (для идентификации в коллекциях)
+ */
+export function get_hash_by_mesh(mesh: IBaseMeshAndThree): string {
+    let key = mesh.name;
+    if (mesh.userData !== undefined && mesh.userData.tile !== undefined) {
+        const tile = mesh.userData.tile as (RenderTileObject | RenderTileData);
+        if ('id_object' in tile) {
+            key = tile.id_object + '';
+        } else {
+            key = mesh.userData.id_layer + '_' + tile.x + '.' + tile.y;
+        }
+    }
+    return key;
 }

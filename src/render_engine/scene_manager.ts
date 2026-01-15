@@ -1,3 +1,13 @@
+/**
+ * SceneManager - управление объектами сцены
+ *
+ * Создание, удаление, сериализация объектов сцены.
+ * Использует DI сервисы через глобальные обёртки:
+ * - RenderEngine.scene → DI RenderService.scene
+ * - Log → DI LoggerService
+ * - EventBus → DI EventBus
+ */
+
 import { Object3D, Quaternion, Vector2, Vector2Tuple, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import { filter_list_base_mesh, is_base_mesh, is_label, is_sprite, is_text } from "./helpers/utils";
 import { Slice9Mesh } from "./objects/slice9";
@@ -15,11 +25,41 @@ import { AudioMesh } from "./objects/audio_mesh";
 import { MultipleMaterialMesh } from "./objects/multiple_material_mesh";
 
 declare global {
-    const SceneManager: ReturnType<typeof SceneManagerModule>;
+    const SceneManager: ISceneManager;
 }
 
-export function register_scene_manager() {
-    (window as any).SceneManager = SceneManagerModule();
+/** Интерфейс SceneManager для типизации */
+interface ISceneManager {
+    get_unique_id(): number;
+    create<T extends IObjectTypes>(type: T, params?: Record<string, unknown>, id?: number): IBaseEntityAndThree;
+    add(mesh: IBaseEntityAndThree, id_parent?: number, id_before?: number): void;
+    add_to_mesh(mesh: IBaseEntityAndThree, parent_mesh: IBaseEntityAndThree): void;
+    remove(id: number): void;
+    get_mesh_by_id(id: number): IBaseEntityAndThree | null;
+    get_mesh_by_name(name: string): IBaseEntityAndThree | undefined;
+    move_mesh(mesh: IBaseEntityAndThree, pid?: number, next_id?: number): void;
+    move_mesh_id(id: number, pid?: number, next_id?: number): void;
+    find_next_id_mesh(mesh: IBaseEntityAndThree): number;
+    make_graph(): { id: number; pid: number; name: string; visible: boolean; type: IObjectTypes }[];
+    debug_graph(mesh: Object3D, level?: number): string;
+    save_editor(): { id_counter: number };
+    load_editor(data: { id_counter: number }): void;
+    serialize_mesh(mesh: IBaseEntityAndThree, clean_id_pid?: boolean, without_children?: boolean): IBaseEntityData;
+    deserialize_mesh(data: IBaseEntityData, with_id?: boolean): IBaseEntityAndThree;
+    save_scene(): IBaseEntityData[];
+    load_scene(data: IBaseEntityData[], sub_name?: string): void;
+    get_scene_list(): IBaseEntityAndThree[];
+    set_mesh_name(mesh: IBaseEntityAndThree, name: string): void;
+    update_mesh_url(mesh: IBaseEntityAndThree): void;
+    get_mesh_id_by_url(url: string): number | undefined;
+    get_mesh_url_by_id(id: number): string | undefined;
+    find_nearest_gui_container(mesh: GuiBox | GuiText): GuiContainer | null;
+    find_nearest_clipping_parent(mesh: GuiBox | GuiText): GuiBox | null;
+}
+
+/** Регистрация глобального SceneManager */
+export function register_scene_manager(): void {
+    (window as unknown as Record<string, unknown>).SceneManager = SceneManagerModule();
 }
 
 type IMeshTypes = {
@@ -209,28 +249,27 @@ export function SceneManagerModule() {
         return data;
     }
 
-    function deserialize_mesh(data: IBaseEntityData, with_id = false, parent?: Object3D) {
+    function deserialize_mesh(data: IBaseEntityData, with_id = false): IBaseEntityAndThree {
         const mesh = create(data.type, data.other_data, with_id ? data.id : -1);
-        if (data.position)
+        if (data.position !== undefined)
             mesh.position.set(data.position[0], data.position[1], data.position[2]);
-        if (data.rotation)
+        if (data.rotation !== undefined)
             mesh.quaternion.set(data.rotation[0], data.rotation[1], data.rotation[2], data.rotation[3]);
-        if (data.scale) {
+        if (data.scale !== undefined) {
             mesh.set_scale(data.scale[0], data.scale[1]);
         }
         set_mesh_name(mesh, data.name);
         mesh.set_active(data.visible);
 
         mesh.deserialize(data.other_data);
-        if (data.children) {
+        if (data.children !== undefined) {
             for (let i = 0; i < data.children.length; i++) {
-                const m = mesh.add(deserialize_mesh(data.children[i], with_id, mesh));
+                const m = mesh.add(deserialize_mesh(data.children[i], with_id));
                 update_mesh_url(m);
             }
-
         }
 
-        if (data.scale && mesh instanceof MultipleMaterialMesh) {
+        if (data.scale !== undefined && mesh instanceof MultipleMaterialMesh) {
             mesh.set_scale(data.scale[0], data.scale[1]);
         }
 
@@ -270,12 +309,12 @@ export function SceneManagerModule() {
         return list;
     }
 
-    function load_scene(data: IBaseEntityData[], sub_name = '') {
-        if (sub_name == '') {
+    function load_scene(data: IBaseEntityData[], sub_name = ''): void {
+        if (sub_name === '') {
             clear_scene();
             for (let i = 0; i < data.length; i++) {
                 const it = data[i];
-                const mesh = deserialize_mesh(it, false, scene);
+                const mesh = deserialize_mesh(it, false);
                 scene.add(mesh);
                 if (mesh instanceof AudioMesh) mesh.after_deserialize();
             }
@@ -286,7 +325,7 @@ export function SceneManagerModule() {
             const tmp = deepClone(data);
             for (let i = 0; i < tmp.length; i++) {
                 const it = tmp[i];
-                const mesh = deserialize_mesh(it, false, container);
+                const mesh = deserialize_mesh(it, false);
                 container.add(mesh);
             }
             scene.add(container);

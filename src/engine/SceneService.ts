@@ -6,12 +6,27 @@
  */
 
 import { Object3D } from 'three';
-import type { ObjectTypes, BaseEntityData } from '@editor/core/render/types';
+import type { ObjectTypes, BaseEntityData, IBaseEntity } from '@editor/core/render/types';
 import type {
     ISceneService,
     ISceneObject,
     SceneServiceParams,
 } from './types';
+
+/** Объявление глобального SceneManager */
+declare const SceneManager: {
+    create<T extends ObjectTypes>(type: T, params?: Record<string, unknown>, id?: number): IBaseEntity;
+    serialize_mesh(mesh: IBaseEntity, clean_id_pid?: boolean, without_children?: boolean): BaseEntityData;
+    deserialize_mesh(data: BaseEntityData, with_id?: boolean, parent?: Object3D): IBaseEntity;
+    get_unique_id(): number;
+    get_mesh_by_id(id: number): IBaseEntity | null;
+    set_mesh_name(mesh: IBaseEntity, name: string): void;
+    update_mesh_url(mesh: IBaseEntity): void;
+    get_mesh_url_by_id(id: number): string | undefined;
+    get_mesh_id_by_url(url: string): number | undefined;
+    add(mesh: IBaseEntity, id_parent?: number, id_before?: number): void;
+    remove(id: number): void;
+};
 
 /** Проверить является ли объект ISceneObject */
 function is_scene_object(obj: Object3D): obj is ISceneObject {
@@ -37,14 +52,20 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
     }
 
     function create<T extends ObjectTypes>(type: T, params_obj?: Record<string, unknown>): ISceneObject {
-        // Базовая реализация - создаём простой Object3D с mesh_data
-        // В реальном проекте здесь будет фабрика для разных типов
         logger.debug(`Создание объекта типа ${type}`);
 
+        // Делегируем создание legacy SceneManager
+        // который знает как создавать все типы объектов (Slice9Mesh, TextMesh и т.д.)
+        if (typeof SceneManager !== 'undefined') {
+            const mesh = SceneManager.create(type, params_obj);
+            event_bus.emit('scene:object_created', { id: mesh.mesh_data.id, type });
+            return mesh as unknown as ISceneObject;
+        }
+
+        // Fallback если SceneManager недоступен
         const id = get_unique_id();
         const obj = new Object3D() as Object3D & { mesh_data: ISceneObject['mesh_data'] };
 
-        // Добавляем mesh_data
         obj.mesh_data = {
             id,
             type,
@@ -59,10 +80,15 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
         return obj as ISceneObject;
     }
 
-    function add(object: ISceneObject): void {
-        const scene = render_service.scene;
-        scene.add(object);
-        update_mesh_url(object);
+    function add(object: ISceneObject, parent_id?: number, before_id?: number): void {
+        // Делегируем SceneManager для корректной обработки иерархии
+        if (typeof SceneManager !== 'undefined') {
+            SceneManager.add(object as unknown as IBaseEntity, parent_id ?? -1, before_id ?? -1);
+        } else {
+            const scene = render_service.scene;
+            scene.add(object);
+            update_mesh_url(object);
+        }
 
         logger.debug(`Объект ${object.mesh_data.id} добавлен в сцену`);
         event_bus.emit('scene:object_added', { id: object.mesh_data.id });
@@ -73,16 +99,21 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
 
         event_bus.emit('scene:object_removing', { id });
 
-        // Удаляем из URL маппинга
-        const url = mesh_id_to_url.get(id);
-        if (url !== undefined) {
-            mesh_url_to_id.delete(url);
-            mesh_id_to_url.delete(id);
-        }
+        // Делегируем SceneManager для корректного удаления
+        if (typeof SceneManager !== 'undefined') {
+            SceneManager.remove(id);
+        } else {
+            // Удаляем из URL маппинга
+            const url = mesh_id_to_url.get(id);
+            if (url !== undefined) {
+                mesh_url_to_id.delete(url);
+                mesh_id_to_url.delete(id);
+            }
 
-        // Удаляем из сцены
-        if (object.parent !== null) {
-            object.parent.remove(object);
+            // Удаляем из сцены
+            if (object.parent !== null) {
+                object.parent.remove(object);
+            }
         }
 
         logger.debug(`Объект ${id} удалён из сцены`);
@@ -90,6 +121,13 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
     }
 
     function get_by_id(id: number): ISceneObject | undefined {
+        // Делегируем SceneManager
+        if (typeof SceneManager !== 'undefined') {
+            const mesh = SceneManager.get_mesh_by_id(id);
+            return mesh !== null ? mesh as unknown as ISceneObject : undefined;
+        }
+
+        // Fallback
         const scene = render_service.scene;
         let result: ISceneObject | undefined;
 
@@ -160,6 +198,12 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
     }
 
     function serialize_object(object: ISceneObject): BaseEntityData {
+        // Делегируем SceneManager для корректной сериализации
+        if (typeof SceneManager !== 'undefined') {
+            return SceneManager.serialize_mesh(object as unknown as IBaseEntity, true);
+        }
+
+        // Fallback
         const position = object.position.toArray() as [number, number, number];
         const rotation = object.quaternion.toArray() as [number, number, number, number];
         const scale: [number, number] = [object.scale.x, object.scale.y];
@@ -256,6 +300,16 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
     }
 
     function get_by_url(url: string): ISceneObject | undefined {
+        // Делегируем SceneManager
+        if (typeof SceneManager !== 'undefined') {
+            const mesh_id = SceneManager.get_mesh_id_by_url(url);
+            if (mesh_id !== undefined) {
+                return get_by_id(mesh_id);
+            }
+            return undefined;
+        }
+
+        // Fallback
         const id = mesh_url_to_id.get(url);
         if (id === undefined) {
             return undefined;
@@ -264,6 +318,11 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
     }
 
     function get_url_by_id(id: number): string | undefined {
+        // Делегируем SceneManager
+        if (typeof SceneManager !== 'undefined') {
+            return SceneManager.get_mesh_url_by_id(id);
+        }
+
         return mesh_id_to_url.get(id);
     }
 

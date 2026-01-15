@@ -40,7 +40,7 @@ const DEFAULT_CONFIG: Required<RenderServiceConfig> = {
     canvas: undefined as unknown as HTMLCanvasElement,
     antialias: false,
     orthographic: true,
-    camera_far: 10000,
+    camera_far: 20000,  // Должно быть больше CAMERA_Z из config.ts (14999)
     camera_z: 1000,
     half_fps: false,
 };

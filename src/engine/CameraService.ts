@@ -188,6 +188,7 @@ export function create_camera_service(params: CameraServiceParams): ICameraServi
         },
         set_mode,
         get_mode,
+        get_zoom: get_current_zoom,
         zoom,
         pan,
         focus_on,

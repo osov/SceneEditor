@@ -1,12 +1,17 @@
 // https://github.com/yomotsu/camera-control_orthographics
 import CameraControls from 'camera-controls';
-import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster, PerspectiveCamera, GridHelper } from 'three';
+import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster, PerspectiveCamera } from 'three';
 import { CAMERA_Z, IS_CAMERA_ORTHOGRAPHIC } from '../config';
 import { createCameraPerspectiveControl } from './CameraPerspectiveControl';
+import type { IBaseMeshAndThree } from '../render_engine/types';
 
 declare global {
     const CameraControl: ReturnType<typeof CameraControlCreate>;
 }
+
+declare const SelectControl: {
+    get_selected_list(): IBaseMeshAndThree[];
+};
 
 export function register_camera_control() {
     (window as any).CameraControl = CameraControlCreate();

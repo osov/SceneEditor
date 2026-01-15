@@ -100,19 +100,78 @@ Legacy код продолжит работать без изменений.
 
 ## Горячие клавиши
 
-Обрабатываются через `KeybindingsService`:
+Все горячие клавиши обрабатываются через `KeybindingsService` (поддержка русской раскладки автоматически):
 
+### Трансформация
 | Клавиша | Действие |
 |---------|----------|
 | `W` | Режим перемещения |
 | `E` | Режим вращения |
 | `R` | Режим масштабирования |
+
+### Редактирование
+| Клавиша | Действие |
+|---------|----------|
+| `Ctrl+C` | Копировать |
+| `Ctrl+X` | Вырезать |
+| `Ctrl+V` | Вставить |
+| `Ctrl+B` | Вставить как дочерний |
+| `Ctrl+D` | Дублировать |
+| `Delete` | Удалить |
+
+### Навигация
+| Клавиша | Действие |
+|---------|----------|
+| `F` | Фокус на объекте |
+| `F2` | Переименовать |
+| `I` | Подсветить идентичные |
 | `Escape` | Отмена операции |
 
-Legacy горячие клавиши (обрабатываются в ViewControl/InputManager):
-- `F` - фокус на объекте
-- `Ctrl+C/X/V` - копировать/вырезать/вставить
-- `Ctrl+D` - дублировать
-- `Ctrl+Z` - отменить
-- `Ctrl+S` - сохранить
-- `Delete` - удалить
+### История и сохранение
+| Клавиша | Действие |
+|---------|----------|
+| `Ctrl+Z` | Отменить (HistoryControl.undo) |
+| `Ctrl+S` | Сохранить (SYS_INPUT_SAVE) |
+
+## Статус миграции
+
+### Мигрированные контролы
+| Контрол | Статус | Заметки |
+|---------|--------|---------|
+| `ViewControl` | ✅ Удалён | Все клавиши в KeybindingsService |
+| `InputManager` | ✅ Частично | Ctrl+Z/S в KeybindingsService |
+
+### Legacy контролы (интеграция через EventBusBridge)
+| Контрол | События | Заметки |
+|---------|---------|---------|
+| `SelectControl` | `selection:changed`, `selection:cleared` | Raycast + выделение |
+| `ActionsControl` | Вызывается из KeybindingsService | Copy/paste/delete |
+| `HistoryControl` | `history:pushed`, `history:undone` | Undo с типизацией |
+| `TreeControl` | `hierarchy:*` | Дерево иерархии |
+| `TransformControl` | `transform:*` | Gizmo трансформации |
+
+## DI Адаптеры
+
+Адаптеры позволяют использовать legacy код через новую DI систему:
+
+### Зарегистрированные адаптеры
+| Токен | Адаптер | Legacy |
+|-------|---------|--------|
+| `TOKENS.Render` | `LegacyRenderAdapter` | `RenderEngine` |
+| `TOKENS.Scene` | `LegacySceneAdapter` | `SceneManager` |
+| `TOKENS.Selection` | `LegacySelectionAdapter` | `SelectControl` |
+| `TOKENS.History` | `LegacyHistoryAdapter` | `HistoryControl` |
+
+### Использование через DI
+```typescript
+// Получение сервисов через контейнер
+const render = container.resolve<IRenderService>(TOKENS.Render);
+const scene = container.resolve<ISceneService>(TOKENS.Scene);
+const selection = container.resolve<ISelectionService>(TOKENS.Selection);
+const history = container.resolve<IHistoryService>(TOKENS.History);
+
+// Использование
+const selected = selection.selected;
+scene.create('go', { name: 'test' });
+history.undo();
+```

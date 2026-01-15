@@ -216,6 +216,8 @@ export interface ICameraService {
     set_mode(mode: CameraMode): void;
     /** Получить текущий режим */
     get_mode(): CameraMode;
+    /** Получить текущий зум */
+    get_zoom(): number;
     /** Масштабирование */
     zoom(delta: number): void;
     /** Панорамирование */

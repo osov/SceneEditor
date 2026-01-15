@@ -114,7 +114,8 @@ export type HistoryDataKeys =
     | 'layer'
     | 'enabled'
     | 'xanchor'
-    | 'yanchor';
+    | 'yanchor'
+    | 'MESH_ADD';
 
 /** Свойства рисования */
 export enum PaintProperty {
@@ -132,3 +133,55 @@ export enum PAINT_MODE {
     COLOR = 'color',
     NORMAL = 'normal',
 }
+
+/** Действия для GUI нод */
+export const NodeActionGui: number[] = [
+    NodeAction.add_gui_container,
+    NodeAction.add_gui_box,
+    NodeAction.add_gui_text,
+];
+
+/** Действия для GO нод */
+export const NodeActionGo: number[] = [
+    NodeAction.add_go_container,
+    NodeAction.add_go_sprite_component,
+    NodeAction.add_go_label_component,
+    NodeAction.add_go_model_component,
+    NodeAction.add_go_animated_model_component,
+    NodeAction.add_go_audio_component,
+];
+
+/** Типы GO миров */
+export const worldGo: string[] = [
+    'go_container',
+    'go_model_component',
+    'go_animated_model_component',
+    'go_sprite_component',
+    'go_label_component',
+    'go_audio_component',
+];
+
+/** Компоненты GO */
+export const componentsGo: string[] = [
+    'go_model_component',
+    'go_animated_model_component',
+    'go_sprite_component',
+    'go_label_component',
+    'go_audio_component',
+];
+
+/** Типы GUI миров */
+export const worldGui: string[] = [
+    'gui_container',
+    'gui_box',
+    'gui_text',
+];
+
+/** Параметры текстуры */
+export type ParamsTexture = {
+    texture: string;
+    atlas: string;
+    size: { w: number; h: number };
+    pid: number;
+    pos: { x: number; y: number };
+};

@@ -521,30 +521,30 @@ export function gui_module() {
 
     function clone(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
-        if (!mesh) {
+        if (mesh === null) {
             Log.error('[clone] Mesh not found for id:', (node as any).id);
             return;
         }
         const parent = mesh.parent ?? RenderEngine.scene;
         const origin = SceneManager.serialize_mesh(mesh, false, true);
         origin.name = generate_unique_name(origin.name);
-        const clone = SceneManager.deserialize_mesh(origin, false, parent);
-        parent.add(clone);
-        return { id: clone.mesh_data.id } as node;
+        const cloned = SceneManager.deserialize_mesh(origin, false);
+        parent.add(cloned);
+        return { id: cloned.mesh_data.id } as node;
     }
 
     function clone_tree(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
-        if (!mesh) {
+        if (mesh === null) {
             Log.error('[clone] Mesh not found for id:', (node as any).id);
             return;
         }
         const parent = mesh.parent ?? RenderEngine.scene;
         const origin = SceneManager.serialize_mesh(mesh);
         make_names_unique(origin);
-        const clone = SceneManager.deserialize_mesh(origin, false, parent);
-        parent.add(clone);
-        return { id: clone.mesh_data.id } as node;
+        const cloned = SceneManager.deserialize_mesh(origin, false);
+        parent.add(cloned);
+        return { id: cloned.mesh_data.id } as node;
     }
 
     function animate(

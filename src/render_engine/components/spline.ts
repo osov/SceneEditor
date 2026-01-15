@@ -4,7 +4,16 @@ import { IBaseEntityAndThree, IObjectTypes } from "../types";
 import { is_base_mesh } from "../helpers/utils";
 import { deepClone } from "../../modules/utils";
 import { HistoryOwner, THistoryUndo } from "../../modules_editor/modules_editor_const";
-import { MeshPropertyInfo } from "../../controls/types";
+import { MeshPropertyInfo } from "@editor/core/render/types";
+
+// Глобальные объекты - связаны с DI сервисами через LegacyBridge
+declare const SelectControl: {
+    get_selected_list(): IBaseEntityAndThree[];
+    set_selected_list(list: IBaseEntityAndThree[]): void;
+};
+declare const HistoryControl: {
+    add(type: string, data: unknown[], owner: HistoryOwner): void;
+};
 
 export function CmpSpline(cmp_mesh: EntityBase) {
     const spline_mat_helper = new MeshBasicMaterial({ color: 0x00ffff });

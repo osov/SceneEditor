@@ -5,13 +5,72 @@ TODO: перейти на полное переиспользование кэш
 */
 
 import { deepClone } from "../modules/utils";
-import { contextMenuItem } from "../modules_editor/ContextMenu";
-import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui, componentsGo, paramsTexture } from "./ActionsControl";
+import { contextMenuItem } from "./ContextMenu";
+import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui, componentsGo, ParamsTexture } from "../shared/types";
 import { IObjectTypes } from '../render_engine/types';
 import { Vector2 } from "three";
-import { ASSET_SCENE_GRAPH, TDictionary } from "../modules_editor/modules_editor_const";
+import { ASSET_SCENE_GRAPH, TDictionary } from "./modules_editor_const";
 import { DEFOLD_LIMITS } from "../config";
 import { ComponentType } from "../render_engine/components/container_component";
+
+// Alias для совместимости
+type paramsTexture = ParamsTexture;
+
+// Типы для Three.js объектов
+interface TreeMeshObject {
+    type?: string;
+    mesh_data?: { id: number };
+    worldToLocal(v: { x: number; y: number; z: number }): { x: number; y: number; z: number };
+}
+
+// Декларации глобальных объектов (связаны с DI через LegacyBridge)
+declare const SelectControl: {
+    get_selected_list(): TreeMeshObject[];
+    set_selected_list(list: TreeMeshObject[]): void;
+    clear(): void;
+};
+declare const ActionsControl: {
+    copy(): void;
+    cut(): void;
+    paste(flag1?: boolean, flag2?: boolean): unknown[];
+    paste_as_child(parent: unknown): unknown[];
+    duplicate(): unknown[];
+    duplication(): unknown[];
+    delete_selected(): void;
+    remove(): void;
+    has_clipboard(): boolean;
+    copy_mesh_list: unknown[];
+    from_the_same_world(list: unknown[], treeList: unknown[]): boolean;
+    is_valid_action(item: unknown, itemSelected?: unknown[], flag1?: boolean, flag2?: boolean): boolean;
+    add_gui_container(params: unknown): void;
+    add_gui_box(params: unknown): void;
+    add_gui_text(params: unknown): void;
+    add_go_container(params: unknown): void;
+    add_go_sprite(params: unknown): void;
+    add_go_sprite_component(params: unknown): void;
+    add_go_label(params: unknown): void;
+    add_go_label_component(params: unknown): void;
+    add_go_model(params: unknown): void;
+    add_go_model_component(params: unknown): void;
+    add_go_animated_model(params: unknown): void;
+    add_go_animated_model_component(params: unknown): void;
+    add_go_audio(params: unknown): void;
+    add_go_audio_component(params: unknown): void;
+    add_component(params: unknown, type: number): void;
+    add_go_with_sprite_component(params: unknown): void;
+    add_component_spline(params: unknown): void;
+    add_component_mover(params: unknown): void;
+    on_action(action: number, params?: unknown): void;
+};
+declare const AssetControl: {
+    go_to_dir(dir: string, create?: boolean): Promise<boolean>;
+    select_file(path: string): void;
+    loadPartOfSceneInPos(path: string, pos: unknown): unknown;
+};
+declare const ControlManager: {
+    draw_graph(): void;
+    update_graph(): void;
+};
 
 declare global {
     const TreeControl: ReturnType<typeof TreeControlCreate>;
@@ -2213,10 +2272,10 @@ function TreeControlCreate() {
             return;
         }
 
-        const nType = isPos && list.length ? list[0]?.type : icon;
+        const nType = isPos && list.length > 0 ? list[0]?.type : icon;
         const mouseUpPos = getMousePos(event);
         const nPos = isPos && mouseUpPos ? new Vector2(mouseUpPos?.x, mouseUpPos?.y) : new Vector2(0, 0);
-        const nId = isPos ? list[0]?.mesh_data.id : id;
+        const nId = isPos && list.length > 0 && list[0]?.mesh_data !== undefined ? list[0].mesh_data.id : id;
 
         const arrSize = event.dataTransfer.getData("textureSize").split("x");
         const tWidth = +arrSize[0];
@@ -2237,7 +2296,7 @@ function TreeControlCreate() {
         }
 
         const go = ['scene', IObjectTypes.GO_CONTAINER];
-        if ((list.length == 0 && isPos) || go.includes(nType)) {
+        if ((list.length == 0 && isPos) || (nType !== undefined && go.includes(nType))) {
             if (!DEFOLD_LIMITS)
                 ActionsControl.add_go_sprite_component(pt);
             else
@@ -2246,7 +2305,7 @@ function TreeControlCreate() {
             return;
         }
 
-        if (worldGui.includes(nType)) {
+        if (nType !== undefined && worldGui.includes(nType)) {
             ActionsControl.add_gui_box(pt);
             return;
         }

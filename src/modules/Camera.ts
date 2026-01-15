@@ -1,18 +1,21 @@
-/*
-    Модуль для работы с камерой и преобразованиями
-*/
+/**
+ * Legacy Camera - модуль для работы с камерой и преобразованиями
+ *
+ * Управляет проекцией камеры, auto-zoom и преобразованиями координат.
+ * Дополняет DI CameraService функциями для игрового движка.
+ */
 
-import { OrthographicCamera, PerspectiveCamera, AudioListener, Vector3, Box3, Frustum, Matrix4, Plane, Raycaster, Vector2 } from "three";
+import { OrthographicCamera, PerspectiveCamera, AudioListener, Vector3, Frustum, Matrix4, Plane, Raycaster, Vector2 } from "three";
+import type { Mesh } from "three";
 import { get_window_size } from "../render_engine/helpers/window_utils";
 import { IS_CAMERA_ORTHOGRAPHIC, TARGET_DISPLAY_HEIGHT, TARGET_DISPLAY_WIDTH } from "../config";
-import { IBaseEntityAndThree } from "@editor/render_engine/types";
 
 declare global {
     const Camera: ReturnType<typeof CameraModule>;
 }
 
-export function register_camera() {
-    (window as any).Camera = CameraModule();
+export function register_camera(): void {
+    (window as unknown as Record<string, unknown>).Camera = CameraModule();
 }
 
 function CameraModule() {
@@ -33,11 +36,11 @@ function CameraModule() {
         EventBus.on('SYS_ON_RESIZED', () => update_window_size());
     }
 
-    function set_width_prjection(ax: number, ay: number, near = -1, far = 1) {
+    function set_width_prjection(ax: number, ay: number, near = -1, far = 1): void {
         is_width_projection = true;
         anchor_x = ax;
         anchor_y = ay;
-        const camera = RenderEngine.camera;
+        const camera = RenderEngine.camera as OrthographicCamera;
         camera.near = near;
         camera.far = far;
         camera.updateProjectionMatrix();
@@ -160,9 +163,8 @@ function CameraModule() {
         return _dynamic_orientation;
     }
 
-    function get_ltrb(win_space = false) {
-        // todo
-    }
+    // Зарезервировано для будущей реализации
+    // function get_ltrb(win_space = false) { }
 
     function screen_to_world(x: number, y: number, is_gui = false) {
         const camera = is_gui ? RenderEngine.camera_gui : RenderEngine.camera;
@@ -194,13 +196,14 @@ function CameraModule() {
             camera.right = right;
             camera.top = top;
             camera.bottom = bottom;
+            camera.updateProjectionMatrix();
         }
         else {
             const camera = _camera as PerspectiveCamera;
             const aspect = window.innerWidth / window.innerHeight;
             camera.aspect = aspect;
+            camera.updateProjectionMatrix();
         }
-        _camera.updateProjectionMatrix();
 
         [left, right, top, bottom] = screen_viewport();
         const camera_gui = RenderEngine.camera_gui;
@@ -211,25 +214,28 @@ function CameraModule() {
         camera_gui.updateProjectionMatrix();
     }
 
-    function is_visible(mesh:any){
-        if (!mesh.geometry){
+    function is_visible(mesh: Mesh): boolean {
+        if (mesh.geometry === undefined) {
             Log.warn('mesh.geometry not found', mesh);
             return false;
         }
         const camera = RenderEngine.camera as OrthographicCamera;
-        if (!mesh.geometry.boundingBox) {
+        if (mesh.geometry.boundingBox === null) {
             mesh.geometry.computeBoundingBox();
-          }
-          const boundingBox = mesh.geometry.boundingBox.clone();
-          boundingBox.applyMatrix4(mesh.matrixWorld);
-        
-          const frustum = new Frustum();
-          const cameraViewProjectionMatrix = new Matrix4();
-          camera.updateMatrixWorld();
-          cameraViewProjectionMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-          frustum.setFromProjectionMatrix(cameraViewProjectionMatrix);
-        
-          return frustum.intersectsBox(boundingBox);
+        }
+        if (mesh.geometry.boundingBox === null) {
+            return false;
+        }
+        const boundingBox = mesh.geometry.boundingBox.clone();
+        boundingBox.applyMatrix4(mesh.matrixWorld);
+
+        const frustum = new Frustum();
+        const cameraViewProjectionMatrix = new Matrix4();
+        camera.updateMatrixWorld();
+        cameraViewProjectionMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        frustum.setFromProjectionMatrix(cameraViewProjectionMatrix);
+
+        return frustum.intersectsBox(boundingBox);
     }
 
     init();

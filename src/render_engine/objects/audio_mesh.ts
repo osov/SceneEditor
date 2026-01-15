@@ -6,6 +6,7 @@ import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, CircleG
 // NOTE: чтобы использовать без (window as any)
 import "../../modules/Sound";
 import { uh_to_id } from "@editor/defold/utils";
+import { inspector_force_refresh } from "@editor/defold/runtime_stubs";
 
 export enum SoundFunctionType {
     LINEAR,
@@ -165,7 +166,7 @@ export class AudioMesh extends EntityBase {
     set_sound_radius(radius: number) {
         this.soundRadius = Math.max(0, radius);
         Sound.set_sound_radius(SceneManager.get_mesh_url_by_id(this.get_id()), this.soundRadius);
-        MeshInspector.force_refresh();
+        inspector_force_refresh();
     }
 
     get_sound_radius() {
@@ -200,7 +201,7 @@ export class AudioMesh extends EntityBase {
         }
 
         Sound.set_zone_type(SceneManager.get_mesh_url_by_id(this.get_id()), zoneType);
-        MeshInspector.force_refresh();
+        inspector_force_refresh();
     }
 
     get_zone_type() {
@@ -210,7 +211,7 @@ export class AudioMesh extends EntityBase {
     set_rectangle_width(width: number) {
         this.rectangleWidth = Math.max(0, width);
         Sound.set_rectangle_width(SceneManager.get_mesh_url_by_id(this.get_id()), this.rectangleWidth);
-        MeshInspector.force_refresh();
+        inspector_force_refresh();
     }
 
     get_rectangle_width() {
@@ -220,7 +221,7 @@ export class AudioMesh extends EntityBase {
     set_rectangle_height(height: number) {
         this.rectangleHeight = Math.max(0, height);
         Sound.set_rectangle_height(SceneManager.get_mesh_url_by_id(this.get_id()), this.rectangleHeight);
-        MeshInspector.force_refresh();
+        inspector_force_refresh();
     }
 
     get_rectangle_height() {
@@ -230,7 +231,7 @@ export class AudioMesh extends EntityBase {
     set_rectangle_max_volume_width(width: number) {
         this.rectangleMaxVolumeWidth = Math.max(0, width);
         Sound.set_rectangle_max_volume_width(SceneManager.get_mesh_url_by_id(this.get_id()), this.rectangleMaxVolumeWidth);
-        MeshInspector.force_refresh();
+        inspector_force_refresh();
     }
 
     get_rectangle_max_volume_width() {
@@ -240,7 +241,7 @@ export class AudioMesh extends EntityBase {
     set_rectangle_max_volume_height(height: number) {
         this.rectangleMaxVolumeHeight = Math.max(0, height);
         Sound.set_rectangle_max_volume_height(SceneManager.get_mesh_url_by_id(this.get_id()), this.rectangleMaxVolumeHeight);
-        MeshInspector.force_refresh();
+        inspector_force_refresh();
     }
 
     get_rectangle_max_volume_height() {
@@ -299,7 +300,7 @@ export class AudioMesh extends EntityBase {
             if (this.loop) this.play(complete_function);
             else if (complete_function) complete_function();
         });
-        MeshInspector.force_refresh();
+        inspector_force_refresh();
     }
 
     is_spatial() {
@@ -311,14 +312,14 @@ export class AudioMesh extends EntityBase {
     pause() {
         if (this.sound == '' || !this.get_active()) return;
         sound.pause(SceneManager.get_mesh_url_by_id(this.get_id()), true);
-        MeshInspector.force_refresh();
+        inspector_force_refresh();
     }
 
     stop() {
         if (this.sound == '' || !this.get_active()) return;
         Sound.stop(SceneManager.get_mesh_url_by_id(this.get_id()));
         Sound.set_off(SceneManager.get_mesh_url_by_id(this.get_id()), true);
-        MeshInspector.force_refresh();
+        inspector_force_refresh();
     }
 
     is_playing() {

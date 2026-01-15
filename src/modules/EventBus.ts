@@ -1,90 +1,94 @@
-import { MessageId, Messages } from "./modules_const";
+/**
+ * Legacy EventBus - обёртка над DI EventBus
+ *
+ * Сохраняет обратную совместимость с существующим кодом,
+ * делегируя все вызовы к новому DI EventBus.
+ */
 
-/*
-    шина сообщений
-*/
+import { MessageId, Messages } from "./modules_const";
+import type { IEventBus } from '../core/di/types';
+import { get_container } from '../core/di/Container';
+import { TOKENS } from '../core/di/tokens';
 
 declare global {
-    const EventBus: ReturnType<typeof EventBusModule>;
-}
-
-
-export function register_event_bus() {
-    (window as any).EventBus = EventBusModule();
+    const EventBus: ILegacyEventBus;
 }
 
 type FncOnCallback<T> = (data: T) => void;
 
-interface ListenerInfo {
-    callback: FncOnCallback<any>;
-    once: boolean;
+/** Интерфейс legacy EventBus для типизации */
+interface ILegacyEventBus {
+    on<T extends MessageId>(id_message: T, callback: FncOnCallback<Messages[T]>): void;
+    once<T extends MessageId>(id_message: T, callback: FncOnCallback<Messages[T]>): void;
+    off<T extends MessageId>(id_message: T, callback: FncOnCallback<Messages[T]>): void;
+    trigger<T extends MessageId>(id_message: T, message_data?: Messages[T], show_warning?: boolean, is_copy_data?: boolean): void;
+    send<T extends MessageId>(id_message: T, message_data?: Messages[T]): void;
 }
 
-function EventBusModule() {
-    const bus_log = Log.get_with_prefix('Bus');
-    const listeners: { [id_message: string]: ListenerInfo[] } = {};
+/** Кэш для DI EventBus */
+let _di_event_bus: IEventBus | undefined;
 
-
-    function _on<T extends MessageId>(id_message: T, callback: FncOnCallback<Messages[T]>, once: boolean) {
-        //bus_log.log('on', id_message, is_message_mode);
-        if (!listeners[id_message])
-            listeners[id_message] = [];
-        listeners[id_message].push({ callback, once, });
-    }
-
-
-    function on<T extends MessageId>(id_message: T, callback: FncOnCallback<Messages[T]>) {
-        _on(id_message, callback, false);
-    }
-
-    function once<T extends MessageId>(id_message: T, callback: FncOnCallback<Messages[T]>) {
-        _on(id_message, callback, true);
-    }
-
-    function off<T extends MessageId>(id_message: T, callback: FncOnCallback<Messages[T]>) {
-        if (!listeners[id_message]) {
-            bus_log.warn(`Ни один слушатель для события не зарегистрирован: ${id_message}, off`);
-            return;
+/** Получить DI EventBus */
+function get_di_event_bus(): IEventBus | undefined {
+    if (_di_event_bus === undefined) {
+        const container = get_container();
+        if (container !== undefined) {
+            _di_event_bus = container.try_resolve<IEventBus>(TOKENS.EventBus);
         }
-        const list = listeners[id_message];
-        for (let i = list.length - 1; i >= 0; i--) {
-            const l = list[i];
-            if (l.callback == callback) {
-                list.splice(i, 1);
-                return;
+    }
+    return _di_event_bus;
+}
+
+/** Регистрация глобального EventBus */
+export function register_event_bus(): void {
+    const legacy_bus: ILegacyEventBus = {
+        on<T extends MessageId>(id_message: T, callback: FncOnCallback<Messages[T]>): void {
+            const di_bus = get_di_event_bus();
+            if (di_bus !== undefined) {
+                di_bus.on(id_message, callback as (data: unknown) => void);
             }
-        }
-    }
+        },
 
+        once<T extends MessageId>(id_message: T, callback: FncOnCallback<Messages[T]>): void {
+            const di_bus = get_di_event_bus();
+            if (di_bus !== undefined) {
+                di_bus.once(id_message, callback as (data: unknown) => void);
+            }
+        },
 
-    function trigger<T extends MessageId>(id_message: T, message_data?: Messages[T], show_warning = true, is_copy_data = false) {
-        if (!listeners[id_message]) {
-            if (show_warning)
-                bus_log.warn(`Ни один слушатель для события не зарегистрирован: ${id_message}, trigger/send`);
-            return;
-        }
-        const data = is_copy_data ? JSON.parse(JSON.stringify(message_data)) : message_data; // чтобы во всех случаях была копия(редко когда нужно иначе)
-        // важный момент для случая once, что сначала происходит тригер, а затем удаление события, т.е. вешать событие внутри колбека нужно аккуратно учитывая это
-        const list = listeners[id_message];
-        const del_ids = [];
-        for (let i = 0; i < list.length; i++) {
-            const l = list[i];
-            l.callback(data);
-            if (l.once)
-                del_ids.push(i);
-        }
+        off<T extends MessageId>(id_message: T, callback: FncOnCallback<Messages[T]>): void {
+            const di_bus = get_di_event_bus();
+            if (di_bus !== undefined) {
+                di_bus.off(id_message, callback as (data: unknown) => void);
+            }
+        },
 
-        for (let i = del_ids.length - 1; i >= 0; i--) {
-            const id = del_ids[i];
-            list.splice(id, 1);
-        }
-    }
+        trigger<T extends MessageId>(
+            id_message: T,
+            message_data?: Messages[T],
+            show_warning = true,
+            is_copy_data = false
+        ): void {
+            const di_bus = get_di_event_bus();
+            if (di_bus !== undefined) {
+                // DI EventBus.trigger поддерживает эти параметры
+                (di_bus as IEventBus & { trigger: (e: string, d?: unknown, w?: boolean, c?: boolean) => void })
+                    .trigger(id_message, message_data, show_warning, is_copy_data);
+            }
+        },
 
-    function send<T extends MessageId>(id_message: T, message_data?: Messages[T]) {
-        return trigger(id_message, message_data);
-    }
+        send<T extends MessageId>(id_message: T, message_data?: Messages[T]): void {
+            const di_bus = get_di_event_bus();
+            if (di_bus !== undefined) {
+                di_bus.emit(id_message, message_data);
+            }
+        },
+    };
 
+    (window as unknown as Record<string, unknown>).EventBus = legacy_bus;
+}
 
-
-    return { on, once, off, send, trigger };
+/** Сброс кэша (для тестов) */
+export function reset_event_bus_cache(): void {
+    _di_event_bus = undefined;
 }

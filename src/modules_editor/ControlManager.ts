@@ -1,12 +1,42 @@
 import { is_base_mesh } from "../render_engine/helpers/utils";
 import { IBaseMeshAndThree } from "../render_engine/types";
 import { TreeItem } from "./TreeControl";
-import { componentsGo } from "./ActionsControl";
-import { HistoryData } from "./HistoryControl";
-import { cbDataItem, Action } from "../modules_editor/Popups";
+import { componentsGo } from "../shared/types";
+import { cbDataItem, Action } from "./Popups";
 import Stats from 'stats.js';
 import { DEFOLD_LIMITS, IS_CAMERA_ORTHOGRAPHIC } from "../config";
-import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
+import { HistoryOwner, THistoryUndo } from "./modules_editor_const";
+
+// Декларации глобальных объектов
+declare const SelectControl: {
+    get_selected_list(): IBaseMeshAndThree[];
+    set_selected_list(list: IBaseMeshAndThree[]): void;
+};
+declare const TransformControl: {
+    set_selected_list(list: IBaseMeshAndThree[]): void;
+    detach(): void;
+    set_active(active: boolean): void;
+    set_mode(mode: string): void;
+};
+declare const SizeControl: {
+    set_selected_list(list: IBaseMeshAndThree[]): void;
+    detach(): void;
+    set_active(active: boolean): void;
+};
+declare const HistoryControl: {
+    add(type: string, data: unknown[], owner: HistoryOwner): void;
+};
+declare const CameraControl: {
+    load_state(name: string): void;
+    get_zoom(): number;
+};
+
+// Тип HistoryData для legacy кода
+type HistoryData = {
+    MESH_MOVE: { id_mesh: number; pid: number; next_id: number };
+    MESH_NAME: { mesh_id: number; value: string };
+    MESH_VISIBLE: { mesh_id: number; value: boolean };
+};
 
 declare global {
     const ControlManager: ReturnType<typeof ControlManagerCreate>;
