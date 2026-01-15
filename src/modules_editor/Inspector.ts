@@ -12,13 +12,22 @@ import { Refreshable } from '@tweakpane/core/dist/blade/common/api/refreshable';
 import { select_file } from '@editor/defold/runtime_stubs';
 import { Services } from '@editor/core';
 
+/** Тип Inspector */
+export type InspectorType = ReturnType<typeof InspectorModule>;
 
-declare global {
-    const Inspector: ReturnType<typeof InspectorModule>;
+/** Модульный instance для использования через импорт */
+let inspector_instance: InspectorType | undefined;
+
+/** Получить instance Inspector */
+export function get_inspector(): InspectorType {
+    if (inspector_instance === undefined) {
+        throw new Error('Inspector не инициализирован. Вызовите register_inspector() сначала.');
+    }
+    return inspector_instance;
 }
 
 export function register_inspector() {
-    (window as any).Inspector = InspectorModule();
+    inspector_instance = InspectorModule();
 }
 
 export enum PropertyType {

@@ -36,7 +36,7 @@ import { deepClone, getObjectHash, hexToRGB, rgbToHex } from '../modules/utils';
 import { Slice9Mesh } from './objects/slice9';
 import { IBaseEntityData } from './types';
 import { MultipleMaterialMesh } from './objects/multiple_material_mesh';
-import { api } from '../modules_editor/ClientAPI';
+import { api, get_client_api } from '../modules_editor/ClientAPI';
 import { URL_PATHS } from '../modules_editor/modules_editor_const';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { IS_LOGGING } from '@editor/config';
@@ -48,9 +48,6 @@ import { Services } from '@editor/core';
 /** Тип возвращаемого значения ResourceManagerModule для DI */
 export type ILegacyResourceManager = ReturnType<typeof ResourceManagerModule>;
 
-declare global {
-    const ResourceManager: ILegacyResourceManager;
-}
 
 /** Кэш для DI ResourceManager */
 let _resource_manager: ILegacyResourceManager | undefined;
@@ -79,9 +76,6 @@ export function get_resource_manager(): ILegacyResourceManager {
 export function register_resource_manager() {
     // Создаём ResourceManager
     const resource_manager = get_resource_manager();
-
-    // Регистрируем в глобальный scope
-    (window as unknown as Record<string, unknown>).ResourceManager = resource_manager;
 
     // Регистрируем в DI контейнер если он доступен
     const container = get_container();
@@ -1679,7 +1673,7 @@ export function ResourceManagerModule() {
             delete atlases[atlas][name];
             URL.revokeObjectURL(tex_data.texture.image.src);
             tex_data.texture.dispose();
-            log('Texture free', name, atlas);
+            Services.logger.debug('Texture free', name, atlas);
         }
         else {
             Services.logger.error('Texture not found', name, atlas);
@@ -1711,7 +1705,7 @@ export function ResourceManagerModule() {
     async function write_metadata() {
         try {
             // Write atlases metadata
-            const metadata = await ClientAPI.get_info('atlases');
+            const metadata = await get_client_api().get_info('atlases');
             if (!metadata.result) {
                 if (metadata.data != undefined) {
                     throw new Error('Failed on get atlases metadata!');
@@ -1735,13 +1729,13 @@ export function ResourceManagerModule() {
                     };
                 }
             }
-            const save_result = await ClientAPI.save_info('atlases', metadata_atlases);
+            const save_result = await get_client_api().save_info('atlases', metadata_atlases);
             if (!save_result.result) {
                 throw new Error('Failed on save atlases metadata!');
             }
 
             // Write layers metadata
-            const layers_metadata = await ClientAPI.get_info('layers');
+            const layers_metadata = await get_client_api().get_info('layers');
             if (!layers_metadata.result && layers_metadata.data != undefined) {
                 throw new Error('Failed on get layers metadata!');
             }
@@ -1750,7 +1744,7 @@ export function ResourceManagerModule() {
                 if (index == 0) return;
                 layers_dict[index.toString()] = layer;
             });
-            const save_layers_result = await ClientAPI.save_info('layers', layers_dict);
+            const save_layers_result = await get_client_api().save_info('layers', layers_dict);
             if (!save_layers_result.result) {
                 throw new Error('Failed on save layers metadata!');
             }
@@ -1763,7 +1757,7 @@ export function ResourceManagerModule() {
     async function update_from_metadata() {
         try {
             // Update atlases from metadata
-            const metadata = await ClientAPI.get_info('atlases');
+            const metadata = await get_client_api().get_info('atlases');
             if (!metadata.result) {
                 if (metadata.data == undefined) {
                     Services.logger.debug('Update resource manager from metadata: atlases not found!');
@@ -1803,7 +1797,7 @@ export function ResourceManagerModule() {
             }
 
             // Update layers from metadata
-            const layers_metadata = await ClientAPI.get_info('layers');
+            const layers_metadata = await get_client_api().get_info('layers');
             if (!layers_metadata.result) {
                 if (layers_metadata.data == undefined) {
                     Services.logger.debug('Update resource manager from metadata: layers not found!');

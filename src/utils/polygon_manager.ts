@@ -103,7 +103,7 @@ export function CellsManagerCreate(hash_cell_size = 20) {
         }
         const navmesh =  new NavMesh(passable_polygons);
         const t2 = Services.time.now_ms();
-        log('make_navmesh time', t2 - t1)
+        Services.logger.debug('make_navmesh time', t2 - t1);
         return navmesh;
     }
 

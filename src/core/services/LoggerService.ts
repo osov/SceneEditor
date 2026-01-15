@@ -27,7 +27,7 @@ const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
 };
 
 /** Конфигурация логгера */
-/** @noSelf */
+
 export interface LoggerConfig {
     /** Минимальный уровень логирования */
     min_level?: LogLevel;

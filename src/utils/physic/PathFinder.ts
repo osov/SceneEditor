@@ -25,12 +25,22 @@ const path_tree_root: PathNode = {
     total_length: 0
 };
 
-declare global {
-    const PathFinder: ReturnType<typeof PathFinderModule>;
+/** Тип PathFinder */
+export type PathFinderType = ReturnType<typeof PathFinderModule>;
+
+/** Модульный instance для использования через импорт */
+let pathfinder_instance: PathFinderType | undefined;
+
+/** Получить instance PathFinder */
+export function get_pathfinder(): PathFinderType {
+    if (pathfinder_instance === undefined) {
+        throw new Error('PathFinder не инициализирован. Вызовите register_pathfinder() сначала.');
+    }
+    return pathfinder_instance;
 }
 
 export function register_pathfinder() {
-    (window as any).PathFinder = PathFinderModule(PF_default_settings);
+    pathfinder_instance = PathFinderModule(PF_default_settings);
 }
 
 export function PathFinderModule(settings: PathFinderSettings) {
@@ -781,7 +791,7 @@ export function PathFinderModule(settings: PathFinderSettings) {
         let counter = 0;
         while (data.lenght_remains >= collision_min_error && counter < max_intervals) {
             if (debug) {
-                log(`Next move in predicted way:`, NextMoveType[data.next_do]);
+                Services.logger.debug(`Next move in predicted way:`, NextMoveType[data.next_do]);
             }
             if (data.next_do == NextMoveType.STRAIGHT_LINE) {
                 linear_move(way, collision_radius, data);

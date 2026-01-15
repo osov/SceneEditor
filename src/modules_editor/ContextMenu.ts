@@ -3,12 +3,22 @@ import { NodeAction } from "@editor/shared";
 import { new_scene_popup, save_current_scene } from "@editor/defold/runtime_stubs";
 import { Services } from '@editor/core';
 
-declare global {
-    const ContextMenu: ReturnType<typeof ContextMenuCreate>;
+/** Тип ContextMenu */
+export type ContextMenuType = ReturnType<typeof ContextMenuCreate>;
+
+/** Модульный instance для использования через импорт */
+let contextmenu_instance: ContextMenuType | undefined;
+
+/** Получить instance ContextMenu */
+export function get_contextmenu(): ContextMenuType {
+    if (contextmenu_instance === undefined) {
+        throw new Error('ContextMenu не инициализирован. Вызовите register_contextmenu() сначала.');
+    }
+    return contextmenu_instance;
 }
 
 export function register_contextmenu() {
-    (window as any).ContextMenu = ContextMenuCreate();
+    contextmenu_instance = ContextMenuCreate();
 }
 
 //  ****** ContextMenu example: ******
@@ -172,7 +182,7 @@ function ContextMenuCreate() {
 
         const dataAction = itemContext?.getAttribute("data-action");
         if (!dataAction || itemContext.classList.contains('not_active')) {
-            log('not dataAction or not_active')
+            Services.logger.debug('not dataAction or not_active');
             return;
         }
 

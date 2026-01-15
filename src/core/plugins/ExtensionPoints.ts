@@ -94,7 +94,7 @@ export type ExtensionPointId = typeof EXTENSION_POINTS[keyof typeof EXTENSION_PO
 // Типы расширений для каждой точки
 
 /** Тип поля инспектора */
-/** @noSelf */
+
 export interface InspectorFieldTypeExtension {
     /** Уникальный ID типа */
     id: string;
@@ -109,7 +109,7 @@ export interface InspectorFieldTypeExtension {
 }
 
 /** Провайдер инспектора объектов */
-/** @noSelf */
+
 export interface ObjectInspectorExtension {
     /** Уникальный ID провайдера */
     id: string;
@@ -140,7 +140,7 @@ export interface ContextMenuItemExtension {
 }
 
 /** Команда редактора */
-/** @noSelf */
+
 export interface CommandExtension {
     /** Уникальный ID команды */
     id: string;
@@ -165,7 +165,7 @@ export interface KeybindingExtension {
 }
 
 /** Тип объекта сцены */
-/** @noSelf */
+
 export interface SceneObjectTypeExtension {
     /** Уникальный ID типа */
     id: string;
@@ -180,7 +180,7 @@ export interface SceneObjectTypeExtension {
 }
 
 /** Экспортёр */
-/** @noSelf */
+
 export interface ExporterExtension {
     /** Уникальный ID экспортёра */
     id: string;
@@ -193,7 +193,7 @@ export interface ExporterExtension {
 }
 
 /** Импортёр */
-/** @noSelf */
+
 export interface ImporterExtension {
     /** Уникальный ID импортёра */
     id: string;

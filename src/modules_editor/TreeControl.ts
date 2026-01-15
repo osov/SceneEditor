@@ -5,7 +5,8 @@
  */
 
 import { deepClone } from "../modules/utils";
-import { contextMenuItem } from "./ContextMenu";
+import { contextMenuItem, get_contextmenu } from "./ContextMenu";
+import { get_popups } from "./Popups";
 import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui, componentsGo, ParamsTexture } from "../shared/types";
 import { IObjectTypes } from '../render_engine/types';
 import { Vector2, Mesh } from "three";
@@ -1218,7 +1219,7 @@ function TreeControlCreate() {
                 countMove++;
                 const canMove = Services.actions.is_same_world(items_to_scene_objects(listSelected));
                 if (!canMove && countMove == 2) {
-                    Popups.toast.open({
+                    get_popups().toast.open({
                         type: 'info',
                         message: 'Нельзя одновременно перемещать элементы из GUI и GO!'
                     });
@@ -2064,7 +2065,7 @@ function TreeControlCreate() {
             divTree.classList.add('no_scrolling');
         }
 
-        ContextMenu.open(getContextMenuItems(), event, menuContextClick);
+        get_contextmenu().open(getContextMenuItems(), event, menuContextClick);
     }
 
     function setCutList(is_clear: boolean = false) {
@@ -2246,13 +2247,13 @@ function TreeControlCreate() {
         }
 
         if (data.length == 0 || data.includes('undefined/undefined')) {
-            Popups.toast.open({ type: 'info', message: "Нет текстуры!" });
+            get_popups().toast.open({ type: 'info', message: "Нет текстуры!" });
             return;
         }
 
         const list = Services.selection.selected as TreeMeshObject[];
         if (list.length > 1 && isPos) {
-            Popups.toast.open({ type: 'info', message: "Для этого действия нужно выбрать только 1 объект!" });
+            get_popups().toast.open({ type: 'info', message: "Для этого действия нужно выбрать только 1 объект!" });
             return;
         }
 
@@ -2275,7 +2276,7 @@ function TreeControlCreate() {
 
         const noDrop = treeList.find((i) => i.id == pt.pid && i.no_drop);
         if (noDrop) {
-            Popups.toast.open({ type: 'info', message: "В текущий объект запрещено добавлять дочерние!" });
+            get_popups().toast.open({ type: 'info', message: "В текущий объект запрещено добавлять дочерние!" });
             return;
         }
 
@@ -2294,7 +2295,7 @@ function TreeControlCreate() {
             return;
         }
 
-        Popups.toast.open({ type: 'info', message: "Этому объекту нельзя добавлять текстуру!" });
+        get_popups().toast.open({ type: 'info', message: "Этому объекту нельзя добавлять текстуру!" });
     }
 
     function updateDataVisible(id: number, value: string) {

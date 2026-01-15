@@ -93,7 +93,7 @@ export function test_detect_collision(
     const angle = vector_slope(shape_vector(way));
     player.setAngle(angle, true);
 
-    log('test detect_collision lib')
+    Services.logger.debug('test detect_collision lib');
     const points: IPoint[] = [point(player.x, player.y)];
     const t1 = Services.time.now_ms()
     for (let k = 0; k < 1; k++) {
@@ -111,8 +111,8 @@ export function test_detect_collision(
         }
     }
     const t2 = Services.time.now_ms()
-    log('time', t2 - t1)
-    log('points', points.length)
+    Services.logger.debug('time', t2 - t1);
+    Services.logger.debug('points', points.length);
 
     return points;
 }

@@ -406,31 +406,33 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
             name: 'NotificationService',
         });
 
-        // === Legacy глобальные объекты (window.*) ===
-        // Новый код использует DI сервисы через Services.*.
-        // Legacy контролы содержат Three.js логику и используют Services.* внутренне.
+        // === Модули с DI сервисами ===
+        // Все модули используют DI сервисы через Services.*.
+        // Глобальные window.* объекты УДАЛЕНЫ, используем импорты.
         //
-        // Статус миграции контролов:
-        // 🗑️ SelectControl - УДАЛЁН, логика в SelectionService
-        // 🗑️ HistoryControl - УДАЛЁН, используем Services.history
-        // 🗑️ ActionsControl - УДАЛЁН, используем Services.actions
-        // ✅ TransformControl - обёртка над Services.transform (Three.js gizmo)
-        // ✅ SizeControl - использует Services.* (Three.js bounds)
-        // ✅ CameraControl - использует Services.* (camera-controls)
-        // ✅ AssetControl - использует Services.* (файловые операции)
+        // Контролы (доступ через импорт get_*):
+        // - TransformControl - обёртка над Services.transform (Three.js gizmo)
+        // - SizeControl - использует Services.size (Three.js bounds)
+        // - CameraControl - использует Services.camera (camera-controls)
+        // - AssetControl - использует Services.assets (файловые операции)
         //
-        // Модули редактора:
-        // ✅ ControlManager - мигрирован на импорты (get_control_manager())
-        // ✅ TreeControl - мигрирован на импорты (get_tree_control())
-        // ✅ InspectorControl - мигрирован на импорты (get_inspector_control())
+        // Модули редактора (доступ через импорт get_*):
+        // - ControlManager - координатор UI контролов
+        // - TreeControl - дерево иерархии сцены
+        // - InspectorControl - инспектор свойств
+        // - Popups - модальные окна
+        // - ContextMenu - контекстное меню
+        // - ClientAPI - API для работы с сервером
+        // - Inspector - tweakpane UI для инспектора
         //
-        // Статус глобальных ссылок:
-        // - ControlManager: доступен через импорт get_control_manager()
-        // - TreeControl: доступен через импорт get_tree_control()
-        // - InspectorControl: доступен через импорт get_inspector_control()
+        // Сервисы (доступ через Services.*):
+        // - ResourceManager - менеджер ресурсов
+        // - TweenManager - менеджер анимаций
+        // - AudioManager - менеджер аудио
+        // - Sound - пространственный звук
 
-        // 1. Resource manager (legacy)
-        register_resource_manager(); // window.ResourceManager
+        // 1. Resource manager
+        register_resource_manager();
 
         // 2. Привязка событий ввода
         const input_service = container.resolve<IInputService>(TOKENS.Input);
@@ -439,7 +441,7 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         // 3. Инициализация SelectionService
         selection_service.init();
 
-        // 4. Контролы редактора (window.*)
+        // 4. Контролы редактора
         register_asset_control();
         register_size_control();
         register_transform_control();
@@ -448,7 +450,7 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         // 6. UI модули редактора
         register_editor_modules();
 
-        logger.info('Legacy глобальные объекты зарегистрированы');
+        logger.info('Модули редактора зарегистрированы');
 
         // 7. Инициализируем UIService (после регистрации модулей редактора)
         ui_service.init();

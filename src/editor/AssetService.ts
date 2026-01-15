@@ -8,6 +8,8 @@
 import type { IDisposable, ILogger, IEventBus } from '../core/di/types';
 import type { IBaseEntityData } from '../render_engine/types';
 import { Services } from '@editor/core';
+import { try_get_client_api } from '../modules_editor/ClientAPI';
+import { try_get_asset_control } from '../controls/AssetControl';
 
 /** Параметры сервиса */
 export interface AssetServiceParams {
@@ -64,20 +66,6 @@ export interface IAssetService extends IDisposable {
     readonly current_scene_path: string | undefined;
 }
 
-/** Получить ClientAPI из глобального scope */
-function get_client_api(): typeof ClientAPI | undefined {
-    return (globalThis as unknown as { ClientAPI?: typeof ClientAPI }).ClientAPI;
-}
-
-/** Legacy AssetControl тип */
-interface LegacyAssetControl {
-    loadPartOfSceneInPos(path: string, position?: unknown): unknown;
-}
-
-/** Получить legacy AssetControl */
-function get_legacy_asset_control(): LegacyAssetControl | undefined {
-    return (globalThis as unknown as { AssetControl?: LegacyAssetControl }).AssetControl;
-}
 
 
 /** Создать AssetService */
@@ -89,7 +77,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
     async function load_scene(path: string): Promise<SceneLoadResult> {
         logger.debug(`Загрузка сцены: ${path}`);
 
-        const client_api = get_client_api();
+        const client_api = try_get_client_api();
         if (client_api === undefined) {
             return { success: false, error: 'ClientAPI недоступен' };
         }
@@ -120,7 +108,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
     async function save_scene(path: string): Promise<AssetOperationResult> {
         logger.debug(`Сохранение сцены: ${path}`);
 
-        const client_api = get_client_api();
+        const client_api = try_get_client_api();
         if (client_api === undefined) {
             return { success: false, error: 'ClientAPI недоступен' };
         }
@@ -150,7 +138,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
     async function get_file_data(path: string): Promise<AssetDataResult> {
         logger.debug(`Чтение файла: ${path}`);
 
-        const client_api = get_client_api();
+        const client_api = try_get_client_api();
         if (client_api === undefined) {
             return { success: false, error: 'ClientAPI недоступен' };
         }
@@ -172,7 +160,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
     async function save_file_data(path: string, data: string): Promise<AssetOperationResult> {
         logger.debug(`Сохранение файла: ${path}`);
 
-        const client_api = get_client_api();
+        const client_api = try_get_client_api();
         if (client_api === undefined) {
             return { success: false, error: 'ClientAPI недоступен' };
         }
@@ -195,7 +183,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
     async function create_folder(path: string, name: string): Promise<AssetOperationResult> {
         logger.debug(`Создание папки: ${path}/${name}`);
 
-        const client_api = get_client_api();
+        const client_api = try_get_client_api();
         if (client_api === undefined) {
             return { success: false, error: 'ClientAPI недоступен' };
         }
@@ -218,7 +206,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
     async function delete_path(path: string): Promise<AssetOperationResult> {
         logger.debug(`Удаление: ${path}`);
 
-        const client_api = get_client_api();
+        const client_api = try_get_client_api();
         if (client_api === undefined) {
             return { success: false, error: 'ClientAPI недоступен' };
         }
@@ -241,7 +229,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
     async function rename_asset(old_path: string, new_path: string): Promise<AssetOperationResult> {
         logger.debug(`Переименование: ${old_path} -> ${new_path}`);
 
-        const client_api = get_client_api();
+        const client_api = try_get_client_api();
         if (client_api === undefined) {
             return { success: false, error: 'ClientAPI недоступен' };
         }
@@ -264,7 +252,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
     async function copy_asset(source: string, destination: string): Promise<AssetOperationResult> {
         logger.debug(`Копирование: ${source} -> ${destination}`);
 
-        const client_api = get_client_api();
+        const client_api = try_get_client_api();
         if (client_api === undefined) {
             return { success: false, error: 'ClientAPI недоступен' };
         }
@@ -287,7 +275,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
     async function move_asset(source: string, destination: string): Promise<AssetOperationResult> {
         logger.debug(`Перемещение: ${source} -> ${destination}`);
 
-        const client_api = get_client_api();
+        const client_api = try_get_client_api();
         if (client_api === undefined) {
             return { success: false, error: 'ClientAPI недоступен' };
         }
@@ -308,12 +296,12 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
     }
 
     function load_part_of_scene(path: string, position?: LoadPartPosition): unknown {
-        const legacy = get_legacy_asset_control();
-        if (legacy === undefined) {
+        const asset_control = try_get_asset_control();
+        if (asset_control === undefined) {
             logger.warn('AssetControl не инициализирован');
             return undefined;
         }
-        return legacy.loadPartOfSceneInPos(path, position);
+        return asset_control.loadPartOfSceneInPos(path, position);
     }
 
     function dispose(): void {

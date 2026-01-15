@@ -10,12 +10,22 @@ import { IBaseEntityAndThree } from '../render_engine/types';
 import { Services } from '@editor/core';
 import type { ISceneObject } from '@editor/engine/types';
 
-declare global {
-    const TransformControl: ReturnType<typeof TransformControlCreate>;
+/** Тип TransformControl */
+export type TransformControlType = ReturnType<typeof TransformControlCreate>;
+
+/** Модульный instance для использования через импорт */
+let transform_control_instance: TransformControlType | undefined;
+
+/** Получить instance TransformControl */
+export function get_transform_control(): TransformControlType {
+    if (transform_control_instance === undefined) {
+        throw new Error('TransformControl не инициализирован. Вызовите register_transform_control() сначала.');
+    }
+    return transform_control_instance;
 }
 
 export function register_transform_control() {
-    (window as unknown as Record<string, unknown>).TransformControl = TransformControlCreate();
+    transform_control_instance = TransformControlCreate();
 }
 
 function TransformControlCreate() {

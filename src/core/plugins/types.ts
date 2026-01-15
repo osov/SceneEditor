@@ -41,7 +41,7 @@ export interface PluginExtension {
 }
 
 /** Контекст плагина - предоставляется при активации */
-/** @noSelf */
+
 export interface IPluginContext {
     /** DI контейнер для плагина (scoped) */
     readonly container: IContainer;
@@ -63,7 +63,7 @@ export interface IPluginContext {
 }
 
 /** Интерфейс плагина */
-/** @noSelf */
+
 export interface IPlugin {
     /** Манифест плагина */
     readonly manifest: PluginManifest;
@@ -105,7 +105,7 @@ export interface LoadedPlugin {
 }
 
 /** Интерфейс менеджера плагинов */
-/** @noSelf */
+
 export interface IPluginManager {
     // Загрузка плагинов
 

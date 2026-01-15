@@ -3,6 +3,7 @@ import { IBaseEntityAndThree } from "@editor/render_engine/types";
 import { AdditiveBlending, Color, CustomBlending, MultiplyBlending, NoColorSpace, NormalBlending } from "three";
 import * as TWEEN from '@tweenjs/tween.js';
 import { Services } from '@editor/core';
+import { get_tween_manager } from '@editor/render_engine/tween_manager';
 
 
 export function hex2rgba(hex: string, alpha = 1) {
@@ -235,7 +236,7 @@ export function animate_logic(
                     backwardTween();
                 });
             applyPlayback(forward_tween, PLAYBACK_ONCE_FORWARD);
-            TweenManager.set_mesh_property_tween(mesh.mesh_data.id, property, forward_tween);
+            get_tween_manager().set_mesh_property_tween(mesh.mesh_data.id, property, forward_tween);
             forward_tween.start();
 
         }
@@ -256,7 +257,7 @@ export function animate_logic(
                     forwardTween();
                 });
             applyPlayback(backward_tween, PLAYBACK_ONCE_FORWARD);
-            TweenManager.set_mesh_property_tween(mesh.mesh_data.id, property, backward_tween);
+            get_tween_manager().set_mesh_property_tween(mesh.mesh_data.id, property, backward_tween);
             backward_tween.start();
         }
 
@@ -278,19 +279,19 @@ export function animate_logic(
         .delay(delay * 1000)
         .easing(EASING_MAP[easing] ?? TWEEN.Easing.Linear.None)
         .onComplete((_: { [key: string]: any }) => {
-            TweenManager.remove_mesh_property_tween(mesh.mesh_data.id, property);
+            get_tween_manager().remove_mesh_property_tween(mesh.mesh_data.id, property);
             if (complete_function) complete_function();
         });
     applyPlayback(tween, playback);
-    TweenManager.set_mesh_property_tween(mesh.mesh_data.id, property, tween);
+    get_tween_manager().set_mesh_property_tween(mesh.mesh_data.id, property, tween);
     tween.start();
 }
 
 export function cancel_animations_logic(mesh: IBaseEntityAndThree, property?: string) {
     if (property == 'tint.w')
         property = 'alpha';
-    if (property) TweenManager.remove_mesh_property_tween(mesh.mesh_data.id, property);
-    else TweenManager.remove_all_mesh_properties_tweens(mesh.mesh_data.id);
+    if (property) get_tween_manager().remove_mesh_property_tween(mesh.mesh_data.id, property);
+    else get_tween_manager().remove_all_mesh_properties_tweens(mesh.mesh_data.id);
 }
 
 export function uh_to_id(uh: string | hash): number {

@@ -28,7 +28,8 @@
       "Bash(node:*)",
       "Bash(git ls-tree:*)",
       "mcp__playwright__browser_type",
-      "Bash(git -C D:/TS_EDITOR_DEFOLD/SceneEditor status --porcelain)"
+      "Bash(git -C D:/TS_EDITOR_DEFOLD/SceneEditor status --porcelain)",
+      "Bash(bunx tsc:*)"
     ]
   }
 }

@@ -7,12 +7,27 @@ import { WORLD_SCALAR } from "../config";
 import { HistoryOwner } from "../modules_editor/modules_editor_const";
 import { Services } from '@editor/core';
 
-declare global {
-    const SizeControl: ReturnType<typeof SizeControlCreate>;
+/** Тип SizeControl */
+export type SizeControlType = ReturnType<typeof SizeControlCreate>;
+
+/** Модульный instance для использования через импорт */
+let size_control_instance: SizeControlType | undefined;
+
+/** Получить instance SizeControl */
+export function get_size_control(): SizeControlType {
+    if (size_control_instance === undefined) {
+        throw new Error('SizeControl не инициализирован. Вызовите register_size_control() сначала.');
+    }
+    return size_control_instance;
+}
+
+/** Попробовать получить instance SizeControl (без ошибки если не инициализирован) */
+export function try_get_size_control(): SizeControlType | undefined {
+    return size_control_instance;
 }
 
 export function register_size_control() {
-    (window as any).SizeControl = SizeControlCreate();
+    size_control_instance = SizeControlCreate();
 }
 
 const DEBUG_BB_POINT_SIZE_MIN = 0.03; // NOTE: минимальный размер точки (не зависит от растояния)

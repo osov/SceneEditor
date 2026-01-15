@@ -100,7 +100,7 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
         preload_tiled_textures(tiles_data);
         const [min, max] = calc_bb(render_data);
         set_world_bounds(min, max);
-        log("correction:", min, max);
+        Services.logger.debug("correction:", min, max);
         const used_textures = [];
         // TILES
         for (let layer of render_data.layers) {

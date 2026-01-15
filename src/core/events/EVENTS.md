@@ -2,11 +2,11 @@
 
 ## Обзор
 
-SceneEditor использует две системы событий:
-- **Legacy EventBus** (`window.EventBus`) - старая система для обратной совместимости
-- **Новый EventBus** (`src/core/events/EventBus.ts`) - новая система через DI
+SceneEditor использует единый EventBus из DI системы (`src/core/events/EventBus.ts`).
 
-`EventBusBridge` обеспечивает двунаправленную трансляцию между ними.
+`EventBusBridge` обеспечивает двунаправленную трансляцию имён событий между:
+- **Legacy именами** (`SYS_*`) - для обратной совместимости с существующим кодом
+- **Новыми именами** (`namespace:event`) - рекомендуемый формат
 
 ## Новые события (рекомендуемые)
 
@@ -95,8 +95,8 @@ event_bus.emit('transform:mode_changed', { mode: 'rotate' });
 ```
 
 ### Через EventBusBridge
-Мост автоматически транслирует события между системами.
-Legacy код продолжит работать без изменений.
+Мост автоматически транслирует имена событий на едином EventBus.
+Legacy код, использующий `SYS_*` события, продолжит работать без изменений.
 
 ## Горячие клавиши
 
@@ -150,28 +150,37 @@ Legacy код продолжит работать без изменений.
 | `TreeControl` | `hierarchy:*` | Дерево иерархии |
 | `TransformControl` | `transform:*` | Gizmo трансформации |
 
-## DI Адаптеры
+## DI Сервисы
 
-Адаптеры позволяют использовать legacy код через новую DI систему:
+Все сервисы доступны через DI контейнер и объект `Services`:
 
-### Зарегистрированные адаптеры
-| Токен | Адаптер | Legacy |
-|-------|---------|--------|
-| `TOKENS.Render` | `LegacyRenderAdapter` | `RenderEngine` |
-| `TOKENS.Scene` | `LegacySceneAdapter` | `SceneManager` |
-| `TOKENS.Selection` | `LegacySelectionAdapter` | `SelectControl` |
-| `TOKENS.History` | `LegacyHistoryAdapter` | `HistoryControl` |
+### Зарегистрированные сервисы
+| Токен | Сервис | Описание |
+|-------|--------|----------|
+| `TOKENS.Render` | `RenderService` | 3D рендеринг (Three.js) |
+| `TOKENS.Scene` | `SceneService` | Управление сценой |
+| `TOKENS.Selection` | `SelectionService` | Выделение объектов |
+| `TOKENS.History` | `HistoryService` | История изменений |
+| `TOKENS.Transform` | `TransformService` | Трансформация объектов |
+| `TOKENS.Resources` | `ResourceService` | Управление ресурсами |
 
-### Использование через DI
+### Использование через Services
 ```typescript
-// Получение сервисов через контейнер
+import { Services } from '@editor/core';
+
+// Использование через глобальный объект Services
+const selected = Services.selection.selected;
+Services.scene.create('go', { name: 'test' });
+Services.history.undo();
+Services.logger.debug('Отладочное сообщение');
+Services.event_bus.emit('my:event', { data: 123 });
+```
+
+### Использование через DI контейнер
+```typescript
+import { get_container, TOKENS } from '@editor/core';
+
+const container = get_container();
 const render = container.resolve<IRenderService>(TOKENS.Render);
 const scene = container.resolve<ISceneService>(TOKENS.Scene);
-const selection = container.resolve<ISelectionService>(TOKENS.Selection);
-const history = container.resolve<IHistoryService>(TOKENS.History);
-
-// Использование
-const selected = selection.selected;
-scene.create('go', { name: 'test' });
-history.undo();
 ```

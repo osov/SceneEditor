@@ -1,11 +1,12 @@
 /**
- * EventBusBridge - мост между legacy и новым EventBus
+ * EventBusBridge - транслятор имён событий
  *
  * Обеспечивает двунаправленную трансляцию событий между:
- * - Legacy EventBus (window.EventBus)
- * - Новый EventBus из DI системы
+ * - Legacy именами (SYS_*) для обратной совместимости
+ * - Новыми именами (namespace:event)
  *
- * Позволяет постепенно мигрировать компоненты на новую архитектуру.
+ * Позволяет постепенно мигрировать компоненты на новую архитектуру,
+ * при этом все события проходят через единый EventBus из DI системы.
  */
 
 import type { ILogger, IEventBus, IDisposable } from '../core/di/types';
@@ -124,8 +125,7 @@ export function create_event_bus_bridge(params: EventBusBridgeParams): IEventBus
     const { logger, new_event_bus } = params;
 
     let is_running = false;
-    const legacy_subscriptions: Array<{ event: string; callback: (data: unknown) => void }> = [];
-    const new_subscriptions: IDisposable[] = [];
+    const subscriptions: IDisposable[] = [];
 
     // Копии маппингов для возможности расширения
     const legacy_to_new = { ...LEGACY_TO_NEW_EVENTS };
@@ -137,21 +137,11 @@ export function create_event_bus_bridge(params: EventBusBridgeParams): IEventBus
     // События, которые не нужно логировать (слишком частые)
     const SILENT_EVENTS = new Set(['engine:update', 'engine:update_end', 'SYS_ON_UPDATE', 'SYS_ON_UPDATE_END']);
 
-    /** Подписаться на legacy события */
-    function subscribe_to_legacy(): void {
-        // Проверяем наличие legacy EventBus
-        if (typeof EventBus === 'undefined') {
-            logger.warn('Legacy EventBus не найден, мост работает только в одном направлении');
-            return;
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const legacy_bus = EventBus as any;
-
+    /** Подписаться на legacy-именованные события и транслировать в новые */
+    function subscribe_legacy_to_new(): void {
         for (const [legacy_event, new_event] of Object.entries(legacy_to_new)) {
-            const callback = (data: unknown) => {
-                // Защита от рекурсии: если это событие уже транслируется - пропускаем
-                const bridge_key = `legacy:${legacy_event}`;
+            const subscription = new_event_bus.on(legacy_event, (data) => {
+                const bridge_key = `l2n:${legacy_event}`;
                 if (events_in_flight.has(bridge_key)) {
                     return;
                 }
@@ -159,71 +149,43 @@ export function create_event_bus_bridge(params: EventBusBridgeParams): IEventBus
                 events_in_flight.add(bridge_key);
                 try {
                     if (!SILENT_EVENTS.has(legacy_event)) {
-                        logger.debug(`[Bridge] Legacy → New: ${legacy_event} → ${new_event}`);
+                        logger.debug(`[Bridge] ${legacy_event} → ${new_event}`);
                     }
                     new_event_bus.emit(new_event, transform_legacy_data(legacy_event, data));
                 } finally {
                     events_in_flight.delete(bridge_key);
                 }
-            };
-
-            try {
-                legacy_bus.on(legacy_event, callback);
-                legacy_subscriptions.push({ event: legacy_event, callback });
-            } catch {
-                // Событие может не существовать в типизации
-                logger.debug(`Не удалось подписаться на legacy событие: ${legacy_event}`);
-            }
+            });
+            subscriptions.push(subscription);
         }
-
-        logger.debug(`Подписано на ${legacy_subscriptions.length} legacy событий`);
     }
 
-    /** Подписаться на новые события */
-    function subscribe_to_new(): void {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const legacy_bus = typeof EventBus !== 'undefined' ? EventBus as any : undefined;
-
+    /** Подписаться на новые события и транслировать в legacy-именованные */
+    function subscribe_new_to_legacy(): void {
         for (const [new_event, legacy_event] of Object.entries(new_to_legacy)) {
             const subscription = new_event_bus.on(new_event, (data) => {
-                // Защита от рекурсии: если соответствующее legacy событие уже транслируется - пропускаем
-                const bridge_key = `legacy:${legacy_event}`;
+                const bridge_key = `n2l:${new_event}`;
                 if (events_in_flight.has(bridge_key)) {
                     return;
                 }
 
-                if (!SILENT_EVENTS.has(new_event)) {
-                    logger.debug(`[Bridge] New → Legacy: ${new_event} → ${legacy_event}`);
-                }
-
                 events_in_flight.add(bridge_key);
                 try {
-                    const transformed_data = transform_new_data(new_event, data);
-
-                    // Всегда эмитим на новый EventBus под legacy именем
-                    // (для компонентов, которые слушают legacy события на новом EventBus)
-                    new_event_bus.emit(legacy_event, transformed_data);
-
-                    // Также эмитим на legacy EventBus если он существует
-                    if (legacy_bus !== undefined) {
-                        legacy_bus.trigger(legacy_event, transformed_data, false);
+                    if (!SILENT_EVENTS.has(new_event)) {
+                        logger.debug(`[Bridge] ${new_event} → ${legacy_event}`);
                     }
-                } catch {
-                    logger.debug(`Не удалось отправить legacy событие: ${legacy_event}`);
+                    const transformed_data = transform_new_data(new_event, data);
+                    new_event_bus.emit(legacy_event, transformed_data);
                 } finally {
                     events_in_flight.delete(bridge_key);
                 }
             });
-
-            new_subscriptions.push(subscription);
+            subscriptions.push(subscription);
         }
-
-        logger.debug(`Подписано на ${new_subscriptions.length} новых событий`);
     }
 
     /** Трансформировать данные из legacy формата */
     function transform_legacy_data(event: string, data: unknown): unknown {
-        // Преобразование специфичных данных
         switch (event) {
             case 'SYS_SELECTED_MESH_LIST': {
                 const typed = data as { list: unknown[] };
@@ -244,7 +206,6 @@ export function create_event_bus_bridge(params: EventBusBridgeParams): IEventBus
 
     /** Трансформировать данные в legacy формат */
     function transform_new_data(event: string, data: unknown): unknown {
-        // Преобразование в формат legacy
         switch (event) {
             case 'selection:changed': {
                 const typed = data as { selected: unknown[] };
@@ -257,25 +218,10 @@ export function create_event_bus_bridge(params: EventBusBridgeParams): IEventBus
 
     /** Отписаться от всех событий */
     function unsubscribe_all(): void {
-        // Legacy
-        if (typeof EventBus !== 'undefined') {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const legacy_bus = EventBus as any;
-            for (const { event, callback } of legacy_subscriptions) {
-                try {
-                    legacy_bus.off(event, callback);
-                } catch {
-                    // Игнорируем ошибки при отписке
-                }
-            }
-        }
-        legacy_subscriptions.length = 0;
-
-        // New
-        for (const sub of new_subscriptions) {
+        for (const sub of subscriptions) {
             sub.dispose();
         }
-        new_subscriptions.length = 0;
+        subscriptions.length = 0;
     }
 
     function start(): void {
@@ -284,8 +230,8 @@ export function create_event_bus_bridge(params: EventBusBridgeParams): IEventBus
             return;
         }
 
-        subscribe_to_legacy();
-        subscribe_to_new();
+        subscribe_legacy_to_new();
+        subscribe_new_to_legacy();
         is_running = true;
 
         logger.info('EventBusBridge запущен');

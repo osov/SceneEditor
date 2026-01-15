@@ -194,7 +194,7 @@ export interface ObjectData {
 }
 
 /** Интерфейс контроллера инспектора */
-/** @noSelf */
+
 export interface IInspectorController {
     /** Установить данные для отображения */
     set_data(list_data: ObjectData[]): void;
@@ -213,7 +213,7 @@ export interface IInspectorController {
 }
 
 /** Интерфейс обработчика типа поля */
-/** @noSelf */
+
 export interface IFieldTypeHandler {
     /** ID типа поля */
     readonly type: PropertyType;
@@ -243,7 +243,7 @@ export interface BindingResult {
 }
 
 /** Интерфейс реестра типов полей */
-/** @noSelf */
+
 export interface IFieldTypeRegistry {
     /** Зарегистрировать обработчик типа поля */
     register_handler(handler: IFieldTypeHandler): IDisposable;
@@ -259,7 +259,7 @@ export interface IFieldTypeRegistry {
 }
 
 /** Интерфейс провайдера инспектора для объекта */
-/** @noSelf */
+
 export interface IObjectInspectorProvider {
     /** Уникальный ID провайдера */
     readonly id: string;

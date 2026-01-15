@@ -102,22 +102,22 @@ export function PathFinder() {
         };
 
         let t1 = Services.time.now_ms();
-        log('mul_scalar', mul_scalar);
+        Services.logger.debug('mul_scalar', mul_scalar);
         for (const obstacle_tile of obstacles_data) {
             const elements = obst_manager.add_obstacle_object(obstacle_tile, mul_scalar);
             all_elements.push(...elements);
         }
         let t2 = Services.time.now_ms();
-        log('prepare obstacles time', t2 - t1)
-        log('all obstacle elements', all_elements.length)
+        Services.logger.debug('prepare obstacles time', t2 - t1);
+        Services.logger.debug('all obstacle elements', all_elements.length);
         const {start, end} = get_level_range(all_elements, OBST_PADDING);
         let t3 = Services.time.now_ms();
 
-        log('get_level_size time', t3 - t2)
-        log(start, end)
+        Services.logger.debug('get_level_size time', t3 - t2);
+        Services.logger.debug(start, end);
         const cells = cell_manager.make_cells(start, end);
         let t4 = Services.time.now_ms();
-        log('make_cells time', t4 - t3)
+        Services.logger.debug('make_cells time', t4 - t3);
         for (const cell of cells) {
             cell.passable = [];
             const obst_in_zone = obst_manager.get_elements_in_zone(cell.rectangle);
@@ -133,7 +133,7 @@ export function PathFinder() {
             all_passable.push(...passable);
         }
         let t5 = Services.time.now_ms();
-        log('get passable polygons time', t5 - t4)
+        Services.logger.debug('get passable polygons time', t5 - t4);
         locations_navmesh[location] = cell_manager.make_navmesh();
         return all_passable;
     }

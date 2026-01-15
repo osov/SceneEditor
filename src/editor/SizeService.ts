@@ -7,26 +7,14 @@
 
 import type { ISceneObject } from '@editor/engine/types';
 import type { ISizeService, SizeServiceParams } from './types';
-
-// Тип legacy SizeControl
-interface LegacySizeControl {
-    set_selected_list(list: unknown[]): void;
-    detach(): void;
-    set_active(active: boolean): void;
-    draw(): void;
-}
-
-/** Получить legacy SizeControl */
-function get_legacy_size_control(): LegacySizeControl | undefined {
-    return (globalThis as unknown as { SizeControl?: LegacySizeControl }).SizeControl;
-}
+import { try_get_size_control } from '../controls/SizeControl';
 
 /** Создать SizeService */
 export function create_size_service(params: SizeServiceParams): ISizeService {
     const { logger } = params;
 
     function set_selected_list(list: ISceneObject[]): void {
-        const legacy = get_legacy_size_control();
+        const legacy = try_get_size_control();
         if (legacy !== undefined) {
             legacy.set_selected_list(list);
         } else {
@@ -35,21 +23,21 @@ export function create_size_service(params: SizeServiceParams): ISizeService {
     }
 
     function detach(): void {
-        const legacy = get_legacy_size_control();
+        const legacy = try_get_size_control();
         if (legacy !== undefined) {
             legacy.detach();
         }
     }
 
     function set_active(active: boolean): void {
-        const legacy = get_legacy_size_control();
+        const legacy = try_get_size_control();
         if (legacy !== undefined) {
             legacy.set_active(active);
         }
     }
 
     function draw(): void {
-        const legacy = get_legacy_size_control();
+        const legacy = try_get_size_control();
         if (legacy !== undefined) {
             legacy.draw();
         }

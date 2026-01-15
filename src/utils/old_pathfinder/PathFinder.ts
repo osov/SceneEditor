@@ -772,7 +772,7 @@ export function PathFinder(settings: PathFinderSettings) {
         let counter = 0;
         while (data.lenght_remains >= collision_min_error && counter < max_intervals) {
             if (debug) {
-                log(`Next move in predicted way:`, NextMoveType[data.next_do]);
+                Services.logger.debug(`Next move in predicted way:`, NextMoveType[data.next_do]);
             }
             if (data.next_do == NextMoveType.STRAIGHT_LINE) {
                 linear_move(way, collision_radius, data);

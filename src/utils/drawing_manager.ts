@@ -54,7 +54,7 @@ export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEn
             const t1 = Date.now()
             const way = navmesh.findPath(player.model.position, pos);
             const t2 = Date.now()
-            log('time', t2 - t1, dist)
+            Services.logger.debug('time', t2 - t1, dist);
             if (way && way.length > 0) {
                 LD.draw_multiline(way, obstacles_container, COLORS.WHITE);
             }

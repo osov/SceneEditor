@@ -1,8 +1,8 @@
 /**
  * ResourceService - сервис управления ресурсами
  *
- * Делегирует к legacy ResourceManager для обратной совместимости.
- * Все методы проксируются к глобальному ResourceManager.
+ * Делегирует к ResourceManager для обратной совместимости.
+ * Все методы проксируются к модульному ResourceManager через get_resource_manager().
  */
 
 import type { Object3D, Texture, AnimationClip, ShaderMaterial } from 'three';
@@ -14,19 +14,12 @@ import type {
     SceneInfo,
     ISceneObject,
 } from './types';
-
-/** Получить legacy ResourceManager */
-function get_legacy_resource_manager() {
-    return (globalThis as unknown as { ResourceManager?: IResourceService }).ResourceManager;
-}
+import { get_resource_manager } from '../render_engine/resource_manager';
 
 /** Проверить доступность ResourceManager */
 function require_resource_manager(): IResourceService {
-    const rm = get_legacy_resource_manager();
-    if (rm === undefined) {
-        throw new Error('ResourceManager не инициализирован. Вызовите register_resource_manager() сначала.');
-    }
-    return rm;
+    // Используем импорт вместо globalThis
+    return get_resource_manager() as unknown as IResourceService;
 }
 
 /** Создать ResourceService */

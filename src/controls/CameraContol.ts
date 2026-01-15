@@ -6,12 +6,22 @@ import { createCameraPerspectiveControl } from './CameraPerspectiveControl';
 import type { IBaseMeshAndThree } from '../render_engine/types';
 import { Services } from '@editor/core';
 
-declare global {
-    const CameraControl: ReturnType<typeof CameraControlCreate>;
+/** Тип CameraControl */
+export type CameraControlType = ReturnType<typeof CameraControlCreate>;
+
+/** Модульный instance для использования через импорт */
+let camera_control_instance: CameraControlType | undefined;
+
+/** Получить instance CameraControl */
+export function get_camera_control(): CameraControlType {
+    if (camera_control_instance === undefined) {
+        throw new Error('CameraControl не инициализирован. Вызовите register_camera_control() сначала.');
+    }
+    return camera_control_instance;
 }
 
 export function register_camera_control() {
-    (window as any).CameraControl = CameraControlCreate();
+    camera_control_instance = CameraControlCreate();
 }
 
 function CameraControlCreate() {

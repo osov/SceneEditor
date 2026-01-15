@@ -20,9 +20,3 @@ export type {
     SceneGraphServiceParams,
 } from './SceneGraphService';
 
-export { create_scene_graph_bridge } from './SceneGraphBridge';
-
-export type {
-    ISceneGraphBridge,
-    SceneGraphBridgeParams,
-} from './SceneGraphBridge';

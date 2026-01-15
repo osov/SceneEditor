@@ -60,12 +60,22 @@ interface SoundInstance {
     off: boolean;
 }
 
-declare global {
-    const Sound: ReturnType<typeof SoundModule>;
+/** Тип Sound */
+export type SoundType = ReturnType<typeof SoundModule>;
+
+/** Модульный instance для использования через импорт */
+let sound_instance: SoundType | undefined;
+
+/** Получить instance Sound */
+export function get_sound(): SoundType {
+    if (sound_instance === undefined) {
+        throw new Error('Sound не инициализирован. Вызовите register_sound() сначала.');
+    }
+    return sound_instance;
 }
 
 export function register_sound() {
-    (window as any).Sound = SoundModule();
+    sound_instance = SoundModule();
 }
 
 function SoundModule() {

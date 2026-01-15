@@ -1,26 +1,55 @@
 import { IS_LOGGING, SERVER_URL } from "../config";
 import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, ProtocolWrapper, TRecursiveDict, DEL_INFO_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, OPEN_EXPLORER_CMD, DataFormatType } from "./modules_editor_const";
 import { Services } from '@editor/core';
+import { get_popups } from './Popups';
 
+/** Тип ClientAPI */
+export type ClientAPIType = ReturnType<typeof ClientAPIModule>;
 
-declare global {
-    const ClientAPI: ReturnType<typeof ClientAPIModule>;
+/** Модульный instance для использования через импорт */
+let client_api_instance: ClientAPIType | undefined;
+
+/** Текущий sessionId (вместо window.currentSessionId) */
+let current_session_id: string | undefined;
+
+/** Получить текущий sessionId */
+export function get_session_id(): string | undefined {
+    return current_session_id;
+}
+
+/** Установить текущий sessionId */
+export function set_session_id(id: string): void {
+    current_session_id = id;
+}
+
+/** Получить instance ClientAPI */
+export function get_client_api(): ClientAPIType {
+    if (client_api_instance === undefined) {
+        throw new Error('ClientAPI не инициализирован. Вызовите register_client_api() сначала.');
+    }
+    return client_api_instance;
+}
+
+/** Попробовать получить instance ClientAPI (без ошибки если не инициализирован) */
+export function try_get_client_api(): ClientAPIType | undefined {
+    return client_api_instance;
 }
 
 export function register_client_api() {
-    (window as any).ClientAPI = ClientAPIModule();
+    client_api_instance = ClientAPIModule();
 }
+
 function ClientAPIModule() {
     function waitForSessionId(): Promise<{ success: boolean; sessionId?: string; error?: string }> {
         return new Promise<{ success: boolean; sessionId?: string; error?: string }>((resolve) => {
-            if ((window as any).currentSessionId) {
-                resolve({ success: true, sessionId: (window as any).currentSessionId });
+            if (current_session_id !== undefined) {
+                resolve({ success: true, sessionId: current_session_id });
                 return;
             }
 
             const checkSessionId = () => {
-                if ((window as any).currentSessionId) {
-                    resolve({ success: true, sessionId: (window as any).currentSessionId });
+                if (current_session_id !== undefined) {
+                    resolve({ success: true, sessionId: current_session_id });
                 } else {
                     setTimeout(checkSessionId, 100);
                 }
@@ -29,8 +58,8 @@ function ClientAPIModule() {
             checkSessionId();
 
             setTimeout(() => {
-                if (!(window as any).currentSessionId) {
-                    Popups.toast.error('Не удалось подключиться к серверу. Проверьте соединение.');
+                if (current_session_id === undefined) {
+                    get_popups().toast.error('Не удалось подключиться к серверу. Проверьте соединение.');
                     resolve({ success: false, error: 'Не удалось подключиться к серверу. Проверьте соединение.' });
                 }
             }, 10000);
@@ -133,7 +162,7 @@ function ClientAPIModule() {
             Services.event_bus.emit('SERVER_FILE_SYSTEM_EVENTS', message);
         } else if (id_message == 'SESSION_ID') {
             const message = _message as NetMessagesEditor['SESSION_ID'];
-            (window as any).currentSessionId = message.sessionId;
+            set_session_id(message.sessionId);
             IS_LOGGING && Services.logger.debug(`Получен SessionId от сервера: ${message.sessionId}`);
         }
     }
@@ -150,9 +179,9 @@ export const api = {
     ) {
         const string_params = new URLSearchParams(params).toString();
         const headers: Record<string, string> = {};
-        const sessionId = (window as any).currentSessionId;
+        const sessionId = get_session_id();
 
-        if (sessionId) {
+        if (sessionId !== undefined) {
             headers['X-Session-ID'] = sessionId;
         }
 
@@ -171,9 +200,9 @@ export const api = {
     ): Promise<Response | undefined> {
         const string_params = new URLSearchParams(params).toString();
         const headers: Record<string, string> = {};
-        const sessionId = (window as any).currentSessionId;
+        const sessionId = get_session_id();
 
-        if (sessionId) {
+        if (sessionId !== undefined) {
             headers['X-Session-ID'] = sessionId;
         }
 
@@ -195,9 +224,9 @@ export const api = {
         const headers: Record<string, string> = {
             'Content-Type': 'application/json'
         };
-        const sessionId = (window as any).currentSessionId;
+        const sessionId = get_session_id();
 
-        if (sessionId) {
+        if (sessionId !== undefined) {
             headers['X-Session-ID'] = sessionId;
         }
 

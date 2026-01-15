@@ -6,6 +6,7 @@ import { GoText, GoSprite, GuiBox, GuiText } from "../objects/sub_types";
 import { MaterialUniformType } from "../resource_manager";
 import type { RenderTileData, RenderTileObject } from "../parsers/tile_parser";
 import { Services } from '@editor/core';
+import { get_popups } from '../../modules_editor/Popups';
 
 
 export function get_basename(path: string) {
@@ -360,7 +361,7 @@ export function getUniformPoint(u: number, points: Point[], arcTable: { arcLengt
 }
 
 export function error_popup(message: string) {
-    Popups.open({
+    get_popups().open({
         type: "Notify",
         params: { title: "Ошибка", text: message, button: "Ok", auto_close: true },
         callback: () => { }   // (success: boolean) => void

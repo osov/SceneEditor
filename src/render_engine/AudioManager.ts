@@ -1,13 +1,24 @@
 import { AudioListener, Audio } from "three";
 import { TDictionary } from "../modules_editor/modules_editor_const";
 import { Services } from '@editor/core';
+import { get_sound } from '../modules/Sound';
 
-declare global {
-    const AudioManager: ReturnType<typeof AudioManagerModule>;
+/** Тип AudioManager */
+export type AudioManagerType = ReturnType<typeof AudioManagerModule>;
+
+/** Модульный instance для использования через импорт */
+let audio_manager_instance: AudioManagerType | undefined;
+
+/** Получить instance AudioManager */
+export function get_audio_manager(): AudioManagerType {
+    if (audio_manager_instance === undefined) {
+        throw new Error('AudioManager не инициализирован. Вызовите register_audio_manager() сначала.');
+    }
+    return audio_manager_instance;
 }
 
 export function register_audio_manager() {
-    (window as any).AudioManager = AudioManagerModule();
+    audio_manager_instance = AudioManagerModule();
 }
 
 export enum SoundEndCallbackType {
@@ -26,7 +37,7 @@ function AudioManagerModule() {
         Services.render.camera.add(listener);
         Services.event_bus.on('SYS_ON_UPDATE', () => {
             const camera = Services.render.camera;
-            Sound.set_listener_position(vmath.vector3(camera.position.x, camera.position.y, camera.position.z));
+            get_sound().set_listener_position(vmath.vector3(camera.position.x, camera.position.y, camera.position.z));
         });
     }
 

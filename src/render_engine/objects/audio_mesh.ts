@@ -3,8 +3,8 @@ import { EntityBase } from "./entity_base";
 import { DEFAULT_PAN_NORMALIZATION_DISTANCE, DEFAULT_MAX_VOLUME_RADIUS, DEFAULT_SOUND_RADIUS, DEFAULT_FADE_IN_TIME, DEFAULT_FADE_OUT_TIME } from "../../config";
 import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, CircleGeometry, Mesh, MeshBasicMaterial } from "three";
 
-// NOTE: чтобы использовать без (window as any)
-import "../../modules/Sound";
+import { get_sound } from "../../modules/Sound";
+import { get_audio_manager } from "../AudioManager";
 import { uh_to_id } from "@editor/defold/utils";
 import { inspector_force_refresh } from "@editor/defold/runtime_stubs";
 import { Services } from '@editor/core';
@@ -84,7 +84,7 @@ export class AudioMesh extends EntityBase {
 
     set_active(val: boolean): void {
         super.set_active(val);
-        Sound.set_active(Services.scene.get_url_by_id(this.get_id()), val);
+        get_sound().set_active(Services.scene.get_url_by_id(this.get_id()), val);
     }
 
     // NOTE: перед установкой звука важно чтобы мешь уже был создан и добавлен в сцену
@@ -94,8 +94,8 @@ export class AudioMesh extends EntityBase {
         }
 
         this.sound = name;
-        AudioManager.create_audio(name, this.get_id());
-        Sound.create(
+        get_audio_manager().create_audio(name, this.get_id());
+        get_sound().create(
             Services.scene.get_url_by_id(this.get_id()),
             this.position,
             this.speed,
@@ -124,12 +124,12 @@ export class AudioMesh extends EntityBase {
     set_position(x: number, y: number, z?: number) {
         z = z == undefined ? this.position.z : z;
         super.set_position(x, y, z);
-        Sound.set_sound_position(Services.scene.get_url_by_id(this.get_id()), vmath.vector3(x, y, z));
+        get_sound().set_sound_position(Services.scene.get_url_by_id(this.get_id()), vmath.vector3(x, y, z));
     }
 
     set_speed(speed: number) {
         this.speed = speed;
-        Sound.set_sound_speed(Services.scene.get_url_by_id(this.get_id()), speed);
+        get_sound().set_sound_speed(Services.scene.get_url_by_id(this.get_id()), speed);
     }
 
     get_speed() {
@@ -138,7 +138,7 @@ export class AudioMesh extends EntityBase {
 
     set_volume(volume: number) {
         this.volume = volume;
-        Sound.set_max_volume(Services.scene.get_url_by_id(this.get_id()), volume);
+        get_sound().set_max_volume(Services.scene.get_url_by_id(this.get_id()), volume);
     }
 
     get_volume() {
@@ -147,7 +147,7 @@ export class AudioMesh extends EntityBase {
 
     set_pan(pan: number) {
         this.pan = pan;
-        Sound.set_sound_pan(Services.scene.get_url_by_id(this.get_id()), pan);
+        get_sound().set_sound_pan(Services.scene.get_url_by_id(this.get_id()), pan);
     }
 
     get_pan() {
@@ -157,8 +157,8 @@ export class AudioMesh extends EntityBase {
     set_loop(loop: boolean) {
         this.loop = loop;
         const url = Services.scene.get_url_by_id(this.get_id());
-        Sound.set_sound_loop(url, loop);
-        AudioManager.set_loop(uh_to_id(url), loop);
+        get_sound().set_sound_loop(url, loop);
+        get_audio_manager().set_loop(uh_to_id(url), loop);
     }
 
     get_loop() {
@@ -167,7 +167,7 @@ export class AudioMesh extends EntityBase {
 
     set_sound_radius(radius: number) {
         this.soundRadius = Math.max(0, radius);
-        Sound.set_sound_radius(Services.scene.get_url_by_id(this.get_id()), this.soundRadius);
+        get_sound().set_sound_radius(Services.scene.get_url_by_id(this.get_id()), this.soundRadius);
         inspector_force_refresh();
     }
 
@@ -186,23 +186,23 @@ export class AudioMesh extends EntityBase {
                 this.rectangleMaxVolumeWidth = 0;
                 this.rectangleMaxVolumeHeight = 0;
 
-                Sound.set_rectangle_width(Services.scene.get_url_by_id(this.get_id()), 0);
-                Sound.set_rectangle_height(Services.scene.get_url_by_id(this.get_id()), 0);
-                Sound.set_rectangle_max_volume_width(Services.scene.get_url_by_id(this.get_id()), 0);
-                Sound.set_rectangle_max_volume_height(Services.scene.get_url_by_id(this.get_id()), 0);
+                get_sound().set_rectangle_width(Services.scene.get_url_by_id(this.get_id()), 0);
+                get_sound().set_rectangle_height(Services.scene.get_url_by_id(this.get_id()), 0);
+                get_sound().set_rectangle_max_volume_width(Services.scene.get_url_by_id(this.get_id()), 0);
+                get_sound().set_rectangle_max_volume_height(Services.scene.get_url_by_id(this.get_id()), 0);
             } else if (zoneType === SoundZoneType.RECTANGULAR) {
                 this.soundRadius = 0;
                 this.maxVolumeRadius = 0;
 
-                Sound.set_sound_radius(Services.scene.get_url_by_id(this.get_id()), 0);
-                Sound.set_max_volume_radius(Services.scene.get_url_by_id(this.get_id()), 0);
+                get_sound().set_sound_radius(Services.scene.get_url_by_id(this.get_id()), 0);
+                get_sound().set_max_volume_radius(Services.scene.get_url_by_id(this.get_id()), 0);
             }
 
             this.removeVisual();
             this.createVisual();
         }
 
-        Sound.set_zone_type(Services.scene.get_url_by_id(this.get_id()), zoneType);
+        get_sound().set_zone_type(Services.scene.get_url_by_id(this.get_id()), zoneType);
         inspector_force_refresh();
     }
 
@@ -212,7 +212,7 @@ export class AudioMesh extends EntityBase {
 
     set_rectangle_width(width: number) {
         this.rectangleWidth = Math.max(0, width);
-        Sound.set_rectangle_width(Services.scene.get_url_by_id(this.get_id()), this.rectangleWidth);
+        get_sound().set_rectangle_width(Services.scene.get_url_by_id(this.get_id()), this.rectangleWidth);
         inspector_force_refresh();
     }
 
@@ -222,7 +222,7 @@ export class AudioMesh extends EntityBase {
 
     set_rectangle_height(height: number) {
         this.rectangleHeight = Math.max(0, height);
-        Sound.set_rectangle_height(Services.scene.get_url_by_id(this.get_id()), this.rectangleHeight);
+        get_sound().set_rectangle_height(Services.scene.get_url_by_id(this.get_id()), this.rectangleHeight);
         inspector_force_refresh();
     }
 
@@ -232,7 +232,7 @@ export class AudioMesh extends EntityBase {
 
     set_rectangle_max_volume_width(width: number) {
         this.rectangleMaxVolumeWidth = Math.max(0, width);
-        Sound.set_rectangle_max_volume_width(Services.scene.get_url_by_id(this.get_id()), this.rectangleMaxVolumeWidth);
+        get_sound().set_rectangle_max_volume_width(Services.scene.get_url_by_id(this.get_id()), this.rectangleMaxVolumeWidth);
         inspector_force_refresh();
     }
 
@@ -242,7 +242,7 @@ export class AudioMesh extends EntityBase {
 
     set_rectangle_max_volume_height(height: number) {
         this.rectangleMaxVolumeHeight = Math.max(0, height);
-        Sound.set_rectangle_max_volume_height(Services.scene.get_url_by_id(this.get_id()), this.rectangleMaxVolumeHeight);
+        get_sound().set_rectangle_max_volume_height(Services.scene.get_url_by_id(this.get_id()), this.rectangleMaxVolumeHeight);
         inspector_force_refresh();
     }
 
@@ -252,7 +252,7 @@ export class AudioMesh extends EntityBase {
 
     set_max_volume_radius(radius: number) {
         this.maxVolumeRadius = Math.max(0, radius);
-        Sound.set_max_volume_radius(Services.scene.get_url_by_id(this.get_id()), this.maxVolumeRadius);
+        get_sound().set_max_volume_radius(Services.scene.get_url_by_id(this.get_id()), this.maxVolumeRadius);
     }
 
     get_max_volume_radius() {
@@ -261,7 +261,7 @@ export class AudioMesh extends EntityBase {
 
     set_pan_normalization_distance(distance: number) {
         this.panNormalizationDistance = Math.max(0, distance);
-        Sound.set_pan_normalization_distance(Services.scene.get_url_by_id(this.get_id()), this.panNormalizationDistance);
+        get_sound().set_pan_normalization_distance(Services.scene.get_url_by_id(this.get_id()), this.panNormalizationDistance);
     }
 
     get_pan_normalization_distance() {
@@ -270,7 +270,7 @@ export class AudioMesh extends EntityBase {
 
     set_sound_function(func: SoundFunctionType) {
         this.soundFunction = func;
-        Sound.set_sound_function(Services.scene.get_url_by_id(this.get_id()), this.soundFunction);
+        get_sound().set_sound_function(Services.scene.get_url_by_id(this.get_id()), this.soundFunction);
     }
 
     get_sound_function() {
@@ -279,7 +279,7 @@ export class AudioMesh extends EntityBase {
 
     set_fade_in_time(time: number) {
         this.fadeInTime = Math.max(0, time);
-        Sound.set_fade_in_time(Services.scene.get_url_by_id(this.get_id()), this.fadeInTime);
+        get_sound().set_fade_in_time(Services.scene.get_url_by_id(this.get_id()), this.fadeInTime);
     }
 
     get_fade_in_time() {
@@ -288,7 +288,7 @@ export class AudioMesh extends EntityBase {
 
     set_fade_out_time(time: number) {
         this.fadeOutTime = Math.max(0, time);
-        Sound.set_fade_out_time(Services.scene.get_url_by_id(this.get_id()), this.fadeOutTime);
+        get_sound().set_fade_out_time(Services.scene.get_url_by_id(this.get_id()), this.fadeOutTime);
     }
 
     get_fade_out_time() {
@@ -297,8 +297,8 @@ export class AudioMesh extends EntityBase {
 
     play(complete_function?: () => void) {
         if (this.sound == '' || !this.get_active()) return;
-        Sound.set_off(Services.scene.get_url_by_id(this.get_id()), false);
-        Sound.play(Services.scene.get_url_by_id(this.get_id()), () => {
+        get_sound().set_off(Services.scene.get_url_by_id(this.get_id()), false);
+        get_sound().play(Services.scene.get_url_by_id(this.get_id()), () => {
             if (this.loop) this.play(complete_function);
             else if (complete_function) complete_function();
         });
@@ -319,14 +319,14 @@ export class AudioMesh extends EntityBase {
 
     stop() {
         if (this.sound == '' || !this.get_active()) return;
-        Sound.stop(Services.scene.get_url_by_id(this.get_id()));
-        Sound.set_off(Services.scene.get_url_by_id(this.get_id()), true);
+        get_sound().stop(Services.scene.get_url_by_id(this.get_id()));
+        get_sound().set_off(Services.scene.get_url_by_id(this.get_id()), true);
         inspector_force_refresh();
     }
 
     is_playing() {
         if (!this.get_active()) return false;
-        return Sound.is_sound_playing(Services.scene.get_url_by_id(this.get_id()));
+        return get_sound().is_sound_playing(Services.scene.get_url_by_id(this.get_id()));
     }
 
     private createVisual() {
@@ -384,7 +384,7 @@ export class AudioMesh extends EntityBase {
         });
         this.listenerVisual = new Mesh(listenerGeometry, listenerMaterial);
 
-        const listenerPosition = Sound.get_listener_position();
+        const listenerPosition = get_sound().get_listener_position();
         this.listenerVisual.position.copy(listenerPosition);
         this.listenerVisual.parent?.localToWorld(this.listenerVisual.position);
         this.listenerVisual.visible = this.get_active();
@@ -489,7 +489,7 @@ export class AudioMesh extends EntityBase {
 
     private updateListenerVisual() {
         if (!this.listenerVisual) return;
-        const listenerPosition = Sound.get_listener_position();
+        const listenerPosition = get_sound().get_listener_position();
         this.listenerVisual.position.copy(listenerPosition);
         this.listenerVisual.parent?.worldToLocal(this.listenerVisual.position);
         this.listenerVisual.visible = this.get_active();
@@ -679,7 +679,7 @@ export class AudioMesh extends EntityBase {
     deserialize(data: AudioSerializeData) {
         super.deserialize(data);
         this.sound = data.sound;
-        AudioManager.create_audio(this.sound, this.get_id());
+        get_audio_manager().create_audio(this.sound, this.get_id());
 
         if (data.speed) this.speed = data.speed;
         if (data.volume) this.volume = data.volume;
@@ -698,7 +698,7 @@ export class AudioMesh extends EntityBase {
     }
 
     after_deserialize() {
-        Sound.create(
+        get_sound().create(
             Services.scene.get_url_by_id(this.get_id()),
             this.position,
             this.speed,
@@ -718,16 +718,16 @@ export class AudioMesh extends EntityBase {
             this.rectangleMaxVolumeHeight
         );
 
-        Sound.set_sound_speed(Services.scene.get_url_by_id(this.get_id()), this.speed);
-        Sound.set_sound_loop(Services.scene.get_url_by_id(this.get_id()), this.loop);
-        Sound.set_active(Services.scene.get_url_by_id(this.get_id()), this.get_active());
+        get_sound().set_sound_speed(Services.scene.get_url_by_id(this.get_id()), this.speed);
+        get_sound().set_sound_loop(Services.scene.get_url_by_id(this.get_id()), this.loop);
+        get_sound().set_active(Services.scene.get_url_by_id(this.get_id()), this.get_active());
     }
 
     dispose() {
         super.dispose();
         this.removeVisual();
         Services.event_bus.off('SYS_ON_UPDATE', this.updateVisual.bind(this));
-        Sound.remove(Services.scene.get_url_by_id(this.get_id()));
-        AudioManager.free_audio(this.get_id());
+        get_sound().remove(Services.scene.get_url_by_id(this.get_id()));
+        get_audio_manager().free_audio(this.get_id());
     }
 }

@@ -6,6 +6,7 @@
  */
 
 import type { IDisposable, ILogger } from '../core/di/types';
+import { try_get_popups } from '../modules_editor/Popups';
 
 /** Тип уведомления */
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
@@ -56,31 +57,13 @@ export interface INotificationService extends IDisposable {
     rename(params: RenameParams): Promise<string | undefined>;
 }
 
-/** Legacy Popups тип */
-interface LegacyPopups {
-    toast: {
-        success(message: string): void;
-        error(message: string): void;
-        open(params: { type: string; message: string }): void;
-    };
-    open(params: {
-        type: string;
-        params: Record<string, unknown>;
-        callback: (success: boolean, data?: unknown) => void;
-    }): void;
-}
-
-/** Получить legacy Popups */
-function get_legacy_popups(): LegacyPopups | undefined {
-    return (globalThis as unknown as { Popups?: LegacyPopups }).Popups;
-}
 
 /** Создать NotificationService */
 export function create_notification_service(params: NotificationServiceParams): INotificationService {
     const { logger } = params;
 
     function success(message: string): void {
-        const popups = get_legacy_popups();
+        const popups = try_get_popups();
         if (popups !== undefined) {
             popups.toast.success(message);
         } else {
@@ -89,7 +72,7 @@ export function create_notification_service(params: NotificationServiceParams): 
     }
 
     function error(message: string): void {
-        const popups = get_legacy_popups();
+        const popups = try_get_popups();
         if (popups !== undefined) {
             popups.toast.error(message);
         } else {
@@ -98,7 +81,7 @@ export function create_notification_service(params: NotificationServiceParams): 
     }
 
     function warning(message: string): void {
-        const popups = get_legacy_popups();
+        const popups = try_get_popups();
         if (popups !== undefined) {
             popups.toast.open({ type: 'warning', message });
         } else {
@@ -107,7 +90,7 @@ export function create_notification_service(params: NotificationServiceParams): 
     }
 
     function info(message: string): void {
-        const popups = get_legacy_popups();
+        const popups = try_get_popups();
         if (popups !== undefined) {
             popups.toast.open({ type: 'info', message });
         } else {
@@ -116,7 +99,7 @@ export function create_notification_service(params: NotificationServiceParams): 
     }
 
     function toast(notification: NotificationParams): void {
-        const popups = get_legacy_popups();
+        const popups = try_get_popups();
         if (popups !== undefined) {
             popups.toast.open({ type: notification.type, message: notification.message });
         } else {
@@ -126,7 +109,7 @@ export function create_notification_service(params: NotificationServiceParams): 
 
     function confirm(confirmParams: ConfirmParams): Promise<boolean> {
         return new Promise((resolve) => {
-            const popups = get_legacy_popups();
+            const popups = try_get_popups();
             if (popups === undefined) {
                 logger.warn('Popups не инициализирован');
                 resolve(false);
@@ -148,7 +131,7 @@ export function create_notification_service(params: NotificationServiceParams): 
 
     function rename(renameParams: RenameParams): Promise<string | undefined> {
         return new Promise((resolve) => {
-            const popups = get_legacy_popups();
+            const popups = try_get_popups();
             if (popups === undefined) {
                 logger.warn('Popups не инициализирован');
                 resolve(undefined);

@@ -2,6 +2,7 @@ import { IBaseEntityAndThree, IBaseMeshAndThree, IObjectTypes } from "@editor/re
 import { Quaternion, Vector3 } from "three";
 import { animate_logic, cancel_animations_logic, get_nested_property, PLAYBACK_LOOP_BACKWARD, PLAYBACK_LOOP_FORWARD, PLAYBACK_ONCE_BACKWARD, PLAYBACK_ONCE_FORWARD, PLAYBACK_ONCE_PINGPONG, PLAYBACK_LOOP_PINGPONG, set_nested_property, uh_to_id, EASING_LINEAR, EASING_INQUART, EASING_INQUAD, EASING_OUTQUART, EASING_OUTQUAD, EASING_OUTQUINT, EASING_INOUTQUAD, EASING_INQUINT, EASING_INOUTQUART, EASING_INOUTQUINT, EASING_OUTCUBIC, EASING_INOUTCUBIC, EASING_OUTSINE, EASING_INSINE, EASING_INCUBIC, EASING_INOUTSINE, EASING_OUTCIRC, EASING_INOUTCIRC, EASING_INOUTEXPO, EASING_INCIRC, EASING_OUTBACK, EASING_INBACK, EASING_INOUTELASTIC, EASING_INOUTBACK, EASING_INEXPO, EASING_OUTEXPO, EASING_INELASTIC, EASING_OUTELASTIC, EASING_INBOUNCE, EASING_OUTBOUNCE, EASING_INOUTBOUNCE } from "./utils";
 import { Services } from '@editor/core';
+import { get_audio_manager } from "@editor/render_engine/AudioManager";
 
 declare global {
     namespace go {
@@ -256,15 +257,15 @@ export function go_module() {
         }
         if (property == 'gain') {
             const id = uh_to_id(url);
-            return AudioManager.get_volume(id);
+            return get_audio_manager().get_volume(id);
         }
         if (property == 'pan') {
             const id = uh_to_id(url);
-            return AudioManager.get_pan(id);
+            return get_audio_manager().get_pan(id);
         }
         if (property == 'speed') {
             const id = uh_to_id(url);
-            return AudioManager.get_speed(id);
+            return get_audio_manager().get_speed(id);
         }
         return get_nested_property(mesh, property);
     }
@@ -281,7 +282,7 @@ export function go_module() {
         }
         if (property == 'speed') {
             const id = uh_to_id(url);
-            AudioManager.set_speed(id, value);
+            get_audio_manager().set_speed(id, value);
             return;
         }
         set_nested_property(mesh, property, value);

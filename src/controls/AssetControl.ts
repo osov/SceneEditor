@@ -12,34 +12,38 @@ import {
 } from "../modules_editor/modules_editor_const";
 import { span_elem, json_parsable, get_keys } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
-import { contextMenuItem } from "../modules_editor/ContextMenu";
+import { contextMenuItem, get_contextmenu } from "../modules_editor/ContextMenu";
 import { NodeAction } from "@editor/shared";
-import { api } from "../modules_editor/ClientAPI";
+import { api, get_client_api } from "../modules_editor/ClientAPI";
 import { IBaseEntityData } from "../render_engine/types";
 import { error_popup, get_file_name } from "../render_engine/helpers/utils";
 import { Quaternion, Vector3 } from "three";
 import { WsWrap } from "@editor/modules/ws_wrap";
 import { Services } from '@editor/core';
 import { get_control_manager } from '../modules_editor/ControlManager';
+import { get_popups } from '../modules_editor/Popups';
 
-declare global {
-    const AssetControl: ReturnType<typeof AssetControlCreate>;
-}
+/** Тип AssetControl */
+export type AssetControlType = ReturnType<typeof AssetControlCreate>;
 
-/** Модульный instance для использования внутри модуля */
-let asset_control_instance: ReturnType<typeof AssetControlCreate> | undefined;
+/** Модульный instance для использования через импорт */
+let asset_control_instance: AssetControlType | undefined;
 
 /** Получить instance AssetControl */
-export function get_asset_control(): ReturnType<typeof AssetControlCreate> {
+export function get_asset_control(): AssetControlType {
     if (asset_control_instance === undefined) {
         throw new Error('AssetControl не инициализирован. Вызовите register_asset_control() сначала.');
     }
     return asset_control_instance;
 }
 
+/** Попробовать получить instance AssetControl (без ошибки если не инициализирован) */
+export function try_get_asset_control(): AssetControlType | undefined {
+    return asset_control_instance;
+}
+
 export function register_asset_control() {
     asset_control_instance = AssetControlCreate();
-    (window as any).AssetControl = asset_control_instance;
 }
 
 
@@ -190,7 +194,7 @@ function AssetControlCreate() {
     async function go_to_dir(path: string, renew = false) {
         if (!current_project) return;
         if (current_dir === path && !renew) return;
-        const resp = await ClientAPI.get_folder(path);
+        const resp = await get_client_api().get_folder(path);
         if (resp.result === 1 && resp.data != undefined) {
             localStorage.setItem("current_dir", path);
             const folder_content = resp.data;
@@ -198,7 +202,7 @@ function AssetControlCreate() {
             await draw_assets(folder_content);
             generate_breadcrumbs(current_dir);
             if (renew)
-                log("refresh current assets dir ok");
+                Services.logger.debug("refresh current assets dir ok");
         }
         else if (path != "") {
             Services.logger.warn("cannot go to dir:", path, ", returning to root dir");
@@ -381,20 +385,20 @@ function AssetControlCreate() {
     }
 
     function save_base64_img(path: string, data: string) {
-        return ClientAPI.save_data(path, data, "base64");
+        return get_client_api().save_data(path, data, "base64");
     }
 
     async function get_file_data(path: string) {
-        const resp = await ClientAPI.get_data(path);
+        const resp = await get_client_api().get_data(path);
         if (!resp || resp.result === 0 || !resp.data) {
-            Popups.toast.error(`Не удалось получить данные: ${resp.message}`);
+            get_popups().toast.error(`Не удалось получить данные: ${resp.message}`);
             return null;
         }
         return resp.data;
     }
 
     function save_file_data(path: string, data: string, format: DataFormatType = "string") {
-        return ClientAPI.save_data(path, data, format);
+        return get_client_api().save_data(path, data, format);
     }
 
     function generate_breadcrumbs(dir: string) {
@@ -502,7 +506,7 @@ function AssetControlCreate() {
 
     function open_menu(event: any) {
         const assets_menu_list = toggle_menu_options();
-        ContextMenu.open(assets_menu_list, event, menuContextClick);
+        get_contextmenu().open(assets_menu_list, event, menuContextClick);
     }
 
     function toggle_menu_options() {
@@ -553,7 +557,7 @@ function AssetControlCreate() {
             await go_to_dir(current_dir, true);
         }
         if (action == NodeAction.open_in_explorer) {
-            await ClientAPI.open_explorer(current_dir);
+            await get_client_api().open_explorer(current_dir);
         }
         if (action == NodeAction.material_base) {
             // open_material_popup(asset_path);
@@ -582,12 +586,12 @@ function AssetControlCreate() {
             if (action == NodeAction.CTRL_X) {
                 move_assets_data.assets = selected_assets.slice();
                 move_assets_data.move_type = "move";
-                log("cut assets, amount = ", move_assets_data.assets.length);
+                Services.logger.debug("cut assets, amount = ", move_assets_data.assets.length);
             }
             if (action == NodeAction.CTRL_C) {
                 move_assets_data.assets = selected_assets.slice();
                 move_assets_data.move_type = "copy";
-                log("copy assets, amount = ", move_assets_data.assets.length);
+                Services.logger.debug("copy assets, amount = ", move_assets_data.assets.length);
             }
             if (action == NodeAction.CTRL_D) {
                 for (const element of selected_assets) {
@@ -618,12 +622,12 @@ function AssetControlCreate() {
     }
 
     function new_folder_popup(current_path: string) {
-        Popups.open({
+        get_popups().open({
             type: "Rename",
             params: { title: "Новая папка:", button: "Ok", auto_close: true },
             callback: async (success, name) => {
                 if (success && name) {
-                    const r = await ClientAPI.new_folder(current_path, name);
+                    const r = await get_client_api().new_folder(current_path, name);
                     if (r.result === 0)
                         error_popup(`Не удалось создать папку, ответ сервера: ${r.message}`);
                     if (r.result && r.data) {
@@ -636,7 +640,7 @@ function AssetControlCreate() {
 
     async function new_scene(path: string, name: string) {
         const scene_path = `${path}/${name}.${SCENE_EXT}`
-        const r = await ClientAPI.save_data(scene_path, JSON.stringify({ scene_data: [] }));
+        const r = await get_client_api().save_data(scene_path, JSON.stringify({ scene_data: [] }));
         if (r.result === 0) {
             error_popup(`Не удалось создать сцену, ответ сервера: ${r.message}`);
             return;
@@ -648,7 +652,7 @@ function AssetControlCreate() {
     }
 
     function new_scene_popup(current_path: string, set_scene_current = false, save_scene = false) {
-        Popups.open({
+        get_popups().open({
             type: "Rename",
             params: { title: "Новая сцена:", button: "Ok", auto_close: true },
             callback: async (success, name) => {
@@ -656,7 +660,7 @@ function AssetControlCreate() {
                     const scene_path = await new_scene(current_path, name);
                     if (set_scene_current) {
                         if (scene_path == undefined) {
-                            Popups.toast.error('Не удалось создать сцену, путь undefined');
+                            get_popups().toast.error('Не удалось создать сцену, путь undefined');
                             return;
                         }
                         const scene_is_set = await set_current_scene(scene_path);
@@ -670,7 +674,7 @@ function AssetControlCreate() {
 
     function save_graph_popup(current_path: string, data: any) {
         const currentName = data.name;
-        Popups.open({
+        get_popups().open({
             type: "Rename",
             params: { title: "Сохранить элемент сцены:", button: "Ok", currentName, auto_close: true },
             callback: async (success, name) => {
@@ -678,13 +682,13 @@ function AssetControlCreate() {
                     const path = `${current_path}/${name}.${SCENE_EXT}`;
                     Services.resources.cache_scene(path, data);
                     // NOTE: для чего сохраянем как IBaseEntityData[] ?
-                    const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: [data] }))
+                    const r = await get_client_api().save_data(path, JSON.stringify({ scene_data: [data] }))
                     if (r && r.result)
-                        return Popups.toast.success(`Объект ${name} сохранён, путь: ${path}`);
+                        return get_popups().toast.success(`Объект ${name} сохранён, путь: ${path}`);
                     else
-                        return Popups.toast.error(`Не удалось сохранить объект ${name}`);
+                        return get_popups().toast.error(`Не удалось сохранить объект ${name}`);
                 }
-                return Popups.toast.error(`Не удалось сохранить объект ${name}`);
+                return get_popups().toast.error(`Не удалось сохранить объект ${name}`);
             }
         });
     }
@@ -692,13 +696,13 @@ function AssetControlCreate() {
     function rename_popup(asset_path: string, name: string, type?: AssetType) {
         let type_name = "файл";
         if (type == "folder") type_name = "папку";
-        Popups.open({
+        get_popups().open({
             type: "Rename",
             params: { title: `Переименовать ${type_name} ${name}`, button: "Ok", currentName: name, auto_close: true },
             callback: async (success, name) => {
                 if (success && name) {
                     const new_path = (current_dir) ? `${current_dir}/${name}` : name;
-                    const r = await ClientAPI.rename(asset_path, new_path);
+                    const r = await get_client_api().rename(asset_path, new_path);
                     if (r.result === 0)
                         error_popup(`Не удалось переименовать ${type_name}, ответ сервера: ${r.message}`);
                     if (r.result) {
@@ -739,7 +743,7 @@ function AssetControlCreate() {
             remove_type = "active";
         }
         if (remove_type) {
-            Popups.open({
+            get_popups().open({
                 type: "Confirm",
                 params: { title, text, button: "Да", buttonNo: "Нет", auto_close: true },
                 callback: async (success) => {
@@ -778,7 +782,7 @@ function AssetControlCreate() {
         }
         let result = 1;
         for (const path of to_remove) {
-            const r = await ClientAPI.remove(path);
+            const r = await get_client_api().remove(path);
             result == result && r.result;
         }
         if (!result)
@@ -789,7 +793,7 @@ function AssetControlCreate() {
     async function paste_asset(name: string, path: string, move_type?: string) {
         const move_to = (current_dir) ? `${current_dir as string}/${name}` : name;
         if (move_type == "move") {
-            const resp = await ClientAPI.move(path, move_to);
+            const resp = await get_client_api().move(path, move_to);
             if (resp && resp.result === 1) {
                 Services.event_bus.emit("SYS_ASSET_MOVED", { name, path, new_path: move_to }, false);
             }
@@ -798,7 +802,7 @@ function AssetControlCreate() {
             }
         }
         if (move_type == "copy") {
-            const resp = await ClientAPI.copy(path, move_to);
+            const resp = await get_client_api().copy(path, move_to);
             if (resp && resp.result === 1) {
                 Services.event_bus.emit("SYS_ASSET_COPIED", { name, path, new_path: move_to }, false);
             }
@@ -811,7 +815,7 @@ function AssetControlCreate() {
     async function duplicate_asset(path: string, name: string) {
         const ext = "." + getFileExt(name);
         let base_name = name.replace(ext, "");
-        const get_folder_resp = await ClientAPI.get_folder(current_dir as string);
+        const get_folder_resp = await get_client_api().get_folder(current_dir as string);
         if (!get_folder_resp || get_folder_resp.result === 0) return;
         const folder_content = get_folder_resp.data as FSObject[];
         const names: string[] = [];
@@ -830,7 +834,7 @@ function AssetControlCreate() {
         });
         const new_name = (names_counter !== 0) ? `${base_name} (${names_counter})${ext}` : name;
         const move_to = `${current_dir}/${new_name}`;
-        const resp = await ClientAPI.copy(path, move_to);
+        const resp = await get_client_api().copy(path, move_to);
         if (resp && resp.result === 1) {
             Services.event_bus.emit("SYS_ASSET_COPIED", { name, path, new_path: move_to }, false);
         }
@@ -895,7 +899,7 @@ function AssetControlCreate() {
                 const asset_path = element.getAttribute('data-path') as string;
                 const name = element.getAttribute('data-name') as string;
                 const move_to = `${dir_to}/${name}`;
-                const r = await ClientAPI.move(asset_path, move_to);
+                const r = await get_client_api().move(asset_path, move_to);
                 if (r && r.result === 1)
                     // обновляем текущую папку, чтобы отобразить изменившееся число файлов в той папке, куда переместили файл
                     await go_to_dir(current_dir as string, true);
@@ -1038,7 +1042,7 @@ function AssetControlCreate() {
                     const path = file_elem.getAttribute('data-path');
                     const name = file_elem.getAttribute('data-name');
                     const ext = file_elem.getAttribute('data-ext');
-                    log(`Клик на ассет файл ${name}, путь ${path}, проект ${current_project}`);
+                    Services.logger.debug(`Клик на ассет файл ${name}, путь ${path}, проект ${current_project}`);
                     Services.event_bus.emit("SYS_CLICK_ON_ASSET", { name, path, ext, button: event.button }, false);
                 }
             }
@@ -1061,24 +1065,24 @@ function AssetControlCreate() {
     }
 
     async function on_key_up(event: any) {
-        if (event.key == 'F2' && active_asset && !Popups.is_visible()) {
+        if (event.key == 'F2' && active_asset && !get_popups().is_visible()) {
             const path = active_asset.getAttribute('data-path') as string;
             const name = active_asset.getAttribute('data-name') as string;
             rename_popup(path, name);
         }
-        if (event.key == 'Delete' && !Popups.is_visible()) {
+        if (event.key == 'Delete' && !get_popups().is_visible()) {
             remove_popup();
         }
         if (Services.input.is_control()) {
             if ((event.key == 'c' || event.key == 'с') && selected_assets.length) {
                 move_assets_data.assets = selected_assets.slice();
                 move_assets_data.move_type = "copy";
-                log("cut assets, amount = ", move_assets_data.assets.length);
+                Services.logger.debug("cut assets, amount = ", move_assets_data.assets.length);
             }
             if ((event.key == 'x' || event.key == 'ч') && selected_assets.length) {
                 move_assets_data.assets = selected_assets.slice();
                 move_assets_data.move_type = "move";
-                log("copy assets, amount = ", move_assets_data.assets.length);
+                Services.logger.debug("copy assets, amount = ", move_assets_data.assets.length);
             }
             if ((event.key == 'v' || event.key == 'м') && move_assets_data.assets.length) {
                 await paste_assets()
@@ -1113,7 +1117,7 @@ function AssetControlCreate() {
     }
 
     function open_scene_exit_popup(current_path: string, new_path: string) {
-        Popups.open({
+        get_popups().open({
             type: "Confirm",
             params: { title: "", text: `У сцены "${current_path}" есть несохранённые изменения, закрыть без сохранения?`, button: "Да", buttonNo: "Нет", auto_close: true },
             callback: async (success) => {
@@ -1130,9 +1134,9 @@ function AssetControlCreate() {
             Services.logger.warn('[set_current_scene] Попытка установить сцену, но путь undefined');
             return false;
         }
-        const resp = await ClientAPI.set_current_scene(path);
+        const resp = await get_client_api().set_current_scene(path);
         if (!resp || resp.result === 0) {
-            Popups.toast.error(`Серверу не удалось установить сцену текущей: ${resp.message}`);
+            get_popups().toast.error(`Серверу не удалось установить сцену текущей: ${resp.message}`);
             return false;
         }
         current_scene.name = resp.data?.name as string;
@@ -1144,9 +1148,9 @@ function AssetControlCreate() {
     }
 
     async function load_scene(path: string) {
-        const resp = await ClientAPI.get_data(path);
+        const resp = await get_client_api().get_data(path);
         if (!resp || resp.result === 0 || !resp.data)
-            return Popups.toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
+            return get_popups().toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
         const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
         Services.scene.load_scene(data.scene_data);
         get_control_manager().update_graph(true, current_scene.name, true);
@@ -1238,12 +1242,12 @@ function AssetControlCreate() {
         const path = current_scene.path as string;
         const name = current_scene.name as string;
         const data = Services.scene.save_scene();
-        const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: data }));
+        const r = await get_client_api().save_data(path, JSON.stringify({ scene_data: data }));
         if (r && r.result) {
             history_length_cache[path] = Services.history.get_undo_stack().length;
-            return Popups.toast.success(`Сцена ${name} сохранена, путь: ${path}`);
+            return get_popups().toast.success(`Сцена ${name} сохранена, путь: ${path}`);
         }
-        else return Popups.toast.error(`Не удалось сохранить сцену ${name}, путь: ${path}: ${r.message}`);
+        else return get_popups().toast.error(`Не удалось сохранить сцену ${name}, путь: ${path}: ${r.message}`);
     }
 
     function get_current_scene() {
@@ -1297,7 +1301,7 @@ function AssetControlCreate() {
     async function upload_files(files: File[],) {
         for (const file of files) {
             const data = new FormData();
-            log(`trying upload a file: ${file.name} in dir ${current_dir}`);
+            Services.logger.debug(`trying upload a file: ${file.name} in dir ${current_dir}`);
             data.append('file', file, file.name);
             data.append('path', current_dir as string);
             const resp = await api.POST(URL_PATHS.UPLOAD, [], data);
@@ -1308,9 +1312,9 @@ function AssetControlCreate() {
 
     async function reload_current_project() {
         if (current_project) {
-            const load_project_resp = await ClientAPI.load_project(current_project);
+            const load_project_resp = await get_client_api().load_project(current_project);
             if (load_project_resp.result !== 1) {
-                log(`Failed to reload current project (${current_project})`);
+                Services.logger.warn(`Failed to reload current project (${current_project})`);
                 return;
             }
             const data = load_project_resp.data as ProjectLoadData;
@@ -1359,7 +1363,7 @@ function fileIsImg(path: string) {
 export async function run_debug_filemanager(project_to_load: string) {
     const asset_control = get_asset_control();
     let server_ok = false;
-    const resp = await ClientAPI.test_server_ok();
+    const resp = await get_client_api().test_server_ok();
     if (resp) {
         const text_response = await resp.text();
         const resp_data = JSON.parse(text_response);
@@ -1373,17 +1377,17 @@ export async function run_debug_filemanager(project_to_load: string) {
             () => { }, () => { },
             (m) => {
                 const data = JSON.parse(m as string) as ProtocolWrapper;
-                ClientAPI.on_message_socket(data.id as keyof NetMessagesEditor, data.message);
+                get_client_api().on_message_socket(data.id as keyof NetMessagesEditor, data.message);
             }
         );
         ws_client.set_reconnect_timer(WS_SERVER_URL, WS_RECONNECT_INTERVAL);
 
-        const sessionResult = await ClientAPI.waitForSessionId();
+        const sessionResult = await get_client_api().waitForSessionId();
         if (!sessionResult.success) {
             Services.logger.warn('Не удалось получить sessionId:', sessionResult.error);
         }
 
-        const projects = await ClientAPI.get_projects();
+        const projects = await get_client_api().get_projects();
         const names: string[] = [];
         // Ищем проект с именем project_to_load и пробуем его загрузить
         for (const project of projects) {
@@ -1396,7 +1400,7 @@ export async function run_debug_filemanager(project_to_load: string) {
         //const current_scene_path = localStorage.getItem("current_scene_path");
         // Если проект project_to_load существует, пробуем загрузить
         if (names.includes(project_to_load)) {
-            const r = await ClientAPI.load_project(project_to_load);
+            const r = await get_client_api().load_project(project_to_load);
             if (r.result === 1) {
                 const data = r.data as ProjectLoadData;
                 let assets: FSObject[] | undefined = data.assets;
@@ -1407,16 +1411,16 @@ export async function run_debug_filemanager(project_to_load: string) {
                     go_to_dir = current_dir;
                 }
                 await asset_control.load_project(data, assets, go_to_dir);
-                IS_LOGGING && log('Загружен проект', data.name);
+                IS_LOGGING && Services.logger.debug('Загружен проект', data.name);
                 return;
             } else {
-                log(`Не удалось загрузить проект ${project_to_load}, result: ${r.result}, message: ${r.message}`);
+                Services.logger.warn(`Не удалось загрузить проект ${project_to_load}, result: ${r.result}, message: ${r.message}`);
             }
         }
-        log(`Не удалось загрузить проект ${project_to_load}`);
+        Services.logger.warn(`Не удалось загрузить проект ${project_to_load}`);
     }
     else {
-        log('Сервер не отвечает, невозможно запустить отладчик файлового менеджера');
+        Services.logger.warn('Сервер не отвечает, невозможно запустить отладчик файлового менеджера');
         await asset_control.draw_empty_project();
     }
 }

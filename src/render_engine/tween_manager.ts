@@ -2,12 +2,22 @@ import { Tween, Group } from "@tweenjs/tween.js";
 import { TDictionary } from "../modules_editor/modules_editor_const";
 import { Services } from '@editor/core';
 
-declare global {
-    const TweenManager: ReturnType<typeof TweenManagerModule>;
+/** Тип TweenManager */
+export type TweenManagerType = ReturnType<typeof TweenManagerModule>;
+
+/** Модульный instance для использования через импорт */
+let tween_manager_instance: TweenManagerType | undefined;
+
+/** Получить instance TweenManager */
+export function get_tween_manager(): TweenManagerType {
+    if (tween_manager_instance === undefined) {
+        throw new Error('TweenManager не инициализирован. Вызовите register_tween_manager() сначала.');
+    }
+    return tween_manager_instance;
 }
 
 export function register_tween_manager() {
-    (window as any).TweenManager = TweenManagerModule();
+    tween_manager_instance = TweenManagerModule();
 }
 
 export function TweenManagerModule() {

@@ -9,7 +9,7 @@ import { is_base_mesh } from "../render_engine/helpers/utils";
 import { IBaseMeshAndThree } from "../render_engine/types";
 import { TreeItem, get_tree_control } from "./TreeControl";
 import { componentsGo } from "../shared/types";
-import { cbDataItem, Action } from "./Popups";
+import { cbDataItem, Action, get_popups } from "./Popups";
 import Stats from 'stats.js';
 import { DEFOLD_LIMITS, IS_CAMERA_ORTHOGRAPHIC } from "../config";
 import { HistoryOwner } from "./modules_editor_const";
@@ -341,7 +341,7 @@ function ControlManagerCreate() {
             return { id: id.toString(), title, can_delete: true };
         });
 
-        Popups.open({
+        get_popups().open({
             type: "Layers",
             params: {
                 title: "Atlas",
@@ -378,7 +378,7 @@ function ControlManagerCreate() {
             };
         });
 
-        Popups.open({
+        get_popups().open({
             type: "Layers",
             params: {
                 title: "Layer",

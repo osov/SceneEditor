@@ -10,6 +10,8 @@ import { BlendMode, convert_blend_mode_to_threejs, convert_threejs_to_blend_mode
 import { get_depth } from "./parsers/tile_parser";
 import { go_to_dir } from "@editor/defold/runtime_stubs";
 import { Services } from '@editor/core';
+import { get_client_api } from '@editor/modules_editor/ClientAPI';
+import { get_popups } from '@editor/modules_editor/Popups';
 
 export type TilesInfo =
     TDictionary<{ texture?: string, layers_mask?: number, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any>, z?: number }>;
@@ -119,12 +121,12 @@ export function TilePatcher(tilemap_path: string) {
             }
         });
 
-        const r = await ClientAPI.save_data(path, JSON.stringify(tiles_data));
+        const r = await get_client_api().save_data(path, JSON.stringify(tiles_data));
         if (r && r.result) {
             await go_to_dir(dir, true);
-            return Popups.toast.success(`Тайлы сохранены, путь: ${path}`);
+            return get_popups().toast.success(`Тайлы сохранены, путь: ${path}`);
         }
-        else return Popups.toast.error(`Не удалось сохранить тайлы, путь: ${path}: ${r.message}`);
+        else return get_popups().toast.error(`Не удалось сохранить тайлы, путь: ${path}: ${r.message}`);
     }
 
     async function patch(tiles: SpriteTileInfoDict) {
@@ -187,7 +189,7 @@ export function TilePatcher(tilemap_path: string) {
             if (info.z != undefined) {
                 sprite.position.z = info.z;
                 //sprite.set_color('#f00');
-                log('other Z', sprite.name);
+                Services.logger.debug('other Z', sprite.name);
             }
         });
     }

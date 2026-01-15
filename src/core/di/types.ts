@@ -16,7 +16,7 @@ export enum ServiceLifecycle {
 }
 
 /** Дескриптор сервиса - описывает как создавать и управлять сервисом */
-/** @noSelf */
+
 export interface IServiceDescriptor<T = unknown> {
     /** Уникальный идентификатор сервиса */
     identifier: ServiceIdentifier<T>;
@@ -33,7 +33,7 @@ export interface IServiceDescriptor<T = unknown> {
 }
 
 /** Интерфейс для сервисов, требующих инициализации */
-/** @noSelf */
+
 export interface IInitializable {
     /** Инициализировать сервис */
     init(): void | Promise<void>;
@@ -42,14 +42,14 @@ export interface IInitializable {
 }
 
 /** Интерфейс для сервисов, требующих очистки */
-/** @noSelf */
+
 export interface IDisposable {
     /** Очистить ресурсы */
     dispose(): void | Promise<void>;
 }
 
 /** Главный интерфейс DI контейнера */
-/** @noSelf */
+
 export interface IContainer {
     // Регистрация
 
@@ -105,7 +105,7 @@ export interface IContainer {
 }
 
 /** Интерфейс логгера */
-/** @noSelf */
+
 export interface ILogger {
     debug(message: string, ...args: unknown[]): void;
     info(message: string, ...args: unknown[]): void;
@@ -118,7 +118,7 @@ export interface ILogger {
 }
 
 /** Интерфейс сервиса конфигурации */
-/** @noSelf */
+
 export interface IConfigService {
     get<T>(key: string): T | undefined;
     get<T>(key: string, default_value: T): T;
@@ -130,7 +130,7 @@ export interface IConfigService {
 export type EventCallback<T = unknown> = (data: T) => void;
 
 /** Интерфейс шины событий */
-/** @noSelf */
+
 export interface IEventBus {
     /** Подписаться на событие */
     on<T>(event: string, handler: EventCallback<T>): IDisposable;
@@ -158,7 +158,7 @@ export interface IEventBus {
 }
 
 /** Подписка для очистки событий */
-/** @noSelf */
+
 export interface ISubscription extends IDisposable {
     /** Проверить, активна ли подписка */
     readonly is_active: boolean;
