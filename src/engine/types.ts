@@ -389,10 +389,16 @@ export interface ICameraService {
     pan(delta: Vector2): void;
     /** Сфокусироваться на объекте */
     focus_on(object: Object3D): void;
+    /** Сфокусироваться на выделенных объектах */
+    focus_on_selected(): void;
     /** Сохранить состояние камеры */
     save_state(): CameraState;
     /** Восстановить состояние камеры */
     restore_state(state: CameraState): void;
+    /** Сохранить состояние камеры для сцены в localStorage */
+    save_scene_state(scene_name: string): void;
+    /** Загрузить состояние камеры для сцены из localStorage */
+    load_scene_state(scene_name: string): void;
     /** Обработать изменение размера */
     resize(width: number, height: number): void;
     /** Преобразовать экранные координаты в мировые (на плоскости Z=0) */

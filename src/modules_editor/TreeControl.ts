@@ -13,6 +13,7 @@ import { ASSET_SCENE_GRAPH, TDictionary } from "./modules_editor_const";
 import { DEFOLD_LIMITS } from "../config";
 import { ComponentType } from "../render_engine/components/container_component";
 import { Services } from '@editor/core';
+import type { ISceneObject } from '@editor/engine/types';
 
 // Alias для совместимости
 type paramsTexture = ParamsTexture;
@@ -24,37 +25,24 @@ interface TreeMeshObject {
     worldToLocal(v: { x: number; y: number; z: number }): { x: number; y: number; z: number };
 }
 
-// Декларации глобальных объектов (legacy контролы - пока остаются как globals)
-// ActionsControl имеет методы, которых нет в DI ActionsService
-declare const ActionsControl: {
-    from_the_same_world(list: unknown[], treeList: unknown[]): boolean;
-    is_valid_action(item: unknown, itemSelected?: unknown[], flag1?: boolean, flag2?: boolean): boolean;
-    copy_mesh_list: unknown[];
-    paste(flag1?: boolean, flag2?: boolean): unknown[];
-    add_gui_container(params: unknown): void;
-    add_gui_box(params: unknown): void;
-    add_gui_text(params: unknown): void;
-    add_go_container(params: unknown): void;
-    add_go_sprite_component(params: unknown): void;
-    add_go_label_component(params: unknown): void;
-    add_go_model_component(params: unknown): void;
-    add_go_animated_model_component(params: unknown): void;
-    add_go_audio_component(params: unknown): void;
-    add_component(params: unknown, type: number): void;
-    add_go_with_sprite_component(params: unknown): void;
-};
-declare const AssetControl: {
-    go_to_dir(dir: string, create?: boolean): Promise<boolean>;
-    select_file(path: string): void;
-    loadPartOfSceneInPos(path: string, pos: unknown): unknown;
-};
+// ActionsControl и AssetControl мигрированы на Services.actions и Services.assets
 
-declare global {
-    const TreeControl: ReturnType<typeof TreeControlCreate>;
+/** Тип TreeControl */
+export type TreeControlType = ReturnType<typeof TreeControlCreate>;
+
+/** Модульный instance для использования через импорт */
+let tree_control_instance: TreeControlType | undefined;
+
+/** Получить instance TreeControl */
+export function get_tree_control(): TreeControlType {
+    if (tree_control_instance === undefined) {
+        throw new Error('TreeControl не инициализирован. Вызовите register_tree_control() сначала.');
+    }
+    return tree_control_instance;
 }
 
 export function register_tree_control() {
-    (window as any).TreeControl = TreeControlCreate();
+    tree_control_instance = TreeControlCreate();
 }
 interface Item {
     id: number;
@@ -88,6 +76,25 @@ function TreeControlCreate() {
     let currentSceneName: string = "root";
     let prevListSelected: number[] = [];
     let listSelected: number[] = [];
+
+    /** Получить ISceneObject[] из списка ID или Item[] */
+    function items_to_scene_objects(items: number[] | Item[]): ISceneObject[] {
+        const result: ISceneObject[] = [];
+        for (const item of items) {
+            const id = typeof item === 'number' ? item : item.id;
+            const obj = Services.scene.get_by_id(id);
+            if (obj !== undefined) {
+                result.push(obj);
+            }
+        }
+        return result;
+    }
+
+    /** Получить ISceneObject из Item */
+    function item_to_scene_object(item: Item | null): ReturnType<typeof Services.scene.get_by_id> | undefined {
+        if (item === null) return undefined;
+        return Services.scene.get_by_id(item.id);
+    }
     let cutList: number[] = [];
     let shiftAnchorId: number | null = null; // якорь для Shift-выбора
 
@@ -1209,7 +1216,7 @@ function TreeControlCreate() {
 
             if (treeItem && _is_dragging) {
                 countMove++;
-                const canMove = ActionsControl.from_the_same_world(listSelected, treeList);
+                const canMove = Services.actions.is_same_world(items_to_scene_objects(listSelected));
                 if (!canMove && countMove == 2) {
                     Popups.toast.open({
                         type: 'info',
@@ -1501,7 +1508,7 @@ function TreeControlCreate() {
         itemDrop = treeList.find(e => e.id === +currentDroppable?.getAttribute("data-id")) || null;
 
         const itemSelected = treeList.filter((e: any) => e.id == listSelected[0]);
-        const canBeMoved = ActionsControl.is_valid_action(itemDrop, itemSelected, true, true);
+        const canBeMoved = Services.actions.is_valid_action(item_to_scene_object(itemDrop), items_to_scene_objects(itemSelected), true, true);
 
         if (
             (listSelected?.length == 1 && currentDroppable === treeItem)
@@ -1538,7 +1545,7 @@ function TreeControlCreate() {
 
         const listSelectedFull = treeList.filter((e: any) => listSelected.includes(e.id));
         const parentDrop = treeList.filter((e: any) => e.id == itemDrop?.pid);
-        const canBeMoved = ActionsControl.is_valid_action(parentDrop[0], listSelectedFull, false, true);
+        const canBeMoved = Services.actions.is_valid_action(item_to_scene_object(parentDrop[0] ?? null), items_to_scene_objects(listSelectedFull), false, true);
 
         if (
             (listSelected?.length == 1 && currentDroppable === treeItem)
@@ -1940,18 +1947,18 @@ function TreeControlCreate() {
             if (itemDrag?.id == -1) not_active = true;
 
         if (action == NodeAction.CTRL_V) {
-            let canPaste = ActionsControl.is_valid_action(itemDrag) == false;
+            let canPaste = Services.actions.is_valid_action(item_to_scene_object(itemDrag)) == false;
             if (itemDrag?.pid == -1) {
                 // если itemDrag в корне сцены, то canPaste c учетом asChild
-                const copyList = ActionsControl.copy_mesh_list;
-                canPaste = ActionsControl.is_valid_action(itemDrag, copyList, true) == false;
+                const copyList = Services.actions.copy_list;
+                canPaste = Services.actions.is_valid_action(item_to_scene_object(itemDrag), copyList, true) == false;
             }
             if (itemDrag?.id == -1) not_active = true;
             else if (canPaste) not_active = true;
         }
 
         if (action == NodeAction.CTRL_B) {
-            const canPaste = ActionsControl.is_valid_action(itemDrag) == false;
+            const canPaste = Services.actions.is_valid_action(item_to_scene_object(itemDrag)) == false;
             if (itemDrag?.id == -1) {
                 if (canPaste) not_active = true;
             }
@@ -2091,11 +2098,11 @@ function TreeControlCreate() {
         }
         if (action == NodeAction.CTRL_V) {
             // isDuplication для возможности вставки в корень из меню
-            ActionsControl.paste(false, copyItemDrag?.id == -1);
+            Services.actions.paste(false, copyItemDrag?.id == -1);
         }
         if (action == NodeAction.CTRL_B) {
             // isDuplication для возможности вставки в корень из меню
-            ActionsControl.paste(true, copyItemDrag?.id == -1);
+            Services.actions.paste(true, copyItemDrag?.id == -1);
         }
         if (action == NodeAction.CTRL_D) {
             Services.actions.duplicate();
@@ -2107,37 +2114,37 @@ function TreeControlCreate() {
             Services.actions.delete_selected();
         }
         if (action == NodeAction.add_gui_container) {
-            ActionsControl.add_gui_container({ pid: copyItemDrag?.id, pos: get_position_view() });
+            Services.actions.add_gui_container({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_gui_box) {
-            ActionsControl.add_gui_box({ pid: copyItemDrag?.id, texture: '2', atlas: '', pos: get_position_view(), size: { w: 128, h: 40 } });
+            Services.actions.add_gui_box({ pid: copyItemDrag?.id, texture: '2', atlas: '', pos: get_position_view(), size: { w: 128, h: 40 } });
         }
         if (action == NodeAction.add_gui_text) {
-            ActionsControl.add_gui_text({ pid: copyItemDrag?.id, pos: get_position_view() });
+            Services.actions.add_gui_text({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_go_container) {
-            ActionsControl.add_go_container({ pid: copyItemDrag?.id, pos: get_position_view() });
+            Services.actions.add_go_container({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_go_sprite_component) {
-            ActionsControl.add_go_sprite_component({ pid: copyItemDrag?.id, texture: 'arrow1', atlas: 'example_atlas', pos: get_position_view(), size: { w: 64, h: 64 } });
+            Services.actions.add_go_sprite({ pid: copyItemDrag?.id, texture: 'arrow1', atlas: 'example_atlas', pos: get_position_view(), size: { w: 64, h: 64 } });
         }
         if (action == NodeAction.add_go_label_component) {
-            ActionsControl.add_go_label_component({ pid: copyItemDrag?.id, pos: get_position_view() });
+            Services.actions.add_go_label({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_go_model_component) {
-            ActionsControl.add_go_model_component({ pid: copyItemDrag?.id, pos: get_position_view() });
+            Services.actions.add_go_model({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_go_animated_model_component) {
-            ActionsControl.add_go_animated_model_component({ pid: copyItemDrag?.id, pos: get_position_view() });
+            Services.actions.add_go_animated_model({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_go_audio_component) {
-            ActionsControl.add_go_audio_component({ pid: copyItemDrag?.id, pos: get_position_view() });
+            Services.actions.add_go_audio({ pid: copyItemDrag?.id, pos: get_position_view() });
         }
         if (action == NodeAction.add_component_spline) {
-            ActionsControl.add_component({ pid: copyItemDrag?.id, pos: get_position_view() }, ComponentType.SPLINE);
+            Services.actions.add_component({ pid: copyItemDrag?.id, pos: get_position_view() }, ComponentType.SPLINE);
         }
         if (action == NodeAction.add_component_mover) {
-            ActionsControl.add_component({ pid: copyItemDrag?.id, pos: get_position_view() }, ComponentType.MOVER);
+            Services.actions.add_component({ pid: copyItemDrag?.id, pos: get_position_view() }, ComponentType.MOVER);
         }
 
         copyItemDrag = null;
@@ -2233,7 +2240,7 @@ function TreeControlCreate() {
         if (asset_type == ASSET_SCENE_GRAPH) {
             const mouseUpPos = getMousePos(event);
             const path = event.dataTransfer.getData("path");
-            AssetControl.loadPartOfSceneInPos(path, mouseUpPos);
+            Services.assets.load_part_of_scene(path, mouseUpPos);
             Services.ui.update_hierarchy();
             return;
         }
@@ -2275,15 +2282,15 @@ function TreeControlCreate() {
         const go = ['scene', IObjectTypes.GO_CONTAINER];
         if ((list.length == 0 && isPos) || (nType !== undefined && go.includes(nType))) {
             if (!DEFOLD_LIMITS)
-                ActionsControl.add_go_sprite_component(pt);
+                Services.actions.add_go_sprite(pt);
             else
-                ActionsControl.add_go_with_sprite_component(pt);
+                Services.actions.add_go_with_sprite(pt);
 
             return;
         }
 
         if (nType !== undefined && worldGui.includes(nType)) {
-            ActionsControl.add_gui_box(pt);
+            Services.actions.add_gui_box(pt);
             return;
         }
 

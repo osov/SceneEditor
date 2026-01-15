@@ -13,19 +13,33 @@ import {
 import { span_elem, json_parsable, get_keys } from "../modules/utils";
 import { Messages } from "../modules/modules_const";
 import { contextMenuItem } from "../modules_editor/ContextMenu";
-import { NodeAction } from "./ActionsControl";
+import { NodeAction } from "@editor/shared";
 import { api } from "../modules_editor/ClientAPI";
 import { IBaseEntityData } from "../render_engine/types";
 import { error_popup, get_file_name } from "../render_engine/helpers/utils";
 import { Quaternion, Vector3 } from "three";
 import { WsWrap } from "@editor/modules/ws_wrap";
 import { Services } from '@editor/core';
+import { get_control_manager } from '../modules_editor/ControlManager';
+
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
 }
 
+/** Модульный instance для использования внутри модуля */
+let asset_control_instance: ReturnType<typeof AssetControlCreate> | undefined;
+
+/** Получить instance AssetControl */
+export function get_asset_control(): ReturnType<typeof AssetControlCreate> {
+    if (asset_control_instance === undefined) {
+        throw new Error('AssetControl не инициализирован. Вызовите register_asset_control() сначала.');
+    }
+    return asset_control_instance;
+}
+
 export function register_asset_control() {
-    (window as any).AssetControl = AssetControlCreate();
+    asset_control_instance = AssetControlCreate();
+    (window as any).AssetControl = asset_control_instance;
 }
 
 
@@ -1135,7 +1149,7 @@ function AssetControlCreate() {
             return Popups.toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
         const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
         Services.scene.load_scene(data.scene_data);
-        ControlManager.update_graph(true, current_scene.name, true);
+        get_control_manager().update_graph(true, current_scene.name, true);
     }
 
     function loadPartOfSceneInPos(
@@ -1343,6 +1357,7 @@ function fileIsImg(path: string) {
 }
 
 export async function run_debug_filemanager(project_to_load: string) {
+    const asset_control = get_asset_control();
     let server_ok = false;
     const resp = await ClientAPI.test_server_ok();
     if (resp) {
@@ -1353,7 +1368,7 @@ export async function run_debug_filemanager(project_to_load: string) {
     if (server_ok) {
         const ws_client = WsWrap(
             () => {
-                Services.event_bus.on('ON_WS_CONNECTED', () => AssetControl.reload_current_project());
+                Services.event_bus.on('ON_WS_CONNECTED', () => asset_control.reload_current_project());
             },
             () => { }, () => { },
             (m) => {
@@ -1391,7 +1406,7 @@ export async function run_debug_filemanager(project_to_load: string) {
                     assets = undefined;
                     go_to_dir = current_dir;
                 }
-                await AssetControl.load_project(data, assets, go_to_dir);
+                await asset_control.load_project(data, assets, go_to_dir);
                 IS_LOGGING && log('Загружен проект', data.name);
                 return;
             } else {
@@ -1402,7 +1417,7 @@ export async function run_debug_filemanager(project_to_load: string) {
     }
     else {
         log('Сервер не отвечает, невозможно запустить отладчик файлового менеджера');
-        await AssetControl.draw_empty_project();
+        await asset_control.draw_empty_project();
     }
 }
 

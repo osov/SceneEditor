@@ -12,6 +12,8 @@
 import type { IDisposable, ILogger, IEventBus } from '../core/di/types';
 import type { ISelectionService, IHierarchyService } from './types';
 import type { ISceneObject } from '../engine/types';
+import { get_control_manager, type ControlManagerType } from '../modules_editor/ControlManager';
+import { get_inspector_control as get_inspector_control_import, type InspectorControlType } from '../modules_editor/InspectorControl';
 
 /** Параметры сервиса */
 export interface UIServiceParams {
@@ -35,14 +37,22 @@ export interface IUIService extends IDisposable {
     update_transform_mode(mode: string): void;
 }
 
-/** Получить InspectorControl из глобального scope */
-function get_inspector_control(): unknown | undefined {
-    return (globalThis as unknown as Record<string, unknown>).InspectorControl;
+/** Получить InspectorControl безопасно */
+function try_get_inspector_control(): InspectorControlType | undefined {
+    try {
+        return get_inspector_control_import();
+    } catch {
+        return undefined;
+    }
 }
 
-/** Получить ControlManager из глобального scope */
-function get_control_manager(): unknown | undefined {
-    return (globalThis as unknown as Record<string, unknown>).ControlManager;
+/** Получить ControlManager безопасно */
+function try_get_control_manager(): ControlManagerType | undefined {
+    try {
+        return get_control_manager();
+    } catch {
+        return undefined;
+    }
 }
 
 /** Создать UIService */
@@ -101,23 +111,22 @@ export function create_ui_service(params: UIServiceParams): IUIService {
     }
 
     function update_inspector(objects: ISceneObject[]): void {
-        const inspector = get_inspector_control();
+        const inspector = try_get_inspector_control();
         if (inspector === undefined) {
             logger.debug('InspectorControl не доступен');
             return;
         }
 
         try {
-            // InspectorControl.draw() обновляет инспектор
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (inspector as any).draw(objects);
+            // InspectorControl.set_selected_list() обновляет инспектор
+            inspector.set_selected_list(objects);
         } catch (error) {
             logger.debug('Ошибка обновления инспектора:', error);
         }
     }
 
     function update_hierarchy(): void {
-        const control_manager = get_control_manager();
+        const control_manager = try_get_control_manager();
         if (control_manager === undefined) {
             logger.debug('ControlManager не доступен');
             return;
@@ -125,8 +134,7 @@ export function create_ui_service(params: UIServiceParams): IUIService {
 
         try {
             // ControlManager.update_graph() обновляет дерево
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (control_manager as any).update_graph();
+            control_manager.update_graph();
         } catch (error) {
             logger.debug('Ошибка обновления иерархии:', error);
         }
@@ -151,7 +159,7 @@ export function create_ui_service(params: UIServiceParams): IUIService {
     }
 
     function update_transform_mode(mode: string): void {
-        const control_manager = get_control_manager();
+        const control_manager = try_get_control_manager();
         if (control_manager === undefined) return;
 
         try {
@@ -165,8 +173,7 @@ export function create_ui_service(params: UIServiceParams): IUIService {
 
             const button_name = button_map[mode];
             if (button_name !== undefined) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (control_manager as any).set_active_control(button_name);
+                control_manager.set_active_control(button_name as 'translate_transform_btn' | 'rotate_transform_btn' | 'scale_transform_btn' | 'size_transform_btn');
             }
         } catch (error) {
             logger.debug('Ошибка обновления режима трансформации:', error);

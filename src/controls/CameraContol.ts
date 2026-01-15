@@ -62,6 +62,12 @@ function CameraControlCreate() {
                 control_orthographic.update(e.dt);
             });
         }
+
+        // Подписка на событие фокуса из DI CameraService
+        Services.event_bus.on('camera:focus_on_selected', () => {
+            focus();
+        });
+
         set_position(540 / 2, -960 / 2);
     }
 

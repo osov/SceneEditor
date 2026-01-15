@@ -6,7 +6,7 @@
  */
 
 import type { ILogger, IEventBus } from '@editor/core/di/types';
-import type { ISceneObject, ISceneService } from '@editor/engine/types';
+import type { ISceneObject, ISceneService, IRenderService } from '@editor/engine/types';
 import type { ObjectTypes } from '@editor/core/render/types';
 
 // ============================================================================
@@ -166,14 +166,31 @@ export interface TransformServiceParams {
 // ActionsService
 // ============================================================================
 
+/** Параметры создания объекта */
+export interface CreateObjectParams {
+    /** ID родителя */
+    pid?: number;
+    /** Позиция */
+    pos?: { x: number; y: number; z?: number };
+    /** Текстура */
+    texture?: string;
+    /** Атлас */
+    atlas?: string;
+    /** Размер */
+    size?: { w: number; h: number };
+}
+
 /** Интерфейс ActionsService */
 export interface IActionsService {
+    /** Список скопированных объектов (для проверки валидности вставки) */
+    readonly copy_list: ISceneObject[];
+
     /** Копировать выделенные объекты */
     copy(): void;
     /** Вырезать выделенные объекты */
     cut(): void;
     /** Вставить из буфера */
-    paste(): ISceneObject[];
+    paste(as_child?: boolean, is_duplication?: boolean): ISceneObject[];
     /** Вставить как дочерний */
     paste_as_child(parent: ISceneObject): ISceneObject[];
     /** Дублировать выделенные объекты */
@@ -184,6 +201,44 @@ export interface IActionsService {
     create(type: ObjectTypes, params?: Record<string, unknown>): ISceneObject;
     /** Проверить есть ли что-то в буфере */
     has_clipboard(): boolean;
+
+    // === Методы создания специфичных объектов ===
+
+    /** Создать GUI контейнер */
+    add_gui_container(params: CreateObjectParams): ISceneObject;
+    /** Создать GUI box */
+    add_gui_box(params: CreateObjectParams): ISceneObject;
+    /** Создать GUI текст */
+    add_gui_text(params: CreateObjectParams): ISceneObject;
+    /** Создать GO контейнер */
+    add_go_container(params: CreateObjectParams): ISceneObject;
+    /** Создать GO sprite */
+    add_go_sprite(params: CreateObjectParams): ISceneObject;
+    /** Создать GO label */
+    add_go_label(params: CreateObjectParams): ISceneObject;
+    /** Создать GO model */
+    add_go_model(params: CreateObjectParams): ISceneObject;
+    /** Создать GO animated model */
+    add_go_animated_model(params: CreateObjectParams): ISceneObject;
+    /** Создать GO audio */
+    add_go_audio(params: CreateObjectParams): ISceneObject;
+    /** Создать GO контейнер со спрайтом внутри */
+    add_go_with_sprite(params: CreateObjectParams): ISceneObject;
+    /** Создать компонент (SPLINE, MOVER) */
+    add_component(params: CreateObjectParams, type: number): ISceneObject;
+
+    // === Валидация ===
+
+    /** Проверить можно ли переместить/вставить объекты */
+    is_valid_action(
+        target: ISceneObject | undefined,
+        objects?: ISceneObject[],
+        as_child?: boolean,
+        is_move?: boolean
+    ): boolean;
+    /** Проверить что объекты из одного мира (GUI/GO) */
+    is_same_world(objects: ISceneObject[]): boolean;
+
     /** Освободить ресурсы */
     dispose(): void;
 }
@@ -250,5 +305,31 @@ export interface HierarchyServiceParams {
     logger: ILogger;
     event_bus: IEventBus;
     scene_service: ISceneService;
+    selection_service: ISelectionService;
+}
+
+// ============================================================================
+// SizeService
+// ============================================================================
+
+/** Интерфейс SizeService - управление визуальными границами объектов */
+export interface ISizeService {
+    /** Установить список выделенных объектов */
+    set_selected_list(list: ISceneObject[]): void;
+    /** Открепить от объектов */
+    detach(): void;
+    /** Активировать/деактивировать контрол */
+    set_active(active: boolean): void;
+    /** Перерисовать границы */
+    draw(): void;
+    /** Освободить ресурсы */
+    dispose(): void;
+}
+
+/** Параметры создания SizeService */
+export interface SizeServiceParams {
+    logger: ILogger;
+    event_bus: IEventBus;
+    render_service: IRenderService;
     selection_service: ISelectionService;
 }

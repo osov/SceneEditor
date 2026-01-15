@@ -37,6 +37,8 @@ import {
     create_asset_service,
     create_ui_service,
     create_inspector_service,
+    create_size_service,
+    create_notification_service,
 } from '../editor';
 
 // Legacy регистрации для обратной совместимости
@@ -45,7 +47,7 @@ import { register_editor_modules } from '../modules_editor/Manager_editor';
 import { register_size_control } from '../controls/SizeControl';
 import { register_transform_control } from '../controls/TransformControl';
 import { register_camera_control } from '../controls/CameraContol';
-import { register_actions_control } from '../controls/ActionsControl';
+// ActionsControl удалён - используем Services.actions
 import { register_asset_control } from '../controls/AssetControl';
 
 // Статические импорты встроенных плагинов
@@ -381,20 +383,51 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
             name: 'InspectorService',
         });
 
+        // SizeService - управление визуальными границами объектов
+        const size_service = create_size_service({
+            logger: logger.create_child('SizeService'),
+            event_bus,
+            render_service,
+            selection_service,
+        });
+
+        container.register_singleton(TOKENS.Size, () => size_service, {
+            init_order: INIT_ORDER.UI + 10,
+            name: 'SizeService',
+        });
+
+        // NotificationService - toast уведомления и диалоги
+        const notification_service = create_notification_service({
+            logger: logger.create_child('NotificationService'),
+        });
+
+        container.register_singleton(TOKENS.Notifications, () => notification_service, {
+            init_order: INIT_ORDER.UI + 15,
+            name: 'NotificationService',
+        });
+
         // === Legacy глобальные объекты (window.*) ===
         // Новый код использует DI сервисы через Services.*.
+        // Legacy контролы содержат Three.js логику и используют Services.* внутренне.
         //
-        // Статус миграции:
+        // Статус миграции контролов:
         // 🗑️ SelectControl - УДАЛЁН, логика в SelectionService
         // 🗑️ HistoryControl - УДАЛЁН, используем Services.history
-        // ✅ TransformControl - делегирует в Services.transform
-        // ✅ SizeControl - использует Services.history, Services.transform
-        // ✅ CameraControl - использует Services.selection
-        // ✅ ActionsControl - использует Services.*
-        // ✅ AssetControl - использует Services.history
-        // ✅ InspectorControl - мигрирован на Services.history.push
-        // ✅ ControlManager - использует Services.*
-        // ✅ TreeControl - использует Services.ui.update_hierarchy()
+        // 🗑️ ActionsControl - УДАЛЁН, используем Services.actions
+        // ✅ TransformControl - обёртка над Services.transform (Three.js gizmo)
+        // ✅ SizeControl - использует Services.* (Three.js bounds)
+        // ✅ CameraControl - использует Services.* (camera-controls)
+        // ✅ AssetControl - использует Services.* (файловые операции)
+        //
+        // Модули редактора:
+        // ✅ ControlManager - мигрирован на импорты (get_control_manager())
+        // ✅ TreeControl - мигрирован на импорты (get_tree_control())
+        // ✅ InspectorControl - мигрирован на импорты (get_inspector_control())
+        //
+        // Статус глобальных ссылок:
+        // - ControlManager: доступен через импорт get_control_manager()
+        // - TreeControl: доступен через импорт get_tree_control()
+        // - InspectorControl: доступен через импорт get_inspector_control()
 
         // 1. Resource manager (legacy)
         register_resource_manager(); // window.ResourceManager
@@ -407,7 +440,6 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         selection_service.init();
 
         // 4. Контролы редактора (window.*)
-        register_actions_control();
         register_asset_control();
         register_size_control();
         register_transform_control();
@@ -418,7 +450,7 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
 
         logger.info('Legacy глобальные объекты зарегистрированы');
 
-        // 7. Инициализируем UIService (после legacy модулей для доступа к InspectorControl, ControlManager)
+        // 7. Инициализируем UIService (после регистрации модулей редактора)
         ui_service.init();
 
         // Запускаем цикл рендеринга

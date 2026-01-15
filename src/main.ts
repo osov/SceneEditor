@@ -23,15 +23,14 @@ import type {
     IActionsService,
     IHistoryService,
 } from './editor/types';
+import type { ICameraService } from './engine/types';
 
 // === Новые сервисы редактора ===
 import { create_keybindings_service, create_event_bus_bridge } from './editor';
 import type { IKeybindingsService, IEventBusBridge } from './editor';
 
-// Декларация глобального ControlManager для активации контролов
-declare const ControlManager: {
-    set_active_control(name: string): void;
-};
+// === UI модули редактора ===
+import { get_control_manager } from './modules_editor/ControlManager';
 
 /** Загрузка сцены проекта */
 async function load_project_scene(logger: { error: (msg: string, ...args: unknown[]) => void }): Promise<void> {
@@ -67,19 +66,23 @@ function register_default_keybindings(keybindings: IKeybindingsService, containe
     const history = container.resolve<IHistoryService>(TOKENS.History);
     const selection = container.resolve<ISelectionService>(TOKENS.Selection);
     const event_bus = container.resolve<IEventBus>(TOKENS.EventBus);
+    const camera = container.resolve<ICameraService>(TOKENS.Camera);
+
+    // UI модули
+    const control_manager = get_control_manager();
 
     // === Режимы трансформации ===
     // ControlManager активирует контрол и устанавливает режим напрямую
     keybindings.register({ key: 'w', description: 'Перемещение' }, () => {
-        ControlManager.set_active_control('translate_transform_btn');
+        control_manager.set_active_control('translate_transform_btn');
     });
 
     keybindings.register({ key: 'e', description: 'Вращение' }, () => {
-        ControlManager.set_active_control('rotate_transform_btn');
+        control_manager.set_active_control('rotate_transform_btn');
     });
 
     keybindings.register({ key: 'r', description: 'Масштаб' }, () => {
-        ControlManager.set_active_control('scale_transform_btn');
+        control_manager.set_active_control('scale_transform_btn');
     });
 
     // === Операции с объектами ===
@@ -109,8 +112,7 @@ function register_default_keybindings(keybindings: IKeybindingsService, containe
 
     // === Камера и навигация ===
     keybindings.register({ key: 'f', description: 'Фокус на объекте' }, () => {
-        // Используем CameraControl.focus() т.к. он работает с реальной камерой рендеринга
-        CameraControl.focus();
+        camera.focus_on_selected();
     });
 
     // === История ===

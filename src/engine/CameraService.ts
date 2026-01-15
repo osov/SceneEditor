@@ -130,6 +130,13 @@ export function create_camera_service(params: CameraServiceParams): ICameraServi
         event_bus.emit('camera:focused', { object_name: object.name });
     }
 
+    function focus_on_selected(): void {
+        // Эмитим событие для CameraControl, который имеет интеграцию с camera-controls
+        // и может делать плавный переход камеры
+        event_bus.emit('camera:focus_on_selected', {});
+        logger.debug('Запрошен фокус на выделенные объекты');
+    }
+
     function save_state(): CameraState {
         return {
             mode: current_mode,
@@ -150,6 +157,58 @@ export function create_camera_service(params: CameraServiceParams): ICameraServi
         }
 
         event_bus.emit('camera:state_restored', {});
+    }
+
+    /** Ключ для localStorage */
+    const CAMERA_STATE_PREFIX = 'camera_control_orthographic-';
+
+    function save_scene_state(scene_name: string): void {
+        const state = save_state();
+        const key = CAMERA_STATE_PREFIX + scene_name;
+        localStorage.setItem(key, JSON.stringify(state));
+        logger.debug(`Состояние камеры сохранено для сцены: ${scene_name}`);
+    }
+
+    /** Проверить валидность состояния камеры */
+    function is_valid_camera_state(state: unknown): state is CameraState {
+        if (state === null || typeof state !== 'object') {
+            return false;
+        }
+        const s = state as Record<string, unknown>;
+        // Проверяем наличие обязательных полей
+        if (s.mode !== 'orthographic' && s.mode !== 'perspective') {
+            return false;
+        }
+        if (!Array.isArray(s.position) || s.position.length !== 3) {
+            return false;
+        }
+        if (!Array.isArray(s.rotation) || s.rotation.length !== 4) {
+            return false;
+        }
+        if (typeof s.zoom !== 'number') {
+            return false;
+        }
+        return true;
+    }
+
+    function load_scene_state(scene_name: string): void {
+        const key = CAMERA_STATE_PREFIX + scene_name;
+        const state_json = localStorage.getItem(key);
+        if (state_json === null) {
+            logger.debug(`Нет сохранённого состояния камеры для сцены: ${scene_name}`);
+            return;
+        }
+        try {
+            const parsed = JSON.parse(state_json) as unknown;
+            if (!is_valid_camera_state(parsed)) {
+                logger.warn('Неверный формат состояния камеры в localStorage, пропускаем восстановление');
+                return;
+            }
+            restore_state(parsed);
+            logger.debug(`Состояние камеры восстановлено для сцены: ${scene_name}`);
+        } catch (e) {
+            logger.warn(`Ошибка парсинга состояния камеры: ${e}`);
+        }
     }
 
     function resize(width: number, height: number): void {
@@ -232,8 +291,11 @@ export function create_camera_service(params: CameraServiceParams): ICameraServi
         zoom,
         pan,
         focus_on,
+        focus_on_selected,
         save_state,
         restore_state,
+        save_scene_state,
+        load_scene_state,
         resize,
         screen_to_world,
         is_visible,

@@ -83,22 +83,26 @@ import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 import { GoSprite, FlipMode } from '../render_engine/objects/sub_types';
 import { HistoryOwner } from './modules_editor_const';
 import { Services } from '@editor/core';
+import { get_control_manager } from './ControlManager';
 
-// Декларации глобальных объектов
-declare const SizeControl: {
-    set_selected_list(list: IBaseMeshAndThree[]): void;
-    detach(): void;
-    set_active(active: boolean): void;
-    set_proxy_in_average_point(list: IBaseMeshAndThree[]): void;
-    draw(): void;
-};
+// SizeControl мигрирован на Services.size
 
-declare global {
-    const InspectorControl: ReturnType<typeof InspectorControlCreate>;
+/** Тип InspectorControl */
+export type InspectorControlType = ReturnType<typeof InspectorControlCreate>;
+
+/** Модульный instance для использования через импорт */
+let inspector_control_instance: InspectorControlType | undefined;
+
+/** Получить instance InspectorControl */
+export function get_inspector_control(): InspectorControlType {
+    if (inspector_control_instance === undefined) {
+        throw new Error('InspectorControl не инициализирован. Вызовите register_inspector_control() сначала.');
+    }
+    return inspector_control_instance;
 }
 
 export function register_inspector_control() {
-    (window as any).InspectorControl = InspectorControlCreate();
+    inspector_control_instance = InspectorControlCreate();
 }
 
 export enum Property {
@@ -458,7 +462,7 @@ function InspectorControlCreate() {
             result.data.push({ name: Property.ASSET_ATLAS, data: atlas });
             result.data.push({
                 name: Property.ATLAS_BUTTON, data: () => {
-                    ControlManager.open_atlas_manager();
+                    get_control_manager().open_atlas_manager();
                 }
             });
 
@@ -1908,7 +1912,7 @@ function InspectorControlCreate() {
         });
 
         Services.transform.set_proxy_in_average_point(_selected_list);
-        SizeControl.draw();
+        Services.size.draw();
     }
 
     function saveRotation(ids: number[]) {
@@ -1970,7 +1974,7 @@ function InspectorControlCreate() {
         });
 
         Services.transform.set_proxy_in_average_point(_selected_list);
-        SizeControl.draw();
+        Services.size.draw();
     }
 
     function saveScale(ids: number[]) {
@@ -2038,7 +2042,7 @@ function InspectorControlCreate() {
         });
 
         Services.transform.set_proxy_in_average_point(_selected_list);
-        SizeControl.draw();
+        Services.size.draw();
 
         // для обновления размера шрифта
         refresh([Property.FONT_SIZE]);
@@ -2122,7 +2126,7 @@ function InspectorControlCreate() {
             mesh.set_size(x, y);
         });
 
-        SizeControl.draw();
+        Services.size.draw();
     }
 
     function savePivot(ids: number[]) {
@@ -2174,7 +2178,7 @@ function InspectorControlCreate() {
             mesh.set_pivot(pivot.x, pivot.y, true);
         });
 
-        SizeControl.draw();
+        Services.size.draw();
     }
 
     function saveAnchor(ids: number[]) {
@@ -2230,7 +2234,7 @@ function InspectorControlCreate() {
             mesh.set_anchor(x, y);
         });
 
-        SizeControl.draw();
+        Services.size.draw();
 
         if (info.data.event.last) {
             refresh([Property.ANCHOR_PRESET]);
@@ -2288,7 +2292,7 @@ function InspectorControlCreate() {
             }
         });
 
-        SizeControl.draw();
+        Services.size.draw();
         refresh([Property.ANCHOR]);
     }
 
@@ -2651,7 +2655,7 @@ function InspectorControlCreate() {
         });
 
         Services.transform.set_proxy_in_average_point(_selected_list);
-        SizeControl.draw();
+        Services.size.draw();
         refresh([Property.SCALE]);
     }
 

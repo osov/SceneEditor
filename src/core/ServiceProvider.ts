@@ -28,7 +28,9 @@ import type {
     IActionsService,
     IHierarchyService,
     ITransformService,
+    ISizeService,
 } from '../editor/types';
+import type { INotificationService } from '../editor/NotificationService';
 import type { IRenderService, ISceneService, ICameraService, IResourceService } from '../engine/types';
 import type { IInputService } from './services/InputService';
 import type { ITimeService } from './services/TimeService';
@@ -70,6 +72,10 @@ export interface IServices {
     readonly inspector: IInspectorService;
     /** Сервис ассетов */
     readonly assets: IAssetService;
+    /** Сервис визуальных границ */
+    readonly size: ISizeService;
+    /** Сервис уведомлений */
+    readonly notifications: INotificationService;
 }
 
 /**
@@ -153,6 +159,14 @@ export const Services: IServices = {
     get assets(): IAssetService {
         return require_container().resolve<IAssetService>(TOKENS.Assets);
     },
+
+    get size(): ISizeService {
+        return require_container().resolve<ISizeService>(TOKENS.Size);
+    },
+
+    get notifications(): INotificationService {
+        return require_container().resolve<INotificationService>(TOKENS.Notifications);
+    },
 };
 
 /**
@@ -188,6 +202,8 @@ export function try_get_service<K extends keyof IServices>(key: K): IServices[K]
         ui: TOKENS.UI,
         inspector: TOKENS.Inspector,
         assets: TOKENS.Assets,
+        size: TOKENS.Size,
+        notifications: TOKENS.Notifications,
     };
 
     return container.try_resolve(token_map[key]) as IServices[K] | undefined;

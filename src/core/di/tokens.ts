@@ -29,8 +29,6 @@ export const INPUT_TOKENS = {
 
 /** Сетевые сервисы */
 export const NETWORK_TOKENS = {
-    /** WebSocket клиент */
-    WsClient: Symbol('WsClient'),
     /** REST API клиент */
     ClientAPI: Symbol('ClientAPI'),
 } as const;
@@ -89,9 +87,13 @@ export const EDITOR_TOKENS = {
     UI: Symbol('UI'),
     /** Сервис инспектора */
     Inspector: Symbol('Inspector'),
+    /** Сервис управления визуальными границами */
+    Size: Symbol('Size'),
+    /** Сервис уведомлений */
+    Notifications: Symbol('Notifications'),
 } as const;
 
-/** Сервисы контролов редактора (legacy) */
+/** Сервисы контролов редактора (legacy Three.js контролы) */
 export const CONTROL_TOKENS = {
     /** Менеджер контролов - координирует все контролы */
     ControlManager: Symbol('ControlManager'),
@@ -101,20 +103,10 @@ export const CONTROL_TOKENS = {
     SizeControl: Symbol('SizeControl'),
     /** Контрол камеры */
     CameraControl: Symbol('CameraControl'),
-    /** Контрол вида */
-    ViewControl: Symbol('ViewControl'),
-    /** Контрол действий (копировать, вставить, удалить) */
-    ActionsControl: Symbol('ActionsControl'),
     /** Контрол ассетов */
     AssetControl: Symbol('AssetControl'),
     /** Контрол дерева (иерархия сцены) */
     TreeControl: Symbol('TreeControl'),
-    /** Контрол рисования */
-    PaintControl: Symbol('PaintControl'),
-    /** Контрол травы/деревьев */
-    GrassTreeControl: Symbol('GrassTreeControl'),
-    /** Контрол компонентов */
-    ComponentsControl: Symbol('ComponentsControl'),
 } as const;
 
 /** UI сервисы */

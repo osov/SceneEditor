@@ -9,6 +9,7 @@ import type { IDisposable, ILogger, IEventBus } from '../core/di/types';
 import type { IFieldTypeRegistry, ObjectData, PropertyData, PropertyType } from '../core/inspector/types';
 import type { ISelectionService } from './types';
 import type { ISceneObject } from '../engine/types';
+import { get_inspector_control as get_inspector_control_import, type InspectorControlType } from '../modules_editor/InspectorControl';
 
 /** Параметры сервиса */
 export interface InspectorServiceParams {
@@ -48,9 +49,13 @@ export interface IInspectorService extends IDisposable {
     has_field_registry(): boolean;
 }
 
-/** Получить InspectorControl из глобального scope */
-function get_inspector_control(): unknown | undefined {
-    return (globalThis as unknown as Record<string, unknown>).InspectorControl;
+/** Получить InspectorControl безопасно */
+function try_get_inspector_control(): InspectorControlType | undefined {
+    try {
+        return get_inspector_control_import();
+    } catch {
+        return undefined;
+    }
 }
 
 /** Создать InspectorService */
@@ -91,6 +96,19 @@ export function create_inspector_service(params: InspectorServiceParams): IInspe
             })
         );
 
+        // Подписка на undo/redo для обновления инспектора
+        subscriptions.push(
+            event_bus.on('history:undo', () => {
+                update();
+            })
+        );
+
+        subscriptions.push(
+            event_bus.on('history:redo', () => {
+                update();
+            })
+        );
+
         logger.info('InspectorService инициализирован');
     }
 
@@ -119,11 +137,10 @@ export function create_inspector_service(params: InspectorServiceParams): IInspe
         current_data = data;
 
         // Передаём данные в legacy InspectorControl
-        const inspector = get_inspector_control();
+        const inspector = try_get_inspector_control();
         if (inspector !== undefined) {
             try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (inspector as any).draw(objects);
+                inspector.set_selected_list(objects);
             } catch (error) {
                 logger.debug('Ошибка обновления InspectorControl:', error);
             }
@@ -152,11 +169,10 @@ export function create_inspector_service(params: InspectorServiceParams): IInspe
     function clear(): void {
         current_data = [];
 
-        const inspector = get_inspector_control();
+        const inspector = try_get_inspector_control();
         if (inspector !== undefined) {
             try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (inspector as any).clear();
+                inspector.clear();
             } catch (error) {
                 logger.debug('Ошибка очистки InspectorControl:', error);
             }
@@ -167,11 +183,10 @@ export function create_inspector_service(params: InspectorServiceParams): IInspe
     }
 
     function refresh_fields(field_keys: string[]): void {
-        const inspector = get_inspector_control();
+        const inspector = try_get_inspector_control();
         if (inspector !== undefined) {
             try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (inspector as any).refresh(field_keys);
+                inspector.refresh(field_keys);
             } catch (error) {
                 logger.debug('Ошибка обновления полей:', error);
             }

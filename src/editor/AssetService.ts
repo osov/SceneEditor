@@ -31,6 +31,13 @@ export interface SceneLoadResult extends AssetOperationResult {
     scene_data?: IBaseEntityData[];
 }
 
+/** Позиция для загрузки части сцены */
+export interface LoadPartPosition {
+    x: number;
+    y: number;
+    z?: number;
+}
+
 /** Интерфейс сервиса */
 export interface IAssetService extends IDisposable {
     /** Загрузить сцену */
@@ -51,6 +58,8 @@ export interface IAssetService extends IDisposable {
     copy(source: string, destination: string): Promise<AssetOperationResult>;
     /** Переместить */
     move(source: string, destination: string): Promise<AssetOperationResult>;
+    /** Загрузить часть сцены (prefab) в позицию */
+    load_part_of_scene(path: string, position?: LoadPartPosition): unknown;
     /** Текущий путь сцены */
     readonly current_scene_path: string | undefined;
 }
@@ -58,6 +67,16 @@ export interface IAssetService extends IDisposable {
 /** Получить ClientAPI из глобального scope */
 function get_client_api(): typeof ClientAPI | undefined {
     return (globalThis as unknown as { ClientAPI?: typeof ClientAPI }).ClientAPI;
+}
+
+/** Legacy AssetControl тип */
+interface LegacyAssetControl {
+    loadPartOfSceneInPos(path: string, position?: unknown): unknown;
+}
+
+/** Получить legacy AssetControl */
+function get_legacy_asset_control(): LegacyAssetControl | undefined {
+    return (globalThis as unknown as { AssetControl?: LegacyAssetControl }).AssetControl;
 }
 
 
@@ -288,6 +307,15 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
         }
     }
 
+    function load_part_of_scene(path: string, position?: LoadPartPosition): unknown {
+        const legacy = get_legacy_asset_control();
+        if (legacy === undefined) {
+            logger.warn('AssetControl не инициализирован');
+            return undefined;
+        }
+        return legacy.loadPartOfSceneInPos(path, position);
+    }
+
     function dispose(): void {
         _current_scene_path = undefined;
         logger.info('AssetService освобождён');
@@ -305,6 +333,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
         rename: rename_asset,
         copy: copy_asset,
         move: move_asset,
+        load_part_of_scene,
         get current_scene_path() {
             return _current_scene_path;
         },

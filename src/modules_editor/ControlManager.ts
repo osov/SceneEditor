@@ -7,7 +7,7 @@
 
 import { is_base_mesh } from "../render_engine/helpers/utils";
 import { IBaseMeshAndThree } from "../render_engine/types";
-import { TreeItem } from "./TreeControl";
+import { TreeItem, get_tree_control } from "./TreeControl";
 import { componentsGo } from "../shared/types";
 import { cbDataItem, Action } from "./Popups";
 import Stats from 'stats.js';
@@ -16,16 +16,7 @@ import { HistoryOwner } from "./modules_editor_const";
 import { Services, try_get_service } from '@editor/core';
 import type { ISceneObject } from '@editor/engine/types';
 
-// Декларации глобальных объектов (Three.js контролы - пока остаются как globals)
-declare const SizeControl: {
-    set_selected_list(list: IBaseMeshAndThree[]): void;
-    detach(): void;
-    set_active(active: boolean): void;
-};
-declare const CameraControl: {
-    load_state(name: string): void;
-    get_zoom(): number;
-};
+// CameraControl и SizeControl мигрированы на Services.camera и Services.size
 
 // Тип HistoryData для undo
 type HistoryData = {
@@ -34,12 +25,22 @@ type HistoryData = {
     MESH_VISIBLE: { mesh_id: number; value: boolean };
 };
 
-declare global {
-    const ControlManager: ReturnType<typeof ControlManagerCreate>;
+/** Тип ControlManager */
+export type ControlManagerType = ReturnType<typeof ControlManagerCreate>;
+
+/** Модульный instance для использования через импорт */
+let control_manager_instance: ControlManagerType | undefined;
+
+/** Получить instance ControlManager */
+export function get_control_manager(): ControlManagerType {
+    if (control_manager_instance === undefined) {
+        throw new Error('ControlManager не инициализирован. Вызовите register_control_manager() сначала.');
+    }
+    return control_manager_instance;
 }
 
 export function register_control_manager() {
-    (window as unknown as Record<string, unknown>).ControlManager = ControlManagerCreate();
+    control_manager_instance = ControlManagerCreate();
 }
 
 type ButtonsList = 'translate_transform_btn' | 'scale_transform_btn' | 'rotate_transform_btn' | 'size_transform_btn';
@@ -60,14 +61,14 @@ function ControlManagerCreate() {
             const e = data as { list: IBaseMeshAndThree[] };
             (window as unknown as Record<string, unknown>).selected = e.list[0];
             Services.transform.set_selected_list(e.list);
-            SizeControl.set_selected_list(e.list);
+            Services.size.set_selected_list(e.list as unknown as ISceneObject[]);
             update_graph();
         });
 
         Services.event_bus.on('SYS_UNSELECTED_MESH_LIST', () => {
             (window as unknown as Record<string, unknown>).selected = null;
             Services.transform.detach();
-            SizeControl.detach();
+            Services.size.detach();
             update_graph();
         });
 
@@ -82,7 +83,7 @@ function ControlManagerCreate() {
             }
             // Используем DI SelectionService
             Services.selection.set_selected(list as unknown as ISceneObject[]);
-            TreeControl.set_selected_items(e.list);
+            get_tree_control().set_selected_items(e.list);
             if (list.length === 0)
                 Services.event_bus.emit('SYS_UNSELECTED_MESH_LIST', {});
         });
@@ -166,7 +167,7 @@ function ControlManagerCreate() {
 
         set_active_control(IS_CAMERA_ORTHOGRAPHIC ? 'size_transform_btn' : 'translate_transform_btn');
         init_stats();
-        CameraControl.load_state('');
+        Services.camera.load_scene_state('');
     }
 
     function undo_mesh_move(items: HistoryData['MESH_MOVE'][]) {
@@ -187,7 +188,7 @@ function ControlManagerCreate() {
         if (params.has("stats")) {
             const div = document.createElement('div');
             div.style.cssText = ' position: absolute;z-index: 10000;top: 50px;left: 45px;font-size: 12px;';
-            div.innerHTML = 'Draw Call: <span id="draw_call">100</span><br>Zoom: <span id="zoom">' + CameraControl.get_zoom().toFixed(2) + '</span>';
+            div.innerHTML = 'Draw Call: <span id="draw_call">100</span><br>Zoom: <span id="zoom">' + Services.camera.get_zoom().toFixed(2) + '</span>';
             document.body.appendChild(div);
             const div_dc = document.getElementById('draw_call')!;
             const div_zoom = document.getElementById('zoom')!;
@@ -203,7 +204,7 @@ function ControlManagerCreate() {
                     div_dc.innerHTML = render.renderer.info.render.calls.toString();
                 else
                     div_dc.innerHTML = current_draw_call.toString();
-                div_zoom.innerHTML = CameraControl.get_zoom().toFixed(2);
+                div_zoom.innerHTML = Services.camera.get_zoom().toFixed(2);
             });
         }
     }
@@ -251,8 +252,8 @@ function ControlManagerCreate() {
         }
         if (name === 'size_transform_btn') {
             active_control = 'size';
-            SizeControl.set_active(true);
-            SizeControl.set_selected_list(selected);
+            Services.size.set_active(true);
+            Services.size.set_selected_list(selected as unknown as ISceneObject[]);
         }
     }
 
@@ -262,7 +263,7 @@ function ControlManagerCreate() {
             list[i].classList.remove('active');
         }
         Services.transform.set_active(false);
-        SizeControl.set_active(false);
+        Services.size.set_active(false);
     }
 
     function set_active_btn(name: ButtonsList) {
@@ -321,9 +322,9 @@ function ControlManagerCreate() {
     function update_graph(is_first = false, name = '', is_load_scene = false) {
         if (name !== '') {
             current_scene_name = name;
-            CameraControl.load_state(name);
+            Services.camera.load_scene_state(name);
         }
-        TreeControl.draw_graph(ControlManager.get_tree_graph(), 'test_scene', is_first, false, is_load_scene);
+        get_tree_control().draw_graph(get_tree_graph(), 'test_scene', is_first, false, is_load_scene);
     }
 
     function get_current_scene_name() {

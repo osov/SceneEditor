@@ -55,6 +55,7 @@ export {
     type AssetOperationResult,
     type AssetDataResult,
     type SceneLoadResult,
+    type LoadPartPosition,
 } from './AssetService';
 
 // UI
@@ -71,3 +72,24 @@ export {
     type IInspectorService,
     type IFieldProvider,
 } from './InspectorService';
+
+// Size
+export {
+    create_size_service,
+} from './SizeService';
+
+export type {
+    ISizeService,
+    SizeServiceParams,
+} from './types';
+
+// Notifications
+export {
+    create_notification_service,
+    type NotificationServiceParams,
+    type INotificationService,
+    type NotificationType,
+    type NotificationParams,
+    type ConfirmParams,
+    type RenameParams,
+} from './NotificationService';
