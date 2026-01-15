@@ -91,12 +91,10 @@ export const EDITOR_TOKENS = {
     Inspector: Symbol('Inspector'),
 } as const;
 
-/** Сервисы контролов редактора */
+/** Сервисы контролов редактора (legacy) */
 export const CONTROL_TOKENS = {
     /** Менеджер контролов - координирует все контролы */
     ControlManager: Symbol('ControlManager'),
-    /** Контрол выделения */
-    SelectControl: Symbol('SelectControl'),
     /** Контрол трансформации (перемещение, вращение, масштаб) */
     TransformControl: Symbol('TransformControl'),
     /** Контрол размера */
@@ -105,8 +103,6 @@ export const CONTROL_TOKENS = {
     CameraControl: Symbol('CameraControl'),
     /** Контрол вида */
     ViewControl: Symbol('ViewControl'),
-    /** Контрол истории (undo/redo) */
-    HistoryControl: Symbol('HistoryControl'),
     /** Контрол действий (копировать, вставить, удалить) */
     ActionsControl: Symbol('ActionsControl'),
     /** Контрол ассетов */
@@ -133,14 +129,6 @@ export const UI_TOKENS = {
 
 /** Сервисы инспекторов */
 export const INSPECTOR_TOKENS = {
-    /** Инспектор мешей */
-    MeshInspector: Symbol('MeshInspector'),
-    /** Инспектор ассетов */
-    AssetInspector: Symbol('AssetInspector'),
-    /** Инспектор рисования */
-    PaintInspector: Symbol('PaintInspector'),
-    /** Инспектор компонента перемещения */
-    ComponentMoverInspector: Symbol('ComponentMoverInspector'),
     /** Реестр инспекторов - управляет типами полей */
     InspectorRegistry: Symbol('InspectorRegistry'),
 } as const;

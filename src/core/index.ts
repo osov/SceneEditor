@@ -161,16 +161,12 @@ export type {
     ISceneManager,
 } from './render';
 
-// Контролы - типы и интерфейсы
+// Контролы (legacy) - типы и интерфейсы
 export { TransformMode } from './controls';
 
 export type {
     IBaseMesh,
     TreeItemData,
-    ISelectControl,
-    HistoryAction,
-    HistoryEntry,
-    IHistoryControl,
     ITransformControl,
     ControlButton,
     IControlManager,

@@ -17,12 +17,6 @@ import { Services, try_get_service } from '@editor/core';
 import type { ISceneObject } from '@editor/engine/types';
 
 // Декларации глобальных объектов (Three.js контролы - пока остаются как globals)
-declare const TransformControl: {
-    set_selected_list(list: IBaseMeshAndThree[]): void;
-    detach(): void;
-    set_active(active: boolean): void;
-    set_mode(mode: string): void;
-};
 declare const SizeControl: {
     set_selected_list(list: IBaseMeshAndThree[]): void;
     detach(): void;
@@ -65,14 +59,14 @@ function ControlManagerCreate() {
         Services.event_bus.on('SYS_SELECTED_MESH_LIST', (data) => {
             const e = data as { list: IBaseMeshAndThree[] };
             (window as unknown as Record<string, unknown>).selected = e.list[0];
-            TransformControl.set_selected_list(e.list);
+            Services.transform.set_selected_list(e.list);
             SizeControl.set_selected_list(e.list);
             update_graph();
         });
 
         Services.event_bus.on('SYS_UNSELECTED_MESH_LIST', () => {
             (window as unknown as Record<string, unknown>).selected = null;
-            TransformControl.detach();
+            Services.transform.detach();
             SizeControl.detach();
             update_graph();
         });
@@ -239,21 +233,21 @@ function ControlManagerCreate() {
 
         if (name === 'translate_transform_btn') {
             active_control = 'translate';
-            TransformControl.set_active(true);
-            TransformControl.set_mode('translate');
-            TransformControl.set_selected_list(selected);
+            Services.transform.set_active(true);
+            Services.transform.set_mode('translate');
+            Services.transform.set_selected_list(selected);
         }
         if (name === 'scale_transform_btn') {
             active_control = 'scale';
-            TransformControl.set_active(true);
-            TransformControl.set_mode('scale');
-            TransformControl.set_selected_list(selected);
+            Services.transform.set_active(true);
+            Services.transform.set_mode('scale');
+            Services.transform.set_selected_list(selected);
         }
         if (name === 'rotate_transform_btn') {
             active_control = 'rotate';
-            TransformControl.set_active(true);
-            TransformControl.set_mode('rotate');
-            TransformControl.set_selected_list(selected);
+            Services.transform.set_active(true);
+            Services.transform.set_mode('rotate');
+            Services.transform.set_selected_list(selected);
         }
         if (name === 'size_transform_btn') {
             active_control = 'size';
@@ -267,7 +261,7 @@ function ControlManagerCreate() {
         for (let i = 0; i < list.length; i++) {
             list[i].classList.remove('active');
         }
-        TransformControl.set_active(false);
+        Services.transform.set_active(false);
         SizeControl.set_active(false);
     }
 

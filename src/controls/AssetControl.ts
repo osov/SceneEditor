@@ -1090,7 +1090,7 @@ function AssetControlCreate() {
             const new_path = file_elem.getAttribute('data-path');
             const current_path = current_scene.path;
             if (ext === SCENE_EXT && new_path != current_path) {
-                if (current_path != undefined && history_length_cache[current_path] != HistoryControl.get_history(current_scene.path).length)
+                if (current_path != undefined && history_length_cache[current_path] != Services.history.get_undo_stack().length)
                     open_scene_exit_popup(current_path, new_path)
                 else if (new_path != undefined)
                     await open_scene(new_path)
@@ -1104,7 +1104,7 @@ function AssetControlCreate() {
             params: { title: "", text: `У сцены "${current_path}" есть несохранённые изменения, закрыть без сохранения?`, button: "Да", buttonNo: "Нет", auto_close: true },
             callback: async (success) => {
                 if (success && new_path != undefined) {
-                    HistoryControl.clear(current_scene.path);
+                    Services.history.clear();
                     await open_scene(new_path);
                 }
             }
@@ -1125,7 +1125,7 @@ function AssetControlCreate() {
         current_scene.path = resp.data?.path as string;
         localStorage.setItem("current_scene_name", current_scene.name);
         localStorage.setItem("current_scene_path", current_scene.path);
-        history_length_cache[path] = HistoryControl.get_history(current_scene.path).length;
+        history_length_cache[path] = Services.history.get_undo_stack().length;
         return true;
     }
 
@@ -1190,9 +1190,9 @@ function AssetControlCreate() {
             data: { mesh_id, mesh_data, next_id, id_parent },
             undo: (data) => {
                 Services.scene.remove_by_id(data.mesh_id);
-                SizeControl.detach();
+                Services.transform.detach();
                 Services.selection.clear();
-                ControlManager.update_graph();
+                Services.ui.update_hierarchy();
             },
             redo: (data) => {
                 const parent = data.id_parent === -1
@@ -1203,7 +1203,7 @@ function AssetControlCreate() {
                     parent.add(m);
                     Services.scene.move(m, data.id_parent, data.next_id);
                     Services.selection.set_selected([m as any]);
-                    ControlManager.update_graph();
+                    Services.ui.update_hierarchy();
                 }
             }
         });
@@ -1226,7 +1226,7 @@ function AssetControlCreate() {
         const data = Services.scene.save_scene();
         const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: data }));
         if (r && r.result) {
-            history_length_cache[path] = HistoryControl.get_history(current_scene.path).length;
+            history_length_cache[path] = Services.history.get_undo_stack().length;
             return Popups.toast.success(`Сцена ${name} сохранена, путь: ${path}`);
         }
         else return Popups.toast.error(`Не удалось сохранить сцену ${name}, путь: ${path}: ${r.message}`);

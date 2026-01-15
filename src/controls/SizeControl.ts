@@ -1,29 +1,11 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, LineDashedMaterial, BufferGeometry, Line, Object3DEventMap, Scene } from "three";
 import { IBaseMeshAndThree, IObjectTypes, PivotX, PivotY } from "../render_engine/types";
-import { MeshPropertyInfo } from "@editor/shared";
+import { MeshPropertyInfo, MeshProperty } from "@editor/shared";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { is_base_mesh } from "../render_engine/helpers/utils";
 import { WORLD_SCALAR } from "../config";
-import { MeshProperty } from "../inspectors/MeshInspector";
-import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
+import { HistoryOwner } from "../modules_editor/modules_editor_const";
 import { Services } from '@editor/core';
-
-// Декларации глобальных объектов
-declare const HistoryControl: {
-    add(type: string, data: unknown[], owner: HistoryOwner): void;
-};
-declare const SelectControl: {
-    set_selected_list(list: IBaseMeshAndThree[]): void;
-};
-declare const ControlManager: {
-    update_graph(): void;
-};
-declare const Inspector: {
-    refresh(properties: MeshProperty[]): void;
-};
-declare const TransformControl: {
-    set_proxy_in_average_point(list: IBaseMeshAndThree[]): void;
-};
 
 declare global {
     const SizeControl: ReturnType<typeof SizeControlCreate>;
@@ -171,9 +153,25 @@ function SizeControlCreate() {
                             const pp = pivot_points[i];
                             if (Services.render.is_intersected_mesh(new Vector2(e.x, e.y), pp)) {
                                 const pivot = index_to_pivot(i);
-                                HistoryControl.add('MESH_PIVOT', [{ mesh_id: mesh.mesh_data.id, value: mesh.get_pivot() }], HistoryOwner.SIZE_CONTROL);
+                                const pivot_data = [{ mesh_id: mesh.mesh_data.id, value: mesh.get_pivot() }];
+                                Services.history.push({
+                                    type: 'MESH_PIVOT',
+                                    description: 'Изменение pivot',
+                                    data: { items: pivot_data, owner: HistoryOwner.SIZE_CONTROL },
+                                    undo: (d) => {
+                                        for (const item of d.items) {
+                                            const m = Services.scene.get_by_id(item.mesh_id) as IBaseMeshAndThree | undefined;
+                                            if (m !== undefined) {
+                                                m.set_pivot(item.value.x, item.value.y, true);
+                                                m.transform_changed();
+                                            }
+                                        }
+                                        Services.ui.update_hierarchy();
+                                    },
+                                    redo: () => {},
+                                });
                                 mesh.set_pivot(pivot.x, pivot.y, true);
-                                Inspector.refresh([MeshProperty.PIVOT]);
+                                Services.inspector.refresh_fields([MeshProperty.PIVOT]);
                                 // для текста почему-то прыгает размер и поэтому bb определяется неверно на ближайших кадрах
                                 // поэтому не обновляем draw_debug_bb
                                 for (let i = 0; i < pivot_points.length; i++)
@@ -248,19 +246,78 @@ function SizeControlCreate() {
             is_down = false;
             if (is_changed_pos) {
                 is_changed_pos = false;
-                HistoryControl.add('MESH_TRANSLATE', old_pos, HistoryOwner.SIZE_CONTROL);
+                Services.history.push({
+                    type: 'MESH_TRANSLATE',
+                    description: 'Перемещение объектов',
+                    data: { items: old_pos.slice(), owner: HistoryOwner.SIZE_CONTROL },
+                    undo: (d) => {
+                        for (const item of d.items) {
+                            const m = Services.scene.get_by_id(item.mesh_id) as IBaseMeshAndThree | undefined;
+                            if (m !== undefined) {
+                                m.position.copy(item.value);
+                                m.transform_changed();
+                            }
+                        }
+                        Services.ui.update_hierarchy();
+                    },
+                    redo: () => {},
+                });
             }
             if (is_changed_size) {
                 is_changed_size = false;
-                HistoryControl.add('MESH_SIZE', old_size, HistoryOwner.SIZE_CONTROL);
+                Services.history.push({
+                    type: 'MESH_SIZE',
+                    description: 'Изменение размера',
+                    data: { items: old_size.slice(), owner: HistoryOwner.SIZE_CONTROL },
+                    undo: (d) => {
+                        for (const item of d.items) {
+                            const m = Services.scene.get_by_id(item.mesh_id) as IBaseMeshAndThree | undefined;
+                            if (m !== undefined) {
+                                m.set_size(item.value.size.x, item.value.size.y);
+                                m.position.copy(item.value.pos);
+                                m.transform_changed();
+                            }
+                        }
+                        Services.ui.update_hierarchy();
+                    },
+                    redo: () => {},
+                });
             }
             if (is_changed_slice) {
                 is_changed_slice = false;
-                HistoryControl.add('MESH_SLICE', old_slice, HistoryOwner.SIZE_CONTROL);
+                Services.history.push({
+                    type: 'MESH_SLICE',
+                    description: 'Изменение slice9',
+                    data: { items: old_slice.slice(), owner: HistoryOwner.SIZE_CONTROL },
+                    undo: (d) => {
+                        for (const item of d.items) {
+                            const m = Services.scene.get_by_id(item.mesh_id);
+                            if (m !== undefined && m instanceof Slice9Mesh) {
+                                m.set_slice(item.value.x, item.value.y);
+                                m.transform_changed();
+                            }
+                        }
+                    },
+                    redo: () => {},
+                });
             }
             if (is_changed_anchor) {
                 is_changed_anchor = false;
-                HistoryControl.add('MESH_ANCHOR', old_anchor, HistoryOwner.SIZE_CONTROL);
+                Services.history.push({
+                    type: 'MESH_ANCHOR',
+                    description: 'Изменение anchor',
+                    data: { items: old_anchor.slice(), owner: HistoryOwner.SIZE_CONTROL },
+                    undo: (d) => {
+                        for (const item of d.items) {
+                            const m = Services.scene.get_by_id(item.mesh_id) as IBaseMeshAndThree | undefined;
+                            if (m !== undefined) {
+                                m.set_anchor(item.value.x, item.value.y);
+                                m.transform_changed();
+                            }
+                        }
+                    },
+                    redo: () => {},
+                });
             }
         });
 
@@ -295,7 +352,7 @@ function SizeControlCreate() {
                     }
                 }
                 draw_debug_bb(bounds);
-                Inspector.refresh([MeshProperty.SLICE9]);
+                Services.inspector.refresh_fields([MeshProperty.SLICE9]);
                 return;
             }
             if (Services.input.is_shift() || Services.input.is_alt())
@@ -354,7 +411,7 @@ function SizeControlCreate() {
                         selected_go.set_position(lp.x, lp.y);
                         is_changed_size = true;
 
-                        Inspector.refresh([MeshProperty.POSITION, MeshProperty.SIZE]);
+                        Services.inspector.refresh_fields([MeshProperty.POSITION, MeshProperty.SIZE]);
                     }
                 }
                 if (dir[0] == 0 && dir[1] == 0) {
@@ -392,61 +449,12 @@ function SizeControlCreate() {
                 }
                 draw_debug_bb(bounds);
 
-                TransformControl.set_proxy_in_average_point(selected_list);
-                Inspector.refresh([MeshProperty.POSITION]);
+                Services.transform.set_proxy_in_average_point(selected_list);
+                Services.inspector.refresh_fields([MeshProperty.POSITION]);
             }
         });
 
-        Services.event_bus.on('SYS_HISTORY_UNDO', (data) => {
-            const event = data as THistoryUndo;
-            if (event.owner !== HistoryOwner.SIZE_CONTROL) return;
-
-            switch (event.type) {
-                case 'MESH_TRANSLATE':
-                    for (const data of event.data) {
-                        const mesh = Services.scene.get_by_id(data.mesh_id)!;
-                        mesh.position.copy(data.value);
-                        mesh.transform_changed();
-                    }
-                    break;
-                case 'MESH_SIZE':
-                    for (const data of event.data) {
-                        const mesh = Services.scene.get_by_id(data.mesh_id)!;
-                        mesh.set_size(data.value.size.x, data.value.size.y);
-                        mesh.position.copy(data.value.pos);
-                        mesh.transform_changed();
-                    }
-                    break;
-                case 'MESH_SLICE':
-                    for (const data of event.data) {
-                        const mesh = Services.scene.get_by_id(data.mesh_id)!;
-                        if (mesh instanceof Slice9Mesh) {
-                            mesh.set_slice(data.value.x, data.value.y);
-                            mesh.transform_changed();
-                        }
-                    }
-                    break;
-                case 'MESH_ANCHOR':
-                    for (const data of event.data) {
-                        const mesh = Services.scene.get_by_id(data.mesh_id)!;
-                        mesh.set_anchor(data.value.x, data.value.y);
-                        mesh.transform_changed();
-                    }
-                    break;
-                case 'MESH_PIVOT':
-                    for (const data of event.data) {
-                        const mesh = Services.scene.get_by_id(data.mesh_id)!;
-                        mesh.set_pivot(data.value.x, data.value.y, true);
-                        mesh.transform_changed();
-                    }
-                    break;
-            }
-
-            // Update selection and graph
-            const meshes = event.data.map(data => Services.scene.get_by_id(data.mesh_id)!);
-            SelectControl.set_selected_list(meshes);
-            ControlManager.update_graph();
-        });
+        // Обработчик undo теперь не нужен - логика в Services.history.push()
 
         Services.event_bus.on('SYS_ON_UPDATE_END', () => {
             draw();

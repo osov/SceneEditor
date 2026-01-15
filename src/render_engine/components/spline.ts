@@ -3,14 +3,10 @@ import { EntityBase } from "../objects/entity_base";
 import { IBaseEntityAndThree, IObjectTypes } from "../types";
 import { is_base_mesh } from "../helpers/utils";
 import { deepClone } from "../../modules/utils";
-import { HistoryOwner, THistoryUndo } from "../../modules_editor/modules_editor_const";
+import { HistoryOwner } from "../../modules_editor/modules_editor_const";
 import { MeshPropertyInfo } from "@editor/core/render/types";
 import { Services } from '@editor/core';
 
-// Глобальные объекты - связаны с DI сервисами через LegacyBridge
-declare const HistoryControl: {
-    add(type: string, data: unknown[], owner: HistoryOwner): void;
-};
 
 export function CmpSpline(cmp_mesh: EntityBase) {
     const spline_mat_helper = new MeshBasicMaterial({ color: 0x00ffff });
@@ -41,36 +37,39 @@ export function CmpSpline(cmp_mesh: EntityBase) {
             }
         });
 
-        Services.event_bus.on('SYS_HISTORY_UNDO', (evt_data) => {
-            const event = evt_data as THistoryUndo;
-            if (event.owner != HistoryOwner.COMPONENT) return;
-            const history_data = event.data[0] as MeshPropertyInfo<Vector3>[];
-            if (history_data[0].index != cmp_mesh.mesh_data.id)
-                return;
-            const positions = [];
-            const ids = [];
-            for (let i = 0; i < history_data.length; i++) {
-                const it = history_data[i];
-                positions.push(it.value);
-                ids.push(it.mesh_id);
-            }
-            deserialize(positions);
-            let counter = 0;
-            for (let i = 0; i < cmp_mesh.children.length; i++) {
-                if (is_base_mesh(cmp_mesh.children[i])) {
-                    (cmp_mesh.children[i] as any).mesh_data.id = ids[counter];
-                    counter++;
-                }
-            }
-        });
     }
 
     function add_to_history() {
         const data = deepClone(serialize(true)) as any as MeshPropertyInfo<Vector3>[];
-        if (data.length == 0)
+        if (data.length === 0)
             return;
         data[0].index = cmp_mesh.mesh_data.id;
-        HistoryControl.add('SPLINE_STATE', [data], HistoryOwner.COMPONENT);
+
+        Services.history.push({
+            type: 'SPLINE_STATE',
+            description: 'Изменение сплайна',
+            data: { items: data, owner: HistoryOwner.COMPONENT },
+            undo: (d) => {
+                const history_data = d.items as MeshPropertyInfo<Vector3>[];
+                if (history_data[0].index !== cmp_mesh.mesh_data.id) return;
+
+                const positions: Vector3[] = [];
+                const ids: number[] = [];
+                for (const it of history_data) {
+                    positions.push(it.value);
+                    ids.push(it.mesh_id);
+                }
+                deserialize(positions);
+                let counter = 0;
+                for (const child of cmp_mesh.children) {
+                    if (is_base_mesh(child)) {
+                        (child as any).mesh_data.id = ids[counter];
+                        counter++;
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function on_mesh_remove(e: { id: number }) {

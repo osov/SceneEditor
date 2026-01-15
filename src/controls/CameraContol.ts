@@ -10,10 +10,6 @@ declare global {
     const CameraControl: ReturnType<typeof CameraControlCreate>;
 }
 
-declare const SelectControl: {
-    get_selected_list(): IBaseMeshAndThree[];
-};
-
 export function register_camera_control() {
     (window as any).CameraControl = CameraControlCreate();
 }
@@ -159,7 +155,7 @@ function CameraControlCreate() {
     }
 
     function focus() {
-        const selected_list = SelectControl.get_selected_list();
+        const selected_list = Services.selection.selected as IBaseMeshAndThree[];
         if (selected_list.length > 0) {
             const wp = new Vector3();
             selected_list[0].getWorldPosition(wp);

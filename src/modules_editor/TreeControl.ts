@@ -48,10 +48,6 @@ declare const AssetControl: {
     select_file(path: string): void;
     loadPartOfSceneInPos(path: string, pos: unknown): unknown;
 };
-declare const ControlManager: {
-    draw_graph(): void;
-    update_graph(): void;
-};
 
 declare global {
     const TreeControl: ReturnType<typeof TreeControlCreate>;
@@ -2238,7 +2234,7 @@ function TreeControlCreate() {
             const mouseUpPos = getMousePos(event);
             const path = event.dataTransfer.getData("path");
             AssetControl.loadPartOfSceneInPos(path, mouseUpPos);
-            ControlManager.update_graph();
+            Services.ui.update_hierarchy();
             return;
         }
 

@@ -1,6 +1,6 @@
 import { format_list_without_children } from "../render_engine/helpers/utils";
 import { IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
-import { TreeItem } from "./TreeControl_legacy";
+import { TreeItem } from "../modules_editor/TreeControl";
 import { DEFOLD_LIMITS, WORLD_SCALAR } from "../config";
 import { Vector2 } from "three";
 import { ComponentType } from "../render_engine/components/container_component";
@@ -165,7 +165,7 @@ function ActionsControlCreate() {
                 parent_id: target_id
             });
         }
-        setUniqueNameMeshList(ControlManager.get_tree_graph());
+        setUniqueNameMeshList(Services.hierarchy.get_tree() as any);
 
         const mesh_ids = mesh_list.map(m => m.mesh_data.id);
         Services.history.push({
@@ -176,9 +176,9 @@ function ActionsControlCreate() {
                 for (const id of data.mesh_ids) {
                     Services.scene.remove_by_id(id);
                 }
-                SizeControl.detach();
+                Services.transform.detach();
                 Services.selection.clear();
-                ControlManager.update_graph();
+                Services.ui.update_hierarchy();
             },
             redo: (data) => {
                 const restored: IBaseMeshAndThree[] = [];
@@ -194,7 +194,7 @@ function ActionsControlCreate() {
                     }
                 }
                 Services.selection.set_selected(restored);
-                ControlManager.update_graph();
+                Services.ui.update_hierarchy();
             }
         });
         Services.selection.set_selected(mesh_list);
@@ -244,15 +244,15 @@ function ActionsControlCreate() {
                         }
                     }
                     Services.selection.set_selected(restored);
-                    ControlManager.update_graph();
+                    Services.ui.update_hierarchy();
                 },
                 redo: (data) => {
                     for (const id of data.mesh_ids) {
                         Services.scene.remove_by_id(id);
                     }
-                    SizeControl.detach();
+                    Services.transform.detach();
                     Services.selection.clear();
-                    ControlManager.update_graph();
+                    Services.ui.update_hierarchy();
                 }
             });
         }
@@ -354,9 +354,9 @@ function ActionsControlCreate() {
             data: { mesh_id, mesh_data, next_id, pid },
             undo: (data) => {
                 Services.scene.remove_by_id(data.mesh_id);
-                SizeControl.detach();
+                Services.transform.detach();
                 Services.selection.clear();
-                ControlManager.update_graph();
+                Services.ui.update_hierarchy();
             },
             redo: (data) => {
                 const parent = data.pid === -1
@@ -367,7 +367,7 @@ function ActionsControlCreate() {
                     parent.add(m);
                     Services.scene.move(m, data.pid, data.next_id);
                     Services.selection.set_selected([m as any]);
-                    ControlManager.update_graph();
+                    Services.ui.update_hierarchy();
                 }
             }
         });

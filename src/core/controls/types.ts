@@ -1,11 +1,12 @@
 /**
- * Типы и интерфейсы для контролов редактора
+ * Типы и интерфейсы для контролов редактора (legacy)
  *
  * Определяет контракты для основных контролов:
  * - ControlManager - координация всех контролов
- * - SelectControl - управление выделением
- * - HistoryControl - undo/redo
  * - TransformControl - трансформации объектов
+ *
+ * ПРИМЕЧАНИЕ: SelectControl и HistoryControl удалены.
+ * Используйте Services.selection и Services.history.
  */
 
 import type { Object3D } from 'three';
@@ -34,76 +35,6 @@ export interface TreeItemData {
     no_drop?: boolean;
     no_rename?: boolean;
     no_remove?: boolean;
-}
-
-// ============================================================================
-// SelectControl
-// ============================================================================
-
-/** Интерфейс SelectControl */
-export interface ISelectControl {
-    /** Инициализация */
-    init(): void;
-    /** Получить выделенный меш */
-    get_selected(): IBaseMesh | null;
-    /** Получить список выделенных мешей */
-    get_selected_list(): IBaseMesh[];
-    /** Установить список выделенных */
-    set_selected_list(list: IBaseMesh[]): void;
-    /** Проверить, выделен ли меш */
-    is_selected(mesh: IBaseMesh): boolean;
-    /** Очистить выделение */
-    clear_selection(): void;
-}
-
-// ============================================================================
-// HistoryControl
-// ============================================================================
-
-/** Тип операции истории */
-export type HistoryAction =
-    | 'MESH_TRANSLATE'
-    | 'MESH_ROTATE'
-    | 'MESH_SCALE'
-    | 'MESH_SIZE'
-    | 'MESH_DELETE'
-    | 'MESH_ADD'
-    | 'MESH_MOVE'
-    | 'MESH_NAME'
-    | 'MESH_ACTIVE'
-    | 'MESH_VISIBLE'
-    | 'MESH_COLOR'
-    | 'MESH_TEXT'
-    | 'MESH_MATERIAL';
-
-/** Запись в истории */
-export interface HistoryEntry<T = unknown> {
-    action: HistoryAction;
-    data: T;
-    owner: string;
-    timestamp: number;
-}
-
-/** Интерфейс HistoryControl */
-export interface IHistoryControl {
-    /** Инициализация */
-    init(): void;
-    /** Добавить запись в историю */
-    add<T>(action: HistoryAction, data: T, owner: string): void;
-    /** Отменить последнее действие */
-    undo(): void;
-    /** Повторить отменённое действие */
-    redo(): void;
-    /** Проверить, можно ли отменить */
-    can_undo(): boolean;
-    /** Проверить, можно ли повторить */
-    can_redo(): boolean;
-    /** Очистить историю */
-    clear(): void;
-    /** Получить размер истории undo */
-    get_undo_size(): number;
-    /** Получить размер истории redo */
-    get_redo_size(): number;
 }
 
 // ============================================================================

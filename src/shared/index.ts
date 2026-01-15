@@ -17,4 +17,5 @@ export {
     NodeAction,
     PaintProperty,
     PAINT_MODE,
+    MeshProperty,
 } from './types';

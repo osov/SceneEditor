@@ -20,6 +20,8 @@ export interface ISelectionService {
     /** Основной (первый) выделенный объект */
     readonly primary: ISceneObject | null;
 
+    /** Инициализация обработчиков ввода */
+    init(): void;
     /** Выделить объект */
     select(object: ISceneObject, additive?: boolean): void;
     /** Снять выделение с объекта */
@@ -120,17 +122,33 @@ export interface ITransformService {
     readonly mode: TransformMode;
     /** Текущее пространство */
     readonly space: TransformSpace;
+    /** Активен ли контрол */
+    readonly is_active: boolean;
 
     /** Установить режим трансформации */
     set_mode(mode: TransformMode): void;
     /** Установить пространство */
     set_space(space: TransformSpace): void;
+    /** Активировать/деактивировать gizmo */
+    set_active(active: boolean): void;
     /** Прикрепить к объектам */
     attach(objects: ISceneObject[]): void;
+    /** Установить выбранные объекты (alias для attach) */
+    set_selected_list(objects: ISceneObject[]): void;
     /** Открепить */
     detach(): void;
     /** Получить прикреплённые объекты */
     get_attached(): ISceneObject[];
+    /** Установить proxy в среднюю точку выбранных объектов */
+    set_proxy_in_average_point(objects?: ISceneObject[]): void;
+    /** Установить позицию proxy */
+    set_proxy_position(x: number, y: number, z: number, objects?: ISceneObject[]): void;
+    /** Установить rotation proxy */
+    set_proxy_rotation(x: number, y: number, z: number, objects?: ISceneObject[]): void;
+    /** Установить scale proxy */
+    set_proxy_scale(x: number, y: number, z: number, objects?: ISceneObject[]): void;
+    /** Получить proxy object */
+    get_proxy(): import('three').Object3D;
     /** Освободить ресурсы */
     dispose(): void;
 }
@@ -139,6 +157,9 @@ export interface ITransformService {
 export interface TransformServiceParams {
     logger: ILogger;
     event_bus: IEventBus;
+    render_service: IRenderService;
+    history_service: IHistoryService;
+    selection_service: ISelectionService;
 }
 
 // ============================================================================

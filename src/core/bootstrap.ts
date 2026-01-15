@@ -45,8 +45,6 @@ import { register_editor_modules } from '../modules_editor/Manager_editor';
 import { register_size_control } from '../controls/SizeControl';
 import { register_transform_control } from '../controls/TransformControl';
 import { register_camera_control } from '../controls/CameraContol';
-import { register_select_control } from '../controls/SelectControl';
-import { register_history_control } from '../controls/HistoryControl';
 import { register_actions_control } from '../controls/ActionsControl';
 import { register_asset_control } from '../controls/AssetControl';
 
@@ -299,6 +297,9 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         const transform_service = create_transform_service({
             logger: logger.create_child('TransformService'),
             event_bus,
+            render_service,
+            history_service,
+            selection_service,
         });
 
         // ActionsService
@@ -381,19 +382,31 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         });
 
         // === Legacy глобальные объекты (window.*) ===
-        // Эти модули регистрируют глобальные объекты для обратной совместимости.
-        // Новый код должен использовать DI сервисы напрямую.
+        // Новый код использует DI сервисы через Services.*.
+        //
+        // Статус миграции:
+        // 🗑️ SelectControl - УДАЛЁН, логика в SelectionService
+        // 🗑️ HistoryControl - УДАЛЁН, используем Services.history
+        // ✅ TransformControl - делегирует в Services.transform
+        // ✅ SizeControl - использует Services.history, Services.transform
+        // ✅ CameraControl - использует Services.selection
+        // ✅ ActionsControl - использует Services.*
+        // ✅ AssetControl - использует Services.history
+        // ✅ InspectorControl - мигрирован на Services.history.push
+        // ✅ ControlManager - использует Services.*
+        // ✅ TreeControl - использует Services.ui.update_hierarchy()
 
-        // 1. Resource manager (legacy) - SceneManager удалён, используем Services.scene
+        // 1. Resource manager (legacy)
         register_resource_manager(); // window.ResourceManager
 
-        // 2. Привязка событий ввода (используем DI InputService напрямую)
+        // 2. Привязка событий ввода
         const input_service = container.resolve<IInputService>(TOKENS.Input);
         input_service.bind_events(canvas);
 
-        // 5. Контролы редактора (window.* глобальные объекты)
-        register_select_control();
-        register_history_control();
+        // 3. Инициализация SelectionService
+        selection_service.init();
+
+        // 4. Контролы редактора (window.*)
         register_actions_control();
         register_asset_control();
         register_size_control();

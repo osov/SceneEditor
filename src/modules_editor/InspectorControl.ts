@@ -85,16 +85,6 @@ import { HistoryOwner } from './modules_editor_const';
 import { Services } from '@editor/core';
 
 // Декларации глобальных объектов
-declare const HistoryControl: {
-    add(type: string, data: unknown[], owner?: HistoryOwner): void;
-};
-declare const TransformControl: {
-    set_selected_list(list: IBaseMeshAndThree[]): void;
-    detach(): void;
-    set_active(active: boolean): void;
-    set_proxy_in_average_point(list: IBaseMeshAndThree[]): void;
-    draw(): void;
-};
 declare const SizeControl: {
     set_selected_list(list: IBaseMeshAndThree[]): void;
     detach(): void;
@@ -373,6 +363,29 @@ function InspectorControlCreate() {
             if (_selected_textures.length > 0) {
                 // NOTE: пока просто пересоздаем поля занаво, так как нет возможности обновить параметры биндинга
                 set_selected_textures(_selected_textures);
+            }
+        });
+
+        // Обработчик undo для MESH_NAME из InspectorControl
+        Services.event_bus.on('SYS_HISTORY_UNDO', (data) => {
+            const event = data as { type: string; data: unknown[]; owner?: number };
+            // Обрабатываем только события без owner (созданные InspectorControl)
+            // или с owner === undefined
+            if (event.owner !== undefined) return;
+
+            if (event.type === 'MESH_NAME') {
+                const names = event.data as NameEventData[];
+                for (const item of names) {
+                    const mesh = Services.scene.get_by_id(item.id_mesh);
+                    if (mesh !== undefined) {
+                        Services.scene.set_name(mesh, item.name);
+                    }
+                }
+                Services.ui.update_hierarchy();
+                // Обновляем инспектор если объект выбран
+                if (_selected_list.length > 0) {
+                    Services.selection.set_selected(_selected_list as unknown as import('@editor/engine/types').ISceneObject[]);
+                }
             }
         });
     }
@@ -1641,7 +1654,21 @@ function InspectorControlCreate() {
             names.push({ id_mesh: id, name: mesh.name });
         });
 
-        HistoryControl.add('MESH_NAME', names);
+        Services.history.push({
+            type: 'MESH_NAME',
+            description: 'Изменение имени',
+            data: { items: names, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as NameEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.name = item.name;
+                    }
+                }
+                Services.ui.update_hierarchy();
+            },
+            redo: () => {},
+        });
     }
 
     function updateName(info: ChangeInfo) {
@@ -1656,7 +1683,7 @@ function InspectorControlCreate() {
             }
 
             mesh.name = info.data.event.value as string;
-            ControlManager.update_graph();
+            Services.ui.update_hierarchy();
         });
     }
 
@@ -1694,7 +1721,21 @@ function InspectorControlCreate() {
             
         });
 
-        HistoryControl.add('MESH_ACTIVE', actives);
+        Services.history.push({
+            type: 'MESH_ACTIVE',
+            description: 'Изменение активности',
+            data: { items: actives, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as ActiveEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.set_active(item.state);
+                    }
+                }
+                Services.ui.update_hierarchy();
+            },
+            redo: () => {},
+        });
     }
 
     function updateChildrenActive(children: any[], state: boolean) {
@@ -1749,7 +1790,21 @@ function InspectorControlCreate() {
             visibles.push({ id_mesh: id, state: mesh.get_visible() });
         });
 
-        HistoryControl.add('MESH_VISIBLE', visibles);
+        Services.history.push({
+            type: 'MESH_VISIBLE',
+            description: 'Изменение видимости',
+            data: { items: visibles, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as VisibleEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.set_visible(item.state);
+                    }
+                }
+                Services.ui.update_hierarchy();
+            },
+            redo: () => {},
+        });
     }
 
     function updateVisible(info: ChangeInfo) {
@@ -1786,7 +1841,23 @@ function InspectorControlCreate() {
             oldPositions.push({ id_mesh: mesh.mesh_data.id, position: deepClone(mesh.position) });
         });
 
-        HistoryControl.add("MESH_TRANSLATE", oldPositions);
+        Services.history.push({
+            type: 'MESH_TRANSLATE',
+            description: 'Перемещение объектов',
+            data: { items: oldPositions, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as PositionEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.position.copy(item.position);
+                        m.transform_changed();
+                    }
+                }
+                Services.transform.set_proxy_in_average_point(Services.selection.selected as IBaseMeshAndThree[]);
+                Services.ui.update_hierarchy();
+            },
+            redo: () => {},
+        });
     }
 
     function updatePosition(info: ChangeInfo) {
@@ -1836,7 +1907,7 @@ function InspectorControlCreate() {
             mesh.set_position(x, y, z);
         });
 
-        TransformControl.set_proxy_in_average_point(_selected_list);
+        Services.transform.set_proxy_in_average_point(_selected_list);
         SizeControl.draw();
     }
 
@@ -1855,7 +1926,23 @@ function InspectorControlCreate() {
             oldRotations.push({ id_mesh: id, rotation: deepClone(mesh.rotation) });
         });
 
-        HistoryControl.add("MESH_ROTATE", oldRotations);
+        Services.history.push({
+            type: 'MESH_ROTATE',
+            description: 'Вращение объектов',
+            data: { items: oldRotations, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as RotationEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.rotation.copy(item.rotation);
+                        m.transform_changed();
+                    }
+                }
+                Services.transform.set_proxy_in_average_point(Services.selection.selected as IBaseMeshAndThree[]);
+                Services.ui.update_hierarchy();
+            },
+            redo: () => {},
+        });
     }
 
     function updateRotation(info: ChangeInfo) {
@@ -1882,7 +1969,7 @@ function InspectorControlCreate() {
             mesh.transform_changed();
         });
 
-        TransformControl.set_proxy_in_average_point(_selected_list);
+        Services.transform.set_proxy_in_average_point(_selected_list);
         SizeControl.draw();
     }
 
@@ -1901,7 +1988,23 @@ function InspectorControlCreate() {
             oldScales.push({ id_mesh: id, scale: deepClone(mesh.scale) });
         });
 
-        HistoryControl.add("MESH_SCALE", oldScales);
+        Services.history.push({
+            type: 'MESH_SCALE',
+            description: 'Масштабирование объектов',
+            data: { items: oldScales, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as ScaleEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.scale.copy(item.scale);
+                        m.transform_changed();
+                    }
+                }
+                Services.transform.set_proxy_in_average_point(Services.selection.selected as IBaseMeshAndThree[]);
+                Services.ui.update_hierarchy();
+            },
+            redo: () => {},
+        });
     }
 
     function updateScale(info: ChangeInfo) {
@@ -1934,7 +2037,7 @@ function InspectorControlCreate() {
             }
         });
 
-        TransformControl.set_proxy_in_average_point(_selected_list);
+        Services.transform.set_proxy_in_average_point(_selected_list);
         SizeControl.draw();
 
         // для обновления размера шрифта
@@ -1956,7 +2059,24 @@ function InspectorControlCreate() {
             oldSizes.push({ id_mesh: id, position: mesh.get_position(), size: mesh.get_size() });
         });
 
-        HistoryControl.add('MESH_SIZE', oldSizes);
+        Services.history.push({
+            type: 'MESH_SIZE',
+            description: 'Изменение размера',
+            data: { items: oldSizes, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as SizeEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.position.copy(item.position);
+                        m.set_size(item.size.x, item.size.y);
+                        m.transform_changed();
+                    }
+                }
+                Services.transform.set_proxy_in_average_point(Services.selection.selected as IBaseMeshAndThree[]);
+                Services.ui.update_hierarchy();
+            },
+            redo: () => {},
+        });
     }
 
     function updateSize(info: ChangeInfo) {
@@ -2020,7 +2140,22 @@ function InspectorControlCreate() {
             pivots.push({ id_mesh: id, pivot: mesh.get_pivot() });
         });
 
-        HistoryControl.add('MESH_PIVOT', pivots);
+        Services.history.push({
+            type: 'MESH_PIVOT',
+            description: 'Изменение точки опоры',
+            data: { items: pivots, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as PivotEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.set_pivot(item.pivot.x, item.pivot.y, true);
+                        m.transform_changed();
+                    }
+                }
+                Services.ui.update_hierarchy();
+            },
+            redo: () => {},
+        });
     }
 
     function updatePivot(info: ChangeInfo) {
@@ -2057,7 +2192,21 @@ function InspectorControlCreate() {
             anchors.push({ id_mesh: id, anchor: mesh.get_anchor() });
         });
 
-        HistoryControl.add('MESH_ANCHOR', anchors);
+        Services.history.push({
+            type: 'MESH_ANCHOR',
+            description: 'Изменение якоря',
+            data: { items: anchors, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as AnchorEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.set_anchor(item.anchor.x, item.anchor.y);
+                    }
+                }
+                Services.ui.update_hierarchy();
+            },
+            redo: () => {},
+        });
     }
 
     function updateAnchor(info: ChangeInfo) {
@@ -2105,7 +2254,21 @@ function InspectorControlCreate() {
             anchors.push({ id_mesh: id, anchor: mesh.get_anchor() });
         });
 
-        HistoryControl.add('MESH_ANCHOR', anchors);
+        Services.history.push({
+            type: 'MESH_ANCHOR',
+            description: 'Изменение якоря (пресет)',
+            data: { items: anchors, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as AnchorEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.set_anchor(item.anchor.x, item.anchor.y);
+                    }
+                }
+                Services.ui.update_hierarchy();
+            },
+            redo: () => {},
+        });
     }
 
     function updateAnchorPreset(info: ChangeInfo) {
@@ -2144,7 +2307,20 @@ function InspectorControlCreate() {
             colors.push({ id_mesh: id, color: mesh.get_color() });
         });
 
-        HistoryControl.add('MESH_COLOR', colors);
+        Services.history.push({
+            type: 'MESH_COLOR',
+            description: 'Изменение цвета',
+            data: { items: colors, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as ColorEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.set_color(item.color);
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateColor(info: ChangeInfo) {
@@ -2182,7 +2358,24 @@ function InspectorControlCreate() {
             }
         });
 
-        HistoryControl.add('MESH_ALPHA', alphas);
+        Services.history.push({
+            type: 'MESH_ALPHA',
+            description: 'Изменение прозрачности',
+            data: { items: alphas, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as AlphaEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        if (m.type === IObjectTypes.TEXT || m.type === IObjectTypes.GUI_TEXT || m.type === IObjectTypes.GO_LABEL_COMPONENT) {
+                            (m as TextMesh).fillOpacity = item.alpha;
+                        } else if (m.type === IObjectTypes.SLICE9_PLANE || m.type === IObjectTypes.GUI_BOX || m.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                            (m as Slice9Mesh).set_alpha(item.alpha);
+                        }
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateAlpha(info: ChangeInfo) {
@@ -2221,7 +2414,21 @@ function InspectorControlCreate() {
             textures.push({ id_mesh: id, texture });
         });
 
-        HistoryControl.add('MESH_TEXTURE', textures);
+        Services.history.push({
+            type: 'MESH_TEXTURE',
+            description: 'Изменение текстуры',
+            data: { items: textures, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as TextureEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        const atlas = m.get_texture()[1];
+                        m.set_texture(item.texture, atlas);
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateTexture(info: ChangeInfo) {
@@ -2258,7 +2465,20 @@ function InspectorControlCreate() {
             slices.push({ id_mesh: id, slice: (mesh as Slice9Mesh).get_slice() });
         });
 
-        HistoryControl.add('MESH_SLICE', slices);
+        Services.history.push({
+            type: 'MESH_SLICE',
+            description: 'Изменение slice',
+            data: { items: slices, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as SliceEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as Slice9Mesh | undefined;
+                    if (m !== undefined) {
+                        m.set_slice(item.slice.x, item.slice.y);
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateSlice(info: ChangeInfo) {
@@ -2298,7 +2518,20 @@ function InspectorControlCreate() {
             texts.push({ id_mesh: id, text: deepClone((mesh as TextMesh).text) });
         });
 
-        HistoryControl.add('MESH_TEXT', texts);
+        Services.history.push({
+            type: 'MESH_TEXT',
+            description: 'Изменение текста',
+            data: { items: texts, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as TextEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as TextMesh | undefined;
+                    if (m !== undefined) {
+                        m.text = item.text;
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateText(info: ChangeInfo) {
@@ -2333,7 +2566,20 @@ function InspectorControlCreate() {
             fonts.push({ id_mesh: id, font: oldFont ? oldFont : '' });
         });
 
-        HistoryControl.add('MESH_FONT', fonts);
+        Services.history.push({
+            type: 'MESH_FONT',
+            description: 'Изменение шрифта',
+            data: { items: fonts, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as FontEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as TextMesh | undefined;
+                    if (m !== undefined) {
+                        m.font = item.font;
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateFont(info: ChangeInfo) {
@@ -2368,7 +2614,22 @@ function InspectorControlCreate() {
             fontSizes.push({ id_mesh: id, scale: new Vector3(oldScale.x, oldScale.y, 1) });
         });
 
-        HistoryControl.add('MESH_FONT_SIZE', fontSizes);
+        Services.history.push({
+            type: 'MESH_FONT_SIZE',
+            description: 'Изменение размера шрифта',
+            data: { items: fontSizes, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as ScaleEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.scale.copy(item.scale);
+                        m.transform_changed();
+                    }
+                }
+                Services.transform.set_proxy_in_average_point(Services.selection.selected as IBaseMeshAndThree[]);
+            },
+            redo: () => {},
+        });
     }
 
     function updateFontSize(info: ChangeInfo) {
@@ -2389,7 +2650,7 @@ function InspectorControlCreate() {
             mesh.transform_changed();
         });
 
-        TransformControl.set_proxy_in_average_point(_selected_list);
+        Services.transform.set_proxy_in_average_point(_selected_list);
         SizeControl.draw();
         refresh([Property.SCALE]);
     }
@@ -2408,7 +2669,20 @@ function InspectorControlCreate() {
             textAligns.push({ id_mesh: id, text_align: deepClone((mesh as TextMesh).textAlign) });
         });
 
-        HistoryControl.add('MESH_TEXT_ALIGN', textAligns);
+        Services.history.push({
+            type: 'MESH_TEXT_ALIGN',
+            description: 'Изменение выравнивания текста',
+            data: { items: textAligns, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as TextAlignEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as TextMesh | undefined;
+                    if (m !== undefined) {
+                        m.textAlign = item.text_align;
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateTextAlign(info: ChangeInfo) {
@@ -2441,7 +2715,20 @@ function InspectorControlCreate() {
             lineHeights.push({ id_mesh: id, line_height: typeof lh === 'number' ? lh : 1 });
         });
 
-        HistoryControl.add('MESH_LINE_HEIGHT', lineHeights);
+        Services.history.push({
+            type: 'MESH_LINE_HEIGHT',
+            description: 'Изменение межстрочного интервала',
+            data: { items: lineHeights, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as LineHeightEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as TextMesh | undefined;
+                    if (m !== undefined) {
+                        m.lineHeight = item.line_height;
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateLineHeight(info: ChangeInfo) {
@@ -2476,7 +2763,20 @@ function InspectorControlCreate() {
             atlases.push({ id_mesh: id, atlas, texture });
         });
 
-        HistoryControl.add('MESH_ATLAS', atlases);
+        Services.history.push({
+            type: 'MESH_ATLAS',
+            description: 'Изменение атласа меша',
+            data: { items: atlases, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as MeshAtlasEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        m.set_texture(item.texture, item.atlas);
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateAtlas(info: ChangeInfo) {
@@ -2515,7 +2815,19 @@ function InspectorControlCreate() {
             atlases.push({ texture_path, atlas: oldAtlas ? oldAtlas : '' });
         });
 
-        HistoryControl.add('TEXTURE_ATLAS', atlases);
+        Services.history.push({
+            type: 'TEXTURE_ATLAS',
+            description: 'Изменение атласа текстуры',
+            data: { items: atlases, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as TextureAtlasEventData[]) {
+                    const texture_name = get_file_name(get_basename(item.texture_path));
+                    const current_atlas = Services.resources.get_atlas_by_texture_name(texture_name) || '';
+                    Services.resources.override_atlas_texture(current_atlas, item.atlas, texture_name);
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateAssetAtlas(info: ChangeInfo) {
@@ -2570,7 +2882,20 @@ function InspectorControlCreate() {
             });
         });
 
-        HistoryControl.add('MESH_BLEND_MODE', blendModes);
+        Services.history.push({
+            type: 'MESH_BLEND_MODE',
+            description: 'Изменение режима смешивания',
+            data: { items: blendModes, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as BlendModeEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined && (m as any).material !== undefined) {
+                        (m as any).material.blending = item.blend_mode;
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateBlendMode(info: ChangeInfo) {
@@ -2613,7 +2938,23 @@ function InspectorControlCreate() {
             });
         });
 
-        HistoryControl.add('TEXTURE_MIN_FILTER', minFilters);
+        Services.history.push({
+            type: 'TEXTURE_MIN_FILTER',
+            description: 'Изменение минификационного фильтра',
+            data: { items: minFilters, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as MinFilterEventData[]) {
+                    const texture_name = get_file_name(get_basename(item.texture_path));
+                    const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
+                    if (atlas !== null) {
+                        const texture_data = Services.resources.get_texture(texture_name, atlas);
+                        texture_data.texture.minFilter = item.filter;
+                    }
+                }
+                Services.resources.write_metadata();
+            },
+            redo: () => {},
+        });
     }
 
     function updateMinFilter(info: ChangeInfo) {
@@ -2663,7 +3004,23 @@ function InspectorControlCreate() {
             });
         });
 
-        HistoryControl.add('TEXTURE_MAG_FILTER', magFilters);
+        Services.history.push({
+            type: 'TEXTURE_MAG_FILTER',
+            description: 'Изменение магнификационного фильтра',
+            data: { items: magFilters, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as MagFilterEventData[]) {
+                    const texture_name = get_file_name(get_basename(item.texture_path));
+                    const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
+                    if (atlas !== null) {
+                        const texture_data = Services.resources.get_texture(texture_name, atlas);
+                        texture_data.texture.magFilter = item.filter;
+                    }
+                }
+                Services.resources.write_metadata();
+            },
+            redo: () => {},
+        });
     }
 
     function updateMagFilter(info: ChangeInfo) {
@@ -2733,7 +3090,20 @@ function InspectorControlCreate() {
             }
         });
 
-        HistoryControl.add('MESH_UV', uvs);
+        Services.history.push({
+            type: 'MESH_UV',
+            description: 'Изменение UV координат',
+            data: { items: uvs, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as UVEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as GoSprite | undefined;
+                    if (m !== undefined && m.type === IObjectTypes.GO_SPRITE_COMPONENT) {
+                        m.set_uv(item.uv);
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function saveMaterial(ids: number[]) {
@@ -2751,7 +3121,20 @@ function InspectorControlCreate() {
             materials.push({ id_mesh: id, material: (mesh as any).material.name });
         });
 
-        HistoryControl.add('MESH_MATERIAL', materials);
+        Services.history.push({
+            type: 'MESH_MATERIAL',
+            description: 'Изменение материала',
+            data: { items: materials, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as MaterialEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        Services.resources.set_material_by_name(m, item.material);
+                    }
+                }
+            },
+            redo: () => {},
+        });
     }
 
     function updateMaterial(info: ChangeInfo) {
