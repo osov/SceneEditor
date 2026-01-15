@@ -35,7 +35,7 @@ function AudioManagerModule() {
 
     function init() {
         Services.render.camera.add(listener);
-        Services.event_bus.on('SYS_ON_UPDATE', () => {
+        Services.event_bus.on('engine:update', () => {
             const camera = Services.render.camera;
             get_sound().set_listener_position(vmath.vector3(camera.position.x, camera.position.y, camera.position.z));
         });

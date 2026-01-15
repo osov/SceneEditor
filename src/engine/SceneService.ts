@@ -6,7 +6,7 @@
  */
 
 import { Object3D, Quaternion, Vector2, Vector3 } from 'three';
-import type { ObjectTypes, BaseEntityData } from '@editor/core/render/types';
+import { ObjectTypes, type BaseEntityData } from '@editor/core/render/types';
 import { IObjectTypes } from '@editor/render_engine/types';
 import type {
     ISceneService,
@@ -15,7 +15,7 @@ import type {
     SceneGraphItem,
 } from './types';
 import { filter_list_base_mesh, is_base_mesh, is_label, is_sprite, is_text } from '@editor/render_engine/helpers/utils';
-import { FLOAT_PRECISION, WORLD_SCALAR } from '@editor/config';
+import { FLOAT_PRECISION } from '@editor/config';
 import { deepClone } from '@editor/modules/utils';
 
 // Импорты классов объектов
@@ -28,11 +28,6 @@ import { Component } from '@editor/render_engine/components/container_component'
 import { Model } from '@editor/render_engine/objects/model';
 import { AudioMesh } from '@editor/render_engine/objects/audio_mesh';
 import { MultipleMaterialMesh } from '@editor/render_engine/objects/multiple_material_mesh';
-
-/** Проверить является ли объект ISceneObject */
-function is_scene_object(obj: Object3D): obj is ISceneObject {
-    return 'mesh_data' in obj && typeof (obj as ISceneObject).mesh_data?.id === 'number';
-}
 
 /** Создать SceneService */
 export function create_scene_service(params: SceneServiceParams): ISceneService {
@@ -71,10 +66,10 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
         const default_size = 32;
 
         // base
-        if (type === IObjectTypes.ENTITY || type === IObjectTypes.EMPTY) {
+        if (type === ObjectTypes.ENTITY || type === ObjectTypes.EMPTY) {
             mesh = new EntityBase(check_id_is_available_or_generate_new(id)) as unknown as ISceneObject;
         }
-        else if (type === IObjectTypes.SLICE9_PLANE) {
+        else if (type === ObjectTypes.SLICE9_PLANE) {
             mesh = new Slice9Mesh(
                 check_id_is_available_or_generate_new(id),
                 (p.width as number) || default_size,
@@ -83,7 +78,7 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
                 (p.slice_height as number) || 0
             ) as unknown as ISceneObject;
         }
-        else if (type === IObjectTypes.TEXT) {
+        else if (type === ObjectTypes.TEXT) {
             mesh = new TextMesh(
                 check_id_is_available_or_generate_new(id),
                 (p.text as string) || '',
@@ -92,10 +87,10 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
             ) as unknown as ISceneObject;
         }
         // gui
-        else if (type === IObjectTypes.GUI_CONTAINER) {
+        else if (type === ObjectTypes.GUI_CONTAINER) {
             mesh = new GuiContainer(check_id_is_available_or_generate_new(id)) as unknown as ISceneObject;
         }
-        else if (type === IObjectTypes.GUI_BOX) {
+        else if (type === ObjectTypes.GUI_BOX) {
             mesh = new GuiBox(
                 check_id_is_available_or_generate_new(id),
                 (p.width as number) || default_size,
@@ -104,7 +99,7 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
                 (p.slice_height as number) || 0
             ) as unknown as ISceneObject;
         }
-        else if (type === IObjectTypes.GUI_TEXT) {
+        else if (type === ObjectTypes.GUI_TEXT) {
             mesh = new GuiText(
                 check_id_is_available_or_generate_new(id),
                 (p.text as string) || '',
@@ -113,11 +108,11 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
             ) as unknown as ISceneObject;
         }
         // go
-        else if (type === IObjectTypes.GO_CONTAINER) {
+        else if (type === ObjectTypes.GO_CONTAINER) {
             mesh = new GoContainer(check_id_is_available_or_generate_new(id)) as unknown as ISceneObject;
         }
         // go components
-        else if (type === IObjectTypes.GO_SPRITE_COMPONENT) {
+        else if (type === ObjectTypes.GO_SPRITE_COMPONENT) {
             mesh = new GoSprite(
                 check_id_is_available_or_generate_new(id),
                 (p.width as number) || default_size,
@@ -126,7 +121,7 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
                 (p.slice_height as number) || 0
             ) as unknown as ISceneObject;
         }
-        else if (type === IObjectTypes.GO_LABEL_COMPONENT) {
+        else if (type === ObjectTypes.GO_LABEL_COMPONENT) {
             mesh = new GoText(
                 check_id_is_available_or_generate_new(id),
                 (p.text as string) || '',
@@ -134,24 +129,24 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
                 (p.height as number) || default_size
             ) as unknown as ISceneObject;
         }
-        else if (type === IObjectTypes.GO_MODEL_COMPONENT) {
+        else if (type === ObjectTypes.GO_MODEL_COMPONENT) {
             mesh = new Model(
                 check_id_is_available_or_generate_new(id),
                 (p.width as number) || default_size,
                 (p.height as number) || default_size
             ) as unknown as ISceneObject;
         }
-        else if (type === IObjectTypes.GO_ANIMATED_MODEL_COMPONENT) {
+        else if (type === ObjectTypes.GO_ANIMATED_MODEL_COMPONENT) {
             mesh = new AnimatedMesh(
                 check_id_is_available_or_generate_new(id),
                 (p.width as number) || default_size,
                 (p.height as number) || default_size
             ) as unknown as ISceneObject;
         }
-        else if (type === IObjectTypes.GO_AUDIO_COMPONENT) {
+        else if (type === ObjectTypes.GO_AUDIO_COMPONENT) {
             mesh = new AudioMesh(check_id_is_available_or_generate_new(id)) as unknown as ISceneObject;
         }
-        else if (type === IObjectTypes.COMPONENT) {
+        else if (type === ObjectTypes.COMPONENT) {
             mesh = new Component(check_id_is_available_or_generate_new(id), (p.type as number) || 0) as unknown as ISceneObject;
         }
         else {
@@ -257,7 +252,7 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
         const data: BaseEntityData = {
             id: m.mesh_data.id,
             pid,
-            type: (m as unknown as EntityBase).type as ObjectTypes,
+            type: (m as unknown as EntityBase).type as unknown as ObjectTypes,
             name: m.name,
             visible: entity.get_active(),
             position: wp.toArray().map(value => Number(value.toFixed(FLOAT_PRECISION))) as [number, number, number],
@@ -267,8 +262,8 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
         };
 
         if (clean_id_pid) {
-            delete (data as Record<string, unknown>).id;
-            delete (data as Record<string, unknown>).pid;
+            delete (data as unknown as Record<string, unknown>).id;
+            delete (data as unknown as Record<string, unknown>).pid;
         }
 
         if (!without_children && m.children.length > 0) {
@@ -413,7 +408,7 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
                 }
             }
         } else {
-            const container = create(IObjectTypes.GO_CONTAINER as ObjectTypes, {});
+            const container = create(ObjectTypes.GO_CONTAINER, {});
             container.name = sub_name;
             const tmp = deepClone(data);
             for (let i = 0; i < tmp.length; i++) {
@@ -462,8 +457,6 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
     }
 
     function find_nearest_clipping_parent(mesh: ISceneObject): ISceneObject | null {
-        const entity = mesh as unknown as GuiBox | GuiText;
-
         if (mesh.parent instanceof GuiBox) {
             if (mesh.parent.isClippingEnabled()) {
                 return mesh.parent as unknown as ISceneObject;
@@ -550,7 +543,7 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
             }
         }
 
-        event_bus.emit('SYS_MESH_MOVED_TO', { id: mesh.mesh_data.id, pid }, false);
+        event_bus.emit('hierarchy:moved', { id: mesh.mesh_data.id, pid });
         event_bus.emit('scene:object_moved', { id: mesh.mesh_data.id, parent_id: pid, before_id: next_id });
     }
 
@@ -593,7 +586,7 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
     }
 
     function remove_by_id(id: number): void {
-        event_bus.emit('SYS_MESH_REMOVE_BEFORE', { id }, false);
+        event_bus.emit('scene:object_removing', { id });
 
         const mesh = get_by_id(id);
         if (mesh !== undefined) {
@@ -612,7 +605,6 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
             }
 
             logger.debug(`Объект ${id} удалён из сцены`);
-            event_bus.emit('SYS_MESH_REMOVE_AFTER', { id }, false);
             event_bus.emit('scene:object_removed', { id });
         }
     }
@@ -653,13 +645,13 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
                     pid,
                     name: it.name,
                     visible: it.visible,
-                    type: entity.type as ObjectTypes,
+                    type: entity.type as unknown as ObjectTypes,
                 });
             }
         });
 
         // Обновляем z-индексы для GUI контейнеров
-        list.filter(item => item.type === IObjectTypes.GUI_CONTAINER).forEach((info) => {
+        list.filter(item => item.type === ObjectTypes.GUI_CONTAINER).forEach((info) => {
             const container = get_by_id(info.id);
             if (container !== undefined) {
                 update_gui_container_children_z(container as unknown as GuiContainer);

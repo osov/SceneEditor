@@ -81,8 +81,6 @@ export const EDITOR_TOKENS = {
     Assets: Symbol('Assets'),
     /** Сервис горячих клавиш */
     Keybindings: Symbol('Keybindings'),
-    /** Мост EventBus */
-    EventBusBridge: Symbol('EventBusBridge'),
     /** Сервис UI */
     UI: Symbol('UI'),
     /** Сервис инспектора */

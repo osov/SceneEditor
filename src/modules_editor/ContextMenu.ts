@@ -224,8 +224,8 @@ function ContextMenuCreate() {
         }
     }
 
-    Services.event_bus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
-    Services.event_bus.on('SYS_INPUT_POINTER_UP', onMouseUp);
+    Services.event_bus.on('input:pointer_down', onMouseDown);
+    Services.event_bus.on('input:pointer_up', onMouseUp);
 
     return { open, isVisible };
 }

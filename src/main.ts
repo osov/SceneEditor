@@ -26,8 +26,8 @@ import type {
 import type { ICameraService } from './engine/types';
 
 // === Новые сервисы редактора ===
-import { create_keybindings_service, create_event_bus_bridge } from './editor';
-import type { IKeybindingsService, IEventBusBridge } from './editor';
+import { create_keybindings_service } from './editor';
+import type { IKeybindingsService } from './editor';
 
 // === UI модули редактора ===
 import { get_control_manager } from './modules_editor/ControlManager';
@@ -50,7 +50,6 @@ async function load_project_scene(logger: { error: (msg: string, ...args: unknow
 
 /** Глобальные сервисы для доступа из консоли */
 let keybindings_service: IKeybindingsService | undefined;
-let event_bus_bridge: IEventBusBridge | undefined;
 
 /**
  * Регистрация горячих клавиш
@@ -174,19 +173,7 @@ async function main(): Promise<void> {
         name: 'KeybindingsService',
     });
 
-    // 4. Запуск моста EventBus (для совместимости с legacy событиями если нужно)
-    event_bus_bridge = create_event_bus_bridge({
-        logger: logger.create_child('EventBusBridge'),
-        new_event_bus: event_bus,
-    });
-    event_bus_bridge.start();
-
-    // Регистрируем EventBusBridge в DI контейнере
-    container.register_singleton(TOKENS.EventBusBridge, () => event_bus_bridge!, {
-        name: 'EventBusBridge',
-    });
-
-    // 5. Загрузка проекта
+    // 4. Загрузка проекта
     await load_project_scene(logger);
 
     logger.info('SceneEditor готов к работе');
@@ -194,7 +181,6 @@ async function main(): Promise<void> {
     // Обработка закрытия
     window.addEventListener('beforeunload', () => {
         keybindings_service?.dispose();
-        event_bus_bridge?.dispose();
         shutdown();
     });
 }

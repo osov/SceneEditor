@@ -261,7 +261,7 @@ export interface IResourceService {
     del_atlas(name: string): void;
     has_texture_name(name: string, atlas?: string): boolean;
     free_texture(name: string, atlas: string): void;
-    override_atlas_texture(name: string, atlas: string, texture: Texture): void;
+    override_atlas_texture(old_atlas: string, new_atlas: string, texture_name: string): void;
 
     // === Модели и анимации ===
     load_model(path: string): Promise<Object3D>;

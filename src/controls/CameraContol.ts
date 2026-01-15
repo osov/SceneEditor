@@ -1,6 +1,6 @@
 // https://github.com/yomotsu/camera-control_orthographics
 import CameraControls from 'camera-controls';
-import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster, PerspectiveCamera } from 'three';
+import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster, PerspectiveCamera, OrthographicCamera } from 'three';
 import { CAMERA_Z, IS_CAMERA_ORTHOGRAPHIC } from '../config';
 import { createCameraPerspectiveControl } from './CameraPerspectiveControl';
 import type { IBaseMeshAndThree } from '../render_engine/types';
@@ -47,7 +47,7 @@ function CameraControlCreate() {
             Services.render.camera.position.set(0, 0, 0);
             control_perspective = createCameraPerspectiveControl(Services.render.camera as PerspectiveCamera);
             Services.render.scene.add(control_perspective.getObject());
-            Services.event_bus.on('SYS_ON_UPDATE', (data) => {
+            Services.event_bus.on('engine:update', (data) => {
                 const e = data as { dt: number };
                 control_perspective.update(e.dt * 3);
             });
@@ -56,7 +56,7 @@ function CameraControlCreate() {
             //  Services.render.scene.add(gridHelper);
         }
         else {
-            control_orthographic = new CameraControls(Services.render.camera, Services.render.renderer.domElement);
+            control_orthographic = new CameraControls(Services.render.camera as OrthographicCamera, Services.render.renderer.domElement);
             control_orthographic.mouseButtons.left = CameraControls.ACTION.NONE;
             control_orthographic.mouseButtons.middle = CameraControls.ACTION.TRUCK;
             control_orthographic.mouseButtons.right = CameraControls.ACTION.TRUCK;
@@ -67,7 +67,7 @@ function CameraControlCreate() {
             control_orthographic.addEventListener('controlend', () => save_state())
             control_orthographic.addEventListener('sleep', () => save_state());
 
-            Services.event_bus.on('SYS_ON_UPDATE', (data) => {
+            Services.event_bus.on('engine:update', (data) => {
                 const e = data as { dt: number };
                 control_orthographic.update(e.dt);
             });

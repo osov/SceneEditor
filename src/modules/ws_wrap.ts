@@ -1,9 +1,10 @@
 import { NetMessagesEditor } from "../modules_editor/modules_editor_const";
+import { Services } from '@editor/core';
 
 type NetMessages = NetMessagesEditor;
 
 export function WsWrap(on_open: () => void, on_close: () => void, on_error: () => void, on_message: (data: string|Uint8Array) => void) {
-    const logger = Log.get_with_prefix('WsWrap');
+    const logger = Services.logger;
     let client: WebSocket;
     let _is_connected = false;
     let timer: Timer | undefined;
@@ -14,17 +15,17 @@ export function WsWrap(on_open: () => void, on_close: () => void, on_error: () =
         client = new WebSocket(url);
         if (is_binary)
             client.binaryType = 'arraybuffer';
-        client.onopen = (e) => {
+        client.onopen = (_e) => {
             _is_connected = true;
             on_open();
         }
 
-        client.onclose = (e) => {
+        client.onclose = (_e) => {
             _is_connected = false;
             on_close();
         }
 
-        client.onerror = (e) => {
+        client.onerror = (_e) => {
             on_error();
         }
 

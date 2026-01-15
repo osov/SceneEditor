@@ -47,7 +47,7 @@ export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEn
         }
     }
 
-    Services.event_bus.on('SYS_INPUT_POINTER_DOWN', (e) => {
+    Services.event_bus.on('input:pointer_down', (e) => {
         if (Services.input.is_shift() && navmesh) {
             const pos = Services.camera.screen_to_world(e.x, e.y);
             const dist = vec2_distance_to(player.model.position, pos)

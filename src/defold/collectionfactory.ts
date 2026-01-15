@@ -13,7 +13,7 @@ export function collectionfactory_module() {
         url: string,
         position?: vmath.vector3,
         rotation?: vmath.quaternion,
-        properties?: any,
+        _properties?: unknown,
         scale?: vmath.vector3
     ) {
         const part = load_part_of_scene_in_pos(

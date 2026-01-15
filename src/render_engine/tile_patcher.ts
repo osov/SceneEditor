@@ -21,7 +21,7 @@ export function TilePatcher(tilemap_path: string) {
     const tilemap_name = get_file_name(tilemap_path);
     Services.resources.set_tilemap_path(tilemap_name, tilemap_path);
 
-    Services.event_bus.on('SYS_VIEW_INPUT_KEY_DOWN', (data) => {
+    Services.event_bus.on('input:key_down', (data) => {
         const e = data as { key: string };
         if (Services.input.is_control() && (e.key == 'l' || e.key == 'д')) {
             save_tilesinfo(true);

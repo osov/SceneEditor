@@ -88,19 +88,19 @@ export function create_selection_service(params: SelectionServiceParams): ISelec
             selected: [...selected_objects],
             primary: selected_objects[0] ?? null,
         });
-        // Legacy событие для совместимости с ControlManager
-        event_bus.emit('SYS_SELECTED_MESH_LIST', { list: selected_objects });
+        // Событие для совместимости с ControlManager
+        event_bus.emit('selection:mesh_list', { list: selected_objects });
     }
 
     /** Инициализация обработчиков ввода */
     function init(): void {
-        event_bus.on('SYS_INPUT_POINTER_DOWN', (e: { target: EventTarget; button: number; x: number; y: number }) => {
+        event_bus.on('input:pointer_down', (e: { target: EventTarget; button: number; x: number; y: number }) => {
             if (e.target !== Services.render.renderer.domElement) return;
             if (e.button !== 0) return;
             click_point.set(e.x, e.y);
         });
 
-        event_bus.on('SYS_INPUT_POINTER_UP', (e: { target: EventTarget; button: number; x: number; y: number }) => {
+        event_bus.on('input:pointer_up', (e: { target: EventTarget; button: number; x: number; y: number }) => {
             if (e.target !== Services.render.renderer.domElement) return;
             if (e.button !== 0) return;
             if (Services.input.is_shift()) return;
@@ -118,7 +118,7 @@ export function create_selection_service(params: SelectionServiceParams): ISelec
             handle_raycast_selection(intersects);
         });
 
-        event_bus.on('SYS_INPUT_POINTER_MOVE', (event: { x: number; y: number }) => {
+        event_bus.on('input:pointer_move', (event: { x: number; y: number }) => {
             prev_point.set(pointer.x, pointer.y);
             pointer.x = event.x;
             pointer.y = event.y;
@@ -139,7 +139,7 @@ export function create_selection_service(params: SelectionServiceParams): ISelec
         if (mesh_list.length === 0) {
             if (!Services.input.is_control()) {
                 clear();
-                event_bus.emit('SYS_UNSELECTED_MESH_LIST', {});
+                event_bus.emit('selection:cleared', {});
             }
             return;
         }

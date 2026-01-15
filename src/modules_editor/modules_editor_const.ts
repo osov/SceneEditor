@@ -1,52 +1,22 @@
 import { WatchEventType } from "fs";
-import { IBaseMeshAndThree } from "../render_engine/types";
 import { VoidMessage } from "../modules/modules_const";
 
 export type ServerCommands = AssetsCommands;
 export type ServerResponses = AssetsResponses;
 export type CommandId = keyof ServerCommands;
 
+/** Типы событий редактора - legacy тип для совместимости */
 export type _SystemMessagesEditor = {
-    SYS_INPUT_UNDO: {},
-    SYS_INPUT_SAVE: {},
-    SYS_INPUT_DBL_CLICK: {},
-    SYS_SELECTED_MESH: { mesh: IBaseMeshAndThree },
-    SYS_SELECTED_MESH_LIST: { list: IBaseMeshAndThree[] },
-    SYS_UNSELECTED_MESH_LIST: {},
-    SYS_CLEAR_SELECT_MESH_LIST: VoidMessage,
-    SYS_GRAPH_SELECTED: { list: number[] },
-    SYS_GRAPH_CHANGE_NAME: { id: number, name: string },
-    SYS_GRAPH_MOVED_TO: { pid: number, next_id: number, id_mesh_list: number[] },
-    SYS_GRAPH_CLICKED: { id: number },
-    SYS_GRAPH_REMOVE: { id: number, list: number[] },
-    SYS_GRAPH_KEY_COM_PRESSED: { id: number, list: number[], key: string | number },
-    SYS_GRAPH_ADD: { id: number, list: number[], type: string | number },
-    SYS_GRAPH_ACTIVE: { list: { id: number, visible: boolean }[], state: boolean },
-    SYS_GRAPH_VISIBLE: { list: number[], state: boolean },
-    SYS_GRAPH_DROP_IN_ASSETS: number,
-    SYS_MESH_REMOVE_BEFORE: { id: number },
-    SYS_MESH_REMOVE_AFTER: { id: number },
-    SYS_MESH_MOVED_TO: { id: number, pid: number },
-
-    SYS_FILE_UPLOADED: FileUploadedData,
-    SYS_ASSET_COPIED: { name: string, path: string, new_path: string },
-    SYS_ASSET_MOVED: { name: string, path: string, new_path: string },
-    SYS_ASSET_DELETED: { name: string, path: string },
-    SYS_CLICK_ON_ASSET: { name: string, path: string, ext: string, button: number },
-    SYS_COPY_CMD: { path: string, new_path: string },
+    /** Файл загружен */
+    FILE_UPLOADED: FileUploadedData,
+    /** Ассет скопирован */
+    ASSET_COPIED: { name: string, path: string, new_path: string },
+    /** Ассет перемещён */
+    ASSET_MOVED: { name: string, path: string, new_path: string },
+    /** Ассет удалён */
+    ASSET_DELETED: { name: string, path: string },
+    /** Новая папка */
     NEW_FOLDER_CMD: { name: string, path: string },
-    SYS_ASSETS_SELECTED_TEXTURES: { paths: string[] },
-    SYS_ASSETS_SELECTED_MATERIALS: { paths: string[] },
-    SYS_ASSETS_SELECTED_AUDIOS: { paths: string[] },
-    SYS_ASSETS_CLEAR_SELECTED: {},
-    SYS_CHANGED_ATLAS_DATA: {},
-    SYS_CHANGED_LAYER_DATA: {},
-    SYS_MATERIAL_CHANGED: TMaterialChanged,
-    SYS_MESH_MATERIAL_CHANGED: TMeshMaterialChanged,
-    SYS_HISTORY_UNDO: THistoryUndo,
-    SYS_TREE_DRAW_GRAPH: { list: unknown[] },
-    SYS_GRAPH_REDRAW: {},
-    SYS_INSPECTOR_UPDATE: {},
 };
 
 export type AssetsCommands = {
@@ -233,5 +203,6 @@ export enum HistoryOwner {
     TEXT_CONTROL,
     SCENE_CONTROL,
     ACTIONS_CONTROL,
-    COMPONENT
+    COMPONENT,
+    INSPECTOR_CONTROL
 };

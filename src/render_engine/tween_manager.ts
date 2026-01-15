@@ -25,7 +25,7 @@ export function TweenManagerModule() {
     const mesh_properties_to_tween: TDictionary<TDictionary<Tween>> = {};
 
     function init() {
-        Services.event_bus.on('SYS_ON_UPDATE', () => {
+        Services.event_bus.on('engine:update', () => {
             group.update();
         });
     }

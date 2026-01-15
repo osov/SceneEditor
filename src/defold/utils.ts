@@ -20,7 +20,7 @@ export function hex2rgba(hex: string, alpha = 1) {
             tonumber("0x" + hex.substr(2, 2))! / 255,
             tonumber("0x" + hex.substr(4, 2))! / 255, alpha);
     else {
-        Services.logger.error(false, 'hex not correct:' + hex);
+        Services.logger.error('hex not correct:' + hex);
         return vmath.vector4();
     }
 }
@@ -298,7 +298,7 @@ export function uh_to_id(uh: string | hash): number {
     if (typeof uh !== 'string' && (uh as any).id != undefined) {
         return (uh as any).id;
     }
-    return Services.scene.get_id_by_url(uh as string);
+    return Services.scene.get_id_by_url(uh as string) ?? -1;
 }
 
 export function convert_defold_blend_mode_to_threejs(blend_mode: any) {

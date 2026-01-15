@@ -10,6 +10,7 @@ import { timer_module } from "./timer";
 import { sound_module } from "./sound";
 import { xmath_module } from "./extension/xmath";
 import { gui_module } from "./gui";
+import { Services } from '@editor/core';
 
 declare global {
     function tonumber(e: any, base?: number): number | undefined;

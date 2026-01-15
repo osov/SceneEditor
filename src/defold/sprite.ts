@@ -1,4 +1,4 @@
-import { IBaseEntityAndThree, IObjectTypes } from "@editor/render_engine/types";
+import { IBaseEntityAndThree, IBaseMeshAndThree, IObjectTypes } from "@editor/render_engine/types";
 import { uh_to_id } from "./utils";
 import { Services } from '@editor/core';
 
@@ -14,8 +14,8 @@ export function sprite_module() {
     function play_flipbook(
         url: string | hash,
         animation_id: string,
-        complete_function?: (self: IBaseEntityAndThree, message_id: string, message: any) => void,
-        options?: {
+        _complete_function?: (self: IBaseEntityAndThree, message_id: string, message: any) => void,
+        _options?: {
             offset?: number,
             playback_rate?: number
         }
@@ -31,8 +31,9 @@ export function sprite_module() {
             return;
         }
 
-        const info = mesh.get_texture();
-        mesh.set_texture(animation_id, info[1]);
+        const sprite = mesh as IBaseMeshAndThree;
+        const info = sprite.get_texture();
+        sprite.set_texture(animation_id, info[1]);
     }
 
     function set_hflip(url: string | hash, flip: boolean) {

@@ -16,7 +16,7 @@ export function CmpMover(cmp_mesh: EntityBase) {
 
         setTimeout(() => {
             const base_pos = cmp_mesh.parent!.position.clone();
-            Services.event_bus.on('SYS_ON_UPDATE', (data) => {
+            Services.event_bus.on('engine:update', (data) => {
                 const e = data as { dt: number };
                 p1.x = base_pos.x + config.p1.x;
                 p1.y = base_pos.y + config.p1.y;

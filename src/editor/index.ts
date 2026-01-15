@@ -40,13 +40,6 @@ export {
     type IKeybindingsService,
 } from './KeybindingsService';
 
-// EventBus Bridge
-export {
-    create_event_bus_bridge,
-    type EventBusBridgeParams,
-    type IEventBusBridge,
-} from './EventBusBridge';
-
 // Assets
 export {
     create_asset_service,

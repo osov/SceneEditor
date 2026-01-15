@@ -119,7 +119,7 @@ function SizeControlCreate() {
         slice_box_range.layers.set(layer_control);
         scene.add(slice_box_range)
 
-        Services.event_bus.on('SYS_VIEW_INPUT_KEY_DOWN', (data) => {
+        Services.event_bus.on('input:key_down', (data) => {
             const e = data as { target: EventTarget };
             if (!is_active) return;
             if (e.target != Services.render.renderer.domElement)
@@ -139,7 +139,7 @@ function SizeControlCreate() {
 
         })
 
-        Services.event_bus.on('SYS_VIEW_INPUT_KEY_UP', () => {
+        Services.event_bus.on('input:key_up', () => {
             if (!is_active) return;
             if (!Services.input.is_shift()) {
                 is_selected_anchor = false;
@@ -150,7 +150,7 @@ function SizeControlCreate() {
         })
 
         // pivots/anchor logic
-        Services.event_bus.on('SYS_INPUT_POINTER_UP', (data) => {
+        Services.event_bus.on('input:pointer_up', (data) => {
             const e = data as { button: number; x: number; y: number };
             if (!is_active) return;
             if (e.button != 0)
@@ -211,7 +211,7 @@ function SizeControlCreate() {
         scene.add(debug_center);
 
 
-        Services.event_bus.on('SYS_INPUT_POINTER_DOWN', (data) => {
+        Services.event_bus.on('input:pointer_down', (data) => {
             const e = data as { target: EventTarget; button: number; x: number; y: number };
             if (e.target != Services.render.renderer.domElement)
                 return;
@@ -253,7 +253,7 @@ function SizeControlCreate() {
                 is_selected_anchor = true;
         });
 
-        Services.event_bus.on('SYS_INPUT_POINTER_UP', (data) => {
+        Services.event_bus.on('input:pointer_up', (data) => {
             const e = data as { button: number };
             if (!is_active) return;
             if (e.button != 0)
@@ -336,7 +336,7 @@ function SizeControlCreate() {
             }
         });
 
-        Services.event_bus.on('SYS_INPUT_POINTER_MOVE', (data) => {
+        Services.event_bus.on('input:pointer_move', (data) => {
             const event = data as { x: number; y: number };
             if (!is_active) return;
             prev_point.set(pointer.x, pointer.y);
@@ -444,7 +444,7 @@ function SizeControlCreate() {
                         if (!is_select) {
                             //log('Unselect', offset_move, WORLD_SCALAR);
                             if (!Services.input.is_control())
-                                Services.event_bus.emit('SYS_UNSELECTED_MESH_LIST', {});
+                                Services.event_bus.emit('selection:cleared', {});
                             return;
                         }
                     }
@@ -471,7 +471,7 @@ function SizeControlCreate() {
 
         // Обработчик undo теперь не нужен - логика в Services.history.push()
 
-        Services.event_bus.on('SYS_ON_UPDATE_END', () => {
+        Services.event_bus.on('engine:update_end', () => {
             draw();
         });
     }

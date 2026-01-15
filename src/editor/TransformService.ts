@@ -28,7 +28,7 @@ interface TransformableObject extends ISceneObject {
 
 /** Создать TransformService */
 export function create_transform_service(params: TransformServiceParams): ITransformService {
-    const { logger, event_bus, render_service, history_service, selection_service } = params;
+    const { logger, event_bus, render_service, history_service, selection_service: _selection_service } = params;
 
     // Внутреннее состояние
     let current_mode: TransformMode = 'translate';
@@ -201,8 +201,8 @@ export function create_transform_service(params: TransformServiceParams): ITrans
             },
         });
 
-        // Также эмитим legacy событие
-        event_bus.emit('SYS_HISTORY_UNDO', {
+        // Также эмитим событие для InspectorControl
+        event_bus.emit('history:undone', {
             type: 'MESH_TRANSLATE',
             data: pos_data,
             owner: HistoryOwner.TRANSFORM_CONTROL,
@@ -274,8 +274,6 @@ export function create_transform_service(params: TransformServiceParams): ITrans
         apply_mode_settings(mode);
         logger.debug(`Режим трансформации: ${mode}`);
         event_bus.emit('transform:mode_changed', { mode });
-        // Legacy событие для совместимости
-        event_bus.emit('SYS_TRANSFORM_MODE_CHANGED', { mode });
     }
 
     function apply_mode_settings(mode: TransformMode): void {

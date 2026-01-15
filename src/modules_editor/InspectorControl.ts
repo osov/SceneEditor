@@ -49,7 +49,7 @@ ID - число, не изменяемое | mesh_data.id
 Slice9* vec2 | метод get_slice/set_slice, минимум 0
  
 Текст** string | метод set_text/свойство text для чтения
-Шрифт** string(выпадающий список из ключей от Services.resources.get_all_fonts()) | метод set_font/свойство parameters.font для чтения
+Шрифт** string(выпадающий список из ключей от generateFontOptions()) | метод set_font/свойство parameters.font для чтения
 Размер шрифта** int | шаг 1, минимум 8 делаем как в дефолде, как бы управляем тут числом, но по факту меняем scale пропорционально, а отталкиваться от стартового значения из свойства fontSize, скажем шрифт 32 по умолчанию. и пишем тут что сейчас стоит скажем 32, но если начнем крутить то скейлим уже, но свойство не трогаем
 Выравнивание** string выпадающий из списка - [center, left, right, justify]/[Центр, Слева, Справа, По ширине] | свойство textAlign
  
@@ -340,30 +340,30 @@ function InspectorControlCreate() {
     }
 
     function subscribeEvents() {
-        Services.event_bus.on('SYS_SELECTED_MESH_LIST', (data) => {
+        Services.event_bus.on('selection:mesh_list', (data) => {
             const e = data as { list: IBaseMeshAndThree[] };
             set_selected_list(e.list);
         });
 
-        Services.event_bus.on('SYS_UNSELECTED_MESH_LIST', () => {
+        Services.event_bus.on('selection:cleared', () => {
             clear();
         });
 
-        Services.event_bus.on('SYS_ASSETS_SELECTED_TEXTURES', (data) => {
+        Services.event_bus.on('assets:textures_selected', (data) => {
             const e = data as { paths: string[] };
             set_selected_textures(e.paths);
         });
 
-        Services.event_bus.on('SYS_ASSETS_SELECTED_MATERIALS', (data) => {
+        Services.event_bus.on('assets:materials_selected', (data) => {
             const e = data as { paths: string[] };
             set_selected_materials(e.paths);
         });
 
-        Services.event_bus.on('SYS_ASSETS_CLEAR_SELECTED', () => {
+        Services.event_bus.on('assets:selection_cleared', () => {
             clear();
         });
 
-        Services.event_bus.on('SYS_CHANGED_ATLAS_DATA', () => {
+        Services.event_bus.on('assets:atlas_changed', () => {
             if (_selected_textures.length > 0) {
                 // NOTE: пока просто пересоздаем поля занаво, так как нет возможности обновить параметры биндинга
                 set_selected_textures(_selected_textures);
@@ -371,7 +371,7 @@ function InspectorControlCreate() {
         });
 
         // Обработчик undo для MESH_NAME из InspectorControl
-        Services.event_bus.on('SYS_HISTORY_UNDO', (data) => {
+        Services.event_bus.on('history:undone', (data) => {
             const event = data as { type: string; data: unknown[]; owner?: number };
             // Обрабатываем только события без owner (созданные InspectorControl)
             // или с owner === undefined
@@ -490,7 +490,7 @@ function InspectorControlCreate() {
 
             const material_name = get_file_name(get_basename(path));
             const material = Services.resources.get_material_info(material_name);
-            if (material === null) return result;
+            if (material === undefined) return result;
 
             result.data.push({ name: Property.VERTEX_PROGRAM, data: material.vertexShader });
             result.data.push({ name: Property.FRAGMENT_PROGRAM, data: material.fragmentShader });
@@ -529,7 +529,7 @@ function InspectorControlCreate() {
                             const property = group.property_list.find((property) => property.name == Property.UNIFORM_RANGE);
                             if (!property) return;
                             property.title = key;
-                            const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.RANGE];
+                            const params = material.uniforms[key].params as unknown as MaterialUniformParams[MaterialUniformType.RANGE];
                             property.params = {
                                 min: params.min,
                                 max: params.max,
@@ -544,7 +544,7 @@ function InspectorControlCreate() {
                             const property = group.property_list.find((property) => property.name == Property.UNIFORM_VEC2);
                             if (!property) return;
                             property.title = key;
-                            const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.VEC2];
+                            const params = material.uniforms[key].params as unknown as MaterialUniformParams[MaterialUniformType.VEC2];
                             property.params = {
                                 x: {
                                     min: params.x.min,
@@ -566,7 +566,7 @@ function InspectorControlCreate() {
                             const property = group.property_list.find((property) => property.name == Property.UNIFORM_VEC3);
                             if (!property) return;
                             property.title = key;
-                            const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.VEC3];
+                            const params = material.uniforms[key].params as unknown as MaterialUniformParams[MaterialUniformType.VEC3];
                             property.params = {
                                 x: {
                                     min: params.x.min,
@@ -593,7 +593,7 @@ function InspectorControlCreate() {
                             const property = group.property_list.find((property) => property.name == Property.UNIFORM_VEC4);
                             if (!property) return;
                             property.title = key;
-                            const params = material.uniforms[key].params as MaterialUniformParams[MaterialUniformType.VEC4];
+                            const params = material.uniforms[key].params as unknown as MaterialUniformParams[MaterialUniformType.VEC4];
                             property.params = {
                                 x: {
                                     min: params.x.min,
@@ -802,7 +802,7 @@ function InspectorControlCreate() {
         _config.forEach((group) => {
             const property = group.property_list.find((property) => property.name == Property.FONT);
             if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = Services.resources.get_all_fonts();
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateFontOptions();
         });
     }
 
@@ -1776,7 +1776,7 @@ function InspectorControlCreate() {
             }
         });
 
-        Services.event_bus.emit("SYS_GRAPH_ACTIVE", {list: ids, state});
+        Services.event_bus.emit("hierarchy:active", {list: ids, state});
     }
 
     function saveVisible(ids: number[]) {
@@ -1827,7 +1827,7 @@ function InspectorControlCreate() {
             mesh.set_visible(state);
         });
 
-        Services.event_bus.emit("SYS_GRAPH_VISIBLE", {list: info.ids, state});
+        Services.event_bus.emit("hierarchy:visibility_changed", {list: info.ids, state});
     }
 
     function savePosition(ids: number[]) {
@@ -3131,9 +3131,9 @@ function InspectorControlCreate() {
             data: { items: materials, owner: HistoryOwner.INSPECTOR_CONTROL },
             undo: (d) => {
                 for (const item of d.items as MaterialEventData[]) {
-                    const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
+                    const m = Services.scene.get_by_id(item.id_mesh) as (IBaseMeshAndThree & { set_material(name: string): void }) | undefined;
                     if (m !== undefined) {
-                        Services.resources.set_material_by_name(m, item.material);
+                        m.set_material(item.material);
                     }
                 }
             },
@@ -3154,7 +3154,7 @@ function InspectorControlCreate() {
 
             const material_name = info.data.event.value as string;
             const material_info = Services.resources.get_material_info(material_name);
-            if (material_info !== null) {
+            if (material_info !== undefined) {
                 (mesh as unknown as { material: unknown }).material = material_info.instances[material_info.origin];
             }
         });
@@ -3164,13 +3164,13 @@ function InspectorControlCreate() {
         const program = info.data.event.value as string;
         info.ids.forEach((id) => {
             const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === null) return;
+            if (material === undefined) return;
             material.vertexShader = program;
             const instance = material.instances[material.origin];
             if (instance !== undefined) {
                 instance.needsUpdate = true;
             }
-            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('materials:changed', {
                 material_name: material.name,
                 property: 'vertexShader',
                 value: program
@@ -3182,13 +3182,13 @@ function InspectorControlCreate() {
         const program = info.data.event.value as string;
         info.ids.forEach((id) => {
             const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === null) return;
+            if (material === undefined) return;
             material.fragmentShader = program;
             const instance = material.instances[material.origin];
             if (instance !== undefined) {
                 instance.needsUpdate = true;
             }
-            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('materials:changed', {
                 material_name: material.name,
                 property: 'fragmentShader',
                 value: program
@@ -3201,7 +3201,7 @@ function InspectorControlCreate() {
         const texture_name = (info.data.event.value as string).split('/')[1];
         info.ids.forEach((id) => {
             const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === null) return;
+            if (material === undefined) return;
 
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
@@ -3211,7 +3211,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('materials:changed', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -3222,7 +3222,7 @@ function InspectorControlCreate() {
     function updateUniformFloat(info: ChangeInfo) {
         info.ids.forEach((id) => {
             const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === null) return;
+            if (material === undefined) return;
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
                 const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
@@ -3231,7 +3231,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('materials:changed', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -3242,7 +3242,7 @@ function InspectorControlCreate() {
     function updateUniformRange(info: ChangeInfo) {
         info.ids.forEach((id) => {
             const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === null) return;
+            if (material === undefined) return;
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
                 const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
@@ -3251,7 +3251,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('materials:changed', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -3262,7 +3262,7 @@ function InspectorControlCreate() {
     function updateUniformVec2(info: ChangeInfo) {
         info.ids.forEach((id) => {
             const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === null) return;
+            if (material === undefined) return;
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
                 const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
@@ -3271,7 +3271,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('materials:changed', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -3282,7 +3282,7 @@ function InspectorControlCreate() {
     function updateUniformVec3(info: ChangeInfo) {
         info.ids.forEach((id) => {
             const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === null) return;
+            if (material === undefined) return;
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
                 const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
@@ -3291,7 +3291,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('materials:changed', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -3302,7 +3302,7 @@ function InspectorControlCreate() {
     function updateUniformVec4(info: ChangeInfo) {
         info.ids.forEach((id) => {
             const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === null) return;
+            if (material === undefined) return;
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
                 const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
@@ -3311,7 +3311,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('materials:changed', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -3322,7 +3322,7 @@ function InspectorControlCreate() {
     function updateUniformColor(info: ChangeInfo) {
         info.ids.forEach((id) => {
             const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === null) return;
+            if (material === undefined) return;
             const color = new Color(info.data.event.value as string);
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
@@ -3332,7 +3332,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('materials:changed', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -3626,6 +3626,14 @@ function generateAtlasOptions() {
     return data;
 }
 
+function generateFontOptions() {
+    const data: {[key in string]: string} = {};
+    Services.resources.get_all_fonts().forEach((font) => {
+        data[font] = font;
+    });
+    return data;
+}
+
 export function getDefaultInspectorConfig() {
 
     return [
@@ -3789,7 +3797,7 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 { name: Property.TEXT, title: 'Текст', type: PropertyType.LOG_DATA },
                 {
-                    name: Property.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: Services.resources.get_all_fonts()
+                    name: Property.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: generateFontOptions()
                 },
                 {
                     name: Property.FONT_SIZE, title: 'Размер шрифта', type: PropertyType.NUMBER, params: {

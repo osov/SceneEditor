@@ -6,7 +6,7 @@
  */
 
 import type { IDisposable, ILogger, IEventBus } from '../core/di/types';
-import type { IBaseEntityData } from '../render_engine/types';
+import type { BaseEntityData } from '../core/render/types';
 import { Services } from '@editor/core';
 import { try_get_client_api } from '../modules_editor/ClientAPI';
 import { try_get_asset_control } from '../controls/AssetControl';
@@ -30,7 +30,7 @@ export interface AssetDataResult extends AssetOperationResult {
 
 /** Результат загрузки сцены */
 export interface SceneLoadResult extends AssetOperationResult {
-    scene_data?: IBaseEntityData[];
+    scene_data?: BaseEntityData[];
 }
 
 /** Позиция для загрузки части сцены */
@@ -85,10 +85,10 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
         try {
             const response = await client_api.get_data(path);
             if (response.result !== 1 || response.data === undefined) {
-                return { success: false, error: response.error ?? 'Ошибка загрузки' };
+                return { success: false, error: response.message ?? 'Ошибка загрузки' };
             }
 
-            const scene_data = JSON.parse(response.data) as IBaseEntityData[];
+            const scene_data = JSON.parse(response.data) as BaseEntityData[];
 
             Services.scene.load_scene(scene_data);
 
@@ -119,7 +119,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
 
             const response = await client_api.save_data(path, json_data);
             if (response.result !== 1) {
-                return { success: false, error: response.error ?? 'Ошибка сохранения' };
+                return { success: false, error: response.message ?? 'Ошибка сохранения' };
             }
 
             _current_scene_path = path;
@@ -146,7 +146,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
         try {
             const response = await client_api.get_data(path);
             if (response.result !== 1 || response.data === undefined) {
-                return { success: false, error: response.error ?? 'Ошибка чтения' };
+                return { success: false, error: response.message ?? 'Ошибка чтения' };
             }
 
             return { success: true, data: response.data };
@@ -168,7 +168,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
         try {
             const response = await client_api.save_data(path, data);
             if (response.result !== 1) {
-                return { success: false, error: response.error ?? 'Ошибка сохранения' };
+                return { success: false, error: response.message ?? 'Ошибка сохранения' };
             }
 
             event_bus.emit('asset:file_saved', { path });
@@ -191,7 +191,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
         try {
             const response = await client_api.new_folder(path, name);
             if (response.result !== 1) {
-                return { success: false, error: response.error ?? 'Ошибка создания папки' };
+                return { success: false, error: response.message ?? 'Ошибка создания папки' };
             }
 
             event_bus.emit('asset:folder_created', { path: `${path}/${name}` });
@@ -214,7 +214,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
         try {
             const response = await client_api.remove(path);
             if (response.result !== 1) {
-                return { success: false, error: response.error ?? 'Ошибка удаления' };
+                return { success: false, error: response.message ?? 'Ошибка удаления' };
             }
 
             event_bus.emit('asset:deleted', { path });
@@ -237,7 +237,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
         try {
             const response = await client_api.rename(old_path, new_path);
             if (response.result !== 1) {
-                return { success: false, error: response.error ?? 'Ошибка переименования' };
+                return { success: false, error: response.message ?? 'Ошибка переименования' };
             }
 
             event_bus.emit('asset:renamed', { old_path, new_path });
@@ -260,7 +260,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
         try {
             const response = await client_api.copy(source, destination);
             if (response.result !== 1) {
-                return { success: false, error: response.error ?? 'Ошибка копирования' };
+                return { success: false, error: response.message ?? 'Ошибка копирования' };
             }
 
             event_bus.emit('asset:copied', { source, destination });
@@ -283,7 +283,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
         try {
             const response = await client_api.move(source, destination);
             if (response.result !== 1) {
-                return { success: false, error: response.error ?? 'Ошибка перемещения' };
+                return { success: false, error: response.message ?? 'Ошибка перемещения' };
             }
 
             event_bus.emit('asset:moved', { source, destination });
@@ -301,7 +301,13 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
             logger.warn('AssetControl не инициализирован');
             return undefined;
         }
-        return asset_control.loadPartOfSceneInPos(path, position);
+
+        // Конвертируем LoadPartPosition в Vector3 если указана позиция
+        const vec3_position = position !== undefined
+            ? { x: position.x, y: position.y, z: position.z ?? 0 } as import('three').Vector3
+            : undefined;
+
+        return asset_control.loadPartOfSceneInPos(path, vec3_position);
     }
 
     function dispose(): void {

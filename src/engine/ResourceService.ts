@@ -130,8 +130,8 @@ export function create_resource_service(params: ResourceServiceParams): IResourc
         return require_resource_manager().free_texture(name, atlas);
     }
 
-    function override_atlas_texture(name: string, atlas: string, texture: Texture): void {
-        return require_resource_manager().override_atlas_texture(name, atlas, texture);
+    function override_atlas_texture(old_atlas: string, new_atlas: string, texture_name: string): void {
+        return require_resource_manager().override_atlas_texture(old_atlas, new_atlas, texture_name);
     }
 
     // === Модели и анимации ===

@@ -1,4 +1,4 @@
-import { MessageId } from "@editor/modules/modules_const";
+import type { MessageId as _MessageId } from "@editor/modules/modules_const";
 import { Services } from '@editor/core';
 
 declare global {
@@ -10,7 +10,7 @@ declare global {
 
 export function msg_module() {
     function post(receiver: string | hash, message_id: string, message?: unknown) {
-        Services.event_bus.emit(message_id as MessageId, {
+        Services.event_bus.emit(message_id, {
             receiver,
             message
         });

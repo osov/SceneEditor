@@ -4,99 +4,106 @@
 
 SceneEditor использует единый EventBus из DI системы (`src/core/events/EventBus.ts`).
 
-`EventBusBridge` обеспечивает двунаправленную трансляцию имён событий между:
-- **Legacy именами** (`SYS_*`) - для обратной совместимости с существующим кодом
-- **Новыми именами** (`namespace:event`) - рекомендуемый формат
+Все события используют формат `namespace:event` для ясности и группировки.
 
-## Новые события (рекомендуемые)
+## События
 
-### Выделение
+### Ввод (input:*)
 | Событие | Данные | Описание |
 |---------|--------|----------|
-| `selection:changed` | `{ selected: ISceneObject[] }` | Изменён список выделенных объектов |
+| `input:key_down` | `{ key: string, target: EventTarget \| null }` | Клавиша нажата |
+| `input:key_up` | `{ key: string, target: EventTarget \| null }` | Клавиша отпущена |
+| `input:pointer_move` | `{ x: number, y: number, offset_x: number, offset_y: number, target: EventTarget \| null }` | Указатель перемещён |
+| `input:pointer_down` | `{ x: number, y: number, offset_x: number, offset_y: number, button: number, target: EventTarget \| null }` | Кнопка мыши нажата |
+| `input:pointer_up` | `{ x: number, y: number, offset_x: number, offset_y: number, button: number, target: EventTarget \| null }` | Кнопка мыши отпущена |
+| `input:dblclick` | `{ x: number, y: number, offset_x: number, offset_y: number, button: number, target: EventTarget \| null }` | Двойной клик |
+
+### Выделение (selection:*)
+| Событие | Данные | Описание |
+|---------|--------|----------|
+| `selection:mesh_list` | `{ list: IBaseMeshAndThree[] }` | Список выделенных мешей изменён |
 | `selection:cleared` | `{}` | Выделение очищено |
 
-### Иерархия
+### Иерархия (hierarchy:*)
 | Событие | Данные | Описание |
 |---------|--------|----------|
-| `hierarchy:selected` | `{ id: number }` | Выбран узел в иерархии |
-| `hierarchy:moved` | `{ ids: number[], parent_id: number, next_id: number }` | Объекты перемещены |
+| `hierarchy:selected` | `{ list: number[] }` | Выбраны узлы в иерархии |
+| `hierarchy:clicked` | `{ id: number }` | Клик по узлу в дереве |
+| `hierarchy:moved` | `{ pid: number, next_id: number, id_mesh_list: number[] }` | Объекты перемещены |
 | `hierarchy:renamed` | `{ id: number, name: string }` | Объект переименован |
-| `hierarchy:visibility_changed` | `{ id: number, visible: boolean }` | Видимость изменена |
-| `hierarchy:refresh_requested` | `{}` | Запрос обновления дерева |
+| `hierarchy:visibility_changed` | `{ list: number[], state: boolean }` | Видимость изменена |
+| `hierarchy:active` | `{ list: { id: number, visible: boolean }[], state: boolean }` | Активность изменена |
 
-### Трансформация
+### Трансформация (transform:*)
 | Событие | Данные | Описание |
 |---------|--------|----------|
 | `transform:mode_changed` | `{ mode: 'translate' \| 'rotate' \| 'scale' }` | Режим трансформации изменён |
-| `transform:space_changed` | `{ space: 'local' \| 'world' }` | Пространство изменено |
-| `transform:translate` | `{ objects: ISceneObject[], delta: Vector3 }` | Перемещение объектов |
-| `transform:rotate` | `{ objects: ISceneObject[], delta: Quaternion }` | Вращение объектов |
-| `transform:scale` | `{ objects: ISceneObject[], delta: Vector3 }` | Масштабирование объектов |
+| `transform:started` | `{}` | Трансформация начата |
+| `transform:ended` | `{}` | Трансформация завершена |
 
-### История
+### История (history:*)
 | Событие | Данные | Описание |
 |---------|--------|----------|
-| `history:undo_requested` | `{}` | Запрос отмены |
-| `history:undone` | `{ type: string }` | Отмена выполнена |
+| `history:undone` | `{ type: string, data: any[], owner: number }` | Отмена выполнена |
 | `history:pushed` | `{ type: string, description: string }` | Действие добавлено в историю |
 
-### Сцена
+### Сцена (scene:*)
 | Событие | Данные | Описание |
 |---------|--------|----------|
-| `scene:object_added` | `{ object: ISceneObject }` | Объект добавлен |
+| `scene:object_added` | `{ id: number, list: number[], type: string \| number }` | Объект добавлен |
+| `scene:object_removing` | `{ id: number }` | Объект удаляется |
 | `scene:object_removed` | `{ id: number }` | Объект удалён |
-| `scene:save_requested` | `{}` | Запрос сохранения |
 
-### Ассеты
+### Движок (engine:*)
 | Событие | Данные | Описание |
 |---------|--------|----------|
-| `assets:clicked` | `{ asset: AssetInfo }` | Клик по ассету |
-| `assets:textures_selected` | `{ textures: TextureInfo[] }` | Выбраны текстуры |
-| `assets:materials_selected` | `{ materials: MaterialInfo[] }` | Выбраны материалы |
+| `engine:update` | `{ dt: number }` | Начало кадра обновления |
+| `engine:update_end` | `{ dt: number }` | Конец кадра обновления |
 
-### Инспектор
+### Ассеты (assets:*)
 | Событие | Данные | Описание |
 |---------|--------|----------|
-| `inspector:update_requested` | `{}` | Запрос обновления инспектора |
+| `assets:textures_selected` | `{ paths: string[] }` | Выбраны текстуры |
+| `assets:materials_selected` | `{ paths: string[] }` | Выбраны материалы |
+| `assets:selection_cleared` | `{}` | Выбор ассетов очищен |
+| `assets:atlas_changed` | `{}` | Атлас изменён |
+| `assets:layer_changed` | `{}` | Слой изменён |
 
-### Горячие клавиши
+### Материалы (materials:*)
+| Событие | Данные | Описание |
+|---------|--------|----------|
+| `materials:changed` | `{ material_name: string, is_uniform: boolean, property: string, value: any }` | Материал изменён |
+
+### Инспектор (inspector:*)
+| Событие | Данные | Описание |
+|---------|--------|----------|
+| `inspector:update` | `{}` | Запрос обновления инспектора |
+
+### Редактор (editor:*)
+| Событие | Данные | Описание |
+|---------|--------|----------|
+| `editor:save` | `{}` | Запрос сохранения |
+
+### Горячие клавиши (keybinding:*)
 | Событие | Данные | Описание |
 |---------|--------|----------|
 | `keybinding:triggered` | `{ key: string, binding: Keybinding }` | Горячая клавиша нажата |
-| `keybinding:context_changed` | `{ context: KeybindingContext }` | Контекст изменён |
-
-## Legacy события (для совместимости)
-
-| Legacy событие | Новое событие |
-|----------------|---------------|
-| `SYS_SELECTED_MESH_LIST` | `selection:changed` |
-| `SYS_CLEAR_SELECT_MESH_LIST` | `selection:cleared` |
-| `SYS_GRAPH_ADD` | `scene:object_added` |
-| `SYS_GRAPH_REMOVE` | `scene:object_removed` |
-| `SYS_GRAPH_MOVED_TO` | `hierarchy:moved` |
-| `SYS_INPUT_UNDO` | `history:undo_requested` |
-| `SYS_INPUT_SAVE` | `scene:save_requested` |
 
 ## Использование
 
-### Подписка на новые события
+### Подписка на события
 ```typescript
-const { event_bus } = await bootstrap({ ... });
+import { Services } from '@editor/core';
 
-event_bus.on('selection:changed', (data) => {
-    console.log('Выбрано:', data.selected);
+Services.event_bus.on('selection:mesh_list', (data) => {
+    console.log('Выбрано:', data.list);
 });
 ```
 
 ### Отправка событий
 ```typescript
-event_bus.emit('transform:mode_changed', { mode: 'rotate' });
+Services.event_bus.emit('transform:mode_changed', { mode: 'rotate' });
 ```
-
-### Через EventBusBridge
-Мост автоматически транслирует имена событий на едином EventBus.
-Legacy код, использующий `SYS_*` события, продолжит работать без изменений.
 
 ## Горячие клавиши
 
@@ -115,65 +122,52 @@ Legacy код, использующий `SYS_*` события, продолжи
 | `Ctrl+C` | Копировать |
 | `Ctrl+X` | Вырезать |
 | `Ctrl+V` | Вставить |
-| `Ctrl+B` | Вставить как дочерний |
 | `Ctrl+D` | Дублировать |
 | `Delete` | Удалить |
+| `Ctrl+A` | Выделить всё |
 
 ### Навигация
 | Клавиша | Действие |
 |---------|----------|
 | `F` | Фокус на объекте |
-| `F2` | Переименовать |
-| `I` | Подсветить идентичные |
 | `Escape` | Отмена операции |
 
 ### История и сохранение
 | Клавиша | Действие |
 |---------|----------|
-| `Ctrl+Z` | Отменить (HistoryControl.undo) |
-| `Ctrl+S` | Сохранить (SYS_INPUT_SAVE) |
-
-## Статус миграции
-
-### Мигрированные контролы
-| Контрол | Статус | Заметки |
-|---------|--------|---------|
-| `ViewControl` | ✅ Удалён | Все клавиши в KeybindingsService |
-| `InputManager` | ✅ Частично | Ctrl+Z/S в KeybindingsService |
-
-### Legacy контролы (интеграция через EventBusBridge)
-| Контрол | События | Заметки |
-|---------|---------|---------|
-| `SelectControl` | `selection:changed`, `selection:cleared` | Raycast + выделение |
-| `ActionsControl` | Вызывается из KeybindingsService | Copy/paste/delete |
-| `HistoryControl` | `history:pushed`, `history:undone` | Undo с типизацией |
-| `TreeControl` | `hierarchy:*` | Дерево иерархии |
-| `TransformControl` | `transform:*` | Gizmo трансформации |
+| `Ctrl+Z` | Отменить |
+| `Ctrl+Y` | Повторить |
+| `Ctrl+S` | Сохранить |
 
 ## DI Сервисы
 
-Все сервисы доступны через DI контейнер и объект `Services`:
+Все сервисы доступны через объект `Services`:
 
-### Зарегистрированные сервисы
-| Токен | Сервис | Описание |
-|-------|--------|----------|
-| `TOKENS.Render` | `RenderService` | 3D рендеринг (Three.js) |
-| `TOKENS.Scene` | `SceneService` | Управление сценой |
-| `TOKENS.Selection` | `SelectionService` | Выделение объектов |
-| `TOKENS.History` | `HistoryService` | История изменений |
-| `TOKENS.Transform` | `TransformService` | Трансформация объектов |
-| `TOKENS.Resources` | `ResourceService` | Управление ресурсами |
-
-### Использование через Services
 ```typescript
 import { Services } from '@editor/core';
 
-// Использование через глобальный объект Services
-const selected = Services.selection.selected;
-Services.scene.create('go', { name: 'test' });
-Services.history.undo();
+// Логирование
 Services.logger.debug('Отладочное сообщение');
+
+// Шина событий
 Services.event_bus.emit('my:event', { data: 123 });
+
+// Ввод
+Services.input.is_control(); // Ctrl нажат?
+Services.input.is_shift();   // Shift нажат?
+
+// Сцена
+Services.scene.get_by_id(123);
+Services.scene.create('go', { name: 'test' });
+
+// Рендеринг
+Services.render.scene;       // Three.js Scene
+Services.render.camera;      // Three.js Camera
+Services.render.renderer;    // Three.js WebGLRenderer
+
+// Время
+Services.time.dt;            // Delta time
+Services.time.elapsed;       // Общее время
 ```
 
 ### Использование через DI контейнер

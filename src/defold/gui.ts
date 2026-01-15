@@ -2,6 +2,7 @@ import { rgbToHex } from "@editor/modules/utils";
 import { is_base_mesh } from "@editor/render_engine/helpers/utils";
 import { GuiBox, GuiText } from "@editor/render_engine/objects/sub_types";
 import { IBaseEntityAndThree, IObjectTypes } from "@editor/render_engine/types";
+import { ObjectTypes } from "@editor/core/render/types";
 import { Quaternion, Vector3 } from "three";
 import { animate_logic, cancel_animations_logic, hex2rgba, PLAYBACK_LOOP_BACKWARD, PLAYBACK_LOOP_FORWARD, PLAYBACK_ONCE_BACKWARD, PLAYBACK_ONCE_FORWARD, PLAYBACK_ONCE_PINGPONG, PLAYBACK_LOOP_PINGPONG, EASING_LINEAR, EASING_INQUART, EASING_INQUAD, EASING_OUTQUART, EASING_OUTQUAD, EASING_OUTQUINT, EASING_INOUTQUAD, EASING_INQUINT, EASING_INOUTQUART, EASING_INOUTQUINT, EASING_OUTCUBIC, EASING_INOUTCUBIC, EASING_OUTSINE, EASING_INSINE, EASING_INCUBIC, EASING_INOUTSINE, EASING_OUTCIRC, EASING_INOUTCIRC, EASING_INOUTEXPO, EASING_INCIRC, EASING_OUTBACK, EASING_INBACK, EASING_INOUTELASTIC, EASING_INOUTBACK, EASING_INEXPO, EASING_OUTEXPO, EASING_INELASTIC, EASING_OUTELASTIC, EASING_INBOUNCE, EASING_OUTBOUNCE, EASING_INOUTBOUNCE, get_nested_property, set_nested_property, convert_defold_blend_mode_to_threejs, convert_threejs_blend_mode_to_defold, convert_defold_pivot_to_threejs, convert_threejs_pivot_to_defold, generate_unique_name, make_names_unique } from "./utils";
 import { Services } from '@editor/core';
@@ -143,21 +144,21 @@ export function gui_module() {
     const BLEND_SCREEN = 4;
 
     function new_box_node(pos: vmath.vector3, size: vmath.vector3) {
-        const gui_box = Services.scene.create(IObjectTypes.GUI_BOX, {
+        const gui_box = Services.scene.create(ObjectTypes.GUI_BOX, {
             width: size.x,
             height: size.y,
-        });
+        }) as GuiBox;
         gui_box.set_position(pos.x, pos.y);
         return { id: gui_box.mesh_data.id } as node;
     }
 
     function new_text_node(pos: vmath.vector3, text: string) {
-        const gui_text = Services.scene.create(IObjectTypes.GUI_TEXT, { text });
+        const gui_text = Services.scene.create(ObjectTypes.GUI_TEXT, { text }) as GuiText;
         gui_text.set_position(pos.x, pos.y);
         return { id: gui_text.mesh_data.id } as node;
     }
 
-    function set(node: node, property: string, value: any, options?: any) {
+    function set(node: node, property: string, value: any, _options?: any) {
         const mesh = Services.scene.get_by_id((node as any).id);
         if (!mesh) {
             Services.logger.error('[set] Mesh not found for id:', (node as any).id);
@@ -256,7 +257,7 @@ export function gui_module() {
         mesh.lineHeight = leading;
     }
 
-    function set_parent(node: node, parent: node, keep_scene_transform?: boolean) {
+    function set_parent(node: node, parent: node, _keep_scene_transform?: boolean) {
         const mesh = Services.scene.get_by_id((node as any).id);
         if (!mesh) {
             Services.logger.error('[set_parent] Mesh not found for id:', (node as any).id);
@@ -336,7 +337,7 @@ export function gui_module() {
         mesh.set_texture(texture_name, atlas);
     }
 
-    function get(node: node, property: string, options?: any) {
+    function get(node: node, property: string, _options?: any) {
         const mesh = Services.scene.get_by_id((node as any).id);
         if (!mesh) {
             Services.logger.error('[get] Mesh not found for id:', (node as any).id);
@@ -522,12 +523,12 @@ export function gui_module() {
 
     function clone(node: node) {
         const mesh = Services.scene.get_by_id((node as any).id);
-        if (mesh === null) {
+        if (!mesh) {
             Services.logger.error('[clone] Mesh not found for id:', (node as any).id);
             return;
         }
         const parent = mesh.parent ?? Services.render.scene;
-        const origin = Services.scene.serialize_object(mesh, false, true);
+        const origin = Services.scene.serialize_object(mesh as IBaseEntityAndThree, false, true);
         origin.name = generate_unique_name(origin.name);
         const cloned = Services.scene.deserialize_object(origin, false);
         parent.add(cloned);
@@ -536,12 +537,12 @@ export function gui_module() {
 
     function clone_tree(node: node) {
         const mesh = Services.scene.get_by_id((node as any).id);
-        if (mesh === null) {
+        if (!mesh) {
             Services.logger.error('[clone] Mesh not found for id:', (node as any).id);
             return;
         }
         const parent = mesh.parent ?? Services.render.scene;
-        const origin = Services.scene.serialize_object(mesh);
+        const origin = Services.scene.serialize_object(mesh as IBaseEntityAndThree);
         make_names_unique(origin);
         const cloned = Services.scene.deserialize_object(origin, false);
         parent.add(cloned);
@@ -563,8 +564,8 @@ export function gui_module() {
             Services.logger.error('[animate] Mesh not found for id:', (node as any).id);
             return;
         }
-        animate_logic(mesh, property, playback, to, easing, duration, delay, () => {
-            if (complete_function) complete_function(mesh, node, property);
+        animate_logic(mesh as IBaseEntityAndThree, property, playback, to, easing, duration, delay, () => {
+            if (complete_function) complete_function(mesh as IBaseEntityAndThree, node, property);
         });
     }
 
@@ -574,7 +575,7 @@ export function gui_module() {
             Services.logger.error('[cancel_animations] Mesh not found for id:', (node as any).id);
             return;
         }
-        cancel_animations_logic(mesh, property);
+        cancel_animations_logic(mesh as IBaseEntityAndThree, property);
     }
 
     return {

@@ -6,7 +6,6 @@ import {
     FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses,
     TDictionary, texture_ext, URL_PATHS, AUDIO_EXT,
     FSEvent,
-    PUBLIC,
     ProtocolWrapper,
     NetMessagesEditor,
 } from "../modules_editor/modules_editor_const";
@@ -15,7 +14,7 @@ import { Messages } from "../modules/modules_const";
 import { contextMenuItem, get_contextmenu } from "../modules_editor/ContextMenu";
 import { NodeAction } from "@editor/shared";
 import { api, get_client_api } from "../modules_editor/ClientAPI";
-import { IBaseEntityData } from "../render_engine/types";
+import type { BaseEntityData } from "../core/render/types";
 import { error_popup, get_file_name } from "../render_engine/helpers/utils";
 import { Quaternion, Vector3 } from "three";
 import { WsWrap } from "@editor/modules/ws_wrap";
@@ -72,15 +71,15 @@ function AssetControlCreate() {
     }
 
     function subscribe() {
-        Services.event_bus.on('SYS_VIEW_INPUT_KEY_UP', on_key_up);
-        Services.event_bus.on('SYS_INPUT_POINTER_DOWN', on_mouse_down);
-        Services.event_bus.on('SYS_INPUT_POINTER_MOVE', on_mouse_move);
-        Services.event_bus.on('SYS_INPUT_POINTER_UP', on_mouse_up);
-        Services.event_bus.on('SYS_INPUT_DBL_CLICK', on_dbl_click);
-        Services.event_bus.on('SYS_INPUT_SAVE', save_current_scene);
-        Services.event_bus.on('SYS_GRAPH_DROP_IN_ASSETS', on_graph_drop);
+        Services.event_bus.on('input:key_up', on_key_up);
+        Services.event_bus.on('input:pointer_down', on_mouse_down);
+        Services.event_bus.on('input:pointer_move', on_mouse_move);
+        Services.event_bus.on('input:pointer_up', on_mouse_up);
+        Services.event_bus.on('input:dblclick', on_dbl_click);
+        Services.event_bus.on('input:save', save_current_scene);
+        Services.event_bus.on('hierarchy:dropped_in_assets', on_graph_drop);
 
-        Services.event_bus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
+        Services.event_bus.on('server:file_system_events', on_fs_events);
     }
 
     async function load_project(data: ProjectLoadData, folder_content?: FSObject[], to_dir?: string) {
@@ -287,7 +286,7 @@ function AssetControlCreate() {
                 folder_elem.appendChild(icon_elem);
                 folder_elem.appendChild(name_elem);
                 folder_elem.appendChild(details_elem);
-                folder_elem.addEventListener("drop", async (e) => {
+                folder_elem.addEventListener("drop", async (_e) => {
                     if (drag_asset_now)
                         await handle_asset_drop(_path);
                 });
@@ -333,7 +332,7 @@ function AssetControlCreate() {
                 file_elem.appendChild(icon_elem);
                 file_elem.appendChild(name_elem);
                 file_elem.appendChild(details_elem);
-                file_elem.addEventListener("dragstart", function (e) {
+                file_elem.addEventListener("dragstart", function (_e) {
                     drag_asset_now = true;
                 })
                 assets_list.appendChild(file_elem);
@@ -423,15 +422,15 @@ function AssetControlCreate() {
                 a_elem.appendChild(s_elem);
                 breadcrumbs.appendChild(a_elem);
                 breadcrumbs.appendChild(arrow);
-                s_elem.addEventListener("drop", async (e) => {
+                s_elem.addEventListener("drop", async (_e) => {
                     if (drag_asset_now)
                         await handle_asset_drop(_path);
                 });
-                s_elem.addEventListener("dragenter", async (e) => {
+                s_elem.addEventListener("dragenter", async (_e) => {
                     if (drag_asset_now)
                         s_elem.classList.add("marked");
                 });
-                s_elem.addEventListener("dragleave", async (e) => {
+                s_elem.addEventListener("dragleave", async (_e) => {
                     if (drag_asset_now)
                         s_elem.classList.remove("marked");
                 });
@@ -443,7 +442,7 @@ function AssetControlCreate() {
         });
     }
 
-    async function getFileAsync(dataTranfer: DataTransfer) {
+    async function _getFileAsync(dataTranfer: DataTransfer) {
         const files = [];
         for (var i = 0; i < dataTranfer.items.length; i++) {
             const item = dataTranfer.items[i];
@@ -465,7 +464,7 @@ function AssetControlCreate() {
     };
 
     function readEntryContentAsync(entry: FileSystemEntry): Promise<File[]> {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, _reject) => {
             let reading = 0;
             const contents: File[] = [];
 
@@ -795,7 +794,7 @@ function AssetControlCreate() {
         if (move_type == "move") {
             const resp = await get_client_api().move(path, move_to);
             if (resp && resp.result === 1) {
-                Services.event_bus.emit("SYS_ASSET_MOVED", { name, path, new_path: move_to }, false);
+                Services.event_bus.emit("assets:moved", { name, path, new_path: move_to });
             }
             else if (resp.result === 0) {
                 error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${resp.message}`);
@@ -804,7 +803,7 @@ function AssetControlCreate() {
         if (move_type == "copy") {
             const resp = await get_client_api().copy(path, move_to);
             if (resp && resp.result === 1) {
-                Services.event_bus.emit("SYS_ASSET_COPIED", { name, path, new_path: move_to }, false);
+                Services.event_bus.emit("assets:copied", { name, path, new_path: move_to });
             }
             else if (resp.result === 0) {
                 error_popup(`Не удалось скопировать файл ${name}, ответ сервера: ${resp.message}`);
@@ -836,7 +835,7 @@ function AssetControlCreate() {
         const move_to = `${current_dir}/${new_name}`;
         const resp = await get_client_api().copy(path, move_to);
         if (resp && resp.result === 1) {
-            Services.event_bus.emit("SYS_ASSET_COPIED", { name, path, new_path: move_to }, false);
+            Services.event_bus.emit("assets:copied", { name, path, new_path: move_to });
         }
     }
 
@@ -847,7 +846,7 @@ function AssetControlCreate() {
         const resp_json = JSON.parse(resp_text) as ServerResponses[typeof FILE_UPLOAD_CMD];
         if (resp_json.result === 1 && resp_json.data) {
             const data = resp_json.data;
-            Services.event_bus.emit("SYS_FILE_UPLOADED", data, false)
+            Services.event_bus.emit("assets:file_uploaded", data)
         }
     }
 
@@ -872,7 +871,7 @@ function AssetControlCreate() {
                         else if (event.event_type == "remove") {
                             if (texture_ext.includes(event.ext)) {
                                 const name = get_file_name(event.path);
-                                Services.resources.free_texture(name);
+                                Services.resources.free_texture(name, '');
                             }
                             // if (model_ext.includes(event.ext)) {
                             //     const name = get_file_name(event.path);
@@ -918,7 +917,7 @@ function AssetControlCreate() {
         });
         selected_assets.splice(0);
 
-        Services.event_bus.emit("SYS_ASSETS_CLEAR_SELECTED");
+        Services.event_bus.emit("assets:selection_cleared");
     }
 
     function add_to_selected(elem: HTMLSpanElement) {
@@ -928,17 +927,17 @@ function AssetControlCreate() {
 
         if (elem.getAttribute('data-type') == ASSET_TEXTURE) {
             const textures_paths = get_selected_textures();
-            Services.event_bus.emit("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
+            Services.event_bus.emit("assets:textures_selected", { paths: textures_paths });
         }
 
         if (elem.getAttribute('data-type') == ASSET_MATERIAL) {
             const materials_paths = get_selected_materials();
-            Services.event_bus.emit("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
+            Services.event_bus.emit("assets:materials_selected", { paths: materials_paths });
         }
 
         if (elem.getAttribute('data-type') == ASSET_AUDIO) {
             const audios_paths = get_selected_audios();
-            Services.event_bus.emit("SYS_ASSETS_SELECTED_AUDIOS", { paths: audios_paths });
+            Services.event_bus.emit("assets:audios_selected", { paths: audios_paths });
         }
     }
 
@@ -975,17 +974,17 @@ function AssetControlCreate() {
         elem.classList.remove("selected");
 
         const textures_paths = get_selected_textures();
-        Services.event_bus.emit("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
+        Services.event_bus.emit("assets:textures_selected", { paths: textures_paths });
 
         const materials_paths = get_selected_materials();
-        Services.event_bus.emit("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
+        Services.event_bus.emit("assets:materials_selected", { paths: materials_paths });
 
         const audios_paths = get_selected_audios();
-        Services.event_bus.emit("SYS_ASSETS_SELECTED_AUDIOS", { paths: audios_paths });
+        Services.event_bus.emit("assets:audios_selected", { paths: audios_paths });
     }
 
-    function on_mouse_move(event: any) {
-
+    function on_mouse_move(_event: unknown) {
+        // Пустой обработчик для совместимости
     }
 
     function on_mouse_down(event: any) {
@@ -1043,7 +1042,7 @@ function AssetControlCreate() {
                     const name = file_elem.getAttribute('data-name');
                     const ext = file_elem.getAttribute('data-ext');
                     Services.logger.debug(`Клик на ассет файл ${name}, путь ${path}, проект ${current_project}`);
-                    Services.event_bus.emit("SYS_CLICK_ON_ASSET", { name, path, ext, button: event.button }, false);
+                    Services.event_bus.emit("assets:clicked", { name, path, ext, button: event.button });
                 }
             }
             const breadcrumbs_elem = event.target.closest('a .folderName');
@@ -1147,11 +1146,13 @@ function AssetControlCreate() {
         return true;
     }
 
-    async function load_scene(path: string) {
+    async function load_scene(path: string): Promise<void> {
         const resp = await get_client_api().get_data(path);
-        if (!resp || resp.result === 0 || !resp.data)
-            return get_popups().toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
-        const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
+        if (!resp || resp.result === 0 || !resp.data) {
+            get_popups().toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
+            return;
+        }
+        const data = JSON.parse(resp.data) as TDictionary<BaseEntityData[]>;
         Services.scene.load_scene(data.scene_data);
         get_control_manager().update_graph(true, current_scene.name, true);
     }
@@ -1159,7 +1160,7 @@ function AssetControlCreate() {
     function loadPartOfSceneInPos(
         pathToScene: string,
         position?: Vector3,
-        rotation?: Quaternion,
+        _rotation?: Quaternion,
         scale?: Vector3,
         with_check = false
     ) {

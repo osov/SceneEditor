@@ -57,7 +57,7 @@ function ControlManagerCreate() {
         bind_btn('size_transform_btn', () => set_active_control('size_transform_btn'));
 
         // Используем DI EventBus
-        Services.event_bus.on('SYS_SELECTED_MESH_LIST', (data) => {
+        Services.event_bus.on('selection:mesh_list', (data) => {
             const e = data as { list: IBaseMeshAndThree[] };
             (window as unknown as Record<string, unknown>).selected = e.list[0];
             Services.transform.set_selected_list(e.list);
@@ -65,7 +65,7 @@ function ControlManagerCreate() {
             update_graph();
         });
 
-        Services.event_bus.on('SYS_UNSELECTED_MESH_LIST', () => {
+        Services.event_bus.on('selection:cleared', () => {
             (window as unknown as Record<string, unknown>).selected = null;
             Services.transform.detach();
             Services.size.detach();
@@ -73,7 +73,7 @@ function ControlManagerCreate() {
         });
 
         // Graph select - используем DI Selection
-        Services.event_bus.on('SYS_GRAPH_SELECTED', (data) => {
+        Services.event_bus.on('hierarchy:selected', (data) => {
             const e = data as { list: number[] };
             const list: IBaseMeshAndThree[] = [];
             for (let i = 0; i < e.list.length; i++) {
@@ -85,10 +85,10 @@ function ControlManagerCreate() {
             Services.selection.set_selected(list as unknown as ISceneObject[]);
             get_tree_control().set_selected_items(e.list);
             if (list.length === 0)
-                Services.event_bus.emit('SYS_UNSELECTED_MESH_LIST', {});
+                Services.event_bus.emit('selection:cleared', {});
         });
 
-        Services.event_bus.on('SYS_GRAPH_MOVED_TO', (data) => {
+        Services.event_bus.on('hierarchy:moved', (data) => {
             const e = data as { id_mesh_list: number[]; pid: number; next_id: number };
             // save history
             const saved_list: HistoryData['MESH_MOVE'][] = [];
@@ -130,7 +130,7 @@ function ControlManagerCreate() {
             update_graph();
         });
 
-        Services.event_bus.on('SYS_GRAPH_CHANGE_NAME', (data) => {
+        Services.event_bus.on('hierarchy:renamed', (data) => {
             const e = data as { id: number; name: string };
             const mesh = Services.scene.get_by_id(e.id) as IBaseMeshAndThree | undefined;
             if (mesh === undefined) {
@@ -196,8 +196,8 @@ function ControlManagerCreate() {
             stats.dom.style.cssText = 'position:fixed;top:0;left:45px;cursor:pointer;opacity:0.9;z-index:10000';
             stats.showPanel(0);
             document.body.appendChild(stats.dom);
-            Services.event_bus.on('SYS_ON_UPDATE', () => stats.begin());
-            Services.event_bus.on('SYS_ON_UPDATE_END', () => {
+            Services.event_bus.on('engine:update', () => stats.begin());
+            Services.event_bus.on('engine:update_end', () => {
                 stats.end();
                 const render = try_get_service('render');
                 if (render !== undefined && render.is_active())
@@ -366,7 +366,7 @@ function ControlManagerCreate() {
                         break;
                 }
 
-                Services.event_bus.emit('SYS_CHANGED_ATLAS_DATA', {});
+                Services.event_bus.emit('assets:atlas_changed', {});
             }
         });
     }
@@ -404,7 +404,7 @@ function ControlManagerCreate() {
                         break;
                 }
 
-                Services.event_bus.emit('SYS_CHANGED_LAYER_DATA', {});
+                Services.event_bus.emit('assets:layer_changed', {});
             }
         });
     }

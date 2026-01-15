@@ -141,7 +141,7 @@ function SoundModule() {
         };
 
         // NOTE: мы же можем использовать этот ивент для обновления ? как вариант вручную где-то потом вызывать update_sound
-        Services.event_bus.on('SYS_ON_UPDATE', () => update(url));
+        Services.event_bus.on('engine:update', () => update(url));
 
         instances.set(url, instance);
 
@@ -154,7 +154,7 @@ function SoundModule() {
         if (instance) {
             stop(url);
             instances.delete(url);
-            Services.event_bus.off('SYS_ON_UPDATE', () => update(url));
+            Services.event_bus.off('engine:update', () => update(url));
         }
     }
 
@@ -405,9 +405,9 @@ function SoundModule() {
             gain: 0,
             pan: instance.data.pan,
             speed: instance.data.speed
-        }, (self: unknown, message_id: string, message: {
+        }, (_self: unknown, message_id: string, _message: {
             play_id: number;
-        }, sender: string) => {
+        }, _sender: string) => {
             instance.isActive = false;
             if (message_id == "sound_done" && complete_function) {
                 complete_function();

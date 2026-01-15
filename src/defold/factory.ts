@@ -5,6 +5,7 @@ import { Slice9Mesh } from "@editor/render_engine/objects/slice9";
 import { TextMesh } from "@editor/render_engine/objects/text";
 import { Vector3, Quaternion } from "three";
 import { load_part_of_scene_in_pos } from "./runtime_stubs";
+import { Services } from '@editor/core';
 
 declare global {
     namespace factory {
@@ -18,10 +19,10 @@ export function factory_module() {
         url: string,
         position?: vmath.vector3,
         rotation?: vmath.quaternion,
-        properties?: any,
+        _properties?: unknown,
         scale?: number | vmath.vector3
     ) {
-        const result = _create(url, position, rotation, properties, scale);
+        const result = _create(url, position, rotation, scale);
         if (result == null) return null;
         return Services.scene.get_url_by_id(result.mesh_data.id);
     }
@@ -30,7 +31,6 @@ export function factory_module() {
         url: string,
         position?: vmath.vector3,
         rotation?: vmath.quaternion,
-        properties?: any,
         scale?: number | vmath.vector3
     ) {
         if (url.includes('#')) {

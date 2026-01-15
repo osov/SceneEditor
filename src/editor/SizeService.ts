@@ -16,7 +16,7 @@ export function create_size_service(params: SizeServiceParams): ISizeService {
     function set_selected_list(list: ISceneObject[]): void {
         const legacy = try_get_size_control();
         if (legacy !== undefined) {
-            legacy.set_selected_list(list);
+            legacy.set_selected_list(list as unknown as import('../render_engine/types').IBaseMeshAndThree[]);
         } else {
             logger.warn('SizeControl не инициализирован');
         }

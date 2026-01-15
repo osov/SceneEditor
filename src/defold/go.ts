@@ -236,7 +236,7 @@ export function go_module() {
         return vmath.vector3(...worldScale.toArray());
     }
 
-    function _delete(id: string | hash, recursive?: boolean) {
+    function _delete(id: string | hash, _recursive?: boolean) {
         const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
@@ -249,7 +249,7 @@ export function go_module() {
         Services.scene.remove_by_id(uh_to_id(id));
     }
 
-    function get(url: string | hash, property: string, options?: any) {
+    function get(url: string | hash, property: string, _options?: unknown) {
         const mesh = Services.scene.get_by_id(uh_to_id(url));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${url} not found`);
@@ -270,7 +270,7 @@ export function go_module() {
         return get_nested_property(mesh, property);
     }
 
-    function set(url: string | hash, property: string, value: any, options?: any) {
+    function set(url: string | hash, property: string, value: unknown, _options?: unknown) {
         const mesh = Services.scene.get_by_id(uh_to_id(url));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${url} not found`);
@@ -282,7 +282,7 @@ export function go_module() {
         }
         if (property == 'speed') {
             const id = uh_to_id(url);
-            get_audio_manager().set_speed(id, value);
+            get_audio_manager().set_speed(id, value as number);
             return;
         }
         set_nested_property(mesh, property, value);
@@ -304,8 +304,8 @@ export function go_module() {
             Services.logger.error(`Mesh with url ${url} not found`);
             return;
         }
-        animate_logic(mesh, property, playback, to, easing, duration, delay, () => {
-            if (complete_function) complete_function(mesh, url, property);
+        animate_logic(mesh as IBaseEntityAndThree, property, playback, to, easing, duration, delay, () => {
+            if (complete_function) complete_function(mesh as IBaseEntityAndThree, url, property);
         });
     }
 
@@ -316,7 +316,7 @@ export function go_module() {
             Services.logger.error(`Mesh with url ${url} not found`);
             return;
         }
-        cancel_animations_logic(mesh, property);
+        cancel_animations_logic(mesh as IBaseEntityAndThree, property);
     }
 
     return {

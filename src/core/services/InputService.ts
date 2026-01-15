@@ -117,8 +117,6 @@ export function create_input_service(params: InputServiceParams): IInputService 
 
             const data: KeyEventData = { key: e.key, target: e.target };
             event_bus.emit('input:key_down', data);
-            // Legacy совместимость
-            event_bus.emit('SYS_VIEW_INPUT_KEY_DOWN', data);
 
             // Предотвращаем браузерные хоткеи
             if (e.ctrlKey && (e.key === 'd' || e.key === 'в')) {
@@ -138,8 +136,6 @@ export function create_input_service(params: InputServiceParams): IInputService 
 
             const data: KeyEventData = { key: e.key, target: e.target };
             event_bus.emit('input:key_up', data);
-            // Legacy совместимость
-            event_bus.emit('SYS_VIEW_INPUT_KEY_UP', data);
         };
 
         // Мышь
@@ -161,8 +157,6 @@ export function create_input_service(params: InputServiceParams): IInputService 
                 target: e.target,
             };
             event_bus.emit('input:pointer_move', data);
-            // Legacy совместимость
-            event_bus.emit('SYS_INPUT_POINTER_MOVE', data);
         };
 
         mousedown_handler = (e: MouseEvent) => {
@@ -177,8 +171,6 @@ export function create_input_service(params: InputServiceParams): IInputService 
                 target: e.target,
             };
             event_bus.emit('input:pointer_down', data);
-            // Legacy совместимость
-            event_bus.emit('SYS_INPUT_POINTER_DOWN', data);
         };
 
         mouseup_handler = (e: MouseEvent) => {
@@ -193,8 +185,6 @@ export function create_input_service(params: InputServiceParams): IInputService 
                 target: e.target,
             };
             event_bus.emit('input:pointer_up', data);
-            // Legacy совместимость
-            event_bus.emit('SYS_INPUT_POINTER_UP', data);
         };
 
         dblclick_handler = (e: MouseEvent) => {
@@ -209,8 +199,6 @@ export function create_input_service(params: InputServiceParams): IInputService 
                 target: e.target,
             };
             event_bus.emit('input:dblclick', data);
-            // Legacy совместимость
-            event_bus.emit('SYS_INPUT_DBL_CLICK', data);
         };
 
         // Привязываем обработчики

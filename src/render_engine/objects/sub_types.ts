@@ -276,6 +276,13 @@ export class GoSprite extends Slice9Mesh {
         return new Float32Array(uv.array);
     }
 
+    set_uv(uv_data: Float32Array | number[]): void {
+        const geometry = this.geometry;
+        geometry.attributes.uv.array.set(uv_data);
+        geometry.attributes.uv.needsUpdate = true;
+        this.transform_changed();
+    }
+
     get_flip(): FlipMode {
         const geometry = this.geometry;
         const uv = geometry.attributes.uv;

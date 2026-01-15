@@ -17,11 +17,11 @@ export function CmpSpline(cmp_mesh: EntityBase) {
     let spline_data: Vector2[] = [];
 
     function init() {
-        Services.event_bus.on('SYS_MESH_REMOVE_BEFORE', (data) => {
+        Services.event_bus.on('scene:object_removing', (data) => {
             const e = data as { id: number };
             on_mesh_remove(e);
         });
-        Services.event_bus.on('SYS_INPUT_POINTER_UP', (data) => {
+        Services.event_bus.on('input:pointer_up', (data) => {
             const e = data as { button: number; x: number; y: number };
             if (e.button == 0) {
                 if (!Services.input.is_shift())

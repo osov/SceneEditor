@@ -140,7 +140,7 @@ export function create_inspector_service(params: InspectorServiceParams): IInspe
         const inspector = try_get_inspector_control();
         if (inspector !== undefined) {
             try {
-                inspector.set_selected_list(objects);
+                inspector.set_selected_list(objects as unknown as import('../render_engine/types').IBaseMeshAndThree[]);
             } catch (error) {
                 logger.debug('Ошибка обновления InspectorControl:', error);
             }
@@ -186,7 +186,8 @@ export function create_inspector_service(params: InspectorServiceParams): IInspe
         const inspector = try_get_inspector_control();
         if (inspector !== undefined) {
             try {
-                inspector.refresh(field_keys);
+                // Property - это enum, поэтому строки нужно привести к типу Property
+                inspector.refresh(field_keys as unknown as import('../modules_editor/InspectorControl').Property[]);
             } catch (error) {
                 logger.debug('Ошибка обновления полей:', error);
             }

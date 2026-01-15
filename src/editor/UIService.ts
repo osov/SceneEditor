@@ -57,7 +57,7 @@ function try_get_control_manager(): ControlManagerType | undefined {
 
 /** Создать UIService */
 export function create_ui_service(params: UIServiceParams): IUIService {
-    const { logger, event_bus, selection_service, hierarchy_service } = params;
+    const { logger, event_bus, selection_service: _selection_service, hierarchy_service: _hierarchy_service } = params;
 
     const subscriptions: IDisposable[] = [];
 
@@ -119,7 +119,7 @@ export function create_ui_service(params: UIServiceParams): IUIService {
 
         try {
             // InspectorControl.set_selected_list() обновляет инспектор
-            inspector.set_selected_list(objects);
+            inspector.set_selected_list(objects as unknown as import('../render_engine/types').IBaseMeshAndThree[]);
         } catch (error) {
             logger.debug('Ошибка обновления инспектора:', error);
         }
