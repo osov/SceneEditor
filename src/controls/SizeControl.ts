@@ -6,6 +6,27 @@ import { is_base_mesh } from "../render_engine/helpers/utils";
 import { WORLD_SCALAR } from "../config";
 import { MeshProperty } from "../inspectors/MeshInspector";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
+import { Services } from '@editor/core';
+
+// Декларации глобальных объектов
+declare const HistoryControl: {
+    add(type: string, data: unknown[], owner: HistoryOwner): void;
+};
+declare const SelectControl: {
+    set_selected_list(list: IBaseMeshAndThree[]): void;
+};
+declare const ControlManager: {
+    update_graph(): void;
+};
+declare const SceneManager: {
+    get_mesh_by_id(id: number): IBaseMeshAndThree | undefined;
+};
+declare const Inspector: {
+    refresh(properties: MeshProperty[]): void;
+};
+declare const TransformControl: {
+    set_proxy_in_average_point(list: IBaseMeshAndThree[]): void;
+};
 
 declare global {
     const SizeControl: ReturnType<typeof SizeControlCreate>;
@@ -104,7 +125,8 @@ function SizeControlCreate() {
         slice_box_range.layers.set(layer_control);
         scene.add(slice_box_range)
 
-        EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
+        Services.event_bus.on('SYS_VIEW_INPUT_KEY_DOWN', (data) => {
+            const e = data as { target: EventTarget };
             if (!is_active) return;
             if (e.target != RenderEngine.renderer.domElement)
                 return;
@@ -123,7 +145,7 @@ function SizeControlCreate() {
 
         })
 
-        EventBus.on('SYS_VIEW_INPUT_KEY_UP', (_e) => {
+        Services.event_bus.on('SYS_VIEW_INPUT_KEY_UP', () => {
             if (!is_active) return;
             if (!Input.is_shift()) {
                 is_selected_anchor = false;
@@ -134,7 +156,8 @@ function SizeControlCreate() {
         })
 
         // pivots/anchor logic
-        EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
+        Services.event_bus.on('SYS_INPUT_POINTER_UP', (data) => {
+            const e = data as { button: number; x: number; y: number };
             if (!is_active) return;
             if (e.button != 0)
                 return;
@@ -178,7 +201,8 @@ function SizeControlCreate() {
         scene.add(debug_center);
 
 
-        EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
+        Services.event_bus.on('SYS_INPUT_POINTER_DOWN', (data) => {
+            const e = data as { target: EventTarget; button: number; x: number; y: number };
             if (e.target != RenderEngine.renderer.domElement)
                 return;
             if (!is_active) return;
@@ -219,7 +243,8 @@ function SizeControlCreate() {
                 is_selected_anchor = true;
         });
 
-        EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
+        Services.event_bus.on('SYS_INPUT_POINTER_UP', (data) => {
+            const e = data as { button: number };
             if (!is_active) return;
             if (e.button != 0)
                 return;
@@ -242,7 +267,8 @@ function SizeControlCreate() {
             }
         });
 
-        EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
+        Services.event_bus.on('SYS_INPUT_POINTER_MOVE', (data) => {
+            const event = data as { x: number; y: number };
             if (!is_active) return;
             prev_point.set(pointer.x, pointer.y);
             pointer.x = event.x;
@@ -349,7 +375,7 @@ function SizeControlCreate() {
                         if (!is_select) {
                             //log('Unselect', offset_move, WORLD_SCALAR);
                             if (!Input.is_control())
-                                EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
+                                Services.event_bus.emit('SYS_UNSELECTED_MESH_LIST', {});
                             return;
                         }
                     }
@@ -374,7 +400,8 @@ function SizeControlCreate() {
             }
         });
 
-        EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
+        Services.event_bus.on('SYS_HISTORY_UNDO', (data) => {
+            const event = data as THistoryUndo;
             if (event.owner !== HistoryOwner.SIZE_CONTROL) return;
 
             switch (event.type) {
@@ -424,7 +451,7 @@ function SizeControlCreate() {
             ControlManager.update_graph();
         });
 
-        EventBus.on('SYS_ON_UPDATE_END', () => {
+        Services.event_bus.on('SYS_ON_UPDATE_END', () => {
             draw();
         });
     }

@@ -34,6 +34,7 @@ import {
     create_hierarchy_service,
     create_asset_service,
     create_ui_service,
+    create_inspector_service,
 } from '../editor';
 
 // Legacy регистрации для обратной совместимости
@@ -359,6 +360,18 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         container.register_singleton(TOKENS.UI, () => ui_service, {
             init_order: INIT_ORDER.UI,
             name: 'UIService',
+        });
+
+        // InspectorService - управление инспектором свойств
+        const inspector_service = create_inspector_service({
+            logger: logger.create_child('InspectorService'),
+            event_bus,
+            selection_service,
+        });
+
+        container.register_singleton(TOKENS.Inspector, () => inspector_service, {
+            init_order: INIT_ORDER.UI + 5,
+            name: 'InspectorService',
         });
 
         // === Legacy глобальные объекты (window.*) ===

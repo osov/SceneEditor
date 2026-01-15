@@ -1,3 +1,10 @@
+/**
+ * ControlManager - координатор UI контролов редактора
+ *
+ * Управляет переключением режимов трансформации,
+ * обновлением дерева иерархии, менеджерами атласов и слоёв.
+ */
+
 import { is_base_mesh } from "../render_engine/helpers/utils";
 import { IBaseMeshAndThree } from "../render_engine/types";
 import { TreeItem } from "./TreeControl";
@@ -5,13 +12,11 @@ import { componentsGo } from "../shared/types";
 import { cbDataItem, Action } from "./Popups";
 import Stats from 'stats.js';
 import { DEFOLD_LIMITS, IS_CAMERA_ORTHOGRAPHIC } from "../config";
-import { HistoryOwner, THistoryUndo } from "./modules_editor_const";
+import { HistoryOwner } from "./modules_editor_const";
+import { Services, try_get_service } from '@editor/core';
+import type { ISceneObject } from '@editor/engine/types';
 
-// Декларации глобальных объектов
-declare const SelectControl: {
-    get_selected_list(): IBaseMeshAndThree[];
-    set_selected_list(list: IBaseMeshAndThree[]): void;
-};
+// Декларации глобальных объектов (Three.js контролы - пока остаются как globals)
 declare const TransformControl: {
     set_selected_list(list: IBaseMeshAndThree[]): void;
     detach(): void;
@@ -23,15 +28,12 @@ declare const SizeControl: {
     detach(): void;
     set_active(active: boolean): void;
 };
-declare const HistoryControl: {
-    add(type: string, data: unknown[], owner: HistoryOwner): void;
-};
 declare const CameraControl: {
     load_state(name: string): void;
     get_zoom(): number;
 };
 
-// Тип HistoryData для legacy кода
+// Тип HistoryData для undo
 type HistoryData = {
     MESH_MOVE: { id_mesh: number; pid: number; next_id: number };
     MESH_NAME: { mesh_id: number; value: string };
@@ -43,7 +45,7 @@ declare global {
 }
 
 export function register_control_manager() {
-    (window as any).ControlManager = ControlManagerCreate();
+    (window as unknown as Record<string, unknown>).ControlManager = ControlManagerCreate();
 }
 
 type ButtonsList = 'translate_transform_btn' | 'scale_transform_btn' | 'rotate_transform_btn' | 'size_transform_btn';
@@ -59,75 +61,113 @@ function ControlManagerCreate() {
         bind_btn('rotate_transform_btn', () => set_active_control('rotate_transform_btn'));
         bind_btn('size_transform_btn', () => set_active_control('size_transform_btn'));
 
-        EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
-            (window as any).selected = e.list[0];
+        // Используем DI EventBus
+        Services.event_bus.on('SYS_SELECTED_MESH_LIST', (data) => {
+            const e = data as { list: IBaseMeshAndThree[] };
+            (window as unknown as Record<string, unknown>).selected = e.list[0];
             TransformControl.set_selected_list(e.list);
             SizeControl.set_selected_list(e.list);
             update_graph();
         });
 
-        EventBus.on('SYS_UNSELECTED_MESH_LIST', () => {
-            (window as any).selected = null;
+        Services.event_bus.on('SYS_UNSELECTED_MESH_LIST', () => {
+            (window as unknown as Record<string, unknown>).selected = null;
             TransformControl.detach();
             SizeControl.detach();
             update_graph();
         });
 
-        // Graph select
-        EventBus.on('SYS_GRAPH_SELECTED', (e) => {
-            const list = [];
+        // Graph select - используем DI Selection
+        Services.event_bus.on('SYS_GRAPH_SELECTED', (data) => {
+            const e = data as { list: number[] };
+            const list: IBaseMeshAndThree[] = [];
             for (let i = 0; i < e.list.length; i++) {
-                const m = SceneManager.get_mesh_by_id(e.list[i]);
-                if (m)
+                const m = SceneManager.get_mesh_by_id(e.list[i]) as IBaseMeshAndThree | null;
+                if (m !== null)
                     list.push(m);
             }
-            SelectControl.set_selected_list(list);
+            // Используем DI SelectionService
+            Services.selection.set_selected(list as unknown as ISceneObject[]);
             TreeControl.set_selected_items(e.list);
-            if (list.length == 0)
-                EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
+            if (list.length === 0)
+                Services.event_bus.emit('SYS_UNSELECTED_MESH_LIST', {});
         });
 
-        EventBus.on('SYS_GRAPH_MOVED_TO', (e) => {
+        Services.event_bus.on('SYS_GRAPH_MOVED_TO', (data) => {
+            const e = data as { id_mesh_list: number[]; pid: number; next_id: number };
             // save history
             const saved_list: HistoryData['MESH_MOVE'][] = [];
             const mesh_list: IBaseMeshAndThree[] = [];
             for (let i = 0; i < e.id_mesh_list.length; i++) {
                 const id = e.id_mesh_list[i];
-                const mesh = SceneManager.get_mesh_by_id(id);
-                if (!mesh) {
-                    Log.error('mesh is null', id);
+                const mesh = SceneManager.get_mesh_by_id(id) as IBaseMeshAndThree | null;
+                if (mesh === null) {
+                    Services.logger.error('mesh is null', id);
                     continue;
                 }
-                const parent = mesh.parent!;
+                const parent = mesh.parent;
                 let pid = -1;
-                if (is_base_mesh(parent))
-                    pid = (parent as any as IBaseMeshAndThree).mesh_data.id;
+                if (parent !== null && is_base_mesh(parent))
+                    pid = (parent as IBaseMeshAndThree).mesh_data.id;
                 saved_list.push({ id_mesh: id, pid: pid, next_id: SceneManager.find_next_id_mesh(mesh) });
                 mesh_list.push(mesh);
             }
-            HistoryControl.add('MESH_MOVE', saved_list, HistoryOwner.CONTROL_MANAGER);
+            // Используем DI HistoryService
+            Services.history.push({
+                type: 'MESH_MOVE',
+                data: { items: saved_list, owner: HistoryOwner.CONTROL_MANAGER },
+                description: 'Move objects',
+                undo: (d) => undo_mesh_move(d.items),
+                redo: () => {
+                    // Redo будет выполнять то же перемещение
+                    for (let i = 0; i < e.id_mesh_list.length; i++) {
+                        const id = e.id_mesh_list[i];
+                        SceneManager.move_mesh_id(id, e.pid, e.next_id);
+                    }
+                },
+            });
             // move
             for (let i = 0; i < e.id_mesh_list.length; i++) {
                 const id = e.id_mesh_list[i];
                 SceneManager.move_mesh_id(id, e.pid, e.next_id);
             }
-            SelectControl.set_selected_list(mesh_list);
+            Services.selection.set_selected(mesh_list as unknown as ISceneObject[]);
             update_graph();
-
         });
 
-        EventBus.on('SYS_GRAPH_CHANGE_NAME', (e) => {
-            const mesh = SceneManager.get_mesh_by_id(e.id);
-            if (!mesh) return Log.error('mesh is null', e.id);
-            HistoryControl.add('MESH_NAME', [{ mesh_id: e.id, value: mesh.name }], HistoryOwner.CONTROL_MANAGER);
+        Services.event_bus.on('SYS_GRAPH_CHANGE_NAME', (data) => {
+            const e = data as { id: number; name: string };
+            const mesh = SceneManager.get_mesh_by_id(e.id) as IBaseMeshAndThree | null;
+            if (mesh === null) {
+                Services.logger.error('mesh is null', e.id);
+                return;
+            }
+            const old_name = mesh.name;
+            // Используем DI HistoryService
+            Services.history.push({
+                type: 'MESH_NAME',
+                data: { mesh_id: e.id, value: old_name, owner: HistoryOwner.CONTROL_MANAGER },
+                description: 'Rename object',
+                undo: (d) => {
+                    const m = SceneManager.get_mesh_by_id(d.mesh_id) as IBaseMeshAndThree | null;
+                    if (m !== null) {
+                        SceneManager.set_mesh_name(m, d.value);
+                        Services.selection.set_selected([m as unknown as ISceneObject]);
+                        update_graph();
+                    }
+                },
+                redo: () => {
+                    const m = SceneManager.get_mesh_by_id(e.id) as IBaseMeshAndThree | null;
+                    if (m !== null) {
+                        SceneManager.set_mesh_name(m, e.name);
+                        Services.selection.set_selected([m as unknown as ISceneObject]);
+                        update_graph();
+                    }
+                },
+            });
             SceneManager.set_mesh_name(mesh, e.name);
-            SelectControl.set_selected_list([mesh]);
+            Services.selection.set_selected([mesh as unknown as ISceneObject]);
             update_graph();
-        });
-
-        EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
-            if (event.owner != HistoryOwner.CONTROL_MANAGER) return;
-            undo(event);
         });
 
         set_active_control(IS_CAMERA_ORTHOGRAPHIC ? 'size_transform_btn' : 'translate_transform_btn');
@@ -135,8 +175,21 @@ function ControlManagerCreate() {
         CameraControl.load_state('');
     }
 
+    function undo_mesh_move(items: HistoryData['MESH_MOVE'][]) {
+        const mesh_list: IBaseMeshAndThree[] = [];
+        for (const data of items) {
+            const mesh = SceneManager.get_mesh_by_id(data.id_mesh) as IBaseMeshAndThree | null;
+            if (mesh !== null) {
+                SceneManager.move_mesh(mesh, data.pid, data.next_id);
+                mesh_list.push(mesh);
+            }
+        }
+        Services.selection.set_selected(mesh_list as unknown as ISceneObject[]);
+        update_graph();
+    }
+
     function init_stats() {
-        let params = new URLSearchParams(document.location.search);
+        const params = new URLSearchParams(document.location.search);
         if (params.has("stats")) {
             const div = document.createElement('div');
             div.style.cssText = ' position: absolute;z-index: 10000;top: 50px;left: 45px;font-size: 12px;';
@@ -146,16 +199,17 @@ function ControlManagerCreate() {
             const div_zoom = document.getElementById('zoom')!;
             const stats = new Stats();
             stats.dom.style.cssText = 'position:fixed;top:0;left:45px;cursor:pointer;opacity:0.9;z-index:10000';
-            stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+            stats.showPanel(0);
             document.body.appendChild(stats.dom);
-            EventBus.on('SYS_ON_UPDATE', () => stats.begin());
-            EventBus.on('SYS_ON_UPDATE_END', () => {
+            Services.event_bus.on('SYS_ON_UPDATE', () => stats.begin());
+            Services.event_bus.on('SYS_ON_UPDATE_END', () => {
                 stats.end();
-                if (RenderEngine.is_active_render())
-                    div_dc.innerHTML = RenderEngine.renderer.info.render.calls.toString();
+                const render = try_get_service('render');
+                if (render !== undefined && render.is_active())
+                    div_dc.innerHTML = render.renderer.info.render.calls.toString();
                 else
                     div_dc.innerHTML = current_draw_call.toString();
-                    div_zoom.innerHTML = CameraControl.get_zoom().toFixed(2);
+                div_zoom.innerHTML = CameraControl.get_zoom().toFixed(2);
             });
         }
     }
@@ -168,38 +222,43 @@ function ControlManagerCreate() {
         current_draw_call = 0;
     }
 
-    function bind_btn(name: ButtonsList, callback: Function) {
-        document.querySelector('.menu_min a.' + name)!.addEventListener('click', () => {
-            callback();
-        })
+    function bind_btn(name: ButtonsList, callback: () => void) {
+        const btn = document.querySelector('.menu_min a.' + name);
+        if (btn !== null) {
+            btn.addEventListener('click', callback);
+        }
     }
 
     function set_active_control(name: ButtonsList) {
-        if (name == active_control) return;
+        if (name === active_control) return;
         clear_all_controls();
         set_active_btn(name);
-        if (name == 'translate_transform_btn') {
+
+        // Получаем выделенные объекты через DI
+        const selected = Services.selection.selected as IBaseMeshAndThree[];
+
+        if (name === 'translate_transform_btn') {
             active_control = 'translate';
             TransformControl.set_active(true);
             TransformControl.set_mode('translate');
-            TransformControl.set_selected_list(SelectControl.get_selected_list());
+            TransformControl.set_selected_list(selected);
         }
-        if (name == 'scale_transform_btn') {
+        if (name === 'scale_transform_btn') {
             active_control = 'scale';
             TransformControl.set_active(true);
             TransformControl.set_mode('scale');
-            TransformControl.set_selected_list(SelectControl.get_selected_list());
+            TransformControl.set_selected_list(selected);
         }
-        if (name == 'rotate_transform_btn') {
+        if (name === 'rotate_transform_btn') {
             active_control = 'rotate';
             TransformControl.set_active(true);
             TransformControl.set_mode('rotate');
-            TransformControl.set_selected_list(SelectControl.get_selected_list());
+            TransformControl.set_selected_list(selected);
         }
-        if (name == 'size_transform_btn') {
+        if (name === 'size_transform_btn') {
             active_control = 'size';
             SizeControl.set_active(true);
-            SizeControl.set_selected_list(SelectControl.get_selected_list());
+            SizeControl.set_selected_list(selected);
         }
     }
 
@@ -213,21 +272,25 @@ function ControlManagerCreate() {
     }
 
     function set_active_btn(name: ButtonsList) {
-        document.querySelector('.menu_min a.' + name)!.classList.add('active');
+        const btn = document.querySelector('.menu_min a.' + name);
+        if (btn !== null) {
+            btn.classList.add('active');
+        }
     }
 
     function setVisible(item: IBaseMeshAndThree): boolean {
-        return item.get_active() && item.get_visible() ? true : false;
+        return item.get_active() && item.get_visible();
     }
 
     function getParentActiveIds(list: IBaseMeshAndThree[]): number[] {
         const ids: number[] = [];
         list.forEach((item) => {
             if ((!item.get_active() || ids.includes(item.mesh_data.id)) && item.children.length > 0) {
-                item.children.forEach((child: any) => {
-                    if (is_base_mesh(child))
-                        ids.push(child.mesh_data.id);
-                })
+                for (const child of item.children) {
+                    if (is_base_mesh(child)) {
+                        ids.push((child as IBaseMeshAndThree).mesh_data.id);
+                    }
+                }
             }
         });
         return ids;
@@ -235,23 +298,25 @@ function ControlManagerCreate() {
 
     function get_tree_graph() {
         const graph = SceneManager.make_graph();
-        const scene_list = SceneManager.get_scene_list();
+        const scene_list = SceneManager.get_scene_list() as IBaseMeshAndThree[];
         const parentActiveIds = getParentActiveIds(scene_list);
-        const sel_list_ids = SelectControl.get_selected_list().map(m => m.mesh_data.id);
+        // Используем DI SelectionService
+        const sel_list_ids = Services.selection.selected.map(m => m.mesh_data.id);
         const list: TreeItem[] = [];
         list.push({ id: -1, pid: -2, name: current_scene_name, icon: 'scene', selected: false, visible: true });
         for (let i = 0; i < graph.length; i++) {
             const g_item = graph[i];
+            const scene_item = scene_list[i];
             const item: TreeItem = {
                 id: g_item.id,
                 pid: g_item.pid,
                 name: g_item.name,
                 icon: g_item.type,
                 selected: sel_list_ids.includes(g_item.id),
-                visible: parentActiveIds.includes(g_item.id) ? false : setVisible(scene_list[i])
+                visible: parentActiveIds.includes(g_item.id) ? false : setVisible(scene_item)
             };
 
-            // no_drop для компонентов Go 
+            // no_drop для компонентов Go
             if (DEFOLD_LIMITS && componentsGo.includes(g_item.type)) { item.no_drop = true; }
 
             list.push(item);
@@ -260,7 +325,7 @@ function ControlManagerCreate() {
     }
 
     function update_graph(is_first = false, name = '', is_load_scene = false) {
-        if (name) {
+        if (name !== '') {
             current_scene_name = name;
             CameraControl.load_state(name);
         }
@@ -273,9 +338,11 @@ function ControlManagerCreate() {
 
     function open_atlas_manager() {
         const atlases = ResourceManager.get_all_atlases();
-        const emptyIndex = atlases.findIndex((atlas) => atlas == '');
-        atlases.splice(emptyIndex, 1);
-        const list = atlases.map((title, id) => {
+        const emptyIndex = atlases.findIndex((atlas: string) => atlas === '');
+        if (emptyIndex !== -1) {
+            atlases.splice(emptyIndex, 1);
+        }
+        const list = atlases.map((title: string, id: number) => {
             return { id: id.toString(), title, can_delete: true };
         });
 
@@ -304,13 +371,13 @@ function ControlManagerCreate() {
                         break;
                 }
 
-                EventBus.trigger('SYS_CHANGED_ATLAS_DATA');
+                Services.event_bus.emit('SYS_CHANGED_ATLAS_DATA', {});
             }
         });
     }
 
     function open_layer_manager() {
-        const list = ResourceManager.get_layers().filter(l => l != 'default').map((title, id) => {
+        const list = ResourceManager.get_layers().filter((l: string) => l !== 'default').map((title: string, id: number) => {
             return {
                 id: id.toString(), title, can_delete: true
             };
@@ -342,34 +409,11 @@ function ControlManagerCreate() {
                         break;
                 }
 
-                EventBus.trigger('SYS_CHANGED_LAYER_DATA');
+                Services.event_bus.emit('SYS_CHANGED_LAYER_DATA', {});
             }
         });
-    }
-
-    function undo(event: THistoryUndo) {
-        const mesh_list: IBaseMeshAndThree[] = [];
-        switch (event.type) {
-            case 'MESH_NAME':
-                for (const data of event.data) {
-                    const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
-                    SceneManager.set_mesh_name(mesh, data.value);
-                    mesh_list.push(mesh);
-                }
-                break;
-            case 'MESH_MOVE':
-                for (const data of event.data) {
-                    const mesh = SceneManager.get_mesh_by_id(data.id_mesh)!;
-                    SceneManager.move_mesh(mesh, data.pid, data.next_id);
-                    mesh_list.push(mesh);
-                }
-                break;
-        }
-        SelectControl.set_selected_list(mesh_list);
-        update_graph();
     }
 
     init();
     return { clear_all_controls, set_active_control, get_tree_graph, update_graph, get_current_scene_name, open_atlas_manager, open_layer_manager, inc_draw_calls, clear_draw_calls };
 }
-

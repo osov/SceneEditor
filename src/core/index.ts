@@ -184,3 +184,12 @@ export {
 } from './bootstrap';
 
 export type { BootstrapOptions, BootstrapResult } from './bootstrap';
+
+// ServiceProvider - единая точка доступа к DI сервисам
+export {
+    Services,
+    is_services_ready,
+    try_get_service,
+} from './ServiceProvider';
+
+export type { IServices } from './ServiceProvider';

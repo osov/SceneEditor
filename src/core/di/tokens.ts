@@ -87,6 +87,8 @@ export const EDITOR_TOKENS = {
     EventBusBridge: Symbol('EventBusBridge'),
     /** Сервис UI */
     UI: Symbol('UI'),
+    /** Сервис инспектора */
+    Inspector: Symbol('Inspector'),
 } as const;
 
 /** Сервисы контролов редактора */

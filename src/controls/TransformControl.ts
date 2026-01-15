@@ -6,6 +6,7 @@ import { MeshProperty } from '../inspectors/MeshInspector';
 import { HistoryOwner, THistoryUndo } from '../modules_editor/modules_editor_const';
 import { IS_CAMERA_ORTHOGRAPHIC } from '@editor/config';
 import { euler_to_quat } from '@editor/modules/utils';
+import { Services } from '@editor/core';
 
 declare global {
     const TransformControl: ReturnType<typeof TransformControlCreate>;
@@ -297,35 +298,33 @@ function TransformControlCreate() {
     }
 
     // Subscribe to mode change events from DI TransformService
-    (EventBus as { on: (event: string, cb: (data: unknown) => void) => void }).on(
-        'SYS_TRANSFORM_MODE_CHANGED',
-        (event: unknown) => {
-            const data = event as { mode: TransformControlsMode };
-            set_mode(data.mode);
-        }
-    );
+    Services.event_bus.on('SYS_TRANSFORM_MODE_CHANGED', (event) => {
+        const data = event as { mode: TransformControlsMode };
+        set_mode(data.mode);
+    });
 
     // Subscribe to undo events
-    EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
-        if (event.owner !== HistoryOwner.TRANSFORM_CONTROL) return;
+    Services.event_bus.on('SYS_HISTORY_UNDO', (event) => {
+        const e = event as THistoryUndo;
+        if (e.owner !== HistoryOwner.TRANSFORM_CONTROL) return;
 
-        switch (event.type) {
+        switch (e.type) {
             case 'MESH_TRANSLATE':
-                for (const data of event.data) {
+                for (const data of e.data) {
                     const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
                     mesh.position.copy(data.value);
                     mesh.transform_changed();
                 }
                 break;
             case 'MESH_ROTATE':
-                for (const data of event.data) {
+                for (const data of e.data) {
                     const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
                     mesh.rotation.copy(data.value);
                     mesh.transform_changed();
                 }
                 break;
             case 'MESH_SCALE':
-                for (const data of event.data) {
+                for (const data of e.data) {
                     const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
                     mesh.scale.copy(data.value);
                     mesh.transform_changed();
@@ -334,7 +333,7 @@ function TransformControlCreate() {
         }
 
         // Update selection and graph
-        const meshes = event.data.map(data => SceneManager.get_mesh_by_id(data.mesh_id)!);
+        const meshes = e.data.map(data => SceneManager.get_mesh_by_id(data.mesh_id)!);
         SelectControl.set_selected_list(meshes);
         ControlManager.update_graph();
     });

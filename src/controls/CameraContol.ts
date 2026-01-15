@@ -4,6 +4,7 @@ import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere
 import { CAMERA_Z, IS_CAMERA_ORTHOGRAPHIC } from '../config';
 import { createCameraPerspectiveControl } from './CameraPerspectiveControl';
 import type { IBaseMeshAndThree } from '../render_engine/types';
+import { Services } from '@editor/core';
 
 declare global {
     const CameraControl: ReturnType<typeof CameraControlCreate>;
@@ -40,7 +41,10 @@ function CameraControlCreate() {
             RenderEngine.camera.position.set(0, 0, 0);
             control_perspective = createCameraPerspectiveControl(RenderEngine.camera as PerspectiveCamera);
             RenderEngine.scene.add(control_perspective.getObject());
-            EventBus.on('SYS_ON_UPDATE', (e) => control_perspective.update(e.dt * 3));
+            Services.event_bus.on('SYS_ON_UPDATE', (data) => {
+                const e = data as { dt: number };
+                control_perspective.update(e.dt * 3);
+            });
             setInterval(() => save_state(), 1000); // todo
             //   const gridHelper = new GridHelper(1000, 50);
             //  RenderEngine.scene.add(gridHelper);
@@ -57,7 +61,10 @@ function CameraControlCreate() {
             control_orthographic.addEventListener('controlend', () => save_state())
             control_orthographic.addEventListener('sleep', () => save_state());
 
-            EventBus.on('SYS_ON_UPDATE', (e) => control_orthographic.update(e.dt));
+            Services.event_bus.on('SYS_ON_UPDATE', (data) => {
+                const e = data as { dt: number };
+                control_orthographic.update(e.dt);
+            });
         }
         set_position(540 / 2, -960 / 2);
     }

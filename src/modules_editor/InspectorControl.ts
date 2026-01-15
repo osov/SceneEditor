@@ -72,7 +72,7 @@ import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plugin';
-import { Vector2, Vector3, NormalBlending, AdditiveBlending, MultiplyBlending, SubtractiveBlending, CustomBlending, NearestFilter, LinearFilter, MinificationTextureFilter, MagnificationTextureFilter, Vector4, Color, Uniform, IUniform } from 'three';
+import { Vector2, Vector3, NormalBlending, AdditiveBlending, MultiplyBlending, SubtractiveBlending, NearestFilter, LinearFilter, MinificationTextureFilter, MagnificationTextureFilter, Vector4, Color } from 'three';
 import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad } from '../modules/utils';
@@ -82,6 +82,7 @@ import { MaterialUniformParams, MaterialUniformType, TextureInfo } from '../rend
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 import { GoSprite, FlipMode } from '../render_engine/objects/sub_types';
 import { HistoryOwner } from './modules_editor_const';
+import { Services } from '@editor/core';
 
 // Декларации глобальных объектов
 declare const HistoryControl: {
@@ -345,27 +346,30 @@ function InspectorControlCreate() {
     }
 
     function subscribeEvents() {
-        EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
+        Services.event_bus.on('SYS_SELECTED_MESH_LIST', (data) => {
+            const e = data as { list: IBaseMeshAndThree[] };
             set_selected_list(e.list);
         });
 
-        EventBus.on('SYS_UNSELECTED_MESH_LIST', () => {
+        Services.event_bus.on('SYS_UNSELECTED_MESH_LIST', () => {
             clear();
         });
 
-        EventBus.on('SYS_ASSETS_SELECTED_TEXTURES', (data: { paths: string[] }) => {
-            set_selected_textures(data.paths);
+        Services.event_bus.on('SYS_ASSETS_SELECTED_TEXTURES', (data) => {
+            const e = data as { paths: string[] };
+            set_selected_textures(e.paths);
         });
 
-        EventBus.on('SYS_ASSETS_SELECTED_MATERIALS', (data: { paths: string[] }) => {
-            set_selected_materials(data.paths);
+        Services.event_bus.on('SYS_ASSETS_SELECTED_MATERIALS', (data) => {
+            const e = data as { paths: string[] };
+            set_selected_materials(e.paths);
         });
 
-        EventBus.on('SYS_ASSETS_CLEAR_SELECTED', () => {
+        Services.event_bus.on('SYS_ASSETS_CLEAR_SELECTED', () => {
             clear();
         });
 
-        EventBus.on('SYS_CHANGED_ATLAS_DATA', () => {
+        Services.event_bus.on('SYS_CHANGED_ATLAS_DATA', () => {
             if (_selected_textures.length > 0) {
                 // NOTE: пока просто пересоздаем поля занаво, так как нет возможности обновить параметры биндинга
                 set_selected_textures(_selected_textures);
@@ -1727,7 +1731,7 @@ function InspectorControlCreate() {
             }
         });
 
-        EventBus.trigger("SYS_GRAPH_ACTIVE", {list: ids, state});
+        Services.event_bus.emit("SYS_GRAPH_ACTIVE", {list: ids, state});
     }
 
     function saveVisible(ids: number[]) {
@@ -1764,7 +1768,7 @@ function InspectorControlCreate() {
             mesh.set_visible(state);
         });
 
-        EventBus.trigger("SYS_GRAPH_VISIBLE", {list: info.ids, state});
+        Services.event_bus.emit("SYS_GRAPH_VISIBLE", {list: info.ids, state});
     }
 
     function savePosition(ids: number[]) {
@@ -2533,12 +2537,13 @@ function InspectorControlCreate() {
                 const is_type = mesh.type == IObjectTypes.GO_SPRITE_COMPONENT || mesh.type == IObjectTypes.GUI_BOX;
                 if (!is_type) return;
 
-                const mesh_texture = (mesh as IBaseMesh).get_texture();
+                const mesh_typed = mesh as unknown as IBaseMesh;
+                const mesh_texture = mesh_typed.get_texture();
                 const is_atlas = mesh_texture.includes(old_atlas);
                 const is_texture = mesh_texture.includes(texture_name);
 
                 if (is_atlas && is_texture) {
-                    mesh.set_texture(texture_name, atlas);
+                    mesh_typed.set_texture(texture_name, atlas);
                 }
             });
         });
@@ -2777,7 +2782,7 @@ function InspectorControlCreate() {
             if (instance !== undefined) {
                 instance.needsUpdate = true;
             }
-            EventBus.trigger('SYS_MATERIAL_CHANGED' as keyof SystemMessages, {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: material.name,
                 property: 'vertexShader',
                 value: program
@@ -2795,7 +2800,7 @@ function InspectorControlCreate() {
             if (instance !== undefined) {
                 instance.needsUpdate = true;
             }
-            EventBus.trigger('SYS_MATERIAL_CHANGED' as keyof SystemMessages, {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: material.name,
                 property: 'fragmentShader',
                 value: program
@@ -2818,7 +2823,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            EventBus.trigger('SYS_MATERIAL_CHANGED' as keyof SystemMessages, {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -2838,7 +2843,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            EventBus.trigger('SYS_MATERIAL_CHANGED' as keyof SystemMessages, {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -2858,7 +2863,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            EventBus.trigger('SYS_MATERIAL_CHANGED' as keyof SystemMessages, {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -2878,7 +2883,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            EventBus.trigger('SYS_MATERIAL_CHANGED' as keyof SystemMessages, {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -2898,7 +2903,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            EventBus.trigger('SYS_MATERIAL_CHANGED' as keyof SystemMessages, {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -2918,7 +2923,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            EventBus.trigger('SYS_MATERIAL_CHANGED' as keyof SystemMessages, {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value
@@ -2939,7 +2944,7 @@ function InspectorControlCreate() {
                 }
                 instance.needsUpdate = true;
             }
-            EventBus.trigger('SYS_MATERIAL_CHANGED' as keyof SystemMessages, {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: material.name,
                 property: info.data.property.title,
                 value: info.data.event.value

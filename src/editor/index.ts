@@ -63,3 +63,11 @@ export {
     type UIServiceParams,
     type IUIService,
 } from './UIService';
+
+// Inspector
+export {
+    create_inspector_service,
+    type InspectorServiceParams,
+    type IInspectorService,
+    type IFieldProvider,
+} from './InspectorService';

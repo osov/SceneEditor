@@ -1,17 +1,18 @@
-/*
-TODO: лучше прийти к общему стилю работы с DOM, потому что сейчас для создания дерева используется html строки, а при обновлении куски работы с HTMLElement-ами, по итогу кода получается больше и меньше ясности
-TODO: переосмыслить названия и разбиение некоторых функций для большей ясности
-TODO: перейти на полное переиспользование кэша в место обновления через дерево (в некоторых местах осталось querySelector)
-*/
+/**
+ * TreeControl - UI контрол для отображения иерархии сцены
+ *
+ * Управляет деревом объектов, drag-drop, контекстное меню.
+ */
 
 import { deepClone } from "../modules/utils";
 import { contextMenuItem } from "./ContextMenu";
 import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui, componentsGo, ParamsTexture } from "../shared/types";
 import { IObjectTypes } from '../render_engine/types';
-import { Vector2 } from "three";
+import { Vector2, Mesh } from "three";
 import { ASSET_SCENE_GRAPH, TDictionary } from "./modules_editor_const";
 import { DEFOLD_LIMITS } from "../config";
 import { ComponentType } from "../render_engine/components/container_component";
+import { Services } from '@editor/core';
 
 // Alias для совместимости
 type paramsTexture = ParamsTexture;
@@ -23,44 +24,24 @@ interface TreeMeshObject {
     worldToLocal(v: { x: number; y: number; z: number }): { x: number; y: number; z: number };
 }
 
-// Декларации глобальных объектов (связаны с DI через LegacyBridge)
-declare const SelectControl: {
-    get_selected_list(): TreeMeshObject[];
-    set_selected_list(list: TreeMeshObject[]): void;
-    clear(): void;
-};
+// Декларации глобальных объектов (legacy контролы - пока остаются как globals)
+// ActionsControl имеет методы, которых нет в DI ActionsService
 declare const ActionsControl: {
-    copy(): void;
-    cut(): void;
-    paste(flag1?: boolean, flag2?: boolean): unknown[];
-    paste_as_child(parent: unknown): unknown[];
-    duplicate(): unknown[];
-    duplication(): unknown[];
-    delete_selected(): void;
-    remove(): void;
-    has_clipboard(): boolean;
-    copy_mesh_list: unknown[];
     from_the_same_world(list: unknown[], treeList: unknown[]): boolean;
     is_valid_action(item: unknown, itemSelected?: unknown[], flag1?: boolean, flag2?: boolean): boolean;
+    copy_mesh_list: unknown[];
+    paste(flag1?: boolean, flag2?: boolean): unknown[];
     add_gui_container(params: unknown): void;
     add_gui_box(params: unknown): void;
     add_gui_text(params: unknown): void;
     add_go_container(params: unknown): void;
-    add_go_sprite(params: unknown): void;
     add_go_sprite_component(params: unknown): void;
-    add_go_label(params: unknown): void;
     add_go_label_component(params: unknown): void;
-    add_go_model(params: unknown): void;
     add_go_model_component(params: unknown): void;
-    add_go_animated_model(params: unknown): void;
     add_go_animated_model_component(params: unknown): void;
-    add_go_audio(params: unknown): void;
     add_go_audio_component(params: unknown): void;
     add_component(params: unknown, type: number): void;
     add_go_with_sprite_component(params: unknown): void;
-    add_component_spline(params: unknown): void;
-    add_component_mover(params: unknown): void;
-    on_action(action: number, params?: unknown): void;
 };
 declare const AssetControl: {
     go_to_dir(dir: string, create?: boolean): Promise<boolean>;
@@ -167,7 +148,7 @@ function TreeControlCreate() {
                 if (itemId) {
                     itemDragRenameId = null;
                     //log(`SYS_GRAPH_CLICKED, { id: ${itemId} }`);
-                    EventBus.trigger("SYS_GRAPH_CLICKED", { id: itemId });
+                    Services.event_bus.emit("SYS_GRAPH_CLICKED", { id: itemId });
                 }
             }
         }, false);
@@ -180,16 +161,16 @@ function TreeControlCreate() {
     }
 
     function subscribe() {
-        EventBus.on('SYS_GRAPH_ACTIVE', updateActive);
-        EventBus.on('SYS_GRAPH_VISIBLE', updateVisible);
+        Services.event_bus.on('SYS_GRAPH_ACTIVE', updateActive);
+        Services.event_bus.on('SYS_GRAPH_VISIBLE', updateVisible);
 
         // document.addEventListener('mousedown', onMouseDown, false);
-        EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
-        EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
-        EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
-        EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', onKeyDown);
+        Services.event_bus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
+        Services.event_bus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
+        Services.event_bus.on('SYS_INPUT_POINTER_UP', onMouseUp);
+        Services.event_bus.on('SYS_VIEW_INPUT_KEY_DOWN', onKeyDown);
 
-        EventBus.on('SYS_MESH_REMOVE_AFTER', () => {
+        Services.event_bus.on('SYS_MESH_REMOVE_AFTER', () => {
             treeList.forEach(item => {
                 const parent = getElementById(item.id)?.closest('li') as HTMLElement;
                 if (parent == undefined) return;
@@ -198,7 +179,7 @@ function TreeControlCreate() {
         });
 
         // NOTE: очищаем выделение items которые не являются IBaseMeshAndThree когда очищается список в SelectControl
-        EventBus.on('SYS_CLEAR_SELECT_MESH_LIST', () => {
+        Services.event_bus.on('SYS_CLEAR_SELECT_MESH_LIST', () => {
             for (const item_id of listSelected) {
                 const element = document.querySelector(`.tree__item[data-id="${item_id}"]`) as HTMLElement;
                 if (element) element.classList.remove('selected');
@@ -235,7 +216,7 @@ function TreeControlCreate() {
         else updateTree(treeList, oldTreeList);
 
         // Синхронизация с новым SceneGraphService через bridge
-        EventBus.trigger('SYS_TREE_DRAW_GRAPH', { list: treeList });
+        Services.event_bus.emit('SYS_TREE_DRAW_GRAPH', { list: treeList });
 
         scrollToLastSelected();
     }
@@ -1274,7 +1255,7 @@ function TreeControlCreate() {
         if ((event.button === 0 || event.button === 2)) {
 
             if (event.target.closest('.filemanager') && itemDrag && listSelected.length == 1) {
-                EventBus.trigger("SYS_GRAPH_DROP_IN_ASSETS", listSelected[0]);
+                Services.event_bus.emit("SYS_GRAPH_DROP_IN_ASSETS", listSelected[0]);
             }
 
             if (!event.target.closest('.tree_div')) {
@@ -1307,7 +1288,7 @@ function TreeControlCreate() {
                     const movedList = getMovedList(listSelected, itemDrag, itemDrop, posInItem);
                     if (movedList) {
                         // log(`SYS_GRAPH_MOVED_TO`, movedList);
-                        EventBus.trigger("SYS_GRAPH_MOVED_TO", movedList);
+                        Services.event_bus.emit("SYS_GRAPH_MOVED_TO", movedList);
 
                         if (listSelected.length === 1 && itemDrag) {
                             shiftAnchorId = itemDrag.id;
@@ -1740,7 +1721,7 @@ function TreeControlCreate() {
                 listSelected = listSelected.filter((item) => item != currentId);
                 _is_currentOnly = true;
 
-                if (isOne) EventBus.trigger('SYS_GRAPH_SELECTED', { list: [] });
+                if (isOne) Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: [] });
             }
             else {
                 currentItem.classList.add("selected");
@@ -1796,23 +1777,23 @@ function TreeControlCreate() {
 
         if (!_is_moveItemDrag) { // если движения Не было
             if (Input.is_control()) {
-                //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
-                EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+                //log(`Services.event_bus.emit('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+                Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
             if (Input.is_shift()) {
-                EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+                Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
             if (listSelected?.length > 1 && event.button == 0) {
                 listSelected = [itemDrag?.id];
-                //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
-                EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+                //log(`Services.event_bus.emit('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+                Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
             if (!_is_currentOnly && listSelected?.length <= 1) { // trigger   кроме текущего
-                //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
-                EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+                //log(`Services.event_bus.emit('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+                Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
 
@@ -1827,8 +1808,8 @@ function TreeControlCreate() {
         }
 
         if (!_is_currentOnly && listSelected?.length <= 1 && !isDrop) {
-            // log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
-            EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+            // log(`Services.event_bus.emit('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+            Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
             return;
         }
     }
@@ -1945,7 +1926,7 @@ function TreeControlCreate() {
             if (name?.length == 0) { return; }
 
             //log('SYS_GRAPH_CHANGE_NAME', { id, name });
-            EventBus.trigger('SYS_GRAPH_CHANGE_NAME', { id, name });
+            Services.event_bus.emit('SYS_GRAPH_CHANGE_NAME', { id, name });
         }
 
     }
@@ -2107,10 +2088,10 @@ function TreeControlCreate() {
         if (!success || action == undefined || action == null || !copyItemDrag) return;
 
         if (action == NodeAction.CTRL_X) {
-            ActionsControl.cut();
+            Services.actions.cut();
         }
         if (action == NodeAction.CTRL_C) {
-            ActionsControl.copy();
+            Services.actions.copy();
         }
         if (action == NodeAction.CTRL_V) {
             // isDuplication для возможности вставки в корень из меню
@@ -2121,13 +2102,13 @@ function TreeControlCreate() {
             ActionsControl.paste(true, copyItemDrag?.id == -1);
         }
         if (action == NodeAction.CTRL_D) {
-            ActionsControl.duplication();
+            Services.actions.duplicate();
         }
         if (action == NodeAction.rename) {
             preRename();
         }
         if (action == NodeAction.remove) {
-            ActionsControl.remove();
+            Services.actions.delete_selected();
         }
         if (action == NodeAction.add_gui_container) {
             ActionsControl.add_gui_container({ pid: copyItemDrag?.id, pos: get_position_view() });
@@ -2167,7 +2148,7 @@ function TreeControlCreate() {
     }
 
     function get_position_view() {
-        const list = SelectControl.get_selected_list();
+        const list = Services.selection.selected as TreeMeshObject[];
         const cx = (0.5) * 2 - 1;
         const cy = - 0.5 * 2 + 1;
         if (list.length == 0) {
@@ -2175,7 +2156,7 @@ function TreeControlCreate() {
             return new Vector2(wp.x, wp.y);
         }
         if (list.length == 1) {
-            if (!Camera.is_visible(list[0])) {
+            if (!Camera.is_visible(list[0] as unknown as Mesh)) {
                 const wp = Camera.screen_to_world(cx, cy);
                 const lp = list[0].worldToLocal(wp);
                 return new Vector2(lp.x, lp.y);
@@ -2266,7 +2247,7 @@ function TreeControlCreate() {
             return;
         }
 
-        const list = SelectControl.get_selected_list();
+        const list = Services.selection.selected as TreeMeshObject[];
         if (list.length > 1 && isPos) {
             Popups.toast.open({ type: 'info', message: "Для этого действия нужно выбрать только 1 объект!" });
             return;
@@ -2565,7 +2546,7 @@ function TreeControlCreate() {
             listSelected = [elementId];
             shiftAnchorId = elementId;
 
-            EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+            Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
         }
 
         if (!isElementInViewport(divTree, element)) {
