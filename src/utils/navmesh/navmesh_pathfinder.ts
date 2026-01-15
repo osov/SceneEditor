@@ -1,4 +1,5 @@
 import NavMesh from "navmesh";
+import { Services } from '@editor/core';
 
 import { ISegment, PointLike } from "@editor/utils/geometry/types";
 import { CellsManager, CellsManagerCreate, ObstraclePolygonsManager, ObstraclePolygonsManagerCreate, Polygon, PolyPoints } from "../polygon_manager";
@@ -100,22 +101,22 @@ export function PathFinder() {
             locations_obstacles[location] = obst_manager;
         };
 
-        let t1 = System.now_ms();
+        let t1 = Services.time.now_ms();
         log('mul_scalar', mul_scalar);
         for (const obstacle_tile of obstacles_data) {
             const elements = obst_manager.add_obstacle_object(obstacle_tile, mul_scalar);
             all_elements.push(...elements);
         }
-        let t2 = System.now_ms();
+        let t2 = Services.time.now_ms();
         log('prepare obstacles time', t2 - t1)
         log('all obstacle elements', all_elements.length)
         const {start, end} = get_level_range(all_elements, OBST_PADDING);
-        let t3 = System.now_ms();
+        let t3 = Services.time.now_ms();
 
         log('get_level_size time', t3 - t2)
         log(start, end)
         const cells = cell_manager.make_cells(start, end);
-        let t4 = System.now_ms();
+        let t4 = Services.time.now_ms();
         log('make_cells time', t4 - t3)
         for (const cell of cells) {
             cell.passable = [];
@@ -131,7 +132,7 @@ export function PathFinder() {
             cell.passable.push(passable);
             all_passable.push(...passable);
         }
-        let t5 = System.now_ms();
+        let t5 = Services.time.now_ms();
         log('get passable polygons time', t5 - t4)
         locations_navmesh[location] = cell_manager.make_navmesh();
         return all_passable;

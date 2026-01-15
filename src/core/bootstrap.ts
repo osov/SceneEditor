@@ -12,6 +12,7 @@ import { create_logger, LogLevel } from './services/LoggerService';
 import type { LoggerConfig } from './services/LoggerService';
 import { create_event_bus } from './events/EventBus';
 import { create_input_service } from './services/InputService';
+import { create_time_service } from './services/TimeService';
 import type { IPluginManager, PluginConfig, PluginFactory } from './plugins/types';
 import { create_plugin_manager } from './plugins/PluginManager';
 import { EXTENSION_POINTS } from './plugins/ExtensionPoints';
@@ -41,9 +42,6 @@ import {
 import { register_engine } from '../render_engine/engine';
 import { register_scene_manager } from '../render_engine/scene_manager';
 import { register_resource_manager } from '../render_engine/resource_manager';
-import { register_event_bus } from '../modules/EventBus';
-import { register_system } from '../modules/System';
-import { register_log } from '../modules/Log';
 import { register_input } from '../modules/InputManager';
 import { register_camera } from '../modules/Camera';
 import { register_editor_modules } from '../modules_editor/Manager_editor';
@@ -131,6 +129,14 @@ function register_core_services(container: IContainer, options: BootstrapOptions
         init_order: INIT_ORDER.INPUT,
         dependencies: [TOKENS.Logger, TOKENS.EventBus],
         name: 'InputService',
+    });
+
+    // Сервис времени
+    container.register_singleton(TOKENS.System, () => {
+        return create_time_service();
+    }, {
+        init_order: INIT_ORDER.CORE,
+        name: 'TimeService',
     });
 
     // Менеджер плагинов
@@ -381,12 +387,7 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         // Эти модули регистрируют глобальные объекты для обратной совместимости.
         // Новый код должен использовать DI сервисы напрямую.
 
-        // 1. Базовые утилиты
-        register_system();  // window.System - время, delta
-        register_log();     // window.Log - делегирует к LoggerService
-
-        // 2. Коммуникация и ввод
-        register_event_bus();  // window.EventBus - делегирует к DI EventBus
+        // 1. Коммуникация и ввод
         register_input();      // window.Input - делегирует к InputService
         register_camera();     // window.Camera - данные камеры
 

@@ -1,5 +1,6 @@
 import { NetMessagesEditor } from "../modules_editor/modules_editor_const";
 import { WsWrap } from "./ws_wrap";
+import { Services } from '@editor/core';
 
 type NetMessages = NetMessagesEditor;
 
@@ -16,10 +17,10 @@ function WsClientModule() {
     const logger = Log.get_with_prefix('WsClient');
 
     const ws_wrap = WsWrap(
-        () => EventBus.trigger('ON_WS_CONNECTED', {}),
-        () =>  EventBus.trigger('ON_WS_DISCONNECTED', {}), 
+        () => Services.event_bus.emit('ON_WS_CONNECTED', {}),
+        () =>  Services.event_bus.emit('ON_WS_DISCONNECTED', {}), 
         () => { },
-        (e) =>  EventBus.trigger('ON_WS_DATA', { data: e })
+        (e) =>  Services.event_bus.emit('ON_WS_DATA', { data: e })
     );
 
     function set_binary(){

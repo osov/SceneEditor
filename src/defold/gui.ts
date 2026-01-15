@@ -4,6 +4,7 @@ import { GuiBox, GuiText } from "@editor/render_engine/objects/sub_types";
 import { IBaseEntityAndThree, IObjectTypes } from "@editor/render_engine/types";
 import { Quaternion, Vector3 } from "three";
 import { animate_logic, cancel_animations_logic, hex2rgba, PLAYBACK_LOOP_BACKWARD, PLAYBACK_LOOP_FORWARD, PLAYBACK_ONCE_BACKWARD, PLAYBACK_ONCE_FORWARD, PLAYBACK_ONCE_PINGPONG, PLAYBACK_LOOP_PINGPONG, EASING_LINEAR, EASING_INQUART, EASING_INQUAD, EASING_OUTQUART, EASING_OUTQUAD, EASING_OUTQUINT, EASING_INOUTQUAD, EASING_INQUINT, EASING_INOUTQUART, EASING_INOUTQUINT, EASING_OUTCUBIC, EASING_INOUTCUBIC, EASING_OUTSINE, EASING_INSINE, EASING_INCUBIC, EASING_INOUTSINE, EASING_OUTCIRC, EASING_INOUTCIRC, EASING_INOUTEXPO, EASING_INCIRC, EASING_OUTBACK, EASING_INBACK, EASING_INOUTELASTIC, EASING_INOUTBACK, EASING_INEXPO, EASING_OUTEXPO, EASING_INELASTIC, EASING_OUTELASTIC, EASING_INBOUNCE, EASING_OUTBOUNCE, EASING_INOUTBOUNCE, get_nested_property, set_nested_property, convert_defold_blend_mode_to_threejs, convert_threejs_blend_mode_to_defold, convert_defold_pivot_to_threejs, convert_threejs_pivot_to_defold, generate_unique_name, make_names_unique } from "./utils";
+import { Services } from '@editor/core';
 
 declare global {
     namespace gui {
@@ -159,12 +160,12 @@ export function gui_module() {
     function set(node: node, property: string, value: any, options?: any) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
-            Log.error('[set] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set] Mesh not found for id:', (node as any).id);
             return;
         }
         const is_gui_type = mesh.type == IObjectTypes.GUI_BOX || mesh.type == IObjectTypes.GUI_TEXT;
         if (['position', 'rotation', 'scale', 'euler.z'].includes(property) && !is_gui_type) {
-            Log.error('[set] Mesh with id', (node as any).id, 'is not gui property:', property);
+            Services.logger.error('[set] Mesh with id', (node as any).id, 'is not gui property:', property);
             return;
         }
         set_nested_property(mesh, property, value);
@@ -173,7 +174,7 @@ export function gui_module() {
     function set_alpha(node: node, alpha: number) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[set_alpha] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_alpha] Mesh not found for id:', (node as any).id);
             return;
         }
         mesh.set_alpha(alpha);
@@ -182,7 +183,7 @@ export function gui_module() {
     function set_blend_mode(node: node, blend_mode: any) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
-            Log.error('[set_blend_mode] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_blend_mode] Mesh not found for id:', (node as any).id);
             return;
         }
         if (mesh instanceof GuiBox) mesh.material.blending = blend_mode;
@@ -195,7 +196,7 @@ export function gui_module() {
     function set_clipping_mode(node: node, mode: any) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox)) {
-            Log.error('[set_clipping_mode] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_clipping_mode] Mesh not found for id:', (node as any).id);
             return;
         }
         if (mode == CLIPPING_MODE_NONE) mesh.disableClipping();
@@ -205,11 +206,11 @@ export function gui_module() {
     function set_clipping_inverted(node: node, inverted: boolean) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox)) {
-            Log.error('[set_clipping_inverted] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_clipping_inverted] Mesh not found for id:', (node as any).id);
             return;
         }
         if (!mesh.isClippingEnabled()) {
-            Log.warn('[set_clipping_inverted] Clipping is not enabled for id:', (node as any).id);
+            Services.logger.warn('[set_clipping_inverted] Clipping is not enabled for id:', (node as any).id);
             return;
         }
         mesh.enableClipping(inverted);
@@ -218,11 +219,11 @@ export function gui_module() {
     function set_clipping_visible(node: node, visible: boolean) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox)) {
-            Log.error('[set_clipping_visible] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_clipping_visible] Mesh not found for id:', (node as any).id);
             return;
         }
         if (!mesh.isClippingEnabled()) {
-            Log.warn('[set_clipping_visible] Clipping is not enabled for id:', (node as any).id);
+            Services.logger.warn('[set_clipping_visible] Clipping is not enabled for id:', (node as any).id);
             return;
         }
         mesh.enableClipping(false, visible);
@@ -231,7 +232,7 @@ export function gui_module() {
     function set_color(node: node, color: vmath.vector4) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[set_color] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_color] Mesh not found for id:', (node as any).id);
             return;
         }
         mesh.set_color(rgbToHex(new Vector3(color.x, color.y, color.z)));
@@ -240,7 +241,7 @@ export function gui_module() {
     function set_euler(node: node, euler: vmath.vector3) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[set_euler] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_euler] Mesh not found for id:', (node as any).id);
             return;
         }
         mesh.rotation.set(euler.x, euler.y, euler.z);
@@ -249,7 +250,7 @@ export function gui_module() {
     function set_leading(node: node, leading: number) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiText)) {
-            Log.error('[set_leading] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_leading] Mesh not found for id:', (node as any).id);
             return;
         }
         mesh.lineHeight = leading;
@@ -258,12 +259,12 @@ export function gui_module() {
     function set_parent(node: node, parent: node, keep_scene_transform?: boolean) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
-            Log.error('[set_parent] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_parent] Mesh not found for id:', (node as any).id);
             return;
         }
         const parent_mesh = SceneManager.get_mesh_by_id((parent as any).id);
         if (!parent_mesh) {
-            Log.error('[set_parent] Parent mesh not found for id:', (parent as any).id);
+            Services.logger.error('[set_parent] Parent mesh not found for id:', (parent as any).id);
             return;
         }
         mesh.parent = parent_mesh;
@@ -272,7 +273,7 @@ export function gui_module() {
     function set_pivot(node: node, pivot: any) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[set_pivot] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_pivot] Mesh not found for id:', (node as any).id);
             return;
         }
         const [pivot_x, pivot_y] = convert_defold_pivot_to_threejs(pivot);
@@ -282,7 +283,7 @@ export function gui_module() {
     function set_position(node: node, position: vmath.vector3) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[set_position] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_position] Mesh not found for id:', (node as any).id);
             return;
         }
         mesh.position.set(position.x, position.y, position.z);
@@ -291,7 +292,7 @@ export function gui_module() {
     function set_rotation(node: node, rotation: vmath.quaternion) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[set_rotation] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_rotation] Mesh not found for id:', (node as any).id);
             return;
         }
         mesh.setRotationFromQuaternion(new Quaternion(rotation.x, rotation.y, rotation.z, rotation.w));
@@ -300,7 +301,7 @@ export function gui_module() {
     function set_size(node: node, size: vmath.vector3) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[set_size] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_size] Mesh not found for id:', (node as any).id);
             return;
         }
         mesh.set_size(size.x, size.y);
@@ -309,7 +310,7 @@ export function gui_module() {
     function set_slice9(node: node, slice9: vmath.vector4) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox)) {
-            Log.error('[set_slice9] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_slice9] Mesh not found for id:', (node as any).id);
             return;
         }
         mesh.set_slice(slice9.x, slice9.y);
@@ -318,7 +319,7 @@ export function gui_module() {
     function set_text(node: node, text: string | number) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiText)) {
-            Log.error('[set_text] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_text] Mesh not found for id:', (node as any).id);
             return;
         }
         mesh.set_text(text.toString());
@@ -328,7 +329,7 @@ export function gui_module() {
     function set_texture(node: node, texture: string) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox)) {
-            Log.error('[set_texture] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[set_texture] Mesh not found for id:', (node as any).id);
             return;
         }
         const [atlas, texture_name] = texture.split('/');
@@ -338,7 +339,7 @@ export function gui_module() {
     function get(node: node, property: string, options?: any) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
-            Log.error('[get] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get] Mesh not found for id:', (node as any).id);
             return null;
         }
         return get_nested_property(mesh, property);
@@ -347,7 +348,7 @@ export function gui_module() {
     function get_node(id: string) {
         const mesh = SceneManager.get_mesh_by_name(id);
         if (!mesh) {
-            Log.error('[get_node] Mesh not found for id:', id);
+            Services.logger.error('[get_node] Mesh not found for id:', id);
             return;
         }
         return { id: mesh.mesh_data.id } as node;
@@ -356,11 +357,11 @@ export function gui_module() {
     function get_type(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
-            Log.error('[get_type] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_type] Mesh not found for id:', (node as any).id);
             return;
         }
         if (mesh.type != IObjectTypes.GUI_BOX && mesh.type != IObjectTypes.GUI_TEXT) {
-            Log.error('[get_type] Wrong/Unsupported mesh type:', (node as any).id);
+            Services.logger.error('[get_type] Wrong/Unsupported mesh type:', (node as any).id);
             return;
         }
         return mesh.type == IObjectTypes.GUI_BOX ? TYPE_BOX : TYPE_TEXT;
@@ -369,11 +370,11 @@ export function gui_module() {
     function get_parent(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
-            Log.error('[get_parent] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_parent] Mesh not found for id:', (node as any).id);
             return;
         }
         if (!mesh.parent || !is_base_mesh(mesh.parent)) {
-            Log.error('[get_parent] Parent mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_parent] Parent mesh not found for id:', (node as any).id);
             return;
         }
         return { id: (mesh.parent as any).mesh_data.id } as node;
@@ -382,7 +383,7 @@ export function gui_module() {
     function get_position(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
-            Log.error('[get_position] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_position] Mesh not found for id:', (node as any).id);
             return;
         }
         return vmath.vector3(mesh.position.x, mesh.position.y, mesh.position.z);
@@ -391,7 +392,7 @@ export function gui_module() {
     function get_rotation(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
-            Log.error('[get_rotation] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_rotation] Mesh not found for id:', (node as any).id);
             return;
         }
         return vmath.vector4(mesh.quaternion.x, mesh.quaternion.y, mesh.quaternion.z, mesh.quaternion.w);
@@ -400,7 +401,7 @@ export function gui_module() {
     function get_scale(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
-            Log.error('[get_scale] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_scale] Mesh not found for id:', (node as any).id);
             return;
         }
         return vmath.vector3(mesh.scale.x, mesh.scale.y, mesh.scale.z);
@@ -409,7 +410,7 @@ export function gui_module() {
     function get_size(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[get_size] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_size] Mesh not found for id:', (node as any).id);
             return;
         }
         return vmath.vector3(mesh.get_size().x, mesh.get_size().y, 0);
@@ -418,7 +419,7 @@ export function gui_module() {
     function get_slice9(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox)) {
-            Log.error('[get_slice9] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_slice9] Mesh not found for id:', (node as any).id);
             return;
         }
         return vmath.vector4(mesh.get_slice().x, mesh.get_slice().y, 0, 0);
@@ -427,7 +428,7 @@ export function gui_module() {
     function get_text(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiText)) {
-            Log.error('[get_text] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_text] Mesh not found for id:', (node as any).id);
             return;
         }
         return mesh.text;
@@ -436,7 +437,7 @@ export function gui_module() {
     function get_pivot(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[get_pivot] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_pivot] Mesh not found for id:', (node as any).id);
             return;
         }
         const [pivot_x, pivot_y] = mesh.get_pivot();
@@ -446,7 +447,7 @@ export function gui_module() {
     function get_alpha(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[get_alpha] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_alpha] Mesh not found for id:', (node as any).id);
             return;
         }
         return mesh.get_alpha();
@@ -455,7 +456,7 @@ export function gui_module() {
     function get_blend_mode(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText) || !mesh.material) {
-            Log.error('[get_blend_mode] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_blend_mode] Mesh not found for id:', (node as any).id);
             return;
         }
         return convert_threejs_blend_mode_to_defold(mesh.material.blending);
@@ -464,7 +465,7 @@ export function gui_module() {
     function get_clipping_mode(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox)) {
-            Log.error('[get_clipping_mode] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_clipping_mode] Mesh not found for id:', (node as any).id);
             return;
         }
         return mesh.isClippingEnabled() ? CLIPPING_MODE_STENCIL : CLIPPING_MODE_NONE;
@@ -473,7 +474,7 @@ export function gui_module() {
     function get_clipping_inverted(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox)) {
-            Log.error('[get_clipping_inverted] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_clipping_inverted] Mesh not found for id:', (node as any).id);
             return;
         }
         return mesh.isInvertedClipping();
@@ -482,7 +483,7 @@ export function gui_module() {
     function get_clipping_visible(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox)) {
-            Log.error('[get_clipping_visible] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_clipping_visible] Mesh not found for id:', (node as any).id);
             return;
         }
         return mesh.isClippingVisible();
@@ -491,7 +492,7 @@ export function gui_module() {
     function get_color(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[get_color] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_color] Mesh not found for id:', (node as any).id);
             return;
         }
         return hex2rgba(mesh.get_color());
@@ -500,7 +501,7 @@ export function gui_module() {
     function get_euler(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiBox || mesh instanceof GuiText)) {
-            Log.error('[get_euler] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_euler] Mesh not found for id:', (node as any).id);
             return;
         }
         return vmath.vector3(mesh.rotation.x, mesh.rotation.y, mesh.rotation.z);
@@ -513,7 +514,7 @@ export function gui_module() {
     function get_leading(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh || !(mesh instanceof GuiText)) {
-            Log.error('[get_leading] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[get_leading] Mesh not found for id:', (node as any).id);
             return;
         }
         return mesh.lineHeight;
@@ -522,7 +523,7 @@ export function gui_module() {
     function clone(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (mesh === null) {
-            Log.error('[clone] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[clone] Mesh not found for id:', (node as any).id);
             return;
         }
         const parent = mesh.parent ?? RenderEngine.scene;
@@ -536,7 +537,7 @@ export function gui_module() {
     function clone_tree(node: node) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (mesh === null) {
-            Log.error('[clone] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[clone] Mesh not found for id:', (node as any).id);
             return;
         }
         const parent = mesh.parent ?? RenderEngine.scene;
@@ -559,7 +560,7 @@ export function gui_module() {
     ) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
-            Log.error('[animate] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[animate] Mesh not found for id:', (node as any).id);
             return;
         }
         animate_logic(mesh, property, playback, to, easing, duration, delay, () => {
@@ -570,7 +571,7 @@ export function gui_module() {
     function cancel_animations(node: node, property?: string) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
-            Log.error('[cancel_animations] Mesh not found for id:', (node as any).id);
+            Services.logger.error('[cancel_animations] Mesh not found for id:', (node as any).id);
             return;
         }
         cancel_animations_logic(mesh, property);

@@ -32,7 +32,7 @@ export function TweenManagerModule() {
             return;
         }
         if (!properties[property]) {
-            Log.warn(`Tween for property ${property} not found`);
+            Services.logger.warn(`Tween for property ${property} not found`);
             return;
         }
         properties[property].remove();
@@ -47,7 +47,7 @@ export function TweenManagerModule() {
         }
         Object.keys(properties).forEach((property) => {
             if (!properties[property]) {
-                Log.error(`Tween for property ${property} not found`);
+                Services.logger.error(`Tween for property ${property} not found`);
                 return;
             }
             properties[property].remove();

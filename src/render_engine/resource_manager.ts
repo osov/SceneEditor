@@ -43,6 +43,7 @@ import { IS_LOGGING } from '@editor/config';
 import { get_file_data, save_file_data } from '@editor/defold/runtime_stubs';
 import { get_container } from '../core/di/Container';
 import { TOKENS } from '../core/di/tokens';
+import { Services } from '@editor/core';
 
 /** Тип возвращаемого значения ResourceManagerModule для DI */
 export type ILegacyResourceManager = ReturnType<typeof ResourceManagerModule>;
@@ -298,7 +299,7 @@ export function ResourceManagerModule() {
     }
 
     function subscribe() {
-        EventBus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {
+        Services.event_bus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {
             for (const event of e.events) {
                 await on_file_change(event);
             }
@@ -457,7 +458,7 @@ export function ResourceManagerModule() {
                     const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
                     const changed_uniform_index = changed_uniforms.indexOf(key);
                     if (changed_uniform_index == -1) {
-                        Log.error('[on_material_file_change] changed_uniform_index not found', key, material_info);
+                        Services.logger.error('[on_material_file_change] changed_uniform_index not found', key, material_info);
                         return;
                     }
 
@@ -645,7 +646,7 @@ export function ResourceManagerModule() {
     async function preload_texture(path: string, atlas = '', override = false) {
         const name = get_file_name(path);
         if (!override && has_texture_name(name, atlas)) {
-            IS_LOGGING && Log.warn('texture exists', name, atlas);
+            IS_LOGGING && Services.logger.warn('texture exists', name, atlas);
             return atlases[atlas][name].data;
         }
         const texture = await load_texture(path);
@@ -657,7 +658,7 @@ export function ResourceManagerModule() {
             add_atlas(atlas);
         }
         if (atlases[atlas][name]) {
-            Log.warn('texture exists already', name, atlas);
+            Services.logger.warn('texture exists already', name, atlas);
         }
         atlases[atlas][name] = {
             data: {
@@ -675,7 +676,7 @@ export function ResourceManagerModule() {
     function add_texture(path: string, atlas = '', texture: Texture, override = false) {
         const name = get_file_name(path);
         if (!override && has_texture_name(name, atlas)) {
-            Log.warn('Texture already exists', name, atlas);
+            Services.logger.warn('Texture already exists', name, atlas);
             return atlases[atlas][name].data;
         }
 
@@ -684,7 +685,7 @@ export function ResourceManagerModule() {
         }
 
         if (atlases[atlas][name]) {
-            Log.warn('Texture already exists', name, atlas);
+            Services.logger.warn('Texture already exists', name, atlas);
         }
 
         atlases[atlas][name] = {
@@ -704,7 +705,7 @@ export function ResourceManagerModule() {
     async function preload_atlas(atlas_path: string, texture_path: string, override = false) {
         const name = get_file_name(atlas_path);
         if (!override && atlases[name]) {
-            Log.warn('atlas exists', name);
+            Services.logger.warn('atlas exists', name);
             const textures = Object.values(atlases[name]);
             if (textures[0]) {
                 return textures[0].data.texture;
@@ -743,7 +744,7 @@ export function ResourceManagerModule() {
 
         const name = get_file_name(path);
         if (!override && fonts[name]) {
-            Log.warn('font exists', name, path);
+            Services.logger.warn('font exists', name, path);
             return true;
         }
 
@@ -753,7 +754,7 @@ export function ResourceManagerModule() {
                 characters: font_characters
             }, () => {
                 if (fonts[name])
-                    Log.warn('font exists already', name, path);
+                    Services.logger.warn('font exists already', name, path);
                 fonts[name] = path;
                 resolve(true);
             });
@@ -767,7 +768,7 @@ export function ResourceManagerModule() {
     function get_vertex_program(path: string) {
         const vertex_program = vertex_programs[path];
         if (!vertex_program) {
-            Log.error('vertex program not found', path);
+            Services.logger.error('vertex program not found', path);
             return;
         }
         return vertex_program;
@@ -775,7 +776,7 @@ export function ResourceManagerModule() {
 
     async function preload_vertex_program(path: string) {
         if (has_vertex_program(path)) {
-            IS_LOGGING && Log.warn('vertex program exists', path);
+            IS_LOGGING && Services.logger.warn('vertex program exists', path);
             return;
         }
         const shader_program = await get_file_data(path);
@@ -793,7 +794,7 @@ export function ResourceManagerModule() {
     function get_fragment_program(path: string) {
         const fragment_program = fragment_programs[path];
         if (!fragment_program) {
-            Log.error('fragment program not found', path);
+            Services.logger.error('fragment program not found', path);
             return;
         }
         return fragment_program;
@@ -801,7 +802,7 @@ export function ResourceManagerModule() {
 
     async function preload_fragment_program(path: string) {
         if (has_fragment_program(path)) {
-            IS_LOGGING && Log.warn('fragment program exists', path);
+            IS_LOGGING && Services.logger.warn('fragment program exists', path);
             return;
         }
         const shader_program = await get_file_data(path);
@@ -907,7 +908,7 @@ export function ResourceManagerModule() {
     async function preload_material(path: string) {
         let name = get_file_name(path);
         if (has_material(name)) {
-            IS_LOGGING && Log.warn('Material already exists', name, path);
+            IS_LOGGING && Services.logger.warn('Material already exists', name, path);
             return materials[name];
         }
 
@@ -921,7 +922,7 @@ export function ResourceManagerModule() {
     function get_material_info(name: string) {
         const material_info = materials[name];
         if (!material_info) {
-            Log.error('Material info not found', name, materials);
+            Services.logger.error('Material info not found', name, materials);
             return null;
         }
         return material_info;
@@ -938,7 +939,7 @@ export function ResourceManagerModule() {
         if (!material_info) return null;
         const material = material_info.instances[hash];
         if (!material) {
-            Log.error('Material by hash not found', hash, material_info);
+            Services.logger.error('Material by hash not found', hash, material_info);
             return null;
         }
         return material;
@@ -949,7 +950,7 @@ export function ResourceManagerModule() {
         if (!material_info) return null;
         const hash = material_info.mesh_info_to_material_hashes[mesh_id][index];
         if (!hash) {
-            Log.error('Material hash by mesh id not found', mesh_id, index, material_info);
+            Services.logger.error('Material hash by mesh id not found', mesh_id, index, material_info);
             return null;
         }
         return hash;
@@ -988,7 +989,7 @@ export function ResourceManagerModule() {
                 delete_material_instance(material_info, hash);
             }
         } else {
-            Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
+            Services.logger.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
         }
         if (!material_info.mesh_info_to_material_hashes[mesh_id]) {
             material_info.mesh_info_to_material_hashes[mesh_id] = [];
@@ -1028,7 +1029,7 @@ export function ResourceManagerModule() {
                 delete_material_instance(material_info, hash);
             }
         } else {
-            Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
+            Services.logger.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
         }
     }
 
@@ -1056,7 +1057,7 @@ export function ResourceManagerModule() {
                 delete_material_instance(material_info, hash);
             }
         } else {
-            Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
+            Services.logger.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
         }
     }
 
@@ -1231,7 +1232,7 @@ export function ResourceManagerModule() {
     function set_material_uniform_for_multiple_material_mesh<T>(mesh: MultipleMaterialMesh, index: number, uniform_name: string, value: T) {
         const materials = mesh.get_materials();
         if (materials.length < index) {
-            Log.error('[set_material_uniform_for_multiple_material_mesh] Material index out of range:', index);
+            Services.logger.error('[set_material_uniform_for_multiple_material_mesh] Material index out of range:', index);
             return;
         }
 
@@ -1248,12 +1249,12 @@ export function ResourceManagerModule() {
     function set_material_uniform<T>(material_info: MaterialInfo, mesh_id: number, index: number, uniform_name: string, value: T) {
         const uniform = material_info.uniforms[uniform_name];
         if (!uniform) {
-            Log.error('Uniform not found', uniform_name, material_info.name);
+            Services.logger.error('Uniform not found', uniform_name, material_info.name);
             return false;
         }
 
         if (uniform.readonly) {
-            Log.error('Uniform is readonly', uniform_name, material_info.name);
+            Services.logger.error('Uniform is readonly', uniform_name, material_info.name);
             return false;
         }
 
@@ -1379,7 +1380,7 @@ export function ResourceManagerModule() {
                 delete material_info.instances[hash];
             }
         } else {
-            Log.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
+            Services.logger.error('Mesh id not found in material_hash_to_mesh_id', mesh_id, material_info);
         }
         material_info.mesh_info_to_material_hashes[mesh_id].splice(index, 1);
         if (material_info.mesh_info_to_material_hashes[mesh_id].length == 0) {
@@ -1463,7 +1464,7 @@ export function ResourceManagerModule() {
     function get_texture(name: string, atlas = ''): TextureData {
         if (!has_texture_name(name, atlas)) {
             if (name != '') {
-                Log.error('Texture not found', name, atlas);
+                Services.logger.error('Texture not found', name, atlas);
             }
             return {
                 texture: bad_texture,
@@ -1498,13 +1499,13 @@ export function ResourceManagerModule() {
             }
         }
 
-        Log.error('Atlas not found', texture_name);
+        Services.logger.error('Atlas not found', texture_name);
         return null;
     }
 
     function add_atlas(name: string) {
         if (has_atlas(name)) {
-            Log.warn(`Atlas ${name} already exist!`)
+            Services.logger.warn(`Atlas ${name} already exist!`)
         }
 
         atlases[name] = {};
@@ -1516,7 +1517,7 @@ export function ResourceManagerModule() {
 
     function del_atlas(name: string) {
         if (!atlases[name]) {
-            Log.warn(`Atlas ${name} not found!`);
+            Services.logger.warn(`Atlas ${name} not found!`);
         }
 
         if (!has_atlas('')) {
@@ -1558,7 +1559,7 @@ export function ResourceManagerModule() {
         }
         if (list_anim.length) {
             if (list_anim.length > 1)
-                Log.warn('animation more 1:', list_anim, name_anim, model_name);
+                Services.logger.warn('animation more 1:', list_anim, name_anim, model_name);
             for (let i = 0; i < list_anim.length; i++) {
                 const it = list_anim[i];
                 if (it.model == model_name || it.model == '')
@@ -1591,7 +1592,7 @@ export function ResourceManagerModule() {
                 const clip = anim_list[i];
                 let cur_anim_name = anim_name;
                 if (find_animation(cur_anim_name, model_name))
-                    Log.warn('animation exists already', cur_anim_name, model_name);
+                    Services.logger.warn('animation exists already', cur_anim_name, model_name);
                 animations.push({ model: model_name, animation: cur_anim_name, clip });
             }
         }
@@ -1609,7 +1610,7 @@ export function ResourceManagerModule() {
 
         const response = await api.GET(URL_PATHS.ASSETS + `/${project_name}${path}`);
         if (!response || !response.ok) {
-            Log.error('Failed to load model:', path, 'Status:', response?.status);
+            Services.logger.error('Failed to load model:', path, 'Status:', response?.status);
             return;
         }
 
@@ -1650,7 +1651,7 @@ export function ResourceManagerModule() {
                 });
             })
         }
-        Log.error('Model not supported', path);
+        Services.logger.error('Model not supported', path);
         return null;
     }
 
@@ -1681,7 +1682,7 @@ export function ResourceManagerModule() {
             log('Texture free', name, atlas);
         }
         else {
-            Log.error('Texture not found', name, atlas);
+            Services.logger.error('Texture not found', name, atlas);
         }
     }
 
@@ -1692,7 +1693,7 @@ export function ResourceManagerModule() {
     // иначе будет проблема с одновременной записью в metadata!
     function override_atlas_texture(old_atlas: string, new_atlas: string, name: string) {
         if (!has_texture_name(name, old_atlas)) {
-            Log.error('Texture not found', name, old_atlas);
+            Services.logger.error('Texture not found', name, old_atlas);
             return;
         }
 
@@ -1754,7 +1755,7 @@ export function ResourceManagerModule() {
                 throw new Error('Failed on save layers metadata!');
             }
         } catch (error) {
-            Log.error('Error writing metadata:', error);
+            Services.logger.error('Error writing metadata:', error);
         }
     }
 
@@ -1765,10 +1766,10 @@ export function ResourceManagerModule() {
             const metadata = await ClientAPI.get_info('atlases');
             if (!metadata.result) {
                 if (metadata.data == undefined) {
-                    Log.log('Update resource manager from metadata: atlases not found!');
+                    Services.logger.debug('Update resource manager from metadata: atlases not found!');
                     return;
                 }
-                Log.warn('Update resource manager from metadata: failed on get atlases!');
+                Services.logger.warn('Update resource manager from metadata: failed on get atlases!');
                 return;
             }
             const metadata_atlases = metadata.data as TRecursiveDict;
@@ -1805,10 +1806,10 @@ export function ResourceManagerModule() {
             const layers_metadata = await ClientAPI.get_info('layers');
             if (!layers_metadata.result) {
                 if (layers_metadata.data == undefined) {
-                    Log.log('Update resource manager from metadata: layers not found!');
+                    Services.logger.debug('Update resource manager from metadata: layers not found!');
                     return;
                 }
-                Log.warn('Update resource manager from metadata: failed on get layers!');
+                Services.logger.warn('Update resource manager from metadata: failed on get layers!');
                 return;
             }
             const metadata_layers = layers_metadata.data as TRecursiveDict;
@@ -1819,7 +1820,7 @@ export function ResourceManagerModule() {
                 }
             });
         } catch (error) {
-            Log.error('Error updating resource manager:', error);
+            Services.logger.error('Error updating resource manager:', error);
         }
     }
 
@@ -1851,11 +1852,11 @@ export function ResourceManagerModule() {
         return layers_names.map(layer => {
             const index = layers.indexOf(layer);
             if (index === -1) {
-                Log.warn(`Layer "${layer}" not found in layers array`);
+                Services.logger.warn(`Layer "${layer}" not found in layers array`);
                 return 0;
             }
             if (index > 10) {
-                Log.warn(`Layer "${layer}" index ${index} exceeds maximum allowed value of 10`);
+                Services.logger.warn(`Layer "${layer}" index ${index} exceeds maximum allowed value of 10`);
                 return 0;
             }
             return 1 << index;

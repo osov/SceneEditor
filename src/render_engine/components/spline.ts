@@ -8,10 +8,6 @@ import { MeshPropertyInfo } from "@editor/core/render/types";
 import { Services } from '@editor/core';
 
 // Глобальные объекты - связаны с DI сервисами через LegacyBridge
-declare const SelectControl: {
-    get_selected_list(): IBaseEntityAndThree[];
-    set_selected_list(list: IBaseEntityAndThree[]): void;
-};
 declare const HistoryControl: {
     add(type: string, data: unknown[], owner: HistoryOwner): void;
 };
@@ -34,7 +30,7 @@ export function CmpSpline(cmp_mesh: EntityBase) {
             if (e.button == 0) {
                 if (!Input.is_shift())
                     return;
-                const selected_list = SelectControl.get_selected_list();
+                const selected_list = Services.selection.selected;
                 if (selected_list.length == 1) {
                     if (selected_list[0].parent == cmp_mesh || selected_list[0] == cmp_mesh) {
                         add_to_history();
@@ -113,7 +109,7 @@ export function CmpSpline(cmp_mesh: EntityBase) {
             return;
         let point = new Vector3();
         if (!spline_mesh) {
-            Log.error("spline_mesh is null");
+            Services.logger.error("spline_mesh is null");
             return;
         }
         let position = spline_mesh.geometry.attributes.position;
@@ -160,7 +156,7 @@ export function CmpSpline(cmp_mesh: EntityBase) {
             cmp_mesh.add(helper);
         }
         if (select && helper)
-            SelectControl.set_selected_list([helper]);
+            Services.selection.set_selected([helper]);
         curve = new CatmullRomCurve3(positions);
         curve.curveType = 'catmullrom';
         let geometry = new BufferGeometry();

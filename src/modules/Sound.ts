@@ -1,5 +1,6 @@
 import '../defold/vmath';
 import { calculate_distance_2d } from './utils';
+import { Services } from '@editor/core';
 
 
 export enum SoundFunctionType {
@@ -94,7 +95,7 @@ function SoundModule() {
 
         // TODO: нужен лучший способ проверки существования звука
         if (!go.get(url, "gain")) {
-            Log.error('Sound not found or not set');
+            Services.logger.error('Sound not found or not set');
             return -1;
         }
 
@@ -130,7 +131,7 @@ function SoundModule() {
         };
 
         // NOTE: мы же можем использовать этот ивент для обновления ? как вариант вручную где-то потом вызывать update_sound
-        EventBus.on('SYS_ON_UPDATE', () => update(url));
+        Services.event_bus.on('SYS_ON_UPDATE', () => update(url));
 
         instances.set(url, instance);
 
@@ -143,7 +144,7 @@ function SoundModule() {
         if (instance) {
             stop(url);
             instances.delete(url);
-            EventBus.off('SYS_ON_UPDATE', () => update(url));
+            Services.event_bus.off('SYS_ON_UPDATE', () => update(url));
         }
     }
 
@@ -425,7 +426,7 @@ function SoundModule() {
 
         instance.fadeStartVolume = instance.currentVolume;
         instance.targetVolume = targetVolume;
-        instance.fadeStartTime = System.now_with_ms();
+        instance.fadeStartTime = Services.time.now_with_ms();
         instance.fadeDuration = duration;
     }
 
@@ -433,7 +434,7 @@ function SoundModule() {
         const instance = instances.get(url);
         if (!instance || instance.fadeDuration <= 0) return;
 
-        const currentTime = System.now_with_ms();
+        const currentTime = Services.time.now_with_ms();
         const fadeProgress = (currentTime - instance.fadeStartTime) / instance.fadeDuration;
 
         if (fadeProgress >= 1) {

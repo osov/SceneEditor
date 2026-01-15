@@ -141,7 +141,7 @@ function AssetInspectorCreate() {
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
 
             if (atlas == null) {
-                Log.error(`[set_selected_textures] Atlas for texture ${texture_name} not found`);
+                Services.logger.error(`[set_selected_textures] Atlas for texture ${texture_name} not found`);
                 return { id, fields: [] };
             }
 
@@ -563,7 +563,7 @@ function AssetInspectorCreate() {
         info.ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[saveAtlas] Texture path not found for id:', id);
+                Services.logger.error('[saveAtlas] Texture path not found for id:', id);
                 return;
             }
 
@@ -614,14 +614,14 @@ function AssetInspectorCreate() {
         info.ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[saveMinFilter] Texture path not found for id:', id);
+                Services.logger.error('[saveMinFilter] Texture path not found for id:', id);
                 return;
             }
 
             const texture_name = get_file_name(texture_path);
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
-                Log.error('[saveMinFilter] Atlas not found for texture:', texture_name);
+                Services.logger.error('[saveMinFilter] Atlas not found for texture:', texture_name);
                 return;
             }
 
@@ -665,14 +665,14 @@ function AssetInspectorCreate() {
         info.ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[saveMagFilter] Texture path not found for id:', id);
+                Services.logger.error('[saveMagFilter] Texture path not found for id:', id);
                 return;
             }
 
             const texture_name = get_file_name(texture_path);
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
-                Log.error('[saveMagFilter] Atlas not found for texture:', texture_name);
+                Services.logger.error('[saveMagFilter] Atlas not found for texture:', texture_name);
                 return;
             }
 
@@ -715,14 +715,14 @@ function AssetInspectorCreate() {
         info.ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[saveWrapS] Texture path not found for id:', id);
+                Services.logger.error('[saveWrapS] Texture path not found for id:', id);
                 return;
             }
 
             const texture_name = get_file_name(texture_path);
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
-                Log.error('[saveWrapS] Atlas not found for texture:', texture_name);
+                Services.logger.error('[saveWrapS] Atlas not found for texture:', texture_name);
                 return;
             }
 
@@ -763,14 +763,14 @@ function AssetInspectorCreate() {
         info.ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[saveWrapT] Texture path not found for id:', id);
+                Services.logger.error('[saveWrapT] Texture path not found for id:', id);
                 return;
             }
 
             const texture_name = get_file_name(texture_path);
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
-                Log.error('[saveWrapT] Atlas not found for texture:', texture_name);
+                Services.logger.error('[saveWrapT] Atlas not found for texture:', texture_name);
                 return;
             }
 
@@ -1180,7 +1180,7 @@ function AssetInspectorCreate() {
         return info.ids.map(id => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[convertChangeInfoToTextureData] Texture path not found for id:', id);
+                Services.logger.error('[convertChangeInfoToTextureData] Texture path not found for id:', id);
                 return null;
             }
             return { texture_path, value };

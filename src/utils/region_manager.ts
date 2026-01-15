@@ -1,6 +1,7 @@
 import { Vector2, Vector3 } from "three";
 import { Aabb, createSpatialHash } from "./spatial_hash";
 import { IBaseEntityAndThree } from "../render_engine/types";
+import { Services } from '@editor/core';
 
 interface RegionData {
     region: Aabb;
@@ -47,7 +48,7 @@ export function createRegionManager(cell_size: number, object_size: number) {
     function on_entered_check(id_region: string, item: GoData) {
         const reg = regions_data[id_region];
         if (!reg) {
-            Log.error('Регион не найден:', id_region);
+            Services.logger.error('Регион не найден:', id_region);
             return;
         }
         // уже был в регионе
@@ -58,12 +59,12 @@ export function createRegionManager(cell_size: number, object_size: number) {
     }
 
     function on_enter_region(id_region: string, id_mesh: string) {
-        EventBus.trigger('REGION_ENTER', {id_mesh, id_region}, false);
+        Services.event_bus.emit('REGION_ENTER', {id_mesh, id_region}, false);
         //log('Enter:', id_mesh, 'in region:', id_region);
     }
 
     function on_leave_region(id_region: string, id_mesh: string) {
-        EventBus.trigger('REGION_LEAVE', {id_mesh, id_region}, false);
+        Services.event_bus.emit('REGION_LEAVE', {id_mesh, id_region}, false);
         //log('Leave:', id_mesh, 'in region:', id_region);
     }
 

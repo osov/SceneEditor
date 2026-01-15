@@ -127,14 +127,14 @@ function ClientAPIModule() {
     }
 
     function on_message_socket<T extends keyof NetMessagesEditor>(id_message: T, _message: NetMessagesEditor[T]) {
-        //Log.log('on_message_socket', id_message, _message);
+        //Services.logger.debug('on_message_socket', id_message, _message);
         if (id_message == 'SERVER_FILE_SYSTEM_EVENTS') {
             const message = _message as NetMessagesEditor['SERVER_FILE_SYSTEM_EVENTS'];
             Services.event_bus.emit('SERVER_FILE_SYSTEM_EVENTS', message);
         } else if (id_message == 'SESSION_ID') {
             const message = _message as NetMessagesEditor['SESSION_ID'];
             (window as any).currentSessionId = message.sessionId;
-            IS_LOGGING && Log.log(`Получен SessionId от сервера: ${message.sessionId}`);
+            IS_LOGGING && Services.logger.debug(`Получен SessionId от сервера: ${message.sessionId}`);
         }
     }
 
@@ -216,6 +216,6 @@ async function try_fetch(input: string | URL | globalThis.Request, init?: Reques
         const result = await fetch(input, init);
         return result;
     } catch (e) {
-        Log.error(e);
+        Services.logger.error(e);
     }
 }

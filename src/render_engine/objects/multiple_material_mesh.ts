@@ -5,6 +5,7 @@ import { get_file_name } from "../helpers/utils";
 import { FLOAT_PRECISION, WORLD_SCALAR } from "../../config";
 import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils';
 import { hex2rgba, rgb2hex } from "@editor/defold/utils";
+import { Services } from '@editor/core';
 
 export interface MultipleMaterialMeshSerializeData {
     mesh_name: string,
@@ -53,7 +54,7 @@ export class MultipleMaterialMesh extends EntityPlane {
     set_color(color: string) {
         if (this.materials.length == 0 || this.materials.length <= 0) return;
         if (!this.materials[0].uniforms['u_color']) {
-            Log.warn('Material has no u_color uniform', this.materials[0].name);
+            Services.logger.warn('Material has no u_color uniform', this.materials[0].name);
             return;
         }
         ResourceManager.set_material_uniform_for_multiple_material_mesh(this, 0, 'u_color', color);
@@ -62,7 +63,7 @@ export class MultipleMaterialMesh extends EntityPlane {
     get_color() {
         if (this.materials.length == 0 || this.materials.length <= 0) return;
         if (!this.materials[0].uniforms['u_color']) {
-            Log.warn('Material has no u_color uniform', this.materials[0].name);
+            Services.logger.warn('Material has no u_color uniform', this.materials[0].name);
             return "#fff";
         }
         return rgb2hex(this.materials[0].uniforms['u_color'].value) as any;
@@ -97,7 +98,7 @@ export class MultipleMaterialMesh extends EntityPlane {
     set_mesh(name: string) {
         const src = ResourceManager.get_model(name);
         if (!src)
-            return Log.error('Mesh not found', name);
+            return Services.logger.error('Mesh not found', name);
 
         this.mesh_name = name;
         this.materials = [];

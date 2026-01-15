@@ -2,6 +2,7 @@ import { Vector2, Vector3 } from "three";
 import { get_file_name, rotate_point } from "../helpers/utils";
 import { IBaseEntityAndThree } from "../types";
 import { FlipMode, GoSprite } from "../objects/sub_types";
+import { Services } from '@editor/core';
 
 // Флаги Tiled для отражения и вращения
 export const FLIP_HORIZONTALLY_FLAG = 0x80000000;
@@ -194,12 +195,12 @@ export function get_tile_texture(gid: number) {
         }
     }
     if (tileset == '')
-        Log.error('Тайлсет не найден', gid);
+        Services.logger.error('Тайлсет не найден', gid);
     const tile_sets = tiled_textures_data[tileset];
     if (tile_sets != undefined) {
         const local_id = gid - max_firstgid;
         if (tile_sets[local_id + ''] == undefined) {
-            Log.error('Тайл не найден', gid);
+            Services.logger.error('Тайл не найден', gid);
             return;
         }
         return tile_sets[local_id + ''];

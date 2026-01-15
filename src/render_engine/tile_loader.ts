@@ -4,6 +4,7 @@ import { make_ramk, rotate_point } from "./helpers/utils";
 import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo, preload_tiled_textures, TileInfo, set_world_bounds, set_tileset, RenderMapData } from "./parsers/tile_parser";
 import { IObjectTypes } from "./types";
 import { GoContainer, GoSprite } from "./objects/sub_types";
+import { Services } from '@editor/core';
 
 
 export interface ParsedObject {
@@ -45,7 +46,7 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                 if (tile_info != undefined) {
                     if (tile_info.h < tileSize) {
                         tile_info.h = tileSize;
-                        Log.warn('fix tile_info.h', tile_info);
+                        Services.logger.warn('fix tile_info.h', tile_info);
                     }
                     // Вычисляем коррекцию
                     const tile_w = tile_info.w * SUB_SCALAR;
@@ -113,11 +114,11 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                 if (tile_info != undefined) {
                     if (tile_info.w < tileSize) {
                         tile_info.w = tileSize;
-                        Log.warn('fix tile_info.w', tile_info);
+                        Services.logger.warn('fix tile_info.w', tile_info);
                     }
                     if (tile_info.h < tileSize) {
                         tile_info.h = tileSize;
-                        Log.warn('fix tile_info.h', tile_info);
+                        Services.logger.warn('fix tile_info.h', tile_info);
                     }
 
                     // Вычисляем коррекцию
@@ -202,7 +203,7 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                         tiles[get_id_by_tile(tile, id_layer)] = { tile_info, tile, _hash: plane, data };
                     }
                     else {
-                        Log.warn('tile not found', object_layer.layer_name, tile_id, tile);
+                        Services.logger.warn('tile not found', object_layer.layer_name, tile_id, tile);
                     }
                 }
             }

@@ -9,6 +9,7 @@ import { COLORS } from "./old_pathfinder/types";
 import { DynamicEntity } from "./physic/physic_system";
 import { Arc } from "./geometry/shapes";
 import { point } from "./geometry/logic";
+import { Services } from '@editor/core';
 
 
 export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEntity[], obstacles: ISegment[], passable_polygons: PolyPoints[], navmesh: any) {
@@ -46,7 +47,7 @@ export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEn
         }
     }
 
-    EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
+    Services.event_bus.on('SYS_INPUT_POINTER_DOWN', (e) => {
         if (Input.is_shift() && navmesh) {
             const pos = Camera.screen_to_world(e.x, e.y);
             const dist = vec2_distance_to(player.model.position, pos)

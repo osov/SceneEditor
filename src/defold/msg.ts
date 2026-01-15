@@ -1,15 +1,16 @@
 import { MessageId } from "@editor/modules/modules_const";
+import { Services } from '@editor/core';
 
 declare global {
     namespace msg {
-        export function post(receiver: string | hash, message_id: string, message?: any): void;
+        export function post(receiver: string | hash, message_id: string, message?: unknown): void;
         export function url(socket?: string | hash, path?: string | hash, fragment?: string | hash): string;
     }
 }
 
 export function msg_module() {
-    function post(receiver: string | hash, message_id: string, message?: any) {
-        EventBus.send(message_id as MessageId, {
+    function post(receiver: string | hash, message_id: string, message?: unknown) {
+        Services.event_bus.emit(message_id as MessageId, {
             receiver,
             message
         });

@@ -23,7 +23,7 @@ export function CmpMover(cmp_mesh: EntityBase) {
                 p2.x = base_pos.x + config.p2.x;
                 p2.y = base_pos.y + config.p2.y;
 
-               const t_raw = (System.now_with_ms() * config.s) % 2; // 0..2
+               const t_raw = (Services.time.now_with_ms() * config.s) % 2; // 0..2
                 const t = t_raw < 1 ? t_raw : 2 - t_raw; // зеркалка: 0→1→0
 
                 const x = lerp(p1.x, p2.x, t);

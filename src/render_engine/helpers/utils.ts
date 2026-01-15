@@ -5,6 +5,7 @@ import { TextMesh } from "../objects/text";
 import { GoText, GoSprite, GuiBox, GuiText } from "../objects/sub_types";
 import { MaterialUniformType } from "../resource_manager";
 import type { RenderTileData, RenderTileObject } from "../parsers/tile_parser";
+import { Services } from '@editor/core';
 
 
 export function get_basename(path: string) {
@@ -206,7 +207,7 @@ export function copy_material(material: ShaderMaterial) {
 export function get_material_hash(material: ShaderMaterial) {
     const material_info = ResourceManager.get_material_info(material.name);
     if (!material_info) {
-        Log.error('Material info not found', material.name);
+        Services.logger.error('Material info not found', material.name);
         return 'error';
     }
 

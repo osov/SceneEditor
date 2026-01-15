@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { Services } from '@editor/core';
 import { NULL_VALUE, ShapeNames } from "../geometry/const";
 import { arc_end, arc_start, clone, point2point, point_at_length, rotate, translate } from "../geometry/logic";
 import { Point, Segment, Vector } from "../geometry/shapes";
@@ -212,7 +213,7 @@ export function PathUpdater(settings: PlayerMovementSettings, pathfinder_setting
         path_data.path_points = points;
         path_data.arc_table = compute_arc_length_table(points);
         if (renew_time)
-            path_data.time = System.now();
+            path_data.time = Services.time.now();
     }  
       
     function get_pos_at_ratio(path_data: PathData, _ratio: number) {

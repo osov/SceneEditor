@@ -1,9 +1,10 @@
 import { MapData, parse_tiled } from "@editor/render_engine/parsers/tile_parser";
-import { 
+import { Services } from '@editor/core';
+import {
     System as CollisionSystem,
     Circle,
     Line,
-    Polygon, 
+    Polygon,
     BodyOptions
 } from "detect-collisions"
 import { IPoint, ISegment, PointLike } from "../geometry/types";
@@ -94,7 +95,7 @@ export function test_detect_collision(
 
     log('test detect_collision lib')
     const points: IPoint[] = [point(player.x, player.y)];
-    const t1 = System.now_ms()
+    const t1 = Services.time.now_ms()
     for (let k = 0; k < 1; k++) {
         for (let i = 0; i < move_times; i++) {
             player.move(move, true);
@@ -109,7 +110,7 @@ export function test_detect_collision(
             points.push(point(player.x, player.y));
         }
     }
-    const t2 = System.now_ms()
+    const t2 = Services.time.now_ms()
     log('time', t2 - t1)
     log('points', points.length)
 

@@ -438,7 +438,7 @@ function InspectorControlCreate() {
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
 
             if (atlas == null) {
-                Log.error(`[set_selected_textures] Atlas for texture ${texture_name} not found`);
+                Services.logger.error(`[set_selected_textures] Atlas for texture ${texture_name} not found`);
                 return { id, data: [] };
             }
 
@@ -841,7 +841,7 @@ function InspectorControlCreate() {
 
     function searchPaneInFolderByProperty(folder: FolderApi, property: Property): Pane | undefined {
         if (folder.children == undefined) {
-            Log.error("Not folder: ", folder);
+            Services.logger.error("Not folder: ", folder);
             return undefined;
         }
 
@@ -870,7 +870,7 @@ function InspectorControlCreate() {
     }
 
     function clear() {
-        // Log.log('CLEAR');
+        // Services.logger.debug('CLEAR');
         _inspector.children.forEach((value) => {
             value.dispose();
         });
@@ -924,7 +924,7 @@ function InspectorControlCreate() {
             }
         }
 
-        Log.error(`Not found ${name}`);
+        Services.logger.error(`Not found ${name}`);
         return undefined;
     }
 
@@ -1128,7 +1128,7 @@ function InspectorControlCreate() {
             case PropertyType.BUTTON:
                 return createButton(field as PropertyData<PropertyType.BUTTON>, property as PropertyItem<PropertyType.BUTTON>, { title: property.title });
             default:
-                Log.error(`Unable to cast ${field.name}`);
+                Services.logger.error(`Unable to cast ${field.name}`);
                 return undefined;
         }
     }
@@ -1316,7 +1316,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[tryDisabledPositionValueByAxis] Mesh not found for id:', id);
+                Services.logger.error('[tryDisabledPositionValueByAxis] Mesh not found for id:', id);
                 return;
             }
 
@@ -1359,7 +1359,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[tryDisabledRotationValueByAxis] Mesh not found for id:', id);
+                Services.logger.error('[tryDisabledRotationValueByAxis] Mesh not found for id:', id);
                 return;
             }
 
@@ -1402,7 +1402,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[tryDisabledScaleValueByAxis] Mesh not found for id:', id);
+                Services.logger.error('[tryDisabledScaleValueByAxis] Mesh not found for id:', id);
                 return;
             }
 
@@ -1443,7 +1443,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[tryDisabledSizeValueByAxis] Mesh not found for id:', id);
+                Services.logger.error('[tryDisabledSizeValueByAxis] Mesh not found for id:', id);
                 return;
             }
 
@@ -1484,7 +1484,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[tryDisabledAnchorValueByAxis] Mesh not found for id:', id);
+                Services.logger.error('[tryDisabledAnchorValueByAxis] Mesh not found for id:', id);
                 return;
             }
 
@@ -1525,7 +1525,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[tryDisabledSliceValueByAxis] Mesh not found for id:', id);
+                Services.logger.error('[tryDisabledSliceValueByAxis] Mesh not found for id:', id);
                 return;
             }
 
@@ -1551,7 +1551,7 @@ function InspectorControlCreate() {
     }
 
     function saveValue(info: BeforeChangeInfo) {
-        // Log.log("SAVED: ", info.field.name);
+        // Services.logger.debug("SAVED: ", info.field.name);
 
         switch (info.field.name) {
             case Property.NAME: saveName(info.ids); break;
@@ -1583,7 +1583,7 @@ function InspectorControlCreate() {
     }
 
     function updatedValue(info: ChangeInfo) {
-        // Log.log("UPDATED: ", info);
+        // Services.logger.debug("UPDATED: ", info);
 
         switch (info.data.field.name) {
             case Property.NAME: updateName(info); break;
@@ -1634,7 +1634,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveName] Mesh not found for id:', id);
+                Services.logger.error('[saveName] Mesh not found for id:', id);
                 return;
             }
 
@@ -1651,7 +1651,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateName] Mesh not found for id:', id);
+                Services.logger.error('[updateName] Mesh not found for id:', id);
                 return;
             }
 
@@ -1681,7 +1681,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveActive] Mesh not found for id:', id);
+                Services.logger.error('[saveActive] Mesh not found for id:', id);
                 return;
             }
 
@@ -1719,7 +1719,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateActive] Mesh not found for id:', id);
+                Services.logger.error('[updateActive] Mesh not found for id:', id);
                 return;
             }
 
@@ -1742,7 +1742,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveVisible] Mesh not found for id:', id);
+                Services.logger.error('[saveVisible] Mesh not found for id:', id);
                 return;
             }
 
@@ -1761,7 +1761,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateVisible] Mesh not found for id:', id);
+                Services.logger.error('[updateVisible] Mesh not found for id:', id);
                 return;
             }
 
@@ -1779,7 +1779,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[savePosition] Mesh not found for id:', id);
+                Services.logger.error('[savePosition] Mesh not found for id:', id);
                 return;
             }
 
@@ -1807,7 +1807,7 @@ function InspectorControlCreate() {
                 });
 
                 if (mesh == undefined) {
-                    Log.error('[updatePosition] Mesh not found for id:', id);
+                    Services.logger.error('[updatePosition] Mesh not found for id:', id);
                     return;
                 }
 
@@ -1823,7 +1823,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updatePosition] Mesh not found for id:', id);
+                Services.logger.error('[updatePosition] Mesh not found for id:', id);
                 return;
             }
 
@@ -1848,7 +1848,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveRotation] Mesh not found for id:', id);
+                Services.logger.error('[saveRotation] Mesh not found for id:', id);
                 return;
             }
 
@@ -1870,7 +1870,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateRotation] Mesh not found for id:', id);
+                Services.logger.error('[updateRotation] Mesh not found for id:', id);
                 return;
             }
 
@@ -1894,7 +1894,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveScale] Mesh not found for id:', id);
+                Services.logger.error('[saveScale] Mesh not found for id:', id);
                 return;
             }
 
@@ -1915,7 +1915,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateScale] Mesh not found for id:', id);
+                Services.logger.error('[updateScale] Mesh not found for id:', id);
                 return;
             }
 
@@ -1949,7 +1949,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveSize] Mesh not found for id:', id);
+                Services.logger.error('[saveSize] Mesh not found for id:', id);
                 return;
             }
 
@@ -1976,7 +1976,7 @@ function InspectorControlCreate() {
                 });
 
                 if (mesh == undefined) {
-                    Log.error('[updateSize] Mesh not found for id:', id);
+                    Services.logger.error('[updateSize] Mesh not found for id:', id);
                     return;
                 }
 
@@ -1992,7 +1992,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateSize] Mesh not found for id:', id);
+                Services.logger.error('[updateSize] Mesh not found for id:', id);
                 return;
             }
 
@@ -2013,7 +2013,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[savePivot] Mesh not found for id:', id);
+                Services.logger.error('[savePivot] Mesh not found for id:', id);
                 return;
             }
 
@@ -2030,7 +2030,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updatePivot] Mesh not found for id:', id);
+                Services.logger.error('[updatePivot] Mesh not found for id:', id);
                 return;
             }
 
@@ -2050,7 +2050,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveAnchor] Mesh not found for id:', id);
+                Services.logger.error('[saveAnchor] Mesh not found for id:', id);
                 return;
             }
 
@@ -2071,7 +2071,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateAnchor] Mesh not found for id:', id);
+                Services.logger.error('[updateAnchor] Mesh not found for id:', id);
                 return;
             }
 
@@ -2098,7 +2098,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveAnchorPreset] Mesh not found for id:', id);
+                Services.logger.error('[saveAnchorPreset] Mesh not found for id:', id);
                 return;
             }
 
@@ -2115,7 +2115,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateAnchorPreset] Mesh not found for id:', id);
+                Services.logger.error('[updateAnchorPreset] Mesh not found for id:', id);
                 return;
             }
 
@@ -2137,7 +2137,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveColor] Mesh not found for id:', id);
+                Services.logger.error('[saveColor] Mesh not found for id:', id);
                 return;
             }
 
@@ -2154,7 +2154,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateColor] Mesh not found for id:', id);
+                Services.logger.error('[updateColor] Mesh not found for id:', id);
                 return;
             }
 
@@ -2171,7 +2171,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveAlpha] Mesh not found for id:', id);
+                Services.logger.error('[saveAlpha] Mesh not found for id:', id);
                 return;
             }
 
@@ -2192,7 +2192,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateAlpha] Mesh not found for id:', id);
+                Services.logger.error('[updateAlpha] Mesh not found for id:', id);
                 return;
             }
 
@@ -2213,7 +2213,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveTexture] Mesh not found for id:', id);
+                Services.logger.error('[saveTexture] Mesh not found for id:', id);
                 return;
             }
 
@@ -2231,7 +2231,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateTexture] Mesh not found for id:', id);
+                Services.logger.error('[updateTexture] Mesh not found for id:', id);
                 return;
             }
 
@@ -2251,7 +2251,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveSlice] Mesh not found for id:', id);
+                Services.logger.error('[saveSlice] Mesh not found for id:', id);
                 return;
             }
 
@@ -2272,7 +2272,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateSlice] Mesh not found for id:', id);
+                Services.logger.error('[updateSlice] Mesh not found for id:', id);
                 return;
             }
 
@@ -2291,7 +2291,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveText] Mesh not found for id:', id);
+                Services.logger.error('[saveText] Mesh not found for id:', id);
                 return;
             }
 
@@ -2308,7 +2308,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateText] Mesh not found for id:', id);
+                Services.logger.error('[updateText] Mesh not found for id:', id);
                 return;
             }
 
@@ -2325,7 +2325,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveFont] Mesh not found for id:', id);
+                Services.logger.error('[saveFont] Mesh not found for id:', id);
                 return;
             }
 
@@ -2343,7 +2343,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateFont] Mesh not found for id:', id);
+                Services.logger.error('[updateFont] Mesh not found for id:', id);
                 return;
             }
 
@@ -2360,7 +2360,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveFontSize] Mesh not found for id:', id);
+                Services.logger.error('[saveFontSize] Mesh not found for id:', id);
                 return;
             }
 
@@ -2378,7 +2378,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateFontSize] Mesh not found for id:', id);
+                Services.logger.error('[updateFontSize] Mesh not found for id:', id);
                 return;
             }
 
@@ -2401,7 +2401,7 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
             if (mesh == undefined) {
-                Log.error('[saveTextAlign] Mesh not found for id:', id);
+                Services.logger.error('[saveTextAlign] Mesh not found for id:', id);
                 return;
             }
 
@@ -2417,7 +2417,7 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
             if (mesh == undefined) {
-                Log.error('[updateTextAlign] Mesh not found for id:', id);
+                Services.logger.error('[updateTextAlign] Mesh not found for id:', id);
                 return;
             }
 
@@ -2433,7 +2433,7 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
             if (mesh == undefined) {
-                Log.error('[saveLineHeight] Mesh not found for id:', id);
+                Services.logger.error('[saveLineHeight] Mesh not found for id:', id);
                 return;
             }
 
@@ -2450,7 +2450,7 @@ function InspectorControlCreate() {
                 return item.mesh_data.id == id;
             });
             if (mesh == undefined) {
-                Log.error('[updateLineHeight] Mesh not found for id:', id);
+                Services.logger.error('[updateLineHeight] Mesh not found for id:', id);
                 return;
             }
 
@@ -2467,7 +2467,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveAtlas] Mesh not found for id:', id);
+                Services.logger.error('[saveAtlas] Mesh not found for id:', id);
                 return;
             }
 
@@ -2480,7 +2480,7 @@ function InspectorControlCreate() {
     }
 
     function updateAtlas(info: ChangeInfo) {
-        Log.log('update atlas');
+        Services.logger.debug('update atlas');
         const atlas = info.data.event.value as string;
         info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
@@ -2488,7 +2488,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateAtlas] Mesh not found for id:', id);
+                Services.logger.error('[updateAtlas] Mesh not found for id:', id);
                 return;
             }
 
@@ -2506,7 +2506,7 @@ function InspectorControlCreate() {
         ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[saveAtlas] Texture path not found for id:', id);
+                Services.logger.error('[saveAtlas] Texture path not found for id:', id);
                 return;
             }
 
@@ -2524,7 +2524,7 @@ function InspectorControlCreate() {
         info.ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[updateAtlas] Texture path not found for id:', id);
+                Services.logger.error('[updateAtlas] Texture path not found for id:', id);
                 return;
             }
 
@@ -2560,7 +2560,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveBlendMode] Mesh not found for id:', id);
+                Services.logger.error('[saveBlendMode] Mesh not found for id:', id);
                 return;
             }
 
@@ -2580,7 +2580,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateBlendMode] Mesh not found for id:', id);
+                Services.logger.error('[updateBlendMode] Mesh not found for id:', id);
                 return;
             }
 
@@ -2595,14 +2595,14 @@ function InspectorControlCreate() {
         ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[saveMinFilter] Texture path not found for id:', id);
+                Services.logger.error('[saveMinFilter] Texture path not found for id:', id);
                 return;
             }
 
             const texture_name = get_file_name(get_basename(texture_path));
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
-                Log.error('[saveMinFilter] Atlas not found for texture:', texture_name);
+                Services.logger.error('[saveMinFilter] Atlas not found for texture:', texture_name);
                 return;
             }
 
@@ -2620,14 +2620,14 @@ function InspectorControlCreate() {
         info.ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[updateMinFilter] Texture path not found for id:', id);
+                Services.logger.error('[updateMinFilter] Texture path not found for id:', id);
                 return;
             }
 
             const texture_name = get_file_name(get_basename(texture_path));
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
-                Log.error('[updateMinFilter] Atlas not found for texture:', texture_name);
+                Services.logger.error('[updateMinFilter] Atlas not found for texture:', texture_name);
                 return;
             }
 
@@ -2645,14 +2645,14 @@ function InspectorControlCreate() {
         ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[saveMagFilter] Texture path not found for id:', id);
+                Services.logger.error('[saveMagFilter] Texture path not found for id:', id);
                 return;
             }
 
             const texture_name = get_file_name(get_basename(texture_path));
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
-                Log.error('[saveMagFilter] Atlas not found for texture:', texture_name);
+                Services.logger.error('[saveMagFilter] Atlas not found for texture:', texture_name);
                 return;
             }
 
@@ -2670,14 +2670,14 @@ function InspectorControlCreate() {
         info.ids.forEach((id) => {
             const texture_path = _selected_textures[id];
             if (texture_path == null) {
-                Log.error('[updateMagFilter] Texture path not found for id:', id);
+                Services.logger.error('[updateMagFilter] Texture path not found for id:', id);
                 return;
             }
 
             const texture_name = get_file_name(get_basename(texture_path));
             const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
-                Log.error('[updateMagFilter] Atlas not found for texture:', texture_name);
+                Services.logger.error('[updateMagFilter] Atlas not found for texture:', texture_name);
                 return;
             }
 
@@ -2720,7 +2720,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveUV] Mesh not found for id:', id);
+                Services.logger.error('[saveUV] Mesh not found for id:', id);
                 return;
             }
 
@@ -2744,7 +2744,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[saveMaterial] Mesh not found for id:', id);
+                Services.logger.error('[saveMaterial] Mesh not found for id:', id);
                 return;
             }
 
@@ -2761,7 +2761,7 @@ function InspectorControlCreate() {
             });
 
             if (mesh == undefined) {
-                Log.error('[updateMaterial] Mesh not found for id:', id);
+                Services.logger.error('[updateMaterial] Mesh not found for id:', id);
                 return;
             }
 

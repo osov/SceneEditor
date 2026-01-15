@@ -43,7 +43,7 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 	add_animation(name: string) {
 		const clip = ResourceManager.find_animation(name, this.mesh_name);
 		if (!clip)
-			return Log.error('Animation not found', name);
+			return Services.logger.error('Animation not found', name);
 		const animationAction = this.mixer.clipAction(clip.clip)
 		this.animations_list[name] = animationAction;
 		if (Object.keys(this.animations_list).length == 1) {

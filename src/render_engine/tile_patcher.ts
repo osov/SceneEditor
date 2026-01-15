@@ -52,7 +52,7 @@ export function TilePatcher(tilemap_path: string) {
 
             const material = (mesh as Slice9Mesh).material;
             if (!material) {
-                Log.warn(`Material not found for tile ${mesh.name}`);
+                Services.logger.warn(`Material not found for tile ${mesh.name}`);
                 return;
             }
 
@@ -136,7 +136,7 @@ export function TilePatcher(tilemap_path: string) {
         const tilesinfo_path = `${dir}${tilemap_name}.tilesinfo`;
         const tilesinfo = await ResourceManager.load_asset(tilesinfo_path) as TilesInfo;
         if (!tilesinfo) {
-            Log.log(`No tilesinfo file found for tilemap ${tilemap_name}`);
+            Services.logger.debug(`No tilesinfo file found for tilemap ${tilemap_name}`);
             return;
         }
 

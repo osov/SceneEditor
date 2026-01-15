@@ -3,6 +3,7 @@ import { get_keys } from "../modules/utils";
 import { MeshMoveEventData, MeshMaterialUniformInfo, MeshPropertyInfo, AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo, MeshMaterialPropertyInfo } from "./types";
 import { BlendMode } from "../inspectors/MeshInspector";
 import { TDictionary } from "@editor/modules_editor/modules_editor_const";
+import { Services } from '@editor/core';
 
 
 declare global {
@@ -103,7 +104,7 @@ interface HistoryDataItem<T extends HistoryDataKeys> {
 function HistoryControlCreate() {
     const context_data: { [k: string]: HistoryDataItem<HistoryDataKeys>[] } = {};
     function init() {
-        EventBus.on('SYS_INPUT_UNDO', () => undo());
+        Services.event_bus.on('SYS_INPUT_UNDO', () => undo());
     }
 
     function clear(ctx_name?: string) {
@@ -148,7 +149,7 @@ function HistoryControlCreate() {
         const type = last.type;
         const owner = last.owner;
         const data = last.data;
-        EventBus.trigger('SYS_HISTORY_UNDO', { type, data, owner });
+        Services.event_bus.emit('SYS_HISTORY_UNDO', { type, data, owner });
     }
 
     init();

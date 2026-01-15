@@ -31,6 +31,7 @@ import type {
 } from '../editor/types';
 import type { IRenderService, ISceneService, ICameraService, IResourceService } from '../engine/types';
 import type { IInputService } from './services/InputService';
+import type { ITimeService } from './services/TimeService';
 import type { IUIService } from '../editor/UIService';
 import type { IInspectorService } from '../editor/InspectorService';
 import type { IAssetService } from '../editor/AssetService';
@@ -43,6 +44,8 @@ export interface IServices {
     readonly event_bus: IEventBus;
     /** Сервис ввода */
     readonly input: IInputService;
+    /** Сервис времени */
+    readonly time: ITimeService;
     /** Сервис рендеринга */
     readonly render: IRenderService;
     /** Сервис сцены */
@@ -97,6 +100,10 @@ export const Services: IServices = {
 
     get input(): IInputService {
         return require_container().resolve<IInputService>(TOKENS.Input);
+    },
+
+    get time(): ITimeService {
+        return require_container().resolve<ITimeService>(TOKENS.System);
     },
 
     get render(): IRenderService {
@@ -168,6 +175,7 @@ export function try_get_service<K extends keyof IServices>(key: K): IServices[K]
         logger: TOKENS.Logger,
         event_bus: TOKENS.EventBus,
         input: TOKENS.Input,
+        time: TOKENS.System,
         render: TOKENS.Render,
         scene: TOKENS.Scene,
         resources: TOKENS.Resources,

@@ -23,6 +23,7 @@ import { TDictionary } from "../modules_editor/modules_editor_const";
 import { Model } from "./objects/model";
 import { AudioMesh } from "./objects/audio_mesh";
 import { MultipleMaterialMesh } from "./objects/multiple_material_mesh";
+import { Services } from '@editor/core';
 
 declare global {
     const SceneManager: ISceneManager;
@@ -152,7 +153,7 @@ export function SceneManagerModule() {
         else if (type == IObjectTypes.COMPONENT)
             mesh = new Component(check_id_is_available_or_generate_new(id), params.type || 0);
         else {
-            Log.error('Unknown mesh type', type);
+            Services.logger.error('Unknown mesh type', type);
             mesh = new Slice9Mesh(check_id_is_available_or_generate_new(id), 32, 32);
             //mesh.set_color('#f00');
         }
@@ -205,7 +206,7 @@ export function SceneManagerModule() {
             const m = get_mesh_by_id(id);
             if (m) {
                 const new_id = get_unique_id();
-                Log.error('mesh with id already exists', id, 'generated new id', new_id);
+                Services.logger.error('mesh with id already exists', id, 'generated new id', new_id);
                 id = new_id;
             }
             return id;
@@ -357,7 +358,7 @@ export function SceneManagerModule() {
         if (mesh)
             move_mesh(mesh, pid, next_id);
         else
-            Log.error('mesh is null');
+            Services.logger.error('mesh is null');
     }
 
     function get_next_base_mesh_id(mesh: IBaseEntityAndThree) {
@@ -437,7 +438,7 @@ export function SceneManagerModule() {
                 pid_is_child = true;
         });
         if (pid_is_child)
-            return Log.error('pid is child');
+            return Services.logger.error('pid is child');
         move_mesh_to(mesh, pid, next_id);
     }
 
@@ -448,7 +449,7 @@ export function SceneManagerModule() {
         let new_parent = (pid == -1) ? scene : get_mesh_by_id(pid);
         if (!new_parent) {
             new_parent = scene;
-            Log.error('new_parent is null, mesh:', mesh.mesh_data.id, 'pid:' + pid);
+            Services.logger.error('new_parent is null, mesh:', mesh.mesh_data.id, 'pid:' + pid);
         }
         const old_pos = new Vector3();
         mesh.getWorldPosition(old_pos);
@@ -490,7 +491,7 @@ export function SceneManagerModule() {
                 clipping_parent.enableClipping(clipping_parent.isInvertedClipping(), clipping_parent.isClippingVisible());
             }
         }
-        EventBus.trigger('SYS_MESH_MOVED_TO', { id: mesh.mesh_data.id, pid }, false);
+        Services.event_bus.emit('SYS_MESH_MOVED_TO', { id: mesh.mesh_data.id, pid }, false);
     }
 
     function add(mesh: IBaseEntityAndThree, id_parent = -1, id_before = -1) {
@@ -517,13 +518,13 @@ export function SceneManagerModule() {
     }
 
     function remove(id: number) {
-        EventBus.trigger('SYS_MESH_REMOVE_BEFORE', { id: id }, false);
+        Services.event_bus.emit('SYS_MESH_REMOVE_BEFORE', { id: id }, false);
         const mesh = get_mesh_by_id(id);
         if (mesh) {
             if (mesh instanceof EntityBase)
                 mesh.dispose();
             mesh.parent!.remove(mesh);
-            EventBus.trigger('SYS_MESH_REMOVE_AFTER', { id: id }, false);
+            Services.event_bus.emit('SYS_MESH_REMOVE_AFTER', { id: id }, false);
         }
     }
 

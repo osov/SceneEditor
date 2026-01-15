@@ -9,6 +9,7 @@ import { OrthographicCamera, PerspectiveCamera, AudioListener, Vector3, Frustum,
 import type { Mesh } from "three";
 import { get_window_size } from "../render_engine/helpers/window_utils";
 import { IS_CAMERA_ORTHOGRAPHIC, TARGET_DISPLAY_HEIGHT, TARGET_DISPLAY_WIDTH } from "../config";
+import { Services } from '@editor/core';
 
 declare global {
     const Camera: ReturnType<typeof CameraModule>;
@@ -33,7 +34,7 @@ function CameraModule() {
     let is_width_projection = false;
 
     function init() {
-        EventBus.on('SYS_ON_RESIZED', () => update_window_size());
+        Services.event_bus.on('SYS_ON_RESIZED', () => update_window_size());
     }
 
     function set_width_prjection(ax: number, ay: number, near = -1, far = 1): void {
@@ -216,7 +217,7 @@ function CameraModule() {
 
     function is_visible(mesh: Mesh): boolean {
         if (mesh.geometry === undefined) {
-            Log.warn('mesh.geometry not found', mesh);
+            Services.logger.warn('mesh.geometry not found', mesh);
             return false;
         }
         const camera = RenderEngine.camera as OrthographicCamera;

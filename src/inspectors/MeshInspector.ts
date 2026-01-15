@@ -1459,7 +1459,7 @@ function MeshInspectorCreate() {
     function refreshPosition(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
-            Log.error('[refreshPosition] Mesh not found for id:', ids);
+            Services.logger.error('[refreshPosition] Mesh not found for id:', ids);
             return;
         }
         return mesh.get_position();
@@ -1468,7 +1468,7 @@ function MeshInspectorCreate() {
     function refreshRotation(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
-            Log.error('[refreshRotation] Mesh not found for id:', ids);
+            Services.logger.error('[refreshRotation] Mesh not found for id:', ids);
             return;
         }
         const raw = mesh.quaternion;
@@ -1478,7 +1478,7 @@ function MeshInspectorCreate() {
     function refreshScale(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
-            Log.error('[refreshScale] Mesh not found for id:', ids);
+            Services.logger.error('[refreshScale] Mesh not found for id:', ids);
             return;
         }
         return mesh.get_scale();
@@ -1487,7 +1487,7 @@ function MeshInspectorCreate() {
     function refreshModelScale(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
-            Log.error('[refreshModelScale] Mesh not found for id:', ids);
+            Services.logger.error('[refreshModelScale] Mesh not found for id:', ids);
             return;
         }
         const firstChild = (mesh as AnimatedMesh).children[0];
@@ -1500,7 +1500,7 @@ function MeshInspectorCreate() {
     function refreshSize(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
-            Log.error('[refreshSize] Mesh not found for id:', ids);
+            Services.logger.error('[refreshSize] Mesh not found for id:', ids);
             return;
         }
         return mesh.get_size();
@@ -1509,7 +1509,7 @@ function MeshInspectorCreate() {
     function refreshPivot(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
-            Log.error('[refreshPivot] Mesh not found for id:', ids);
+            Services.logger.error('[refreshPivot] Mesh not found for id:', ids);
             return;
         }
         return pivotToScreenPreset(mesh.get_pivot());
@@ -1518,7 +1518,7 @@ function MeshInspectorCreate() {
     function refreshAnchor(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
-            Log.error('[refreshAnchor] Mesh not found for id:', ids);
+            Services.logger.error('[refreshAnchor] Mesh not found for id:', ids);
             return;
         }
         return mesh.get_anchor();
@@ -1527,7 +1527,7 @@ function MeshInspectorCreate() {
     function refreshAnchorPreset(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined) {
-            Log.error('[refreshAnchorPreset] Mesh not found for id:', ids);
+            Services.logger.error('[refreshAnchorPreset] Mesh not found for id:', ids);
             return;
         }
         return anchorToScreenPreset(mesh.get_anchor());
@@ -1536,7 +1536,7 @@ function MeshInspectorCreate() {
     function refreshSlice9(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]) as Slice9Mesh;
         if (mesh == undefined) {
-            Log.error('[refreshSlice9] Mesh not found for id:', ids);
+            Services.logger.error('[refreshSlice9] Mesh not found for id:', ids);
             return;
         }
         return mesh.get_slice();
@@ -1545,7 +1545,7 @@ function MeshInspectorCreate() {
     function refreshFontSize(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]) as TextMesh;
         if (mesh == undefined) {
-            Log.error('[refreshFontSize] Mesh not found for id:', ids);
+            Services.logger.error('[refreshFontSize] Mesh not found for id:', ids);
             return;
         }
         const delta = new Vector3(1 * mesh.scale.x, 1 * mesh.scale.y);
@@ -1556,7 +1556,7 @@ function MeshInspectorCreate() {
     function refreshFlipVertical(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]) as GoSprite;
         if (mesh == undefined) {
-            Log.error('[refreshFlipVertical] Mesh not found for id:', ids);
+            Services.logger.error('[refreshFlipVertical] Mesh not found for id:', ids);
             return;
         }
         return mesh.get_flip() == FlipMode.VERTICAL;
@@ -1565,7 +1565,7 @@ function MeshInspectorCreate() {
     function refreshFlipHorizontal(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]) as GoSprite;
         if (mesh == undefined) {
-            Log.error('[refreshFlipHorizontal] Mesh not found for id:', ids);
+            Services.logger.error('[refreshFlipHorizontal] Mesh not found for id:', ids);
             return;
         }
         return mesh.get_flip() == FlipMode.HORIZONTAL;
@@ -1574,7 +1574,7 @@ function MeshInspectorCreate() {
     function refreshFlipDiagonal(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]) as GoSprite;
         if (mesh == undefined) {
-            Log.error('[refreshFlipDiagonal] Mesh not found for id:', ids);
+            Services.logger.error('[refreshFlipDiagonal] Mesh not found for id:', ids);
             return;
         }
         return mesh.get_flip() == FlipMode.DIAGONAL;
@@ -1585,7 +1585,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveName] Mesh not found for id:', id);
+                Services.logger.error('[saveName] Mesh not found for id:', id);
                 return;
             }
             names.push({ mesh_id: id, value: mesh.name });
@@ -1602,7 +1602,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateName] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateName] Mesh not found for id:', item.mesh_id);
                 return;
             }
             SceneManager.set_mesh_name(mesh, item.value);
@@ -1628,7 +1628,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveActive] Mesh not found for id:', id);
+                Services.logger.error('[saveActive] Mesh not found for id:', id);
                 return;
             }
             actives.push({ mesh_id: id, value: mesh.get_active() });
@@ -1650,7 +1650,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateActive] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateActive] Mesh not found for id:', item.mesh_id);
                 return;
             }
             mesh.set_active(item.value);
@@ -1683,7 +1683,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveUIClipping] Mesh not found for id:', id);
+                Services.logger.error('[saveUIClipping] Mesh not found for id:', id);
                 return;
             }
             if (mesh.type != IObjectTypes.GUI_BOX) return;
@@ -1722,7 +1722,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveModel] Mesh not found for id:', id);
+                Services.logger.error('[saveModel] Mesh not found for id:', id);
                 return;
             }
             if (mesh.type != IObjectTypes.GO_MODEL_COMPONENT) return;
@@ -1757,7 +1757,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateModel] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateModel] Mesh not found for id:', item.mesh_id);
                 return;
             }
             const model = item.value;
@@ -1796,7 +1796,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveModel] Mesh not found for id:', id);
+                Services.logger.error('[saveModel] Mesh not found for id:', id);
                 return;
             }
             if (mesh.type != IObjectTypes.GO_ANIMATED_MODEL_COMPONENT) return;
@@ -1833,7 +1833,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateModel] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateModel] Mesh not found for id:', item.mesh_id);
                 return;
             }
             const model = item.value;
@@ -1878,7 +1878,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveAnimationList] Mesh not found for id:', id);
+                Services.logger.error('[saveAnimationList] Mesh not found for id:', id);
                 return;
             }
             oldAnimations.push({ mesh_id: mesh.mesh_data.id, value: Object.keys((mesh as AnimatedMesh).get_animation_list()) });
@@ -1895,7 +1895,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateAnimationList] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateAnimationList] Mesh not found for id:', item.mesh_id);
                 return;
             }
 
@@ -1926,7 +1926,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveActiveModelAnimation] Mesh not found for id:', id);
+                Services.logger.error('[saveActiveModelAnimation] Mesh not found for id:', id);
                 return;
             }
             if (mesh.type != IObjectTypes.GO_ANIMATED_MODEL_COMPONENT) return;
@@ -1945,7 +1945,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateActiveModelAnimation] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateActiveModelAnimation] Mesh not found for id:', item.mesh_id);
                 return;
             }
             const animation = item.value;
@@ -1960,7 +1960,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[savePosition] Mesh not found for id:', id);
+                Services.logger.error('[savePosition] Mesh not found for id:', id);
                 return;
             }
             oldPositions.push({ mesh_id: id, value: mesh.position.clone() });
@@ -1981,7 +1981,7 @@ function MeshInspectorCreate() {
             info.ids.forEach((id) => {
                 const mesh = SceneManager.get_mesh_by_id(id);
                 if (mesh == undefined) {
-                    Log.error('[updatePosition] Mesh not found for id:', id);
+                    Services.logger.error('[updatePosition] Mesh not found for id:', id);
                     return;
                 }
                 sum.add(mesh.get_position());
@@ -1992,7 +1992,7 @@ function MeshInspectorCreate() {
         const data = info.ids.map((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[updatePosition] Mesh not found for id:', id);
+                Services.logger.error('[updatePosition] Mesh not found for id:', id);
                 return;
             }
             const x = isDraggedX ? mesh.get_position().x + (pos.x - averagePoint.x) : isChangedX ? pos.x : mesh.get_position().x;
@@ -2009,7 +2009,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updatePosition] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updatePosition] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_position(item.value.x, item.value.y, item.value.z);
@@ -2043,7 +2043,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveRotation] Mesh not found for id:', id);
+                Services.logger.error('[saveRotation] Mesh not found for id:', id);
                 return;
             }
             oldRotations.push({ mesh_id: id, value: mesh.quaternion.clone() });
@@ -2058,7 +2058,7 @@ function MeshInspectorCreate() {
         const data = info.ids.map((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[updateRotation] Mesh not found for id:', id);
+                Services.logger.error('[updateRotation] Mesh not found for id:', id);
                 return;
             }
 
@@ -2083,7 +2083,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateRotation] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateRotation] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.quaternion.set(item.value.x, item.value.y, item.value.z, item.value.w);
@@ -2100,7 +2100,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveScale] Mesh not found for id:', id);
+                Services.logger.error('[saveScale] Mesh not found for id:', id);
                 return;
             }
             oldScales.push({ mesh_id: id, value: deepClone(mesh.scale) });
@@ -2115,7 +2115,7 @@ function MeshInspectorCreate() {
         const data = info.ids.map((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[updateScale] Mesh not found for id:', id);
+                Services.logger.error('[updateScale] Mesh not found for id:', id);
                 return;
             }
             const x = isChangedX ? scale.x : mesh.get_scale().x;
@@ -2130,7 +2130,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateScale] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateScale] Mesh not found for id:', item.mesh_id);
                 continue;
             }
 
@@ -2159,7 +2159,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveModelScale] Mesh not found for id:', id);
+                Services.logger.error('[saveModelScale] Mesh not found for id:', id);
                 return;
             }
             if (mesh instanceof MultipleMaterialMesh) {
@@ -2179,7 +2179,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateModelScale] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateModelScale] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             if (mesh instanceof MultipleMaterialMesh) {
@@ -2193,7 +2193,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveSize] Mesh not found for id:', id);
+                Services.logger.error('[saveSize] Mesh not found for id:', id);
                 return;
             }
             oldSizes.push({ mesh_id: id, value: { pos: mesh.get_position(), size: mesh.get_size() } });
@@ -2208,7 +2208,7 @@ function MeshInspectorCreate() {
         const data = info.ids.map((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[updateSize] Mesh not found for id:', id);
+                Services.logger.error('[updateSize] Mesh not found for id:', id);
                 return;
             }
             const x = isChangedX ? size.x : mesh.get_size().x;
@@ -2223,7 +2223,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateSize] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateSize] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_size(item.value.x, item.value.y);
@@ -2239,7 +2239,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[savePivot] Mesh not found for id:', id);
+                Services.logger.error('[savePivot] Mesh not found for id:', id);
                 return;
             }
             pivots.push({ mesh_id: id, value: mesh.get_pivot() });
@@ -2256,7 +2256,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updatePivot] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updatePivot] Mesh not found for id:', item.mesh_id);
                 return;
             }
             const pivot_preset = item.value;
@@ -2272,7 +2272,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveAnchor] Mesh not found for id:', id);
+                Services.logger.error('[saveAnchor] Mesh not found for id:', id);
                 return;
             }
             anchors.push({ mesh_id: id, value: mesh.get_anchor() });
@@ -2287,7 +2287,7 @@ function MeshInspectorCreate() {
         const data = info.ids.map((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[updateAnchor] Mesh not found for id:', id);
+                Services.logger.error('[updateAnchor] Mesh not found for id:', id);
                 return;
             }
             const x = isChangedX ? anchor.x : mesh.get_anchor().x;
@@ -2302,7 +2302,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateAnchor] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateAnchor] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_anchor(item.value.x, item.value.y);
@@ -2321,7 +2321,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveAnchorPreset] Mesh not found for id:', id);
+                Services.logger.error('[saveAnchorPreset] Mesh not found for id:', id);
                 return;
             }
             anchors.push({ mesh_id: id, value: mesh.get_anchor() });
@@ -2338,7 +2338,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateAnchorPreset] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateAnchorPreset] Mesh not found for id:', item.mesh_id);
                 return;
             }
             const anchor = screenPresetToAnchorValue(item.value);
@@ -2355,7 +2355,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveColor] Mesh not found for id:', id);
+                Services.logger.error('[saveColor] Mesh not found for id:', id);
                 return;
             }
             colors.push({ mesh_id: id, value: mesh.get_color() });
@@ -2372,7 +2372,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateColor] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateColor] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             const color = item.value;
@@ -2385,7 +2385,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveTextAlpha] Mesh not found for id:', id);
+                Services.logger.error('[saveTextAlpha] Mesh not found for id:', id);
                 return;
             }
             alphas.push({ mesh_id: id, value: (mesh as TextMesh).fillOpacity });
@@ -2402,7 +2402,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[updateTextAlpha] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateTextAlpha] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.fillOpacity = item.value;
@@ -2414,7 +2414,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as GuiBox;
             if (mesh == undefined) {
-                Log.error('[saveInheredAlpha] Mesh not found for id:', id);
+                Services.logger.error('[saveInheredAlpha] Mesh not found for id:', id);
                 return;
             }
             inheredAlphas.push({ mesh_id: id, value: mesh.isInheredAlpha() });
@@ -2431,7 +2431,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as GuiBox;
             if (mesh == undefined) {
-                Log.error('[updateInheredAlpha] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateInheredAlpha] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.setInheredAlpha(item.value);
@@ -2443,7 +2443,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
             if (mesh == undefined) {
-                Log.error('[saveSlice] Mesh not found for id:', id);
+                Services.logger.error('[saveSlice] Mesh not found for id:', id);
                 return;
             }
             slices.push({ mesh_id: id, value: mesh.get_slice() });
@@ -2458,7 +2458,7 @@ function MeshInspectorCreate() {
         const data = info.ids.map((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as Slice9Mesh;
             if (mesh == undefined) {
-                Log.error('[updateSlice] Mesh not found for id:', id);
+                Services.logger.error('[updateSlice] Mesh not found for id:', id);
                 return;
             }
             const x = isChangedX ? slice.x : mesh.get_slice().x;
@@ -2474,7 +2474,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as Slice9Mesh;
             if (mesh == undefined) {
-                Log.error('[updateSlice] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateSlice] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_slice(item.value.x, item.value.y);
@@ -2486,7 +2486,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[saveText] Mesh not found for id:', id);
+                Services.logger.error('[saveText] Mesh not found for id:', id);
                 return;
             }
             texts.push({ mesh_id: id, value: deepClone(mesh.text) });
@@ -2503,7 +2503,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[updateText] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateText] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             const text = item.value;
@@ -2516,7 +2516,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[saveFont] Mesh not found for id:', id);
+                Services.logger.error('[saveFont] Mesh not found for id:', id);
                 return;
             }
             const oldFont = deepClone(mesh.font);
@@ -2534,7 +2534,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[updateFont] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateFont] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             const font = item.value;
@@ -2547,7 +2547,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveFontSize] Mesh not found for id:', id);
+                Services.logger.error('[saveFontSize] Mesh not found for id:', id);
                 return;
             }
             const oldScale = mesh.get_scale();
@@ -2565,7 +2565,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[updateFontSize] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateFontSize] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             const font_size = item.value;
@@ -2585,7 +2585,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[saveTextAlign] Mesh not found for id:', id);
+                Services.logger.error('[saveTextAlign] Mesh not found for id:', id);
                 return;
             }
             textAligns.push({ mesh_id: id, value: deepClone(mesh.textAlign) });
@@ -2602,7 +2602,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[updateTextAlign] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateTextAlign] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             const text_align = item.value;
@@ -2615,7 +2615,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[saveLineHeight] Mesh not found for id:', id);
+                Services.logger.error('[saveLineHeight] Mesh not found for id:', id);
                 return;
             }
             lineHeights.push({ mesh_id: id, value: deepClone(mesh.lineHeight) });
@@ -2632,7 +2632,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as TextMesh;
             if (mesh == undefined) {
-                Log.error('[updateLineHeight] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateLineHeight] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             const line_height = item.value;
@@ -2645,7 +2645,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveBlendMode] Mesh not found for id:', id);
+                Services.logger.error('[saveBlendMode] Mesh not found for id:', id);
                 return;
             }
             if (mesh instanceof Slice9Mesh) {
@@ -2669,7 +2669,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateBlendMode] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateBlendMode] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             const blend_mode = item.value as BlendMode;
@@ -2688,7 +2688,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveMaterial] Mesh not found for id:', id);
+                Services.logger.error('[saveMaterial] Mesh not found for id:', id);
                 return;
             }
             if (mesh instanceof Slice9Mesh) {
@@ -2722,7 +2722,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateMaterial] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateMaterial] Mesh not found for id:', item.mesh_id);
                 return;
             }
 
@@ -2798,7 +2798,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveUV] Mesh not found for id:', id);
+                Services.logger.error('[saveUV] Mesh not found for id:', id);
                 return;
             }
             if (mesh.type === IObjectTypes.GO_SPRITE_COMPONENT) {
@@ -2962,7 +2962,7 @@ function MeshInspectorCreate() {
 
                 let material_name = '';
                 if (materials.length >= item.material_index) material_name = materials[item.material_index].name;
-                else Log.error('[updateUniformSampler2D] Material index out of range:', item.material_index);
+                else Services.logger.error('[updateUniformSampler2D] Material index out of range:', item.material_index);
 
                 const material = ResourceManager.get_material_by_mesh_id(material_name, item.mesh_id, item.material_index);
                 if (!material) return;
@@ -3175,7 +3175,7 @@ function MeshInspectorCreate() {
     function refreshUIAlpha(ids: number[]) {
         const mesh = SceneManager.get_mesh_by_id(ids[0]);
         if (mesh == undefined || !(mesh instanceof GuiBox)) {
-            Log.error('[refreshUIAlpha] Mesh not found for id:', ids);
+            Services.logger.error('[refreshUIAlpha] Mesh not found for id:', ids);
             return 1;
         }
         return mesh.get_alpha();
@@ -3476,7 +3476,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveSound] Mesh not found for id:', id);
+                Services.logger.error('[saveSound] Mesh not found for id:', id);
                 return;
             }
             sounds.push({ mesh_id: id, value: mesh.get_sound() });
@@ -3493,7 +3493,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateSound] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateSound] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_sound(item.value);
@@ -3507,7 +3507,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveLoop] Mesh not found for id:', id);
+                Services.logger.error('[saveLoop] Mesh not found for id:', id);
                 return;
             }
             loops.push({ mesh_id: id, value: mesh.get_loop() });
@@ -3524,7 +3524,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateLoop] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateLoop] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_loop(item.value);
@@ -3536,7 +3536,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveVolume] Mesh not found for id:', id);
+                Services.logger.error('[saveVolume] Mesh not found for id:', id);
                 return;
             }
             volumes.push({ mesh_id: id, value: mesh.get_volume() });
@@ -3553,7 +3553,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateVolume] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateVolume] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             if (!Number.isFinite(item.value)) continue;
@@ -3566,7 +3566,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveSpeed] Mesh not found for id:', id);
+                Services.logger.error('[saveSpeed] Mesh not found for id:', id);
                 return;
             }
             speeds.push({ mesh_id: id, value: mesh.get_speed() });
@@ -3583,7 +3583,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateSpeed] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateSpeed] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             if (!Number.isFinite(item.value)) continue;
@@ -3596,7 +3596,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveTileLayer] Mesh not found for id:', id);
+                Services.logger.error('[saveTileLayer] Mesh not found for id:', id);
                 return;
             }
             layers.push({ mesh_id: id, value: mesh.layers.mask });
@@ -3609,7 +3609,7 @@ function MeshInspectorCreate() {
         const patched_data = data.map(item => {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (!mesh) {
-                Log.error('[handleLayerChange] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[handleLayerChange] Mesh not found for id:', item.mesh_id);
                 return;
             }
             return { mesh_id: item.mesh_id, value: (mesh.layers.mask & 0xFFFFFC00) | ResourceManager.get_layers_mask_by_names(item.value) };
@@ -3621,7 +3621,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id);
             if (mesh == undefined) {
-                Log.error('[updateTileLayer] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateTileLayer] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.layers.mask = item.value;
@@ -3640,7 +3640,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveUIInvertedClipping] Mesh not found for id:', id);
+                Services.logger.error('[saveUIInvertedClipping] Mesh not found for id:', id);
                 return;
             }
             if (mesh.type != IObjectTypes.GUI_BOX) return;
@@ -3670,7 +3670,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[saveUIClippingVisible] Mesh not found for id:', id);
+                Services.logger.error('[saveUIClippingVisible] Mesh not found for id:', id);
                 return;
             }
             if (mesh.type != IObjectTypes.GUI_BOX) return;
@@ -3700,7 +3700,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveSoundRadius] Mesh not found for id:', id);
+                Services.logger.error('[saveSoundRadius] Mesh not found for id:', id);
                 return;
             }
             soundRadius.push({ mesh_id: id, value: mesh.get_sound_radius() });
@@ -3717,7 +3717,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateSoundRadius] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateSoundRadius] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_sound_radius(item.value);
@@ -3729,7 +3729,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveMaxVolumeRadius] Mesh not found for id:', id);
+                Services.logger.error('[saveMaxVolumeRadius] Mesh not found for id:', id);
                 return;
             }
             maxVolumeRadius.push({ mesh_id: id, value: mesh.get_max_volume_radius() });
@@ -3746,7 +3746,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateMaxVolumeRadius] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateMaxVolumeRadius] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_max_volume_radius(item.value);
@@ -3758,7 +3758,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[savePanNormalizationDistance] Mesh not found for id:', id);
+                Services.logger.error('[savePanNormalizationDistance] Mesh not found for id:', id);
                 return;
             }
             panNormalizationDistance.push({ mesh_id: id, value: mesh.get_pan_normalization_distance() });
@@ -3775,7 +3775,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updatePanNormalizationDistance] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updatePanNormalizationDistance] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_pan_normalization_distance(item.value);
@@ -3787,7 +3787,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveSoundFunction] Mesh not found for id:', id);
+                Services.logger.error('[saveSoundFunction] Mesh not found for id:', id);
                 return;
             }
             soundFunction.push({ mesh_id: id, value: mesh.get_sound_function() });
@@ -3804,7 +3804,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateSoundFunction] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateSoundFunction] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_sound_function(item.value as SoundFunctionType);
@@ -3816,7 +3816,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveZoneType] Mesh not found for id:', id);
+                Services.logger.error('[saveZoneType] Mesh not found for id:', id);
                 return;
             }
             zoneTypes.push({ mesh_id: id, value: mesh.get_zone_type() });
@@ -3833,7 +3833,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateZoneType] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateZoneType] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_zone_type(item.value as SoundZoneType);
@@ -3845,7 +3845,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveRectangleWidth] Mesh not found for id:', id);
+                Services.logger.error('[saveRectangleWidth] Mesh not found for id:', id);
                 return;
             }
             rectangleWidths.push({ mesh_id: id, value: mesh.get_rectangle_width() });
@@ -3862,7 +3862,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateRectangleWidth] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateRectangleWidth] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_rectangle_width(item.value);
@@ -3874,7 +3874,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveRectangleHeight] Mesh not found for id:', id);
+                Services.logger.error('[saveRectangleHeight] Mesh not found for id:', id);
                 return;
             }
             rectangleHeights.push({ mesh_id: id, value: mesh.get_rectangle_height() });
@@ -3891,7 +3891,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateRectangleHeight] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateRectangleHeight] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_rectangle_height(item.value);
@@ -3903,7 +3903,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveRectangleMaxVolumeWidth] Mesh not found for id:', id);
+                Services.logger.error('[saveRectangleMaxVolumeWidth] Mesh not found for id:', id);
                 return;
             }
             rectangleMaxVolumeWidths.push({ mesh_id: id, value: mesh.get_rectangle_max_volume_width() });
@@ -3920,7 +3920,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateRectangleMaxVolumeWidth] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateRectangleMaxVolumeWidth] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_rectangle_max_volume_width(item.value);
@@ -3932,7 +3932,7 @@ function MeshInspectorCreate() {
         info.ids.forEach((id) => {
             const mesh = SceneManager.get_mesh_by_id(id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[saveRectangleMaxVolumeHeight] Mesh not found for id:', id);
+                Services.logger.error('[saveRectangleMaxVolumeHeight] Mesh not found for id:', id);
                 return;
             }
             rectangleMaxVolumeHeights.push({ mesh_id: id, value: mesh.get_rectangle_max_volume_height() });
@@ -3949,7 +3949,7 @@ function MeshInspectorCreate() {
         for (const item of data) {
             const mesh = SceneManager.get_mesh_by_id(item.mesh_id) as AudioMesh;
             if (mesh == undefined) {
-                Log.error('[updateRectangleMaxVolumeHeight] Mesh not found for id:', item.mesh_id);
+                Services.logger.error('[updateRectangleMaxVolumeHeight] Mesh not found for id:', item.mesh_id);
                 continue;
             }
             mesh.set_rectangle_max_volume_height(item.value);
@@ -4172,7 +4172,7 @@ function MeshInspectorCreate() {
         return info.ids.map(id => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[convertChangeInfoToMeshData] Mesh not found for id:', id);
+                Services.logger.error('[convertChangeInfoToMeshData] Mesh not found for id:', id);
                 return null;
             }
             return { mesh_id: id, value };
@@ -4184,7 +4184,7 @@ function MeshInspectorCreate() {
         return info.ids.map(id => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[convertChangeInfoToMeshData] Mesh not found for id:', id);
+                Services.logger.error('[convertChangeInfoToMeshData] Mesh not found for id:', id);
                 return null;
             }
             return { mesh_id: id, material_index: info.data.field.data.material_index, value };
@@ -4196,7 +4196,7 @@ function MeshInspectorCreate() {
         return info.ids.map(id => {
             const mesh = SceneManager.get_mesh_by_id(id);
             if (mesh == undefined) {
-                Log.error('[convertChangeInfoToMeshData] Mesh not found for id:', id);
+                Services.logger.error('[convertChangeInfoToMeshData] Mesh not found for id:', id);
                 return null;
             }
             return { mesh_id: id, material_index: info.data.field.data.material_index, uniform_name: info.data.field.key, value };

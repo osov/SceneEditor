@@ -3,6 +3,7 @@ import { PointLike } from "./geometry/types";
 import { vec2_distance_to } from "./math_utils";
 import { ObstacleTileData } from "./old_pathfinder/types";
 import { Point } from "./geometry/shapes";
+import { Services } from '@editor/core';
 
 import NavMesh from "navmesh";
 import * as martinez from 'martinez-polygon-clipping';
@@ -94,14 +95,14 @@ export function CellsManagerCreate(hash_cell_size = 20) {
     }
 
     function make_navmesh() {
-        const t1 = System.now_ms();
+        const t1 = Services.time.now_ms();
         const passable_polygons: Polygon = [];
         for (const cell of base.all_elements) {
             for (const polygon of cell.passable)
                 passable_polygons.push(...polygon)
         }
         const navmesh =  new NavMesh(passable_polygons);
-        const t2 = System.now_ms();
+        const t2 = Services.time.now_ms();
         log('make_navmesh time', t2 - t1)
         return navmesh;
     }

@@ -6,8 +6,6 @@ import {
     FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses,
     TDictionary, texture_ext, URL_PATHS, AUDIO_EXT,
     FSEvent,
-    HistoryOwner,
-    THistoryUndo,
     PUBLIC,
     ProtocolWrapper,
     NetMessagesEditor,
@@ -21,6 +19,7 @@ import { IBaseEntityData } from "../render_engine/types";
 import { error_popup, get_file_name } from "../render_engine/helpers/utils";
 import { Quaternion, Vector3 } from "three";
 import { WsWrap } from "@editor/modules/ws_wrap";
+import { Services } from '@editor/core';
 declare global {
     const AssetControl: ReturnType<typeof AssetControlCreate>;
 }
@@ -55,20 +54,15 @@ function AssetControlCreate() {
     }
 
     function subscribe() {
-        EventBus.on('SYS_VIEW_INPUT_KEY_UP', on_key_up);
-        EventBus.on('SYS_INPUT_POINTER_DOWN', on_mouse_down);
-        EventBus.on('SYS_INPUT_POINTER_MOVE', on_mouse_move);
-        EventBus.on('SYS_INPUT_POINTER_UP', on_mouse_up);
-        EventBus.on('SYS_INPUT_DBL_CLICK', on_dbl_click);
-        EventBus.on('SYS_INPUT_SAVE', save_current_scene);
-        EventBus.on('SYS_GRAPH_DROP_IN_ASSETS', on_graph_drop);
+        Services.event_bus.on('SYS_VIEW_INPUT_KEY_UP', on_key_up);
+        Services.event_bus.on('SYS_INPUT_POINTER_DOWN', on_mouse_down);
+        Services.event_bus.on('SYS_INPUT_POINTER_MOVE', on_mouse_move);
+        Services.event_bus.on('SYS_INPUT_POINTER_UP', on_mouse_up);
+        Services.event_bus.on('SYS_INPUT_DBL_CLICK', on_dbl_click);
+        Services.event_bus.on('SYS_INPUT_SAVE', save_current_scene);
+        Services.event_bus.on('SYS_GRAPH_DROP_IN_ASSETS', on_graph_drop);
 
-        EventBus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
-
-        EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
-            if (event.owner != HistoryOwner.ASSET_CONTROL) return;
-            undo(event);
-        });
+        Services.event_bus.on('SERVER_FILE_SYSTEM_EVENTS', on_fs_events);
     }
 
     async function load_project(data: ProjectLoadData, folder_content?: FSObject[], to_dir?: string) {
@@ -193,11 +187,11 @@ function AssetControlCreate() {
                 log("refresh current assets dir ok");
         }
         else if (path != "") {
-            Log.warn("cannot go to dir:", path, ", returning to root dir");
+            Services.logger.warn("cannot go to dir:", path, ", returning to root dir");
             await go_to_dir("", true);
         }
         else
-            Log.warn('failed to load root dir!');
+            Services.logger.warn('failed to load root dir!');
     }
 
     async function select_file(file_path: string) {
@@ -783,7 +777,7 @@ function AssetControlCreate() {
         if (move_type == "move") {
             const resp = await ClientAPI.move(path, move_to);
             if (resp && resp.result === 1) {
-                EventBus.trigger("SYS_ASSET_MOVED", { name, path, new_path: move_to }, false);
+                Services.event_bus.emit("SYS_ASSET_MOVED", { name, path, new_path: move_to }, false);
             }
             else if (resp.result === 0) {
                 error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${resp.message}`);
@@ -792,7 +786,7 @@ function AssetControlCreate() {
         if (move_type == "copy") {
             const resp = await ClientAPI.copy(path, move_to);
             if (resp && resp.result === 1) {
-                EventBus.trigger("SYS_ASSET_COPIED", { name, path, new_path: move_to }, false);
+                Services.event_bus.emit("SYS_ASSET_COPIED", { name, path, new_path: move_to }, false);
             }
             else if (resp.result === 0) {
                 error_popup(`Не удалось скопировать файл ${name}, ответ сервера: ${resp.message}`);
@@ -824,7 +818,7 @@ function AssetControlCreate() {
         const move_to = `${current_dir}/${new_name}`;
         const resp = await ClientAPI.copy(path, move_to);
         if (resp && resp.result === 1) {
-            EventBus.trigger("SYS_ASSET_COPIED", { name, path, new_path: move_to }, false);
+            Services.event_bus.emit("SYS_ASSET_COPIED", { name, path, new_path: move_to }, false);
         }
     }
 
@@ -835,7 +829,7 @@ function AssetControlCreate() {
         const resp_json = JSON.parse(resp_text) as ServerResponses[typeof FILE_UPLOAD_CMD];
         if (resp_json.result === 1 && resp_json.data) {
             const data = resp_json.data;
-            EventBus.trigger("SYS_FILE_UPLOADED", data, false)
+            Services.event_bus.emit("SYS_FILE_UPLOADED", data, false)
         }
     }
 
@@ -906,7 +900,7 @@ function AssetControlCreate() {
         });
         selected_assets.splice(0);
 
-        EventBus.trigger("SYS_ASSETS_CLEAR_SELECTED");
+        Services.event_bus.emit("SYS_ASSETS_CLEAR_SELECTED");
     }
 
     function add_to_selected(elem: HTMLSpanElement) {
@@ -916,17 +910,17 @@ function AssetControlCreate() {
 
         if (elem.getAttribute('data-type') == ASSET_TEXTURE) {
             const textures_paths = get_selected_textures();
-            EventBus.trigger("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
+            Services.event_bus.emit("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
         }
 
         if (elem.getAttribute('data-type') == ASSET_MATERIAL) {
             const materials_paths = get_selected_materials();
-            EventBus.trigger("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
+            Services.event_bus.emit("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
         }
 
         if (elem.getAttribute('data-type') == ASSET_AUDIO) {
             const audios_paths = get_selected_audios();
-            EventBus.trigger("SYS_ASSETS_SELECTED_AUDIOS", { paths: audios_paths });
+            Services.event_bus.emit("SYS_ASSETS_SELECTED_AUDIOS", { paths: audios_paths });
         }
     }
 
@@ -963,13 +957,13 @@ function AssetControlCreate() {
         elem.classList.remove("selected");
 
         const textures_paths = get_selected_textures();
-        EventBus.trigger("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
+        Services.event_bus.emit("SYS_ASSETS_SELECTED_TEXTURES", { paths: textures_paths });
 
         const materials_paths = get_selected_materials();
-        EventBus.trigger("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
+        Services.event_bus.emit("SYS_ASSETS_SELECTED_MATERIALS", { paths: materials_paths });
 
         const audios_paths = get_selected_audios();
-        EventBus.trigger("SYS_ASSETS_SELECTED_AUDIOS", { paths: audios_paths });
+        Services.event_bus.emit("SYS_ASSETS_SELECTED_AUDIOS", { paths: audios_paths });
     }
 
     function on_mouse_move(event: any) {
@@ -1031,7 +1025,7 @@ function AssetControlCreate() {
                     const name = file_elem.getAttribute('data-name');
                     const ext = file_elem.getAttribute('data-ext');
                     log(`Клик на ассет файл ${name}, путь ${path}, проект ${current_project}`);
-                    EventBus.trigger("SYS_CLICK_ON_ASSET", { name, path, ext, button: event.button }, false);
+                    Services.event_bus.emit("SYS_CLICK_ON_ASSET", { name, path, ext, button: event.button }, false);
                 }
             }
             const breadcrumbs_elem = event.target.closest('a .folderName');
@@ -1080,7 +1074,7 @@ function AssetControlCreate() {
 
     async function open_scene(path: string) {
         if (path == undefined) {
-            Log.warn('[open_scene] Попытка открыть сцену, но путь undefined');
+            Services.logger.warn('[open_scene] Попытка открыть сцену, но путь undefined');
             return;
         }
         const result = await set_current_scene(path);
@@ -1119,7 +1113,7 @@ function AssetControlCreate() {
 
     async function set_current_scene(path: string) {
         if (path == undefined) {
-            Log.warn('[set_current_scene] Попытка установить сцену, но путь undefined');
+            Services.logger.warn('[set_current_scene] Попытка установить сцену, но путь undefined');
             return false;
         }
         const resp = await ClientAPI.set_current_scene(path);
@@ -1155,11 +1149,11 @@ function AssetControlCreate() {
             pathToScene = `/${pathToScene}`;
         const info = ResourceManager.get_scene_info(pathToScene);
         if (!info) {
-            return Log.error(`Не удалось получить данные сцены: ${pathToScene}`);
+            return Services.logger.error(`Не удалось получить данные сцены: ${pathToScene}`);
         }
 
         if (with_check && !info.is_component) {
-            return Log.error(`${pathToScene} не может быть создан, так как он содержит вложенные GO`);
+            return Services.logger.error(`${pathToScene} не может быть создан, так как он содержит вложенные GO`);
         }
 
         const obj_data = info.data;
@@ -1180,14 +1174,42 @@ function AssetControlCreate() {
         // if (rotation) obj.set_rotation(rotation);
         if (scale) root.set_scale(scale.x, scale.y);
         let id_parent = -1;
-        if (SelectControl.get_selected_list().length == 1)
-            id_parent = SelectControl.get_selected_list()[0].mesh_data.id;
+        const selected = Services.selection.selected;
+        if (selected.length == 1)
+            id_parent = selected[0].mesh_data.id;
 
         SceneManager.add(root, id_parent);
-        HistoryControl.add('MESH_DELETE', [{ id_mesh: root.mesh_data.id }], HistoryOwner.ASSET_CONTROL);
+
+        const mesh_id = root.mesh_data.id;
+        const mesh_data = SceneManager.serialize_mesh(root);
+        const next_id = SceneManager.find_next_id_mesh(root);
+
+        Services.history.push({
+            type: 'import_model',
+            description: 'Импорт модели',
+            data: { mesh_id, mesh_data, next_id, id_parent },
+            undo: (data) => {
+                SceneManager.remove(data.mesh_id);
+                SizeControl.detach();
+                Services.selection.clear();
+                ControlManager.update_graph();
+            },
+            redo: (data) => {
+                const parent = data.id_parent === -1
+                    ? RenderEngine.scene
+                    : SceneManager.get_mesh_by_id(data.id_parent);
+                if (parent) {
+                    const m = SceneManager.deserialize_mesh(data.mesh_data, true, parent);
+                    parent.add(m);
+                    SceneManager.move_mesh(m, data.id_parent, data.next_id);
+                    Services.selection.set_selected([m]);
+                    ControlManager.update_graph();
+                }
+            }
+        });
         root.position.z = 0;
 
-        SelectControl.set_selected_list([root], true);
+        Services.selection.set_selected([root]);
 
         return root;
     }
@@ -1247,7 +1269,7 @@ function AssetControlCreate() {
     async function on_drop_upload(event: DragEvent) {
         drag_for_upload_now = false;
         if (current_project == undefined || current_dir == undefined) {
-            Log.warn('Попытка загрузить файл на сервер, но никакой проект не загружен');
+            Services.logger.warn('Попытка загрузить файл на сервер, но никакой проект не загружен');
             return;
         }
         if (event.dataTransfer != null) {
@@ -1282,21 +1304,11 @@ function AssetControlCreate() {
 
             await load_project(data, undefined, to_dir);
             if (current_scene.path == undefined) {
-                Log.warn('[reload_current_project] Не удалось установить сцену, путь undefined');
+                Services.logger.warn('[reload_current_project] Не удалось установить сцену, путь undefined');
                 return;
             }
             await set_current_scene(current_scene.path);
         }
-    }
-
-    function undo(event: THistoryUndo) {
-        const data = event.data;
-        if (event.type == 'MESH_DELETE') {
-            const mesh_id = data[0].id_mesh;
-            SceneManager.remove(mesh_id);
-        }
-        SizeControl.detach();
-        ControlManager.update_graph();
     }
 
     init();
@@ -1341,7 +1353,7 @@ export async function run_debug_filemanager(project_to_load: string) {
     if (server_ok) {
         const ws_client = WsWrap(
             () => {
-                EventBus.on('ON_WS_CONNECTED', () => AssetControl.reload_current_project());
+                Services.event_bus.on('ON_WS_CONNECTED', () => AssetControl.reload_current_project());
             },
             () => { }, () => { },
             (m) => {
@@ -1353,7 +1365,7 @@ export async function run_debug_filemanager(project_to_load: string) {
 
         const sessionResult = await ClientAPI.waitForSessionId();
         if (!sessionResult.success) {
-            Log.warn('Не удалось получить sessionId:', sessionResult.error);
+            Services.logger.warn('Не удалось получить sessionId:', sessionResult.error);
         }
 
         const projects = await ClientAPI.get_projects();

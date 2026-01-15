@@ -12,6 +12,7 @@ import { Vector2 } from "three";
 import { ASSET_SCENE_GRAPH, TDictionary } from "../modules_editor/modules_editor_const";
 import { DEFOLD_LIMITS } from "../config";
 import { ComponentType } from "../render_engine/components/container_component";
+import { Services } from '@editor/core';
 
 declare global {
     const TreeControl: ReturnType<typeof TreeControlCreate>;
@@ -108,7 +109,7 @@ function TreeControlCreate() {
                 if (itemId) {
                     itemDragRenameId = null;
                     //log(`SYS_GRAPH_CLICKED, { id: ${itemId} }`);
-                    EventBus.trigger("SYS_GRAPH_CLICKED", { id: itemId });
+                    Services.event_bus.emit("SYS_GRAPH_CLICKED", { id: itemId });
                 }
             }
         }, false);
@@ -121,16 +122,16 @@ function TreeControlCreate() {
     }
 
     function subscribe() {
-        EventBus.on('SYS_GRAPH_ACTIVE', updateActive);
-        EventBus.on('SYS_GRAPH_VISIBLE', updateVisible);
+        Services.event_bus.on('SYS_GRAPH_ACTIVE', updateActive);
+        Services.event_bus.on('SYS_GRAPH_VISIBLE', updateVisible);
 
         // document.addEventListener('mousedown', onMouseDown, false);
-        EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
-        EventBus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
-        EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
-        EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', onKeyDown);
+        Services.event_bus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
+        Services.event_bus.on('SYS_INPUT_POINTER_MOVE', onMouseMove);
+        Services.event_bus.on('SYS_INPUT_POINTER_UP', onMouseUp);
+        Services.event_bus.on('SYS_VIEW_INPUT_KEY_DOWN', onKeyDown);
 
-        EventBus.on('SYS_MESH_REMOVE_AFTER', () => {
+        Services.event_bus.on('SYS_MESH_REMOVE_AFTER', () => {
             treeList.forEach(item => {
                 const parent = getElementById(item.id)?.closest('li') as HTMLElement;
                 if (parent == undefined) return;
@@ -139,7 +140,7 @@ function TreeControlCreate() {
         });
 
         // NOTE: очищаем выделение items которые не являются IBaseMeshAndThree когда очищается список в SelectControl
-        EventBus.on('SYS_CLEAR_SELECT_MESH_LIST', () => {
+        Services.event_bus.on('SYS_CLEAR_SELECT_MESH_LIST', () => {
             for (const item_id of listSelected) {
                 const element = document.querySelector(`.tree__item[data-id="${item_id}"]`) as HTMLElement;
                 if (element) element.classList.remove('selected');
@@ -1212,7 +1213,7 @@ function TreeControlCreate() {
         if ((event.button === 0 || event.button === 2)) {
 
             if (event.target.closest('.filemanager') && itemDrag && listSelected.length == 1) {
-                EventBus.trigger("SYS_GRAPH_DROP_IN_ASSETS", listSelected[0]);
+                Services.event_bus.emit("SYS_GRAPH_DROP_IN_ASSETS", listSelected[0]);
             }
 
             if (!event.target.closest('.tree_div')) {
@@ -1245,7 +1246,7 @@ function TreeControlCreate() {
                     const movedList = getMovedList(listSelected, itemDrag, itemDrop, posInItem);
                     if (movedList) {
                         // log(`SYS_GRAPH_MOVED_TO`, movedList);
-                        EventBus.trigger("SYS_GRAPH_MOVED_TO", movedList);
+                        Services.event_bus.emit("SYS_GRAPH_MOVED_TO", movedList);
 
                         if (listSelected.length === 1 && itemDrag) {
                             shiftAnchorId = itemDrag.id;
@@ -1678,7 +1679,7 @@ function TreeControlCreate() {
                 listSelected = listSelected.filter((item) => item != currentId);
                 _is_currentOnly = true;
 
-                if (isOne) EventBus.trigger('SYS_GRAPH_SELECTED', { list: [] });
+                if (isOne) Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: [] });
             }
             else {
                 currentItem.classList.add("selected");
@@ -1734,23 +1735,23 @@ function TreeControlCreate() {
 
         if (!_is_moveItemDrag) { // если движения Не было
             if (Input.is_control()) {
-                //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
-                EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+                //log(`Services.event_bus.emit('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+                Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
             if (Input.is_shift()) {
-                EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+                Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
             if (listSelected?.length > 1 && event.button == 0) {
                 listSelected = [itemDrag?.id];
-                //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
-                EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+                //log(`Services.event_bus.emit('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+                Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
             if (!_is_currentOnly && listSelected?.length <= 1) { // trigger   кроме текущего
-                //log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
-                EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+                //log(`Services.event_bus.emit('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+                Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
 
@@ -1765,8 +1766,8 @@ function TreeControlCreate() {
         }
 
         if (!_is_currentOnly && listSelected?.length <= 1 && !isDrop) {
-            // log(`EventBus.trigger('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
-            EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+            // log(`Services.event_bus.emit('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
+            Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
             return;
         }
     }
@@ -1883,7 +1884,7 @@ function TreeControlCreate() {
             if (name?.length == 0) { return; }
 
             //log('SYS_GRAPH_CHANGE_NAME', { id, name });
-            EventBus.trigger('SYS_GRAPH_CHANGE_NAME', { id, name });
+            Services.event_bus.emit('SYS_GRAPH_CHANGE_NAME', { id, name });
         }
 
     }
@@ -2503,7 +2504,7 @@ function TreeControlCreate() {
             listSelected = [elementId];
             shiftAnchorId = elementId;
 
-            EventBus.trigger('SYS_GRAPH_SELECTED', { list: listSelected });
+            Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
         }
 
         if (!isElementInViewport(divTree, element)) {

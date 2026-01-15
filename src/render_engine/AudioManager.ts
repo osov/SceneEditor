@@ -23,7 +23,7 @@ function AudioManagerModule() {
     const end_callbacks: TDictionary<(type: SoundEndCallbackType) => void> = {};
 
     function init() {
-        Camera.set_listener(listener);
+        RenderEngine.camera.add(listener);
         Services.event_bus.on('SYS_ON_UPDATE', () => {
             const camera = RenderEngine.camera;
             Sound.set_listener_position(vmath.vector3(camera.position.x, camera.position.y, camera.position.z));
@@ -44,12 +44,12 @@ function AudioManagerModule() {
     function free_audio(id: number) {
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.free_audio]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.free_audio]: sound ${id} not found`);
             return;
         }
         const panner = panners[id];
         if (!panner) {
-            Log.error(`[SoundManager.free_audio]: panner ${id} not found`);
+            Services.logger.error(`[SoundManager.free_audio]: panner ${id} not found`);
             return;
         }
         sound.disconnect();
@@ -69,17 +69,17 @@ function AudioManagerModule() {
     function play(id: number, loop = false, volume = 1, speed = 1, pan = 0, offset = 0) {
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.play]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.play]: sound ${id} not found`);
             return;
         }
         const panner = panners[id];
         if (!panner) {
-            Log.error(`[SoundManager.play]: panner ${id} not found`);
+            Services.logger.error(`[SoundManager.play]: panner ${id} not found`);
             return;
         }
         const gain = gains[id];
         if (!gain) {
-            Log.error(`[SoundManager.play]: gain ${id} not found`);
+            Services.logger.error(`[SoundManager.play]: gain ${id} not found`);
             return;
         }
 
@@ -109,7 +109,7 @@ function AudioManagerModule() {
     function stop(id: number) {
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.stop]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.stop]: sound ${id} not found`);
             return;
         }
         sound.stop();
@@ -121,7 +121,7 @@ function AudioManagerModule() {
     function is_playing(id: number) {
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.is_playing]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.is_playing]: sound ${id} not found`);
             return false;
         }
         return sound.isPlaying;
@@ -130,7 +130,7 @@ function AudioManagerModule() {
     function pause(id: number) {
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.pause]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.pause]: sound ${id} not found`);
             return;
         }
         sound.pause();
@@ -139,12 +139,12 @@ function AudioManagerModule() {
     function set_volume(id: number, volume: number) {
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.set_volume]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.set_volume]: sound ${id} not found`);
             return;
         }
         const gain = gains[id];
         if (!gain) {
-            Log.error(`[SoundManager.set_volume]: gain ${id} not found`);
+            Services.logger.error(`[SoundManager.set_volume]: gain ${id} not found`);
             return;
         }
         gain.gain.value = volume;
@@ -153,12 +153,12 @@ function AudioManagerModule() {
     function get_volume(id: number) {
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.get_volume]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.get_volume]: sound ${id} not found`);
             return 0;
         }
         const gain = gains[id];
         if (!gain) {
-            Log.error(`[SoundManager.get_volume]: gain ${id} not found`);
+            Services.logger.error(`[SoundManager.get_volume]: gain ${id} not found`);
             return 0;
         }
         return gain.gain.value;
@@ -167,7 +167,7 @@ function AudioManagerModule() {
     function set_loop(id: number, loop: boolean) {
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.set_loop]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.set_loop]: sound ${id} not found`);
             return;
         }
         sound.setLoop(loop);
@@ -176,7 +176,7 @@ function AudioManagerModule() {
     function get_loop(id: number) {
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.get_loop]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.get_loop]: sound ${id} not found`);
             return false;
         }
         return sound.getLoop();
@@ -185,7 +185,7 @@ function AudioManagerModule() {
     function set_speed(id: number, speed: number) {
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.set_speed]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.set_speed]: sound ${id} not found`);
             return;
         }
 
@@ -197,7 +197,7 @@ function AudioManagerModule() {
     function get_speed(id: number) {
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.get_speed]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.get_speed]: sound ${id} not found`);
             return 1;
         }
         return sound.getPlaybackRate();
@@ -206,13 +206,13 @@ function AudioManagerModule() {
     function set_pan(id: number, pan: number) {
         const panner = panners[id];
         if (!panner) {
-            Log.error(`[SoundManager.set_pan]: panner ${id} not found`);
+            Services.logger.error(`[SoundManager.set_pan]: panner ${id} not found`);
             return;
         }
 
         const sound = sounds[id];
         if (!sound) {
-            Log.error(`[SoundManager.set_pan]: sound ${id} not found`);
+            Services.logger.error(`[SoundManager.set_pan]: sound ${id} not found`);
             return;
         }
 
@@ -224,7 +224,7 @@ function AudioManagerModule() {
     function get_pan(id: number) {
         const panner = panners[id];
         if (!panner) {
-            Log.error(`[SoundManager.get_pan]: panner ${id} not found`);
+            Services.logger.error(`[SoundManager.get_pan]: panner ${id} not found`);
             return 0.5;
         }
         return panner.pan.value;

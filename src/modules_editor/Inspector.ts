@@ -10,6 +10,7 @@ import { Vector2, Vector3, Vector4 } from 'three';
 import { FLOAT_PRECISION } from '../config';
 import { Refreshable } from '@tweakpane/core/dist/blade/common/api/refreshable';
 import { select_file } from '@editor/defold/runtime_stubs';
+import { Services } from '@editor/core';
 
 
 declare global {
@@ -572,7 +573,7 @@ function InspectorModule() {
                     max: slider_field.params?.max
                 });
             default:
-                Log.error(`Unable to cast ${field.key}`);
+                Services.logger.error(`Unable to cast ${field.key}`);
                 return undefined;
         }
     }
@@ -731,13 +732,13 @@ function InspectorModule() {
 
         const firstObj = _data.find(obj => obj.id == info.ids[0]);
         if (!firstObj) {
-            Log.warn('[tryDisabledVectorValueByAxis] First object not found for id:', info.ids[0]);
+            Services.logger.warn('[tryDisabledVectorValueByAxis] First object not found for id:', info.ids[0]);
             return;
         }
 
         const firstField = findFieldRecursive(firstObj.fields, info.data.field.key);
         if (!firstField) {
-            Log.warn('[tryDisabledVectorValueByAxis] Field not found in first object:', info.data.field.key);
+            Services.logger.warn('[tryDisabledVectorValueByAxis] Field not found in first object:', info.data.field.key);
             return;
         }
 
@@ -746,13 +747,13 @@ function InspectorModule() {
         for (let i = 1; i < info.ids.length; i++) {
             const currentObj = _data.find(obj => obj.id == info.ids[i]);
             if (!currentObj) {
-                Log.warn('[tryDisabledVectorValueByAxis] Object not found for id:', info.ids[i]);
+                Services.logger.warn('[tryDisabledVectorValueByAxis] Object not found for id:', info.ids[i]);
                 continue;
             }
 
             const currentField = currentObj.fields.find(field => field.key == info.data.field.key);
             if (!currentField) {
-                Log.warn('[tryDisabledVectorValueByAxis] Field not found in object:', info.data.field.key, currentObj);
+                Services.logger.warn('[tryDisabledVectorValueByAxis] Field not found in object:', info.data.field.key, currentObj);
                 continue;
             }
 

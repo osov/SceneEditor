@@ -531,7 +531,7 @@ function SizeControlCreate() {
             if (index_to_pivot(i).equals(pivot))
                 return i;
         }
-        Log.error("Pivot not found", pivot);
+        Services.logger.error("Pivot not found", pivot);
         return -1;
     }
 

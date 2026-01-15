@@ -1,4 +1,5 @@
 import { Slice9Mesh } from "../render_engine/objects/slice9";
+import { Services } from '@editor/core';
 
 interface GrassItem {
     added: number;
@@ -13,7 +14,7 @@ export function createGrassManager() {
     const max_amplitude = 1;
 
     function update(dt: number) {
-        const now = System.now_with_ms();
+        const now = Services.time.now_with_ms();
         for (let i = active_list.length - 1; i >= 0; i--) {
             const it = active_list[i];
             if (it.added + effect_time < now) {
@@ -56,7 +57,7 @@ export function createGrassManager() {
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         ResourceManager.set_material_uniform_for_mesh(mesh, 'u_frequency', 3);
         ResourceManager.set_material_uniform_for_mesh(mesh, 'u_amplitude', 0);
-        active_list.push({ mesh, added: System.now_with_ms(), amlitude: 0 });
+        active_list.push({ mesh, added: Services.time.now_with_ms(), amlitude: 0 });
     }
 
     function deactivate(mesh: Slice9Mesh, with_del = true) {

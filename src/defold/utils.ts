@@ -2,6 +2,7 @@ import { Slice9Mesh } from "@editor/render_engine/objects/slice9";
 import { IBaseEntityAndThree } from "@editor/render_engine/types";
 import { AdditiveBlending, Color, CustomBlending, MultiplyBlending, NoColorSpace, NormalBlending } from "three";
 import * as TWEEN from '@tweenjs/tween.js';
+import { Services } from '@editor/core';
 
 
 export function hex2rgba(hex: string, alpha = 1) {
@@ -18,7 +19,7 @@ export function hex2rgba(hex: string, alpha = 1) {
             tonumber("0x" + hex.substr(2, 2))! / 255,
             tonumber("0x" + hex.substr(4, 2))! / 255, alpha);
     else {
-        Log.error(false, 'hex not correct:' + hex);
+        Services.logger.error(false, 'hex not correct:' + hex);
         return vmath.vector4();
     }
 }
@@ -50,13 +51,13 @@ export function get_nested_property(obj: any, path: string): any {
     }
     for (const part of parts) {
         if (current === undefined || current === null) {
-            Log.error(`get_nested_property: ${path} not found`, obj);
+            Services.logger.error(`get_nested_property: ${path} not found`, obj);
             return undefined;
         }
         current = current[part];
     }
     if (current == undefined)
-        Log.error(`get_nested_property: ${path} not found`, obj);
+        Services.logger.error(`get_nested_property: ${path} not found`, obj);
     return current;
 }
 
@@ -207,7 +208,7 @@ export function animate_logic(
         const material = (mesh as any).material;
         if (material) currentValue = material.uniforms[property]?.value;
         if (currentValue == undefined) {
-            Log.error(`Property ${property} not found on mesh`);
+            Services.logger.error(`Property ${property} not found on mesh`);
             return;
         }
     }

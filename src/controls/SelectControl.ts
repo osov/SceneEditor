@@ -3,6 +3,7 @@ import { Intersection, Object3D, Object3DEventMap, Texture, Vector2 } from "thre
 import { IBaseEntityAndThree, IBaseMeshAndThree } from "../render_engine/types";
 import { is_base_mesh } from "../render_engine/helpers/utils";
 import { WORLD_SCALAR } from "../config";
+import { Services } from '@editor/core';
 
 
 declare global {
@@ -20,7 +21,7 @@ function SelectControlCreate() {
     let selected: IBaseMeshAndThree | null = null;
     let selected_list: IBaseMeshAndThree[] = [];
     function init() {
-        EventBus.on('SYS_INPUT_POINTER_DOWN', (e) => {
+        Services.event_bus.on('SYS_INPUT_POINTER_DOWN', (e) => {
             if (e.target != RenderEngine.renderer.domElement)
                 return;
             if (e.button != 0)
@@ -28,7 +29,7 @@ function SelectControlCreate() {
             click_point.set(e.x, e.y);
         });
 
-        EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
+        Services.event_bus.on('SYS_INPUT_POINTER_UP', (e) => {
             if (e.target != RenderEngine.renderer.domElement)
                 return;
             if (e.button != 0)
@@ -47,14 +48,14 @@ function SelectControlCreate() {
             set_selected_intersect(intersects);
         });
 
-        EventBus.on('SYS_INPUT_POINTER_MOVE', (event) => {
+        Services.event_bus.on('SYS_INPUT_POINTER_MOVE', (event) => {
             prev_point.set(pointer.x, pointer.y);
             pointer.x = event.x;
             pointer.y = event.y;
         });
 
 
-        EventBus.on('SYS_SELECTED_MESH', (e) => {
+        Services.event_bus.on('SYS_SELECTED_MESH', (e) => {
             if (Input.is_control()) {
                 if (!is_selected(e.mesh))
                     selected_list.push(e.mesh);
@@ -66,10 +67,10 @@ function SelectControlCreate() {
             else {
                 selected_list = [e.mesh];
             }
-            EventBus.trigger('SYS_SELECTED_MESH_LIST', { list: selected_list });
+            Services.event_bus.emit('SYS_SELECTED_MESH_LIST', { list: selected_list });
         });
 
-        EventBus.on('SYS_UNSELECTED_MESH_LIST', () => {
+        Services.event_bus.on('SYS_UNSELECTED_MESH_LIST', () => {
             selected = null;
             if (!Input.is_control())
                 selected_list = [];
@@ -130,11 +131,11 @@ function SelectControlCreate() {
     function set_selected_list(list: IBaseMeshAndThree[], clear_old = true) {
         if (clear_old) {
             selected_list = [];
-            EventBus.trigger('SYS_CLEAR_SELECT_MESH_LIST');
+            Services.event_bus.emit('SYS_CLEAR_SELECT_MESH_LIST');
         }
         if (list.length == 0) {
             if (!Input.is_control())
-                EventBus.trigger('SYS_UNSELECTED_MESH_LIST');
+                Services.event_bus.emit('SYS_UNSELECTED_MESH_LIST');
             return;
         }
         let is_breaked = false;
@@ -144,7 +145,7 @@ function SelectControlCreate() {
             if (selected == null) {
                 selected = it;
                 if (!clear_old)
-                    EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
+                    Services.event_bus.emit('SYS_SELECTED_MESH', { mesh: selected });
                 is_breaked = true;
                 break;
             }
@@ -155,7 +156,7 @@ function SelectControlCreate() {
                     next_index = 0;
                 selected = list[next_index];
                 if (!clear_old)
-                    EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
+                    Services.event_bus.emit('SYS_SELECTED_MESH', { mesh: selected });
                 is_breaked = true;
                 break;
             }
@@ -165,12 +166,12 @@ function SelectControlCreate() {
             // ситуация когда что-то было выбрано, но в этом списке не оказалось
             selected = list[0];
             if (!clear_old)
-                EventBus.trigger('SYS_SELECTED_MESH', { mesh: selected });
+                Services.event_bus.emit('SYS_SELECTED_MESH', { mesh: selected });
         }
 
         if (clear_old) {
             selected_list = list.slice(0);
-            EventBus.trigger('SYS_SELECTED_MESH_LIST', { list: selected_list });
+            Services.event_bus.emit('SYS_SELECTED_MESH_LIST', { list: selected_list });
         }
     }
 

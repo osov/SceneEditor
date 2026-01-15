@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable prefer-const */
+import { Services } from '@editor/core';
 import { ObstaclesManager } from "./obstacle_manager";
 import { ClosestObstacleData, ControlType, NextMoveType, PredictNextMoveData, PathData as PathData, PathNode, PathFinderSettings, PF_default_settings, COLORS } from "./types";
 import { CCW, CW, DP_TOL, ShapeNames } from "../geometry/const";
@@ -82,7 +83,7 @@ export function PathFinderModule(settings: PathFinderSettings) {
         }
         for (const elem of path_data.path)
             path_data.length += shape_length(elem);
-        path_data.time = System.now();
+        path_data.time = Services.time.now();
         path_data.cur_time = path_data.time;
         return path_data;
     }
@@ -202,7 +203,7 @@ export function PathFinderModule(settings: PathFinderSettings) {
 
         nodes_to_check.push(path_required_node);
         let checks_number = 0;
-        const time = System.now();
+        const time = Services.time.now();
         let time_elapsed = 0;
 
         // Пока есть пути, которые нужно проверить, при этом не превысили ограничений по числу проверок:
@@ -215,7 +216,7 @@ export function PathFinderModule(settings: PathFinderSettings) {
             clear_path_nodes.push(...result.clear_way_nodes);
             blocked_path_nodes.push(...result.blocked_way_nodes);
             checks_number++;
-            time_elapsed = System.now() - time;
+            time_elapsed = Services.time.now() - time;
 
             if (use_first_found && end_nodes.length > 0) break; 
         }
