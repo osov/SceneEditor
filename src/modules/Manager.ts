@@ -1,16 +1,15 @@
-import { register_system } from "./System";
-import { register_log } from "./Log";
-import { register_event_bus } from "./EventBus";
+/**
+ * Legacy Manager - устаревший модуль
+ *
+ * ВНИМАНИЕ: Этот модуль не используется в v3.0.
+ * Инициализация происходит через bootstrap.ts и DI контейнер.
+ * Файл сохранён для справки, может быть удалён.
+ */
+
 import { _SystemMessages, NetMessages } from "./modules_const";
-import { register_camera } from "./Camera";
-import { register_input } from "./InputManager";
 import { register_ws_client } from "./WsClient";
 import { register_editor_modules } from "../modules_editor/Manager_editor";
 import { register_sound } from "./Sound";
-
-/*
-    Основной модуль для подгрузки остальных, доступен по объекту Manager
-*/
 
 declare global {
     const Manager: ReturnType<typeof ManagerModule>;
@@ -26,11 +25,12 @@ export function register_manager() {
 function ManagerModule() {
 
     function init() {
-        register_system();
-        register_log();
-        register_event_bus();
-        register_input();
-        register_camera();
+        // Legacy модули перенесены в DI:
+        // - System → TimeService
+        // - Log → LoggerService
+        // - EventBus → EventBus (core/events)
+        // - Input → InputService
+        // - Camera → CameraService
         register_ws_client();
         register_sound();
         register_editor_modules();

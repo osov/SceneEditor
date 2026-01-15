@@ -24,7 +24,15 @@ import type {
 } from './types';
 
 /** Слои рендеринга для draw calls */
-export enum RenderLayers {
+export const DC_LAYERS = {
+    GO_LAYER: 0,
+    GUI_LAYER: 1,
+    CONTROLS_LAYER: 30,
+    RAYCAST_LAYER: 31,
+} as const;
+
+/** Enum для внутреннего использования */
+enum RenderLayersEnum {
     /** Основной слой сцены */
     GO_LAYER = 0,
     /** Слой GUI камеры */
@@ -105,8 +113,8 @@ export function create_render_service(params: RenderServiceParams): IRenderServi
         // GUI камера (всегда ортографическая)
         camera_gui = new OrthographicCamera(-1, 1, -1, 1, 0, 100);
         camera_gui.position.set(0, 0, merged_config.camera_z);
-        camera_gui.layers.disable(RenderLayers.GO_LAYER);
-        camera_gui.layers.enable(RenderLayers.GUI_LAYER);
+        camera_gui.layers.disable(RenderLayersEnum.GO_LAYER);
+        camera_gui.layers.enable(RenderLayersEnum.GUI_LAYER);
 
         // Raycaster
         raycaster = new Raycaster();
@@ -134,7 +142,7 @@ export function create_render_service(params: RenderServiceParams): IRenderServi
 
         // Рендерим контролы отдельным проходом
         const mask = camera.layers.mask;
-        camera.layers.set(RenderLayers.CONTROLS_LAYER);
+        camera.layers.set(RenderLayersEnum.CONTROLS_LAYER);
         renderer.clearDepth();
         renderer.render(scene, camera);
         camera.layers.mask = mask;
@@ -239,7 +247,7 @@ export function create_render_service(params: RenderServiceParams): IRenderServi
         }
 
         raycaster.setFromCamera(position, camera);
-        raycaster.layers.enable(RenderLayers.RAYCAST_LAYER);
+        raycaster.layers.enable(RenderLayersEnum.RAYCAST_LAYER);
 
         const results = raycaster.intersectObjects(scene.children);
 
@@ -262,6 +270,22 @@ export function create_render_service(params: RenderServiceParams): IRenderServi
 
     function set_gui_camera_active(active: boolean): void {
         is_gui_camera_active = active;
+    }
+
+    /** Raycast по сцене (alias для raycast) */
+    function raycast_scene(position: Vector2): Intersection[] {
+        return raycast(position);
+    }
+
+    /** Проверить пересечение с конкретным mesh */
+    function is_intersected_mesh(position: Vector2, mesh: Object3D): boolean {
+        const results = raycast(position);
+        for (const intersection of results) {
+            if (intersection.object === mesh) {
+                return true;
+            }
+        }
+        return false;
     }
 
     function dispose(): void {
@@ -298,12 +322,19 @@ export function create_render_service(params: RenderServiceParams): IRenderServi
             }
             return camera;
         },
+        get camera_gui(): OrthographicCamera {
+            if (camera_gui === undefined) {
+                throw new Error('RenderService не инициализирован');
+            }
+            return camera_gui;
+        },
         get renderer(): WebGLRenderer {
             if (renderer === undefined) {
                 throw new Error('RenderService не инициализирован');
             }
             return renderer;
         },
+        DC_LAYERS,
         init,
         render,
         start,
@@ -311,6 +342,8 @@ export function create_render_service(params: RenderServiceParams): IRenderServi
         resize,
         get_render_size,
         raycast,
+        raycast_scene,
+        is_intersected_mesh,
         is_active,
         set_active,
         set_gui_camera_active,

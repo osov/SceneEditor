@@ -1,5 +1,6 @@
 import { TextureInfo } from "../render_engine/resource_manager";
 import { ChangeInfo } from "../modules_editor/Inspector";
+import { Services } from '@editor/core';
 import { BlendMode, ScreenPointPreset } from "./MeshInspector";
 import { AdditiveBlending, Blending, LinearFilter, MultiplyBlending, NearestFilter, NormalBlending, SubtractiveBlending, Vector2, RepeatWrapping, ClampToEdgeWrapping, MirroredRepeatWrapping } from "three";
 import { FilterMode, WrappingMode } from "./AssetInspector";
@@ -60,7 +61,7 @@ export function getDraggedInfo(info: ChangeInfo) {
 }
 
 export function generateTextureOptions(with_atlas = false) {
-    return ResourceManager.get_all_textures().map((info) => castTextureInfo(info, with_atlas));
+    return Services.resources.get_all_textures().map((info) => castTextureInfo(info, with_atlas));
 }
 
 export function castTextureInfo(info: TextureInfo, with_atlas = false) {
@@ -115,7 +116,7 @@ export function castTextureInfo(info: TextureInfo, with_atlas = false) {
 
 export function generateAtlasOptions() {
     const data: { [key in string]: string } = {};
-    ResourceManager.get_all_atlases().forEach((atlas) => {
+    Services.resources.get_all_atlases().forEach((atlas) => {
         return data[atlas == '' ? 'Без атласа' : atlas] = atlas;
     });
     return data;
@@ -123,7 +124,7 @@ export function generateAtlasOptions() {
 
 export function generateMaterialOptions() {
     const materialOptions: { [key: string]: string } = {};
-    ResourceManager.get_all_materials().sort().forEach(material => {
+    Services.resources.get_all_materials().sort().forEach(material => {
         materialOptions[material] = material;
     });
     return materialOptions;
@@ -131,7 +132,7 @@ export function generateMaterialOptions() {
 
 export function generateModelOptions() {
     const modelOptions: { [key: string]: string } = {};
-    ResourceManager.get_all_models().forEach(model => {
+    Services.resources.get_all_models().forEach(model => {
         modelOptions[model] = model;
     });
     return modelOptions;
@@ -139,7 +140,7 @@ export function generateModelOptions() {
 
 export function generateModelAnimationOptions(model_name: string) {
     const animationOptions: { [key: string]: string } = {};
-    ResourceManager.get_all_model_animations(model_name).forEach(animation => {
+    Services.resources.get_all_model_animations(model_name).forEach(animation => {
         animationOptions[animation] = animation;
     });
     return animationOptions;
@@ -282,7 +283,7 @@ export function convertThreeJSFilterToFilterMode(filter: number): FilterMode {
 
 export function generateVertexProgramOptions() {
     const vertex_options: { [key: string]: string } = {};
-    const vertex_programs = ResourceManager.get_all_vertex_programs();
+    const vertex_programs = Services.resources.get_all_vertex_programs();
     vertex_programs.forEach((program) => {
         vertex_options[program] = program;
     });
@@ -291,7 +292,7 @@ export function generateVertexProgramOptions() {
 
 export function generateFragmentProgramOptions() {
     const fragment_options: { [key: string]: string } = {};
-    const fragment_programs = ResourceManager.get_all_fragment_programs();
+    const fragment_programs = Services.resources.get_all_fragment_programs();
     fragment_programs.forEach((program) => {
         fragment_options[program] = program;
     });

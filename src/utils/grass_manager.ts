@@ -22,7 +22,7 @@ export function createGrassManager() {
                 if (val < 0)
                     val = 0;
                 it.amlitude = val;
-                ResourceManager.set_material_uniform_for_mesh(it.mesh, 'u_amplitude', val);
+                Services.resources.set_material_uniform_for_mesh(it.mesh, 'u_amplitude', val);
                 if (val == 0) {
                     deactivate(it.mesh, false);
                     active_list.splice(i, 1);
@@ -34,7 +34,7 @@ export function createGrassManager() {
                     val = max_amplitude;
                 if (val < max_amplitude) {
                     it.amlitude = val;
-                    ResourceManager.set_material_uniform_for_mesh(it.mesh, 'u_amplitude', val);
+                    Services.resources.set_material_uniform_for_mesh(it.mesh, 'u_amplitude', val);
                 }
             }
         }
@@ -55,8 +55,8 @@ export function createGrassManager() {
         const tex_atlas = mesh.get_texture();
         mesh.set_material('grass');
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
-        ResourceManager.set_material_uniform_for_mesh(mesh, 'u_frequency', 3);
-        ResourceManager.set_material_uniform_for_mesh(mesh, 'u_amplitude', 0);
+        Services.resources.set_material_uniform_for_mesh(mesh, 'u_frequency', 3);
+        Services.resources.set_material_uniform_for_mesh(mesh, 'u_amplitude', 0);
         active_list.push({ mesh, added: Services.time.now_with_ms(), amlitude: 0 });
     }
 

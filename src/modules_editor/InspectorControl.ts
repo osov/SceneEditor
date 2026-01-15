@@ -49,7 +49,7 @@ ID - число, не изменяемое | mesh_data.id
 Slice9* vec2 | метод get_slice/set_slice, минимум 0
  
 Текст** string | метод set_text/свойство text для чтения
-Шрифт** string(выпадающий список из ключей от ResourceManager.get_all_fonts()) | метод set_font/свойство parameters.font для чтения
+Шрифт** string(выпадающий список из ключей от Services.resources.get_all_fonts()) | метод set_font/свойство parameters.font для чтения
 Размер шрифта** int | шаг 1, минимум 8 делаем как в дефолде, как бы управляем тут числом, но по факту меняем scale пропорционально, а отталкиваться от стартового значения из свойства fontSize, скажем шрифт 32 по умолчанию. и пишем тут что сейчас стоит скажем 32, но если начнем крутить то скейлим уже, но свойство не трогаем
 Выравнивание** string выпадающий из списка - [center, left, right, justify]/[Центр, Слева, Справа, По ширине] | свойство textAlign
  
@@ -435,7 +435,7 @@ function InspectorControlCreate() {
             const result = { id, data: [] as PropertyData<PropertyType>[] };
 
             const texture_name = get_file_name(get_basename(path));
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
 
             if (atlas == null) {
                 Services.logger.error(`[set_selected_textures] Atlas for texture ${texture_name} not found`);
@@ -449,8 +449,8 @@ function InspectorControlCreate() {
                 }
             });
 
-            const min_filter = convertThreeJSFilterToFilterMode(ResourceManager.get_texture(texture_name, atlas).texture.minFilter);
-            const mag_filter = convertThreeJSFilterToFilterMode(ResourceManager.get_texture(texture_name, atlas).texture.magFilter);
+            const min_filter = convertThreeJSFilterToFilterMode(Services.resources.get_texture(texture_name, atlas).texture.minFilter);
+            const mag_filter = convertThreeJSFilterToFilterMode(Services.resources.get_texture(texture_name, atlas).texture.magFilter);
 
             result.data.push({ name: Property.MIN_FILTER, data: min_filter });
             result.data.push({ name: Property.MAG_FILTER, data: mag_filter });
@@ -472,7 +472,7 @@ function InspectorControlCreate() {
             const result = {id, data: [] as PropertyData<PropertyType>[]}; 
 
             const material_name = get_file_name(get_basename(path));
-            const material = ResourceManager.get_material_info(material_name);
+            const material = Services.resources.get_material_info(material_name);
             if (material === null) return result;
 
             result.data.push({ name: Property.VERTEX_PROGRAM, data: material.vertexShader });
@@ -678,7 +678,7 @@ function InspectorControlCreate() {
                     // NOTE: обновляем конфиг текстур только для выбранного атласа
                     update_texture_options([Property.TEXTURE], () => {
                         const list: any[] = [];
-                        ResourceManager.get_all_textures().forEach((info) => {
+                        Services.resources.get_all_textures().forEach((info) => {
                             if(info.atlas != atlas) {
                                 return;
                             }
@@ -785,7 +785,7 @@ function InspectorControlCreate() {
         _config.forEach((group) => {
             const property = group.property_list.find((property) => property.name == Property.FONT);
             if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = ResourceManager.get_all_fonts();
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = Services.resources.get_all_fonts();
         });
     }
 
@@ -2511,7 +2511,7 @@ function InspectorControlCreate() {
             }
 
             const texture_name = get_file_name(get_basename(texture_path));
-            const oldAtlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const oldAtlas = Services.resources.get_atlas_by_texture_name(texture_name);
             atlases.push({ texture_path, atlas: oldAtlas ? oldAtlas : '' });
         });
 
@@ -2529,8 +2529,8 @@ function InspectorControlCreate() {
             }
 
             const texture_name = get_file_name(get_basename(texture_path));
-            const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
-            ResourceManager.override_atlas_texture(old_atlas, atlas, texture_name);
+            const old_atlas = Services.resources.get_atlas_by_texture_name(texture_name) || '';
+            Services.resources.override_atlas_texture(old_atlas, atlas, texture_name);
 
             // NOTE: возможно обновление текстур в мешах должно быть в override_atlas_texture
             Services.scene.get_all().forEach((mesh) => {
@@ -2549,7 +2549,7 @@ function InspectorControlCreate() {
             });
         });
 
-        ResourceManager.write_metadata();
+        Services.resources.write_metadata();
     }
 
     function saveBlendMode(ids: number[]) {
@@ -2600,13 +2600,13 @@ function InspectorControlCreate() {
             }
 
             const texture_name = get_file_name(get_basename(texture_path));
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Services.logger.error('[saveMinFilter] Atlas not found for texture:', texture_name);
                 return;
             }
 
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             minFilters.push({
                 texture_path,
                 filter: texture_data.texture.minFilter as MinificationTextureFilter
@@ -2625,7 +2625,7 @@ function InspectorControlCreate() {
             }
 
             const texture_name = get_file_name(get_basename(texture_path));
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Services.logger.error('[updateMinFilter] Atlas not found for texture:', texture_name);
                 return;
@@ -2633,11 +2633,11 @@ function InspectorControlCreate() {
 
             const filter_mode = info.data.event.value as FilterMode;
             const threeFilterMode = convertFilterModeToThreeJS(filter_mode) as MinificationTextureFilter;
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             texture_data.texture.minFilter = threeFilterMode;
         });
 
-        ResourceManager.write_metadata();
+        Services.resources.write_metadata();
     }
 
     function saveMagFilter(ids: number[]) {
@@ -2650,13 +2650,13 @@ function InspectorControlCreate() {
             }
 
             const texture_name = get_file_name(get_basename(texture_path));
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Services.logger.error('[saveMagFilter] Atlas not found for texture:', texture_name);
                 return;
             }
 
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             magFilters.push({
                 texture_path,
                 filter: texture_data.texture.magFilter as MagnificationTextureFilter
@@ -2675,7 +2675,7 @@ function InspectorControlCreate() {
             }
 
             const texture_name = get_file_name(get_basename(texture_path));
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Services.logger.error('[updateMagFilter] Atlas not found for texture:', texture_name);
                 return;
@@ -2683,11 +2683,11 @@ function InspectorControlCreate() {
 
             const filter_mode = info.data.event.value as FilterMode;
             const threeFilterMode = convertFilterModeToThreeJS(filter_mode) as MagnificationTextureFilter;
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             texture_data.texture.magFilter = threeFilterMode;
         });
 
-        ResourceManager.write_metadata();
+        Services.resources.write_metadata();
     }
 
     function convertFilterModeToThreeJS(filter_mode: FilterMode): number {
@@ -2766,7 +2766,7 @@ function InspectorControlCreate() {
             }
 
             const material_name = info.data.event.value as string;
-            const material_info = ResourceManager.get_material_info(material_name);
+            const material_info = Services.resources.get_material_info(material_name);
             if (material_info !== null) {
                 (mesh as unknown as { material: unknown }).material = material_info.instances[material_info.origin];
             }
@@ -2776,7 +2776,7 @@ function InspectorControlCreate() {
     function updateMaterialVertexProgram(info: ChangeInfo) {
         const program = info.data.event.value as string;
         info.ids.forEach((id) => {
-            const material = ResourceManager.get_material_info(_selected_materials[id]);
+            const material = Services.resources.get_material_info(_selected_materials[id]);
             if (material === null) return;
             material.vertexShader = program;
             const instance = material.instances[material.origin];
@@ -2794,7 +2794,7 @@ function InspectorControlCreate() {
     function updateMaterialFragmentProgram(info: ChangeInfo) {
         const program = info.data.event.value as string;
         info.ids.forEach((id) => {
-            const material = ResourceManager.get_material_info(_selected_materials[id]);
+            const material = Services.resources.get_material_info(_selected_materials[id]);
             if (material === null) return;
             material.fragmentShader = program;
             const instance = material.instances[material.origin];
@@ -2813,14 +2813,14 @@ function InspectorControlCreate() {
         const atlas = (info.data.event.value as string).split('/')[0];
         const texture_name = (info.data.event.value as string).split('/')[1];
         info.ids.forEach((id) => {
-            const material = ResourceManager.get_material_info(_selected_materials[id]);
+            const material = Services.resources.get_material_info(_selected_materials[id]);
             if (material === null) return;
 
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
                 const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
                 if (uniform !== undefined) {
-                    uniform.value = ResourceManager.get_texture(texture_name, atlas ?? '').texture;
+                    uniform.value = Services.resources.get_texture(texture_name, atlas ?? '').texture;
                 }
                 instance.needsUpdate = true;
             }
@@ -2834,7 +2834,7 @@ function InspectorControlCreate() {
 
     function updateUniformFloat(info: ChangeInfo) {
         info.ids.forEach((id) => {
-            const material = ResourceManager.get_material_info(_selected_materials[id]);
+            const material = Services.resources.get_material_info(_selected_materials[id]);
             if (material === null) return;
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
@@ -2854,7 +2854,7 @@ function InspectorControlCreate() {
 
     function updateUniformRange(info: ChangeInfo) {
         info.ids.forEach((id) => {
-            const material = ResourceManager.get_material_info(_selected_materials[id]);
+            const material = Services.resources.get_material_info(_selected_materials[id]);
             if (material === null) return;
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
@@ -2874,7 +2874,7 @@ function InspectorControlCreate() {
 
     function updateUniformVec2(info: ChangeInfo) {
         info.ids.forEach((id) => {
-            const material = ResourceManager.get_material_info(_selected_materials[id]);
+            const material = Services.resources.get_material_info(_selected_materials[id]);
             if (material === null) return;
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
@@ -2894,7 +2894,7 @@ function InspectorControlCreate() {
 
     function updateUniformVec3(info: ChangeInfo) {
         info.ids.forEach((id) => {
-            const material = ResourceManager.get_material_info(_selected_materials[id]);
+            const material = Services.resources.get_material_info(_selected_materials[id]);
             if (material === null) return;
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
@@ -2914,7 +2914,7 @@ function InspectorControlCreate() {
 
     function updateUniformVec4(info: ChangeInfo) {
         info.ids.forEach((id) => {
-            const material = ResourceManager.get_material_info(_selected_materials[id]);
+            const material = Services.resources.get_material_info(_selected_materials[id]);
             if (material === null) return;
             const instance = material.instances[material.origin];
             if (instance?.uniforms !== undefined) {
@@ -2934,7 +2934,7 @@ function InspectorControlCreate() {
 
     function updateUniformColor(info: ChangeInfo) {
         info.ids.forEach((id) => {
-            const material = ResourceManager.get_material_info(_selected_materials[id]);
+            const material = Services.resources.get_material_info(_selected_materials[id]);
             if (material === null) return;
             const color = new Color(info.data.event.value as string);
             const instance = material.instances[material.origin];
@@ -3171,7 +3171,7 @@ function convertThreeJSBlendingToBlendMode(blending: number): BlendMode {
 }
 
 function generateTextureOptions() {
-    return ResourceManager.get_all_textures().map(castTextureInfo);
+    return Services.resources.get_all_textures().map(castTextureInfo);
 }
 
 function castTextureInfo(info: TextureInfo) {
@@ -3225,7 +3225,7 @@ function castTextureInfo(info: TextureInfo) {
 
 function generateMaterialOptions() {
     const materialOptions: { [key: string]: string } = {};
-    ResourceManager.get_all_materials().forEach(material => {
+    Services.resources.get_all_materials().forEach(material => {
         materialOptions[material] = material;
     });
     return materialOptions;
@@ -3233,7 +3233,7 @@ function generateMaterialOptions() {
 
 function generateAtlasOptions() {
     const data: {[key in string]: string} = {};
-    ResourceManager.get_all_atlases().forEach((atlas) => {
+    Services.resources.get_all_atlases().forEach((atlas) => {
         return data[atlas == '' ? 'Без атласа' : atlas] = atlas;
     });
     return data;
@@ -3402,7 +3402,7 @@ export function getDefaultInspectorConfig() {
             property_list: [
                 { name: Property.TEXT, title: 'Текст', type: PropertyType.LOG_DATA },
                 {
-                    name: Property.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: ResourceManager.get_all_fonts()
+                    name: Property.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: Services.resources.get_all_fonts()
                 },
                 {
                     name: Property.FONT_SIZE, title: 'Размер шрифта', type: PropertyType.NUMBER, params: {

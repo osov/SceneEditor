@@ -4,6 +4,8 @@ import { TextMesh, TextSerializeData } from "./text";
 import { EntityBase } from "./entity_base";
 import { flip_geometry_x, flip_geometry_y, flip_geometry_xy } from "../helpers/utils";
 import * as THREE from 'three';
+import { DC_LAYERS } from '@editor/engine/RenderService';
+import { Services } from '@editor/core';
 
 
 export class GuiContainer extends EntityBase {
@@ -11,8 +13,8 @@ export class GuiContainer extends EntityBase {
 
     constructor(id: number) {
         super(id);
-        this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
-        this.layers.disable(RenderEngine.DC_LAYERS.GUI_LAYER);
+        this.layers.disable(DC_LAYERS.GO_LAYER);
+        this.layers.disable(DC_LAYERS.GUI_LAYER);
     }
 
     set_position(x: number, y: number, z?: number): void { }
@@ -25,8 +27,8 @@ export class GoContainer extends EntityBase {
 
     constructor(id: number) {
         super(id);
-        this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
-        this.layers.disable(RenderEngine.DC_LAYERS.GUI_LAYER);
+        this.layers.disable(DC_LAYERS.GO_LAYER);
+        this.layers.disable(DC_LAYERS.GUI_LAYER);
     }
 }
 
@@ -65,10 +67,10 @@ export class GuiBox extends Slice9Mesh {
             inheredAlpha = parent.get_raw_alpha();
         }
         value *= inheredAlpha;
-        ResourceManager.set_material_uniform_for_mesh(this, 'alpha', value);
+        Services.resources.set_material_uniform_for_mesh(this, 'alpha', value);
         this.children.forEach(child => {
             // NOTE: не меняем альфу, а меняем действительное посчитаное значение
-            if (child instanceof GuiBox && child.isInheredAlpha()) ResourceManager.set_material_uniform_for_mesh(child, 'alpha', child.get_raw_alpha());
+            if (child instanceof GuiBox && child.isInheredAlpha()) Services.resources.set_material_uniform_for_mesh(child, 'alpha', child.get_raw_alpha());
             else if (child instanceof GuiText && child.isInheredAlpha()) child.fillOpacity = child.get_raw_alpha();
         });
     }
@@ -77,23 +79,23 @@ export class GuiBox extends Slice9Mesh {
         this.clippingEnabled = true;
         this.invertedClipping = inverted;
 
-        ResourceManager.set_material_property_for_mesh(this, 'colorWrite', visible);
-        ResourceManager.set_material_property_for_mesh(this, 'depthTest', false);
-        ResourceManager.set_material_property_for_mesh(this, 'stencilWrite', true);
-        ResourceManager.set_material_property_for_mesh(this, 'stencilRef', this.mesh_data.id);
+        Services.resources.set_material_property_for_mesh(this, 'colorWrite', visible);
+        Services.resources.set_material_property_for_mesh(this, 'depthTest', false);
+        Services.resources.set_material_property_for_mesh(this, 'stencilWrite', true);
+        Services.resources.set_material_property_for_mesh(this, 'stencilRef', this.mesh_data.id);
         let stencilFunc: number = THREE.AlwaysStencilFunc;
         if (this.parent != null && this.parent instanceof GuiBox && this.parent.isClippingEnabled()) {
             stencilFunc = this.parent.isInvertedClipping() ? THREE.NotEqualStencilFunc : THREE.EqualStencilFunc;
         }
-        ResourceManager.set_material_property_for_mesh(this, 'stencilFunc', stencilFunc);
-        ResourceManager.set_material_property_for_mesh(this, 'stencilZPass', THREE.ReplaceStencilOp);
+        Services.resources.set_material_property_for_mesh(this, 'stencilFunc', stencilFunc);
+        Services.resources.set_material_property_for_mesh(this, 'stencilZPass', THREE.ReplaceStencilOp);
 
         const setClippingForChildren = (children: THREE.Object3D[]) => {
             children.forEach(child => {
                 if (child instanceof GuiBox) {
-                    ResourceManager.set_material_property_for_mesh(child, 'stencilWrite', true);
-                    ResourceManager.set_material_property_for_mesh(child, 'stencilRef', this.mesh_data.id);
-                    ResourceManager.set_material_property_for_mesh(child, 'stencilFunc', inverted ? THREE.NotEqualStencilFunc : THREE.EqualStencilFunc);
+                    Services.resources.set_material_property_for_mesh(child, 'stencilWrite', true);
+                    Services.resources.set_material_property_for_mesh(child, 'stencilRef', this.mesh_data.id);
+                    Services.resources.set_material_property_for_mesh(child, 'stencilFunc', inverted ? THREE.NotEqualStencilFunc : THREE.EqualStencilFunc);
                     setClippingForChildren(child.children);
                 }
 
@@ -111,20 +113,20 @@ export class GuiBox extends Slice9Mesh {
 
     disableClipping(): void {
         this.clippingEnabled = false;
-        ResourceManager.set_material_property_for_mesh(this, 'colorWrite', true);
-        ResourceManager.set_material_property_for_mesh(this, 'depthTest', true);
-        ResourceManager.set_material_property_for_mesh(this, 'stencilWrite', false);
-        ResourceManager.set_material_property_for_mesh(this, 'stencilRef', 0);
-        ResourceManager.set_material_property_for_mesh(this, 'stencilFunc', THREE.AlwaysStencilFunc);
-        ResourceManager.set_material_property_for_mesh(this, 'stencilZPass', THREE.KeepStencilOp);
+        Services.resources.set_material_property_for_mesh(this, 'colorWrite', true);
+        Services.resources.set_material_property_for_mesh(this, 'depthTest', true);
+        Services.resources.set_material_property_for_mesh(this, 'stencilWrite', false);
+        Services.resources.set_material_property_for_mesh(this, 'stencilRef', 0);
+        Services.resources.set_material_property_for_mesh(this, 'stencilFunc', THREE.AlwaysStencilFunc);
+        Services.resources.set_material_property_for_mesh(this, 'stencilZPass', THREE.KeepStencilOp);
 
         const disableClippingForChildren = (children: THREE.Object3D[]) => {
             children.forEach(child => {
                 if (child instanceof GuiBox) {
-                    ResourceManager.set_material_property_for_mesh(child, 'stencilWrite', false);
-                    ResourceManager.set_material_property_for_mesh(child, 'stencilRef', 0);
-                    ResourceManager.set_material_property_for_mesh(child, 'stencilFunc', THREE.AlwaysStencilFunc);
-                    ResourceManager.set_material_property_for_mesh(child, 'stencilZPass', THREE.KeepStencilOp);
+                    Services.resources.set_material_property_for_mesh(child, 'stencilWrite', false);
+                    Services.resources.set_material_property_for_mesh(child, 'stencilRef', 0);
+                    Services.resources.set_material_property_for_mesh(child, 'stencilFunc', THREE.AlwaysStencilFunc);
+                    Services.resources.set_material_property_for_mesh(child, 'stencilZPass', THREE.KeepStencilOp);
                     disableClippingForChildren(child.children);
                 }
 
@@ -219,7 +221,7 @@ export class GuiText extends TextMesh {
         this.fillOpacity = value;
         this.children.forEach(child => {
             // NOTE: не меняем альфу, а меняем действительное посчитаное значение
-            if (child instanceof GuiBox && child.isInheredAlpha()) ResourceManager.set_material_uniform_for_mesh(child, 'alpha', child.get_raw_alpha());
+            if (child instanceof GuiBox && child.isInheredAlpha()) Services.resources.set_material_uniform_for_mesh(child, 'alpha', child.get_raw_alpha());
             else if (child instanceof GuiText && child.isInheredAlpha()) child.fillOpacity = child.get_raw_alpha();
         });
     }

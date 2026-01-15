@@ -18,9 +18,6 @@ declare const SelectControl: {
 declare const ControlManager: {
     update_graph(): void;
 };
-declare const SceneManager: {
-    get_mesh_by_id(id: number): IBaseMeshAndThree | undefined;
-};
 declare const Inspector: {
     refresh(properties: MeshProperty[]): void;
 };
@@ -44,7 +41,7 @@ const DEBUG_BB_POINT_SIZE_MAX = 0.1; // NOTE: самый большой возм
 // модуль не умеет правильно работать если сделан scale в минус или rotation(точки не строит правильно)
 
 function SizeControlCreate() {
-    const scene = RenderEngine.scene;
+    const scene = Services.render.scene;
     const editor_z = 0;
     let debug_center: Mesh;
     const bb_points: Mesh<SphereGeometry, MeshBasicMaterial, Object3DEventMap>[] = [];
@@ -70,7 +67,7 @@ function SizeControlCreate() {
     let is_changed_slice = false;
     let is_changed_anchor = false;
     const dir = [0, 0];
-    const layer_control = RenderEngine.DC_LAYERS.CONTROLS_LAYER;
+    const layer_control = Services.render.DC_LAYERS.CONTROLS_LAYER;
 
     function init() {
         const geometry = new SphereGeometry(8, 4, 2);
@@ -88,7 +85,7 @@ function SizeControlCreate() {
             const mesh = new Mesh(geometry, material);
             mesh.visible = false;
             mesh.layers.set(layer_control);
-            mesh.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
+            mesh.layers.enable(Services.render.DC_LAYERS.RAYCAST_LAYER);
             scene.add(mesh)
             pivot_points.push(mesh);
         }
@@ -96,9 +93,9 @@ function SizeControlCreate() {
         anchor_mesh = new Mesh(new CircleGeometry(15 * WORLD_SCALAR, 12), new MeshBasicMaterial({ color: 0xffff00, transparent: true }));
         anchor_mesh.position.set(300, -220, editor_z);
         anchor_mesh.layers.set(layer_control);
-        anchor_mesh.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
-        ResourceManager.preload_texture('img/target.png', 'editor').then(() => {
-            anchor_mesh.material.map = ResourceManager.get_texture('target', 'editor').texture;
+        anchor_mesh.layers.enable(Services.render.DC_LAYERS.RAYCAST_LAYER);
+        Services.resources.preload_texture('img/target.png', 'editor').then(() => {
+            anchor_mesh.material.map = Services.resources.get_texture('target', 'editor').texture;
             anchor_mesh.material.needsUpdate = true;
         })
         anchor_mesh.visible = false;
@@ -128,15 +125,15 @@ function SizeControlCreate() {
         Services.event_bus.on('SYS_VIEW_INPUT_KEY_DOWN', (data) => {
             const e = data as { target: EventTarget };
             if (!is_active) return;
-            if (e.target != RenderEngine.renderer.domElement)
+            if (e.target != Services.render.renderer.domElement)
                 return;
-            if (Input.is_shift()) {
+            if (Services.input.is_shift()) {
                 document.body.style.cursor = 'default';
                 set_pivot_visible(true);
                 draw_anchor_point();
             }
 
-            if (Input.is_alt() && selected_list.length == 1 && (selected_list[0] instanceof Slice9Mesh)) {
+            if (Services.input.is_alt() && selected_list.length == 1 && (selected_list[0] instanceof Slice9Mesh)) {
                 if (!slice_box.visible) {
                     set_slice_visible(true);
                     draw();
@@ -147,11 +144,11 @@ function SizeControlCreate() {
 
         Services.event_bus.on('SYS_VIEW_INPUT_KEY_UP', () => {
             if (!is_active) return;
-            if (!Input.is_shift()) {
+            if (!Services.input.is_shift()) {
                 is_selected_anchor = false;
                 set_pivot_visible(false);
             }
-            if (!Input.is_alt())
+            if (!Services.input.is_alt())
                 set_slice_visible(false);
         })
 
@@ -161,7 +158,7 @@ function SizeControlCreate() {
             if (!is_active) return;
             if (e.button != 0)
                 return;
-            if (!Input.is_shift())
+            if (!Services.input.is_shift())
                 return;
             if (selected_list.length == 1) {
                 const mesh = selected_list[0];
@@ -172,7 +169,7 @@ function SizeControlCreate() {
                     if (is_supported_pivot()) {
                         for (let i = 0; i < pivot_points.length; i++) {
                             const pp = pivot_points[i];
-                            if (RenderEngine.is_intersected_mesh(new Vector2(e.x, e.y), pp)) {
+                            if (Services.render.is_intersected_mesh(new Vector2(e.x, e.y), pp)) {
                                 const pivot = index_to_pivot(i);
                                 HistoryControl.add('MESH_PIVOT', [{ mesh_id: mesh.mesh_data.id, value: mesh.get_pivot() }], HistoryOwner.SIZE_CONTROL);
                                 mesh.set_pivot(pivot.x, pivot.y, true);
@@ -203,7 +200,7 @@ function SizeControlCreate() {
 
         Services.event_bus.on('SYS_INPUT_POINTER_DOWN', (data) => {
             const e = data as { target: EventTarget; button: number; x: number; y: number };
-            if (e.target != RenderEngine.renderer.domElement)
+            if (e.target != Services.render.renderer.domElement)
                 return;
             if (!is_active) return;
             if (e.button != 0)
@@ -211,7 +208,7 @@ function SizeControlCreate() {
             is_down = true;
             click_point.set(e.x, e.y)
             offset_move = 0;
-            click_pos = Camera.screen_to_world(click_point.x, click_point.y);
+            click_pos = Services.camera.screen_to_world(click_point.x, click_point.y);
             // save
             old_pos = [];
             is_changed_pos = false;
@@ -239,7 +236,7 @@ function SizeControlCreate() {
                 const m = selected_list[i];
                 old_anchor.push({ mesh_id: m.mesh_data.id, value: m.get_anchor() });
             }
-            if (RenderEngine.is_intersected_mesh(new Vector2(pointer.x, pointer.y), anchor_mesh))
+            if (Services.render.is_intersected_mesh(new Vector2(pointer.x, pointer.y), anchor_mesh))
                 is_selected_anchor = true;
         });
 
@@ -273,13 +270,13 @@ function SizeControlCreate() {
             prev_point.set(pointer.x, pointer.y);
             pointer.x = event.x;
             pointer.y = event.y;
-            const wp = Camera.screen_to_world(pointer.x, pointer.y);
+            const wp = Services.camera.screen_to_world(pointer.x, pointer.y);
             const bounds = get_bounds_from_list();
-            if (Input.is_shift() && is_selected_anchor) {
+            if (Services.input.is_shift() && is_selected_anchor) {
                 draw_anchor_point(true);
             }
             // slice logic
-            if (Input.is_alt() && selected_list.length == 1 && (selected_list[0] instanceof Slice9Mesh)) {
+            if (Services.input.is_alt() && selected_list.length == 1 && (selected_list[0] instanceof Slice9Mesh)) {
                 if (!is_down) {
                     const size = selected_list[0].get_slice();
                     const ws = new Vector3();
@@ -301,7 +298,7 @@ function SizeControlCreate() {
                 Inspector.refresh([MeshProperty.SLICE9]);
                 return;
             }
-            if (Input.is_shift() || Input.is_alt())
+            if (Services.input.is_shift() || Services.input.is_alt())
                 return;
             if (selected_list.length == 0)
                 return;
@@ -315,7 +312,7 @@ function SizeControlCreate() {
             }
             if (is_down) {
                 offset_move = click_pos.clone().sub(wp).length();
-                const cp = Camera.screen_to_world(prev_point.x, prev_point.y);
+                const cp = Services.camera.screen_to_world(prev_point.x, prev_point.y);
                 for (let i = 0; i < selected_list.length; i++) {
                     const selected_go = selected_list[i];
                     const ws = new Vector3();
@@ -367,14 +364,14 @@ function SizeControlCreate() {
                         let is_select = false;
                         for (let i = 0; i < selected_list.length; i++) {
                             const selected_go = selected_list[i];
-                            if (RenderEngine.is_intersected_mesh(pointer, selected_go)) {
+                            if (Services.render.is_intersected_mesh(pointer, selected_go)) {
                                 is_select = true;
                                 break;
                             }
                         }
                         if (!is_select) {
                             //log('Unselect', offset_move, WORLD_SCALAR);
-                            if (!Input.is_control())
+                            if (!Services.input.is_control())
                                 Services.event_bus.emit('SYS_UNSELECTED_MESH_LIST', {});
                             return;
                         }
@@ -407,14 +404,14 @@ function SizeControlCreate() {
             switch (event.type) {
                 case 'MESH_TRANSLATE':
                     for (const data of event.data) {
-                        const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                        const mesh = Services.scene.get_by_id(data.mesh_id)!;
                         mesh.position.copy(data.value);
                         mesh.transform_changed();
                     }
                     break;
                 case 'MESH_SIZE':
                     for (const data of event.data) {
-                        const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                        const mesh = Services.scene.get_by_id(data.mesh_id)!;
                         mesh.set_size(data.value.size.x, data.value.size.y);
                         mesh.position.copy(data.value.pos);
                         mesh.transform_changed();
@@ -422,7 +419,7 @@ function SizeControlCreate() {
                     break;
                 case 'MESH_SLICE':
                     for (const data of event.data) {
-                        const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                        const mesh = Services.scene.get_by_id(data.mesh_id)!;
                         if (mesh instanceof Slice9Mesh) {
                             mesh.set_slice(data.value.x, data.value.y);
                             mesh.transform_changed();
@@ -431,14 +428,14 @@ function SizeControlCreate() {
                     break;
                 case 'MESH_ANCHOR':
                     for (const data of event.data) {
-                        const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                        const mesh = Services.scene.get_by_id(data.mesh_id)!;
                         mesh.set_anchor(data.value.x, data.value.y);
                         mesh.transform_changed();
                     }
                     break;
                 case 'MESH_PIVOT':
                     for (const data of event.data) {
-                        const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                        const mesh = Services.scene.get_by_id(data.mesh_id)!;
                         mesh.set_pivot(data.value.x, data.value.y, true);
                         mesh.transform_changed();
                     }
@@ -446,7 +443,7 @@ function SizeControlCreate() {
             }
 
             // Update selection and graph
-            const meshes = event.data.map(data => SceneManager.get_mesh_by_id(data.mesh_id)!);
+            const meshes = event.data.map(data => Services.scene.get_by_id(data.mesh_id)!);
             SelectControl.set_selected_list(meshes);
             ControlManager.update_graph();
         });
@@ -596,7 +593,7 @@ function SizeControlCreate() {
             const pivot = mesh.get_pivot();
             pivot_points[pivot_to_index(pivot)].material.color.set(0xff0000);
             // slice box
-            if (mesh instanceof Slice9Mesh && Input.is_alt()) {
+            if (mesh instanceof Slice9Mesh && Services.input.is_alt()) {
                 const slice = mesh.get_slice();
                 const scale = mesh.get_size();
                 const ws = new Vector3();
@@ -611,8 +608,8 @@ function SizeControlCreate() {
                 slice_box_range.scale.copy(slice_box.scale);
                 slice_box_range.scale.x -= slice.x * 2;
                 slice_box_range.scale.y -= slice.y * 2;
-                const cp = Camera.screen_to_world(pointer.x, pointer.y);
-                const pp = Camera.screen_to_world(prev_point.x, prev_point.y);
+                const cp = Services.camera.screen_to_world(pointer.x, pointer.y);
+                const pp = Services.camera.screen_to_world(prev_point.x, prev_point.y);
                 const delta = cp.clone().sub(pp);
                 const center_x = (bb[0] + bb[2]) / 2;
                 const center_y = (bb[1] + bb[3]) / 2;
@@ -672,7 +669,7 @@ function SizeControlCreate() {
         mesh.getWorldPosition(wp);
         const bb_limit = get_parent_bb(mesh);
         if (is_set_pos) {
-            const cp = Camera.screen_to_world(pointer.x, pointer.y);
+            const cp = Services.camera.screen_to_world(pointer.x, pointer.y);
             if (cp.x < bb_limit[0]) cp.x = bb_limit[0];
             if (cp.x > bb_limit[2]) cp.x = bb_limit[2];
             if (cp.y > bb_limit[1]) cp.y = bb_limit[1];

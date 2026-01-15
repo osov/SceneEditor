@@ -337,7 +337,7 @@ function ControlManagerCreate() {
     }
 
     function open_atlas_manager() {
-        const atlases = ResourceManager.get_all_atlases();
+        const atlases = Services.resources.get_all_atlases();
         const emptyIndex = atlases.findIndex((atlas: string) => atlas === '');
         if (emptyIndex !== -1) {
             atlases.splice(emptyIndex, 1);
@@ -361,13 +361,13 @@ function ControlManagerCreate() {
                 switch (data?.action) {
                     case Action.ADD:
                         const added_item = data.item;
-                        ResourceManager.add_atlas(added_item.title);
-                        ResourceManager.write_metadata();
+                        Services.resources.add_atlas(added_item.title);
+                        Services.resources.write_metadata();
                         break;
                     case Action.DELETE:
                         const deleted_item = data.item;
-                        ResourceManager.del_atlas(deleted_item.title);
-                        ResourceManager.write_metadata();
+                        Services.resources.del_atlas(deleted_item.title);
+                        Services.resources.write_metadata();
                         break;
                 }
 
@@ -377,7 +377,7 @@ function ControlManagerCreate() {
     }
 
     function open_layer_manager() {
-        const list = ResourceManager.get_layers().filter((l: string) => l !== 'default').map((title: string, id: number) => {
+        const list = Services.resources.get_layers().filter((l: string) => l !== 'default').map((title: string, id: number) => {
             return {
                 id: id.toString(), title, can_delete: true
             };
@@ -399,13 +399,13 @@ function ControlManagerCreate() {
                 switch (data?.action) {
                     case Action.ADD:
                         const added_item = data.item;
-                        ResourceManager.add_layer(added_item.title);
-                        ResourceManager.write_metadata();
+                        Services.resources.add_layer(added_item.title);
+                        Services.resources.write_metadata();
                         break;
                     case Action.DELETE:
                         const deleted_item = data.item;
-                        ResourceManager.remove_layer(deleted_item.title);
-                        ResourceManager.write_metadata();
+                        Services.resources.remove_layer(deleted_item.title);
+                        Services.resources.write_metadata();
                         break;
                 }
 

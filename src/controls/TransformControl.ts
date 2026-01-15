@@ -22,9 +22,6 @@ declare const SelectControl: {
 declare const ControlManager: {
     update_graph(): void;
 };
-declare const SceneManager: {
-    get_mesh_by_id(id: number): (IBaseEntityAndThree & { transform_changed(): void }) | undefined;
-};
 declare const Inspector: {
     refresh(properties: MeshProperty[]): void;
 };
@@ -35,7 +32,7 @@ export function register_transform_control() {
 
 
 function TransformControlCreate() {
-    const scene = RenderEngine.scene;
+    const scene = Services.render.scene;
     const tmp_vec3 = new Vector3();
     const _start_position = new Vector3();
     const _delta_position = new Vector3();
@@ -50,7 +47,7 @@ function TransformControlCreate() {
     let selectedObjects: IBaseEntityAndThree[] = [];
     const proxy = new Object3D();
     scene.add(proxy);
-    const control = new TransformControls(RenderEngine.camera, RenderEngine.renderer.domElement);
+    const control = new TransformControls(Services.render.camera, Services.render.renderer.domElement);
     const gizmo = control.getHelper();
     control.size = 0.5;
     scene.add(gizmo);
@@ -311,21 +308,21 @@ function TransformControlCreate() {
         switch (e.type) {
             case 'MESH_TRANSLATE':
                 for (const data of e.data) {
-                    const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                    const mesh = Services.scene.get_by_id(data.mesh_id)!;
                     mesh.position.copy(data.value);
                     mesh.transform_changed();
                 }
                 break;
             case 'MESH_ROTATE':
                 for (const data of e.data) {
-                    const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                    const mesh = Services.scene.get_by_id(data.mesh_id)!;
                     mesh.rotation.copy(data.value);
                     mesh.transform_changed();
                 }
                 break;
             case 'MESH_SCALE':
                 for (const data of e.data) {
-                    const mesh = SceneManager.get_mesh_by_id(data.mesh_id)!;
+                    const mesh = Services.scene.get_by_id(data.mesh_id)!;
                     mesh.scale.copy(data.value);
                     mesh.transform_changed();
                 }
@@ -333,7 +330,7 @@ function TransformControlCreate() {
         }
 
         // Update selection and graph
-        const meshes = e.data.map(data => SceneManager.get_mesh_by_id(data.mesh_id)!);
+        const meshes = e.data.map(data => Services.scene.get_by_id(data.mesh_id)!);
         SelectControl.set_selected_list(meshes);
         ControlManager.update_graph();
     });

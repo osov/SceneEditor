@@ -115,7 +115,7 @@ function ActionsControlCreate() {
 
         copy_mesh_list = [];
         for (let i = 0; i < list.length; i++) {
-            copy_mesh_list.push(SceneManager.serialize_mesh(list[i]));
+            copy_mesh_list.push(Services.scene.serialize_object(list[i] as any));
         }
 
     }
@@ -126,7 +126,7 @@ function ActionsControlCreate() {
             return;
         }
         const selected = Services.selection.selected;
-        const preTarget = selected.length ? selected : [RenderEngine.scene];
+        const preTarget = selected.length ? selected : [Services.render.scene];
         if (!selected.length && !isDuplication) {
             showToast('Некуда вставлять!');
             return;
@@ -150,18 +150,18 @@ function ActionsControlCreate() {
         }
 
         const mesh_list: IBaseMeshAndThree[] = [];
-        const created_mesh_data: { mesh: ReturnType<typeof SceneManager.serialize_mesh>; next_id: number; parent_id: number }[] = [];
+        const created_mesh_data: { mesh: ReturnType<typeof Services.scene.serialize_object>; next_id: number; parent_id: number }[] = [];
         const target_id = target.mesh_data?.id ?? -1;
 
         for (let i = 0; i < copy_mesh_list.length; i++) {
-            const m = SceneManager.deserialize_mesh(copy_mesh_list[i], false, target);
+            const m = Services.scene.deserialize_object(copy_mesh_list[i], false);
             m.position.x += 5;
             m.position.y -= 5;
             target.add(m);
-            mesh_list.push(m);
+            mesh_list.push(m as any);
             created_mesh_data.push({
-                mesh: SceneManager.serialize_mesh(m),
-                next_id: SceneManager.find_next_id_mesh(m),
+                mesh: Services.scene.serialize_object(m),
+                next_id: Services.scene.find_next_sibling_id(m),
                 parent_id: target_id
             });
         }
@@ -174,7 +174,7 @@ function ActionsControlCreate() {
             data: { mesh_ids, created_mesh_data },
             undo: (data) => {
                 for (const id of data.mesh_ids) {
-                    SceneManager.remove(id);
+                    Services.scene.remove_by_id(id);
                 }
                 SizeControl.detach();
                 Services.selection.clear();
@@ -184,13 +184,13 @@ function ActionsControlCreate() {
                 const restored: IBaseMeshAndThree[] = [];
                 for (const item of data.created_mesh_data) {
                     const parent = item.parent_id === -1
-                        ? RenderEngine.scene
-                        : SceneManager.get_mesh_by_id(item.parent_id);
+                        ? Services.render.scene
+                        : Services.scene.get_by_id(item.parent_id);
                     if (parent) {
-                        const m = SceneManager.deserialize_mesh(item.mesh, true, parent);
+                        const m = Services.scene.deserialize_object(item.mesh, true);
                         parent.add(m);
-                        SceneManager.move_mesh(m, item.parent_id, item.next_id);
-                        restored.push(m);
+                        Services.scene.move(m, item.parent_id, item.next_id);
+                        restored.push(m as any);
                     }
                 }
                 Services.selection.set_selected(restored);
@@ -210,7 +210,7 @@ function ActionsControlCreate() {
         const list = format_list_without_children(Services.selection.selected);
         if (list.length == 0) return;
 
-        const mesh_data: { mesh: ReturnType<typeof SceneManager.serialize_mesh>; next_id: number }[] = [];
+        const mesh_data: { mesh: ReturnType<typeof Services.scene.serialize_object>; next_id: number }[] = [];
         const mesh_ids: number[] = [];
 
         for (let i = 0; i < list.length; i++) {
@@ -218,11 +218,11 @@ function ActionsControlCreate() {
             mesh_ids.push(m.mesh_data.id);
             if (!(m.ignore_history?.includes('MESH_ADD'))) {
                 mesh_data.push({
-                    mesh: SceneManager.serialize_mesh(m),
-                    next_id: SceneManager.find_next_id_mesh(m)
+                    mesh: Services.scene.serialize_object(m as any),
+                    next_id: Services.scene.find_next_sibling_id(m as any)
                 });
             }
-            SceneManager.remove(m.mesh_data.id);
+            Services.scene.remove_by_id(m.mesh_data.id);
         }
 
         if (mesh_data.length > 0) {
@@ -234,13 +234,13 @@ function ActionsControlCreate() {
                     const restored: IBaseMeshAndThree[] = [];
                     for (const item of data.mesh_data) {
                         const parent = item.mesh.pid === -1
-                            ? RenderEngine.scene
-                            : SceneManager.get_mesh_by_id(item.mesh.pid);
+                            ? Services.render.scene
+                            : Services.scene.get_by_id(item.mesh.pid as number);
                         if (parent) {
-                            const m = SceneManager.deserialize_mesh(item.mesh, true, parent);
+                            const m = Services.scene.deserialize_object(item.mesh, true);
                             parent.add(m);
-                            SceneManager.move_mesh(m, item.mesh.pid, item.next_id);
-                            restored.push(m);
+                            Services.scene.move(m, item.mesh.pid as number, item.next_id);
+                            restored.push(m as any);
                         }
                     }
                     Services.selection.set_selected(restored);
@@ -248,7 +248,7 @@ function ActionsControlCreate() {
                 },
                 redo: (data) => {
                     for (const id of data.mesh_ids) {
-                        SceneManager.remove(id);
+                        Services.scene.remove_by_id(id);
                     }
                     SizeControl.detach();
                     Services.selection.clear();
@@ -260,17 +260,17 @@ function ActionsControlCreate() {
     }
 
     function add_gui_container(data: ParamsPidPos) {
-        const container = SceneManager.create(IObjectTypes.GUI_CONTAINER);
+        const container = Services.scene.create(IObjectTypes.GUI_CONTAINER as any) as any;
         if (!container) return;
         container.set_position(data.pos.x, data.pos.y);
         sceneAddItem(container, data.pid);
     }
 
     function add_gui_box(data: paramsTexture) {
-        const box = SceneManager.create(IObjectTypes.GUI_BOX, { width: data.size.w, height: data.size.h });
+        const box = Services.scene.create(IObjectTypes.GUI_BOX as any, { width: data.size.w, height: data.size.h }) as any;
         if (!box) return;
         box.set_position(data.pos.x, data.pos.y);
-        SceneManager.move_mesh(box, data.pid);
+        Services.scene.move(box, data.pid);
         box.scale.setScalar(1);
         box.set_color('#0f0')
         box.set_texture(data.texture, data.atlas);
@@ -279,7 +279,7 @@ function ActionsControlCreate() {
     }
 
     function add_gui_text(data: ParamsPidPos) {
-        const txt = SceneManager.create(IObjectTypes.GUI_TEXT, { text: 'Text', width: 128, height: 40 });
+        const txt = Services.scene.create(IObjectTypes.GUI_TEXT as any, { text: 'Text', width: 128, height: 40 }) as any;
         if (!txt) return;
         txt.set_position(data.pos.x, data.pos.y);
         txt.set_color('#0f0');
@@ -289,14 +289,14 @@ function ActionsControlCreate() {
     }
 
     function add_go_container(data: ParamsPidPos) {
-        const container = SceneManager.create(IObjectTypes.GO_CONTAINER);
+        const container = Services.scene.create(IObjectTypes.GO_CONTAINER as any) as any;
         if (!container) return;
         container.set_position(data.pos.x, data.pos.y);
         sceneAddItem(container, data.pid);
     }
 
     function add_go_sprite_component(data: paramsTexture) {
-        const sprite = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: data.size.w * WORLD_SCALAR, height: data.size.h * WORLD_SCALAR });
+        const sprite = Services.scene.create(IObjectTypes.GO_SPRITE_COMPONENT as any, { width: data.size.w * WORLD_SCALAR, height: data.size.h * WORLD_SCALAR }) as any;
         if (!sprite) return;
         sprite.set_position(data.pos.x, data.pos.y);
         sprite.set_texture(data.texture, data.atlas);
@@ -304,7 +304,7 @@ function ActionsControlCreate() {
     }
 
     function add_go_label_component(data: ParamsPidPos) {
-        const label = SceneManager.create(IObjectTypes.GO_LABEL_COMPONENT, { text: 'label' });
+        const label = Services.scene.create(IObjectTypes.GO_LABEL_COMPONENT as any, { text: 'label' }) as any;
         if (!label) return;
         label.set_position(data.pos.x, data.pos.y);
         label.set_font('ShantellSans-Light11');
@@ -312,28 +312,28 @@ function ActionsControlCreate() {
     }
 
     function add_go_model_component(data: ParamsPidPos) {
-        const model = SceneManager.create(IObjectTypes.GO_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
+        const model = Services.scene.create(IObjectTypes.GO_MODEL_COMPONENT as any, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR }) as any;
         if (!model) return;
         model.set_position(data.pos.x, data.pos.y);
         sceneAddItem(model, data.pid);
     }
 
     function add_go_animated_model_component(data: ParamsPidPos) {
-        const model = SceneManager.create(IObjectTypes.GO_ANIMATED_MODEL_COMPONENT, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR });
+        const model = Services.scene.create(IObjectTypes.GO_ANIMATED_MODEL_COMPONENT as any, { width: 50 * WORLD_SCALAR, height: 50 * WORLD_SCALAR }) as any;
         if (!model) return;
         model.set_position(data.pos.x, data.pos.y);
         sceneAddItem(model, data.pid);
     }
 
     function add_go_audio_component(data: ParamsPidPos) {
-        const audio = SceneManager.create(IObjectTypes.GO_AUDIO_COMPONENT);
+        const audio = Services.scene.create(IObjectTypes.GO_AUDIO_COMPONENT as any) as any;
         if (!audio) return;
         audio.set_position(data.pos.x, data.pos.y);
         sceneAddItem(audio, data.pid);
     }
 
     function add_component(data: ParamsPidPos, type: ComponentType) {
-        const cmp = SceneManager.create(IObjectTypes.COMPONENT, { type });
+        const cmp = Services.scene.create(IObjectTypes.COMPONENT as any, { type }) as any;
         cmp.set_position(data.pos.x, data.pos.y);
         sceneAddItem(cmp, data.pid);
     }
@@ -341,32 +341,32 @@ function ActionsControlCreate() {
     function sceneAddItem(item: IBaseMeshAndThree, pid: number = -1) {
         if (!item) return;
 
-        const parent = SceneManager.get_mesh_by_id(pid);
-        parent ? parent.add(item) : SceneManager.add(item, pid);
+        const parent = Services.scene.get_by_id(pid);
+        parent ? parent.add(item) : Services.scene.add(item as any, pid);
 
         const mesh_id = item.mesh_data.id;
-        const mesh_data = SceneManager.serialize_mesh(item);
-        const next_id = SceneManager.find_next_id_mesh(item);
+        const mesh_data = Services.scene.serialize_object(item as any);
+        const next_id = Services.scene.find_next_sibling_id(item as any);
 
         Services.history.push({
             type: 'create',
             description: 'Создание объекта',
             data: { mesh_id, mesh_data, next_id, pid },
             undo: (data) => {
-                SceneManager.remove(data.mesh_id);
+                Services.scene.remove_by_id(data.mesh_id);
                 SizeControl.detach();
                 Services.selection.clear();
                 ControlManager.update_graph();
             },
             redo: (data) => {
                 const parent = data.pid === -1
-                    ? RenderEngine.scene
-                    : SceneManager.get_mesh_by_id(data.pid);
+                    ? Services.render.scene
+                    : Services.scene.get_by_id(data.pid);
                 if (parent) {
-                    const m = SceneManager.deserialize_mesh(data.mesh_data, true, parent);
+                    const m = Services.scene.deserialize_object(data.mesh_data, true);
                     parent.add(m);
-                    SceneManager.move_mesh(m, data.pid, data.next_id);
-                    Services.selection.set_selected([m]);
+                    Services.scene.move(m, data.pid, data.next_id);
+                    Services.selection.set_selected([m as any]);
                     ControlManager.update_graph();
                 }
             }
@@ -375,11 +375,11 @@ function ActionsControlCreate() {
     }
 
     function add_go_with_sprite_component(data: paramsTexture) {
-        const go = SceneManager.create(IObjectTypes.GO_CONTAINER);
-        const spr = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: (data.size.w || 32) * WORLD_SCALAR, height: (data.size.h || 32) * WORLD_SCALAR });
+        const go = Services.scene.create(IObjectTypes.GO_CONTAINER as any) as any;
+        const spr = Services.scene.create(IObjectTypes.GO_SPRITE_COMPONENT as any, { width: (data.size.w || 32) * WORLD_SCALAR, height: (data.size.h || 32) * WORLD_SCALAR }) as any;
         if (!spr || !go) return;
         go.set_position(data.pos.x, data.pos.y);
-        SceneManager.move_mesh(go, data.pid);
+        Services.scene.move(go, data.pid);
         go.position.z = 0;
         spr.set_position(0, 0);
         spr.set_texture(data.texture, data.atlas);
@@ -398,9 +398,9 @@ function ActionsControlCreate() {
 
             if (namesMap[baseName]) {
                 namesMap[baseName]++;
-                const mesh = SceneManager.get_mesh_by_id(item.id);
+                const mesh = Services.scene.get_by_id(item.id);
                 if (mesh) {
-                    SceneManager.set_mesh_name(mesh, baseName + ` (${namesMap[baseName] - 1})`);
+                    Services.scene.set_name(mesh, baseName + ` (${namesMap[baseName] - 1})`);
                 }
             } else {
                 namesMap[baseName] = 1;

@@ -3,6 +3,7 @@ import { Vector2, Vector3 } from "three";
 import { Text } from 'troika-three-text';
 import { IBaseMesh, IObjectTypes } from "../types";
 import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
+import { Services } from '@editor/core';
 
 
 interface IParameters {
@@ -161,7 +162,7 @@ export class TextMesh extends Text implements IBaseMesh {
     }
 
     set_font(name: string, is_sync = true) {
-        this.font = ResourceManager.get_font(name);
+        this.font = Services.resources.get_font(name);
         this.parameters.font = name;
         if (is_sync)
             this.sync();

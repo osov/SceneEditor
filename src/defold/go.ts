@@ -65,7 +65,7 @@ declare global {
 
 export function go_module() {
     function set_position(position: vmath.vector3, id: string | hash) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return;
@@ -78,7 +78,7 @@ export function go_module() {
     }
 
     function get_position(id: string | hash) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return null;
@@ -91,7 +91,7 @@ export function go_module() {
     }
 
     function set_rotation(rotation: vmath.quaternion, id: string | hash) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return;
@@ -104,7 +104,7 @@ export function go_module() {
     }
 
     function get_rotation(id: string | hash) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return null;
@@ -118,7 +118,7 @@ export function go_module() {
     }
 
     function set_scale(scale: vmath.vector3 | number, id: string | hash) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return;
@@ -134,7 +134,7 @@ export function go_module() {
     }
 
     function get_scale(id: string | hash) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return null;
@@ -147,8 +147,8 @@ export function go_module() {
     }
 
     function set_parent(id: string | hash, parent_id: string | hash) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
-        const parent = SceneManager.get_mesh_by_id(uh_to_id(parent_id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
+        const parent = Services.scene.get_by_id(uh_to_id(parent_id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return;
@@ -169,7 +169,7 @@ export function go_module() {
     }
 
     function get_parent(id: string | hash) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return null;
@@ -178,11 +178,11 @@ export function go_module() {
             Services.logger.error(`Mesh with id ${id} is not go`);
             return null;
         }
-        return mesh.parent ? SceneManager.get_mesh_url_by_id(mesh.parent.id) : null;
+        return mesh.parent ? Services.scene.get_url_by_id(mesh.parent.id) : null;
     }
 
     function get_world_position(id: string | hash) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return null;
@@ -208,7 +208,7 @@ export function go_module() {
     }
 
     function get_world_rotation(id: string | hash) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return null;
@@ -222,7 +222,7 @@ export function go_module() {
     }
 
     function get_world_scale(id: string | hash) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return null;
@@ -236,7 +236,7 @@ export function go_module() {
     }
 
     function _delete(id: string | hash, recursive?: boolean) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
+        const mesh = Services.scene.get_by_id(uh_to_id(id));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${id} not found`);
             return;
@@ -245,11 +245,11 @@ export function go_module() {
             Services.logger.error(`Mesh with id ${id} is not go`);
             return;
         }
-        SceneManager.remove(uh_to_id(id));
+        Services.scene.remove_by_id(uh_to_id(id));
     }
 
     function get(url: string | hash, property: string, options?: any) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(url));
+        const mesh = Services.scene.get_by_id(uh_to_id(url));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${url} not found`);
             return null;
@@ -270,7 +270,7 @@ export function go_module() {
     }
 
     function set(url: string | hash, property: string, value: any, options?: any) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(url));
+        const mesh = Services.scene.get_by_id(uh_to_id(url));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${url} not found`);
             return;
@@ -298,7 +298,7 @@ export function go_module() {
         complete_function?: (self: IBaseEntityAndThree, url: string | hash, property: string) => void
     ) {
         const mesh_id = uh_to_id(url);
-        const mesh = SceneManager.get_mesh_by_id(mesh_id);
+        const mesh = Services.scene.get_by_id(mesh_id);
         if (!mesh) {
             Services.logger.error(`Mesh with url ${url} not found`);
             return;
@@ -310,7 +310,7 @@ export function go_module() {
 
     function cancel_animations(url: string | hash, property?: string) {
         const mesh_id = uh_to_id(url);
-        const mesh = SceneManager.get_mesh_by_id(mesh_id);
+        const mesh = Services.scene.get_by_id(mesh_id);
         if (!mesh) {
             Services.logger.error(`Mesh with url ${url} not found`);
             return;

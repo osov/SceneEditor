@@ -38,19 +38,19 @@ function CameraControlCreate() {
 
     function init() {
         if (is_perspective) {
-            RenderEngine.camera.position.set(0, 0, 0);
-            control_perspective = createCameraPerspectiveControl(RenderEngine.camera as PerspectiveCamera);
-            RenderEngine.scene.add(control_perspective.getObject());
+            Services.render.camera.position.set(0, 0, 0);
+            control_perspective = createCameraPerspectiveControl(Services.render.camera as PerspectiveCamera);
+            Services.render.scene.add(control_perspective.getObject());
             Services.event_bus.on('SYS_ON_UPDATE', (data) => {
                 const e = data as { dt: number };
                 control_perspective.update(e.dt * 3);
             });
             setInterval(() => save_state(), 1000); // todo
             //   const gridHelper = new GridHelper(1000, 50);
-            //  RenderEngine.scene.add(gridHelper);
+            //  Services.render.scene.add(gridHelper);
         }
         else {
-            control_orthographic = new CameraControls(RenderEngine.camera, RenderEngine.renderer.domElement);
+            control_orthographic = new CameraControls(Services.render.camera, Services.render.renderer.domElement);
             control_orthographic.mouseButtons.left = CameraControls.ACTION.NONE;
             control_orthographic.mouseButtons.middle = CameraControls.ACTION.TRUCK;
             control_orthographic.mouseButtons.right = CameraControls.ACTION.TRUCK;

@@ -36,12 +36,12 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 		if (this.mixer)
 			this.mixer.update(e.dt);
 		for (let i = 0; i < this.materials.length; i++) {
-			ResourceManager.set_material_uniform_for_original(this.materials[i].name, 'offsetZ', this.position.z);
+			Services.resources.set_material_uniform_for_original(this.materials[i].name, 'offsetZ', this.position.z);
 		}
 	}
 
 	add_animation(name: string) {
-		const clip = ResourceManager.find_animation(name, this.mesh_name);
+		const clip = Services.resources.find_animation(name, this.mesh_name);
 		if (!clip)
 			return Services.logger.error('Animation not found', name);
 		const animationAction = this.mixer.clipAction(clip.clip)

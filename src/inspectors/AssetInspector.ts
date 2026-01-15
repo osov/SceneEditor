@@ -138,7 +138,7 @@ function AssetInspectorCreate() {
             const result = { id, fields: [] as PropertyData<PropertyType>[] };
 
             const texture_name = get_file_name(path);
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
 
             if (atlas == null) {
                 Services.logger.error(`[set_selected_textures] Atlas for texture ${texture_name} not found`);
@@ -172,8 +172,8 @@ function AssetInspectorCreate() {
                 }
             });
 
-            const min_filter = convertThreeJSFilterToFilterMode(ResourceManager.get_texture(texture_name, atlas).texture.minFilter);
-            const mag_filter = convertThreeJSFilterToFilterMode(ResourceManager.get_texture(texture_name, atlas).texture.magFilter);
+            const min_filter = convertThreeJSFilterToFilterMode(Services.resources.get_texture(texture_name, atlas).texture.minFilter);
+            const mag_filter = convertThreeJSFilterToFilterMode(Services.resources.get_texture(texture_name, atlas).texture.magFilter);
 
             result.fields.push({
                 key: AssetProperty.MIN_FILTER,
@@ -201,8 +201,8 @@ function AssetInspectorCreate() {
                 onChange: handleMagFilterChange
             });
 
-            const wrap_s = convertThreeJSWrappingToWrappingMode(ResourceManager.get_texture(texture_name, atlas).texture.wrapS);
-            const wrap_t = convertThreeJSWrappingToWrappingMode(ResourceManager.get_texture(texture_name, atlas).texture.wrapT);
+            const wrap_s = convertThreeJSWrappingToWrappingMode(Services.resources.get_texture(texture_name, atlas).texture.wrapS);
+            const wrap_t = convertThreeJSWrappingToWrappingMode(Services.resources.get_texture(texture_name, atlas).texture.wrapT);
 
             result.fields.push({
                 key: AssetProperty.WRAP_S,
@@ -246,9 +246,9 @@ function AssetInspectorCreate() {
             const result = { id, fields: [] as PropertyData<PropertyType>[] };
 
             const material_name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(material_name)
+            const material_info = Services.resources.get_material_info(material_name)
             if (material_info) {
-                const origin = ResourceManager.get_material_by_hash(material_name, material_info.origin);
+                const origin = Services.resources.get_material_by_hash(material_name, material_info.origin);
                 if (origin) {
                     result.fields.push({
                         key: AssetProperty.VERTEX_PROGRAM,
@@ -287,7 +287,7 @@ function AssetInspectorCreate() {
                             case MaterialUniformType.SAMPLER2D:
                                 const texture = uniform as IUniform<Texture>;
                                 const texture_name = get_file_name((texture.value as any).path || '');
-                                const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+                                const atlas = Services.resources.get_atlas_by_texture_name(texture_name) || '';
                                 result.fields.push({
                                     key,
                                     value: `${atlas}/${texture_name}`,
@@ -449,7 +449,7 @@ function AssetInspectorCreate() {
             const result = { id: idx, fields: [] as PropertyData<PropertyType>[] };
 
             const audio_name = get_file_name(path);
-            const audio_buffer = ResourceManager.get_sound_buffer(audio_name);
+            const audio_buffer = Services.resources.get_sound_buffer(audio_name);
 
             if (!audio_buffer) return null;
 
@@ -568,7 +568,7 @@ function AssetInspectorCreate() {
             }
 
             const texture_name = get_file_name(texture_path);
-            const oldAtlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const oldAtlas = Services.resources.get_atlas_by_texture_name(texture_name);
             atlases.push({ texture_path, value: oldAtlas ? oldAtlas : '' });
         });
 
@@ -583,13 +583,13 @@ function AssetInspectorCreate() {
     async function updateAssetAtlas(data: AssetTextureInfo<string>[], last: boolean) {
         for (const item of data) {
             const texture_name = get_file_name(item.texture_path);
-            const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
-            ResourceManager.override_atlas_texture(old_atlas, item.value, texture_name);
+            const old_atlas = Services.resources.get_atlas_by_texture_name(texture_name) || '';
+            Services.resources.override_atlas_texture(old_atlas, item.value, texture_name);
 
 
             if (last) {
                 // NOTE: возможно обновление текстур в мешах должно быть в override_atlas_texture 
-                SceneManager.get_scene_list().forEach((mesh) => {
+                Services.scene.get_all().forEach((mesh) => {
                     const is_type = mesh.type == IObjectTypes.GO_SPRITE_COMPONENT || mesh.type == IObjectTypes.GUI_BOX;
                     if (!is_type) return;
 
@@ -605,7 +605,7 @@ function AssetInspectorCreate() {
         }
 
         if (last) {
-            await ResourceManager.write_metadata();
+            await Services.resources.write_metadata();
         }
     }
 
@@ -619,13 +619,13 @@ function AssetInspectorCreate() {
             }
 
             const texture_name = get_file_name(texture_path);
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Services.logger.error('[saveMinFilter] Atlas not found for texture:', texture_name);
                 return;
             }
 
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             minFilters.push({
                 texture_path,
                 value: texture_data.texture.minFilter as MinificationTextureFilter
@@ -648,15 +648,15 @@ function AssetInspectorCreate() {
     async function updateMinFilter(data: AssetTextureInfo<MinificationTextureFilter>[], last: boolean) {
         for (const item of data) {
             const texture_name = get_file_name(item.texture_path);
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) continue;
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             texture_data.texture.minFilter = item.value;
             updateEachMaterialWhichHasTexture(texture_data.texture);
 
         }
         if (last) {
-            await ResourceManager.write_metadata();
+            await Services.resources.write_metadata();
         }
     }
 
@@ -670,13 +670,13 @@ function AssetInspectorCreate() {
             }
 
             const texture_name = get_file_name(texture_path);
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Services.logger.error('[saveMagFilter] Atlas not found for texture:', texture_name);
                 return;
             }
 
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             magFilters.push({
                 texture_path,
                 value: texture_data.texture.magFilter as MagnificationTextureFilter
@@ -699,14 +699,14 @@ function AssetInspectorCreate() {
     async function updateMagFilter(data: AssetTextureInfo<MagnificationTextureFilter>[], last: boolean) {
         for (const item of data) {
             const texture_name = get_file_name(item.texture_path);
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) continue;
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             texture_data.texture.magFilter = item.value;
             updateEachMaterialWhichHasTexture(texture_data.texture);
         }
         if (last) {
-            await ResourceManager.write_metadata();
+            await Services.resources.write_metadata();
         }
     }
 
@@ -720,13 +720,13 @@ function AssetInspectorCreate() {
             }
 
             const texture_name = get_file_name(texture_path);
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Services.logger.error('[saveWrapS] Atlas not found for texture:', texture_name);
                 return;
             }
 
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             wrapS.push({
                 texture_path,
                 value: texture_data.texture.wrapS
@@ -749,13 +749,13 @@ function AssetInspectorCreate() {
     async function updateWrapS(data: AssetTextureInfo<Wrapping>[], last: boolean) {
         for (const item of data) {
             const texture_name = get_file_name(item.texture_path);
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) continue;
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             texture_data.texture.wrapS = item.value;
             updateEachMaterialWhichHasTexture(texture_data.texture);
         }
-        if (last) await ResourceManager.write_metadata();
+        if (last) await Services.resources.write_metadata();
     }
 
     function saveWrapT(info: BeforeChangeInfo) {
@@ -768,13 +768,13 @@ function AssetInspectorCreate() {
             }
 
             const texture_name = get_file_name(texture_path);
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) {
                 Services.logger.error('[saveWrapT] Atlas not found for texture:', texture_name);
                 return;
             }
 
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             wrapT.push({
                 texture_path,
                 value: texture_data.texture.wrapT
@@ -797,13 +797,13 @@ function AssetInspectorCreate() {
     async function updateWrapT(data: AssetTextureInfo<Wrapping>[], last: boolean) {
         for (const item of data) {
             const texture_name = get_file_name(item.texture_path);
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
             if (atlas == null) continue;
-            const texture_data = ResourceManager.get_texture(texture_name, atlas);
+            const texture_data = Services.resources.get_texture(texture_name, atlas);
             texture_data.texture.wrapT = item.value;
             updateEachMaterialWhichHasTexture(texture_data.texture);
         }
-        if (last) await ResourceManager.write_metadata();
+        if (last) await Services.resources.write_metadata();
     }
 
     function saveMaterialVertexProgram(info: BeforeChangeInfo) {
@@ -811,9 +811,9 @@ function AssetInspectorCreate() {
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
+            const material_info = Services.resources.get_material_info(name);
             if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
+            const origin = Services.resources.get_material_by_hash(name, material_info.origin);
             if (!origin) return;
             vertexPrograms.push({
                 material_path: path,
@@ -853,9 +853,9 @@ function AssetInspectorCreate() {
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
+            const material_info = Services.resources.get_material_info(name);
             if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
+            const origin = Services.resources.get_material_by_hash(name, material_info.origin);
             if (!origin) return;
             fragmentPrograms.push({
                 material_path: path,
@@ -895,9 +895,9 @@ function AssetInspectorCreate() {
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
+            const material_info = Services.resources.get_material_info(name);
             if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
+            const origin = Services.resources.get_material_by_hash(name, material_info.origin);
             if (!origin) return;
             transparents.push({
                 material_path: path,
@@ -942,9 +942,9 @@ function AssetInspectorCreate() {
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
+            const material_info = Services.resources.get_material_info(name);
             if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
+            const origin = Services.resources.get_material_by_hash(name, material_info.origin);
             if (!origin) return;
             const uniform = origin.uniforms[info.field.key];
             if (uniform) {
@@ -960,7 +960,7 @@ function AssetInspectorCreate() {
 
     async function updateUniform<T>(data: AssetMaterialInfo<T>[], last: boolean) {
         for (const item of data) {
-            await ResourceManager.set_material_uniform_for_original(get_file_name(item.material_path), item.name, item.value, last);
+            await Services.resources.set_material_uniform_for_original(get_file_name(item.material_path), item.name, item.value, last);
         }
     }
 
@@ -969,14 +969,14 @@ function AssetInspectorCreate() {
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
+            const material_info = Services.resources.get_material_info(name);
             if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
+            const origin = Services.resources.get_material_by_hash(name, material_info.origin);
             if (!origin) return;
             const uniform = origin.uniforms[info.field.key];
             if (uniform) {
                 const texture_name = get_file_name(uniform.value.path || '');
-                const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+                const atlas = Services.resources.get_atlas_by_texture_name(texture_name) || '';
                 sampler2Ds.push({
                     material_path: path,
                     name: info.field.key,
@@ -995,9 +995,9 @@ function AssetInspectorCreate() {
     async function updateUniformSampler2D(data: AssetMaterialInfo<string>[], last: boolean) {
         for (const item of data) {
             const texture_name = get_file_name(item.value || '');
-            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
-            const texture = ResourceManager.get_texture(texture_name, atlas).texture;
-            await ResourceManager.set_material_uniform_for_original(get_file_name(item.material_path), item.name, texture, last);
+            const atlas = Services.resources.get_atlas_by_texture_name(texture_name) || '';
+            const texture = Services.resources.get_texture(texture_name, atlas).texture;
+            await Services.resources.set_material_uniform_for_original(get_file_name(item.material_path), item.name, texture, last);
         }
     }
 
@@ -1006,9 +1006,9 @@ function AssetInspectorCreate() {
         info.ids.forEach((id) => {
             const path = _selected_materials[id];
             const name = get_file_name(path);
-            const material_info = ResourceManager.get_material_info(name);
+            const material_info = Services.resources.get_material_info(name);
             if (!material_info) return;
-            const origin = ResourceManager.get_material_by_hash(name, material_info.origin);
+            const origin = Services.resources.get_material_by_hash(name, material_info.origin);
             if (!origin) return;
             const uniform = origin.uniforms[info.field.key];
             if (uniform) {
@@ -1032,7 +1032,7 @@ function AssetInspectorCreate() {
     async function updateUniformColor(data: AssetMaterialInfo<string>[], last: boolean) {
         for (const item of data) {
             const rgb = hexToRGB(item.value);
-            await ResourceManager.set_material_uniform_for_original(get_file_name(item.material_path), item.name, rgb, last);
+            await Services.resources.set_material_uniform_for_original(get_file_name(item.material_path), item.name, rgb, last);
         }
     }
 

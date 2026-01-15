@@ -23,7 +23,7 @@ export type {
 } from './types';
 
 // Сервисы
-export { create_render_service, RenderLayers } from './RenderService';
+export { create_render_service, DC_LAYERS } from './RenderService';
 export { create_scene_service } from './SceneService';
 export { create_resource_service } from './ResourceService';
 export { create_camera_service } from './CameraService';

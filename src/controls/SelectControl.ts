@@ -22,7 +22,7 @@ function SelectControlCreate() {
     let selected_list: IBaseMeshAndThree[] = [];
     function init() {
         Services.event_bus.on('SYS_INPUT_POINTER_DOWN', (e) => {
-            if (e.target != RenderEngine.renderer.domElement)
+            if (e.target != Services.render.renderer.domElement)
                 return;
             if (e.button != 0)
                 return;
@@ -30,21 +30,21 @@ function SelectControlCreate() {
         });
 
         Services.event_bus.on('SYS_INPUT_POINTER_UP', (e) => {
-            if (e.target != RenderEngine.renderer.domElement)
+            if (e.target != Services.render.renderer.domElement)
                 return;
             if (e.button != 0)
                 return;
-            if (Input.is_shift())
+            if (Services.input.is_shift())
                 return;
             prev_point.set(pointer.x, pointer.y);
             pointer.x = e.x;
             pointer.y = e.y;
-            const old_pos = Camera.screen_to_world(click_point.x, click_point.y);
-            const cur_pos = Camera.screen_to_world(pointer.x, pointer.y);
+            const old_pos = Services.camera.screen_to_world(click_point.x, click_point.y);
+            const cur_pos = Services.camera.screen_to_world(pointer.x, pointer.y);
             const len = cur_pos.clone().sub(old_pos).length();
             if (len > 5 * WORLD_SCALAR)
                 return;
-            const intersects = RenderEngine.raycast_scene(pointer);
+            const intersects = Services.render.raycast_scene(pointer);
             set_selected_intersect(intersects);
         });
 
@@ -56,7 +56,7 @@ function SelectControlCreate() {
 
 
         Services.event_bus.on('SYS_SELECTED_MESH', (e) => {
-            if (Input.is_control()) {
+            if (Services.input.is_control()) {
                 if (!is_selected(e.mesh))
                     selected_list.push(e.mesh);
                 else {
@@ -72,7 +72,7 @@ function SelectControlCreate() {
 
         Services.event_bus.on('SYS_UNSELECTED_MESH_LIST', () => {
             selected = null;
-            if (!Input.is_control())
+            if (!Services.input.is_control())
                 selected_list = [];
         });
     }
@@ -94,7 +94,7 @@ function SelectControlCreate() {
             if (is_base_mesh(it.object)) {
                 const bm = it.object as IBaseMeshAndThree;
                 const tex_data = bm.get_texture();
-                const texture = ResourceManager.get_texture(tex_data[0], tex_data[1]);
+                const texture = Services.resources.get_texture(tex_data[0], tex_data[1]);
                 // bad texture
                 if ((texture as any).system)
                     tmp_list.push(it.object);
@@ -134,7 +134,7 @@ function SelectControlCreate() {
             Services.event_bus.emit('SYS_CLEAR_SELECT_MESH_LIST');
         }
         if (list.length == 0) {
-            if (!Input.is_control())
+            if (!Services.input.is_control())
                 Services.event_bus.emit('SYS_UNSELECTED_MESH_LIST');
             return;
         }

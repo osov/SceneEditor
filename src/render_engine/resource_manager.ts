@@ -479,7 +479,7 @@ export function ResourceManagerModule() {
                             }
                             material_info.mesh_info_to_material_hashes[mesh_info.id][mesh_info.index] = material_info.origin;
 
-                            const mesh = SceneManager.get_mesh_by_id(mesh_info.id) as Slice9Mesh;
+                            const mesh = Services.scene.get_by_id(mesh_info.id) as Slice9Mesh;
                             if (!mesh) return;
 
                             mesh.set_material(material_info.name);
@@ -509,7 +509,7 @@ export function ResourceManagerModule() {
                             }
                             material_info.mesh_info_to_material_hashes[mesh_info.id][mesh_info.index] = material_info.origin;
 
-                            const mesh = SceneManager.get_mesh_by_id(mesh_info.id) as Slice9Mesh;
+                            const mesh = Services.scene.get_by_id(mesh_info.id) as Slice9Mesh;
                             if (!mesh) return;
 
                             mesh.set_material(material_info.name);
@@ -533,7 +533,7 @@ export function ResourceManagerModule() {
                             }
                             material_info.mesh_info_to_material_hashes[mesh_info.id][mesh_info.index] = new_hash;
 
-                            const mesh = SceneManager.get_mesh_by_id(mesh_info.id) as Slice9Mesh;
+                            const mesh = Services.scene.get_by_id(mesh_info.id) as Slice9Mesh;
                             if (!mesh) return;
 
                             mesh.set_material(material_info.name);
@@ -559,7 +559,7 @@ export function ResourceManagerModule() {
                         }
                         material_info.mesh_info_to_material_hashes[mesh_info.id][mesh_info.index] = new_hash;
 
-                        const mesh = SceneManager.get_mesh_by_id(mesh_info.id) as Slice9Mesh;
+                        const mesh = Services.scene.get_by_id(mesh_info.id) as Slice9Mesh;
                         if (!mesh) return;
 
                         mesh.set_material(material_info.name);

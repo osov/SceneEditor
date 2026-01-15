@@ -12,6 +12,7 @@ import { create_logger, LogLevel } from './services/LoggerService';
 import type { LoggerConfig } from './services/LoggerService';
 import { create_event_bus } from './events/EventBus';
 import { create_input_service } from './services/InputService';
+import type { IInputService } from './services/InputService';
 import { create_time_service } from './services/TimeService';
 import type { IPluginManager, PluginConfig, PluginFactory } from './plugins/types';
 import { create_plugin_manager } from './plugins/PluginManager';
@@ -39,11 +40,7 @@ import {
 } from '../editor';
 
 // Legacy регистрации для обратной совместимости
-import { register_engine } from '../render_engine/engine';
-import { register_scene_manager } from '../render_engine/scene_manager';
 import { register_resource_manager } from '../render_engine/resource_manager';
-import { register_input } from '../modules/InputManager';
-import { register_camera } from '../modules/Camera';
 import { register_editor_modules } from '../modules_editor/Manager_editor';
 import { register_size_control } from '../controls/SizeControl';
 import { register_transform_control } from '../controls/TransformControl';
@@ -387,17 +384,12 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         // Эти модули регистрируют глобальные объекты для обратной совместимости.
         // Новый код должен использовать DI сервисы напрямую.
 
-        // 1. Коммуникация и ввод
-        register_input();      // window.Input - делегирует к InputService
-        register_camera();     // window.Camera - данные камеры
-
-        // 3. Render engine (Three.js)
-        register_engine();           // window.RenderEngine
-        register_scene_manager();    // window.SceneManager
+        // 1. Resource manager (legacy) - SceneManager удалён, используем Services.scene
         register_resource_manager(); // window.ResourceManager
 
-        // 4. Привязка событий ввода (после register_engine для canvas)
-        Input.bind_events();
+        // 2. Привязка событий ввода (используем DI InputService напрямую)
+        const input_service = container.resolve<IInputService>(TOKENS.Input);
+        input_service.bind_events(canvas);
 
         // 5. Контролы редактора (window.* глобальные объекты)
         register_select_control();

@@ -105,7 +105,7 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
         // TILES
         for (let layer of render_data.layers) {
             const id_layer = layer.id_order;
-            const container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+            const container = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
             container.name = layer.layer_name;
             world.add(container);
             for (let tile of layer.tiles) {
@@ -130,7 +130,7 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                     x = new_pos.x + tile_w / 2;
                     y = new_pos.y + tile_h / 2;
                     const z = get_depth(x, y, id_layer, tile_w, tile_h);
-                    const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
+                    const plane = Services.scene.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
                     plane.position.set(x, y, z);
                     (plane as any).tile_z = z;
                     plane.set_texture(tile_info.name, tile_info.atlas);
@@ -151,7 +151,7 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
         for (let object_layer of render_data.objects_layers) {
             const id_layer = object_layer.id_order;
             let id_object = -1;
-            const container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+            const container = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
             container.name = object_layer.layer_name;
             world.add(container);
             for (let tile of object_layer.objects) {
@@ -188,7 +188,7 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                         const y = tile.y * SUB_SCALAR;
                         const y_depth = tile.y_src * SUB_SCALAR;
                         const z = get_depth(x, y_depth, id_layer, tile_w, tile_h);
-                        const plane = SceneManager.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
+                        const plane = Services.scene.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
                         plane.position.set(x, y, z);
                         (plane as any).tile_z = z;
                         plane.set_texture(tile_info.name, tile_info.atlas);

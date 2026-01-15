@@ -6,6 +6,7 @@ import { FLOAT_PRECISION, WORLD_SCALAR } from "../../config";
 import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils';
 import { hex2rgba, rgb2hex } from "@editor/defold/utils";
 import { Services } from '@editor/core';
+import { DC_LAYERS } from '@editor/engine/RenderService';
 
 export interface MultipleMaterialMeshSerializeData {
     mesh_name: string,
@@ -24,15 +25,15 @@ export class MultipleMaterialMesh extends EntityPlane {
 
     constructor(id: number, width = 0, height = 0) {
         super(id);
-        this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
-        this.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
+        this.layers.disable(DC_LAYERS.GO_LAYER);
+        this.layers.enable(DC_LAYERS.RAYCAST_LAYER);
         this.set_size(width, height);
     }
 
     set_texture(name: string, atlas = '', index = 0, uniform_key = 'u_texture') {
         this.textures[index] = [name, atlas, uniform_key];
-        const texture_data = ResourceManager.get_texture(name, atlas);
-        ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, uniform_key, texture_data.texture);
+        const texture_data = Services.resources.get_texture(name, atlas);
+        Services.resources.set_material_uniform_for_multiple_material_mesh(this, index, uniform_key, texture_data.texture);
     }
 
     get_texture(index = 0) {
@@ -57,7 +58,7 @@ export class MultipleMaterialMesh extends EntityPlane {
             Services.logger.warn('Material has no u_color uniform', this.materials[0].name);
             return;
         }
-        ResourceManager.set_material_uniform_for_multiple_material_mesh(this, 0, 'u_color', color);
+        Services.resources.set_material_uniform_for_multiple_material_mesh(this, 0, 'u_color', color);
     }
 
     get_color() {
@@ -70,11 +71,11 @@ export class MultipleMaterialMesh extends EntityPlane {
     }
 
     set_material(name: string, index = 0) {
-        if (!ResourceManager.has_material_by_mesh_id(name, this.mesh_data.id, index)) {
-            ResourceManager.unlink_material_for_multiple_material_mesh(this.materials[index].name, this.mesh_data.id, index);
+        if (!Services.resources.has_material_by_mesh_id(name, this.mesh_data.id, index)) {
+            Services.resources.unlink_material_for_multiple_material_mesh(this.materials[index].name, this.mesh_data.id, index);
         }
 
-        const material = ResourceManager.get_material_by_mesh_id(name, this.mesh_data.id, index);
+        const material = Services.resources.get_material_by_mesh_id(name, this.mesh_data.id, index);
         if (!material) return;
 
         this.materials[index] = material;
@@ -96,7 +97,7 @@ export class MultipleMaterialMesh extends EntityPlane {
     }
 
     set_mesh(name: string) {
-        const src = ResourceManager.get_model(name);
+        const src = Services.resources.get_model(name);
         if (!src)
             return Services.logger.error('Mesh not found', name);
 
@@ -109,11 +110,11 @@ export class MultipleMaterialMesh extends EntityPlane {
             if ((child instanceof Mesh || child instanceof SkinnedMesh) && child.material) {
                 const old_material = (child.material as MeshBasicMaterial);
                 if (old_material.map && old_material.map.image) {
-                    ResourceManager.add_texture(old_material.name, 'mesh_' + name, old_material.map);
+                    Services.resources.add_texture(old_material.name, 'mesh_' + name, old_material.map);
                     old_maps.push(old_material.map);
                 }
 
-                const new_material = ResourceManager.get_material_by_mesh_id(this.default_material_name, this.mesh_data.id)!;
+                const new_material = Services.resources.get_material_by_mesh_id(this.default_material_name, this.mesh_data.id)!;
                 this.materials.push(new_material);
                 child.material = new_material;
             }
@@ -125,7 +126,7 @@ export class MultipleMaterialMesh extends EntityPlane {
         this.set_scale(1, 1);
 
         old_maps.forEach((map, index) => {
-            ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, 'u_texture', map);
+            Services.resources.set_material_uniform_for_multiple_material_mesh(this, index, 'u_texture', map);
         });
 
         this.transform_changed();
@@ -158,10 +159,10 @@ export class MultipleMaterialMesh extends EntityPlane {
                 info.blending = material.blending;
             }
 
-            const material_info = ResourceManager.get_material_info(material.name);
+            const material_info = Services.resources.get_material_info(material.name);
             if (!material_info) return null;
 
-            const hash = ResourceManager.get_material_hash_by_mesh_id(material.name, this.mesh_data.id, idx);
+            const hash = Services.resources.get_material_hash_by_mesh_id(material.name, this.mesh_data.id, idx);
             if (!hash) return data;
 
             const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
@@ -173,7 +174,7 @@ export class MultipleMaterialMesh extends EntityPlane {
                     const uniform = material.uniforms[uniformName];
                     if (uniform.value instanceof Texture) {
                         const texture_name = uniformName == 'u_texture' ? this.get_texture(idx)[0] : get_file_name((uniform.value as any).path || '');
-                        const atlas = uniformName == 'u_texture' ? this.get_texture(idx)[1] : ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+                        const atlas = uniformName == 'u_texture' ? this.get_texture(idx)[1] : Services.resources.get_atlas_by_texture_name(texture_name) || '';
                         modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
                     } else if (material_info.uniforms[uniformName].type == MaterialUniformType.COLOR) {
                         modifiedUniforms[uniformName] = rgb2hex(uniform.value);
@@ -214,12 +215,12 @@ export class MultipleMaterialMesh extends EntityPlane {
             }
 
             if (info.blending != undefined) {
-                ResourceManager.set_material_property_for_multiple_mesh(this, index, 'blending', info.blending);
+                Services.resources.set_material_property_for_multiple_mesh(this, index, 'blending', info.blending);
             }
 
             if (info.changed_uniforms) {
                 for (const [key, value] of Object.entries(info.changed_uniforms)) {
-                    const material_info = ResourceManager.get_material_info(info.name);
+                    const material_info = Services.resources.get_material_info(info.name);
                     if (!material_info) continue;
 
                     const uniform_info = material_info.uniforms[key];
@@ -229,9 +230,9 @@ export class MultipleMaterialMesh extends EntityPlane {
                         const [atlas, texture_name] = value.split('/');
                         this.set_texture(texture_name, atlas, index, key);
                     } else if (uniform_info.type == MaterialUniformType.COLOR) {
-                        ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, key, hex2rgba(value));
+                        Services.resources.set_material_uniform_for_multiple_material_mesh(this, index, key, hex2rgba(value));
                     } else {
-                        ResourceManager.set_material_uniform_for_multiple_material_mesh(this, index, key, value);
+                        Services.resources.set_material_uniform_for_multiple_material_mesh(this, index, key, value);
                     }
                 }
             }

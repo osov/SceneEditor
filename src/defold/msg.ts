@@ -23,7 +23,7 @@ export function msg_module() {
 
         if (socket) {
             if (typeof socket !== "string" && (socket as any).id != undefined) {
-                const url = SceneManager.get_mesh_url_by_id((socket as any).id);
+                const url = Services.scene.get_url_by_id((socket as any).id);
                 if (url) {
                     const parts = url.split(":/");
                     socketStr = parts[0];
@@ -43,7 +43,7 @@ export function msg_module() {
 
         if (path && !pathStr) {
             if (typeof path !== "string" && (path as any).id != undefined) {
-                const url = SceneManager.get_mesh_url_by_id((path as any).id);
+                const url = Services.scene.get_url_by_id((path as any).id);
                 if (url) {
                     const parts = url.split(":/");
                     if (parts.length > 1) pathStr = parts[1].split("#")[0];
@@ -58,7 +58,7 @@ export function msg_module() {
 
         if (fragment && !fragmentStr) {
             if (typeof fragment !== "string" && (fragment as any).id != undefined) {
-                const url = SceneManager.get_mesh_url_by_id((fragment as any).id);
+                const url = Services.scene.get_url_by_id((fragment as any).id);
                 if (url) {
                     const hashIndex = url.indexOf("#");
                     if (hashIndex != -1) {

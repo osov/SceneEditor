@@ -1,5 +1,6 @@
 import { degToRad } from "@editor/modules/utils";
 import { DynamicEntity } from "./physic/physic_system";
+import { Services } from '@editor/core';
 
 
 export function InputManager(player: DynamicEntity) {
@@ -23,21 +24,21 @@ export function InputManager(player: DynamicEntity) {
 
 export function get_angle() {
     let angle = -1;
-    if ((Input.keys_state['d'] || Input.keys_state['ArrowRight']) && (Input.keys_state['w'] || Input.keys_state['ArrowUp']))
+    if ((Services.input.keys_state['d'] || Services.input.keys_state['ArrowRight']) && (Services.input.keys_state['w'] || Services.input.keys_state['ArrowUp']))
         angle = 45;
-    else if ((Input.keys_state['a'] || Input.keys_state['ArrowLeft']) && (Input.keys_state['w'] || Input.keys_state['ArrowUp']))
+    else if ((Services.input.keys_state['a'] || Services.input.keys_state['ArrowLeft']) && (Services.input.keys_state['w'] || Services.input.keys_state['ArrowUp']))
         angle = 135;
-    else if ((Input.keys_state['a'] || Input.keys_state['ArrowLeft']) && (Input.keys_state['s'] || Input.keys_state['ArrowDown']))
+    else if ((Services.input.keys_state['a'] || Services.input.keys_state['ArrowLeft']) && (Services.input.keys_state['s'] || Services.input.keys_state['ArrowDown']))
         angle = 225;
-    else if ((Input.keys_state['d'] || Input.keys_state['ArrowRight']) && (Input.keys_state['s'] || Input.keys_state['ArrowDown']))
+    else if ((Services.input.keys_state['d'] || Services.input.keys_state['ArrowRight']) && (Services.input.keys_state['s'] || Services.input.keys_state['ArrowDown']))
         angle = 315;
-    else if (Input.keys_state['d'] || Input.keys_state['ArrowRight'])
+    else if (Services.input.keys_state['d'] || Services.input.keys_state['ArrowRight'])
         angle = 0;
-    else if (Input.keys_state['w'] || Input.keys_state['ArrowUp'])
+    else if (Services.input.keys_state['w'] || Services.input.keys_state['ArrowUp'])
         angle = 90;
-    else if (Input.keys_state['a'] || Input.keys_state['ArrowLeft'])
+    else if (Services.input.keys_state['a'] || Services.input.keys_state['ArrowLeft'])
         angle = 180;
-    else if (Input.keys_state['s'] || Input.keys_state['ArrowDown'])
+    else if (Services.input.keys_state['s'] || Services.input.keys_state['ArrowDown'])
         angle = 270;
     return angle;
 }

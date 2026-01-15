@@ -23,17 +23,17 @@ function AudioManagerModule() {
     const end_callbacks: TDictionary<(type: SoundEndCallbackType) => void> = {};
 
     function init() {
-        RenderEngine.camera.add(listener);
+        Services.render.camera.add(listener);
         Services.event_bus.on('SYS_ON_UPDATE', () => {
-            const camera = RenderEngine.camera;
+            const camera = Services.render.camera;
             Sound.set_listener_position(vmath.vector3(camera.position.x, camera.position.y, camera.position.z));
         });
     }
 
-    function create_audio(name: string, id = SceneManager.get_unique_id()) {
+    function create_audio(name: string, id = Services.scene.get_unique_id()) {
         const sound = new Audio(listener);
         const panner = listener.context.createStereoPanner();
-        const buffer = ResourceManager.get_sound_buffer(name);
+        const buffer = Services.resources.get_sound_buffer(name);
         sound.setBuffer(buffer);
         sounds[id] = sound;
         panners[id] = panner;

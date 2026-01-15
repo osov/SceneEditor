@@ -188,7 +188,7 @@ function TreeControlCreate() {
         });
     }
 
-    // NOTE: нужно для items которые не являются IBaseMeshAndThree, так как SceneManager.get_mesh_by_id при SYS_GRAPH_SELECTED в ControlManager не найдет их и они не будут выбраны для SelectControl потому что он с ними и не работает, как следствие они не передадуться в отрисовку дерева, поэтому их контролируем отдельно/дополнительно
+    // NOTE: нужно для items которые не являются IBaseMeshAndThree, так как Services.scene.get_by_id при SYS_GRAPH_SELECTED в ControlManager не найдет их и они не будут выбраны для SelectControl потому что он с ними и не работает, как следствие они не передадуться в отрисовку дерева, поэтому их контролируем отдельно/дополнительно
     function set_selected_items(list: number[]) {
         for (const item_id of list) {
             const element = document.querySelector(`.tree__item[data-id="${item_id}"]`) as HTMLElement;
@@ -1224,7 +1224,7 @@ function TreeControlCreate() {
                 // scrollToWhileMoving(divTree, startY, event);
 
                 // отмены не происходит, если выбрано больше одного
-                if (Input.is_control() && listSelected?.length > 0) {
+                if (Services.input.is_control() && listSelected?.length > 0) {
                     treeItem?.classList.add("selected");
                 }
 
@@ -1713,7 +1713,7 @@ function TreeControlCreate() {
             itemsName[i]?.removeAttribute("contenteditable");
         }
 
-        if (Input.is_control()) { // NOTE: если зажата ctrl
+        if (Services.input.is_control()) { // NOTE: если зажата ctrl
             if (listSelected.includes(currentId)) {
                 const isOne = listSelected.length == 1 ? true : false;
                 _is_dragging = listSelected.length > 1 ? true : false;
@@ -1728,7 +1728,7 @@ function TreeControlCreate() {
                 listSelected.push(currentId);
             }
             shiftAnchorId = currentId;
-        } else if (Input.is_shift() && listSelected.length > 0) { // NOTE: если зажата shift
+        } else if (Services.input.is_shift() && listSelected.length > 0) { // NOTE: если зажата shift
             const itemsToSelect = getItemsBetween(shiftAnchorId || listSelected[0], currentId);
 
             for (let i = 0; i < itemsToSelect.length; i++) {
@@ -1776,12 +1776,12 @@ function TreeControlCreate() {
         if (event.button == 2 && !event.target.closest("a.tree__item")) return;
 
         if (!_is_moveItemDrag) { // если движения Не было
-            if (Input.is_control()) {
+            if (Services.input.is_control()) {
                 //log(`Services.event_bus.emit('SYS_GRAPH_SELECTED', {list: ${listSelected}})`);
                 Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
-            if (Input.is_shift()) {
+            if (Services.input.is_shift()) {
                 Services.event_bus.emit('SYS_GRAPH_SELECTED', { list: listSelected });
                 return;
             }
@@ -1800,7 +1800,7 @@ function TreeControlCreate() {
         }
 
         // если движение было
-        if (Input.is_control() && _is_currentOnly) {
+        if (Services.input.is_control() && _is_currentOnly) {
             if (!listSelected.includes(itemDrag?.id)) {
                 listSelected.push(itemDrag?.id);
             }
@@ -2152,12 +2152,12 @@ function TreeControlCreate() {
         const cx = (0.5) * 2 - 1;
         const cy = - 0.5 * 2 + 1;
         if (list.length == 0) {
-            const wp = Camera.screen_to_world(cx, cy);
+            const wp = Services.camera.screen_to_world(cx, cy);
             return new Vector2(wp.x, wp.y);
         }
         if (list.length == 1) {
-            if (!Camera.is_visible(list[0] as unknown as Mesh)) {
-                const wp = Camera.screen_to_world(cx, cy);
+            if (!Services.camera.is_visible(list[0] as unknown as Mesh)) {
+                const wp = Services.camera.screen_to_world(cx, cy);
                 const lp = list[0].worldToLocal(wp);
                 return new Vector2(lp.x, lp.y);
             }
@@ -2215,7 +2215,7 @@ function TreeControlCreate() {
         const canvas = document.querySelector(`canvas#scene`)!;
         const mp_n = new Vector2();
         mp_n.set((event.pageX / canvas.clientWidth) * 2 - 1, - (event.pageY / canvas.clientHeight) * 2 + 1);
-        return Camera.screen_to_world(mp_n.x, mp_n.y) || {};
+        return Services.camera.screen_to_world(mp_n.x, mp_n.y) || {};
     }
 
     function canvasDropTexture() {

@@ -205,7 +205,7 @@ export function copy_material(material: ShaderMaterial) {
 }
 
 export function get_material_hash(material: ShaderMaterial) {
-    const material_info = ResourceManager.get_material_info(material.name);
+    const material_info = Services.resources.get_material_info(material.name);
     if (!material_info) {
         Services.logger.error('Material info not found', material.name);
         return 'error';
@@ -235,9 +235,9 @@ export function get_material_hash(material: ShaderMaterial) {
 }
 
 export function updateEachMaterialWhichHasTexture(texture: Texture) {
-    const materials = ResourceManager.get_all_materials();
+    const materials = Services.resources.get_all_materials();
     materials.forEach((material) => {
-        const material_info = ResourceManager.get_material_info(material);
+        const material_info = Services.resources.get_material_info(material);
         if (!material_info) return;
         Object.entries(material_info.uniforms).forEach(([uniform_name, uniform]) => {
             if (uniform.type != MaterialUniformType.SAMPLER2D) return;

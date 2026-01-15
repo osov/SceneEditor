@@ -11,8 +11,12 @@ import {
     Vector2,
     Vector3,
     Box3,
+    Raycaster,
+    Plane,
+    Frustum,
+    Matrix4,
 } from 'three';
-import type { Camera, Object3D } from 'three';
+import type { Camera, Object3D, Mesh } from 'three';
 import type {
     ICameraService,
     CameraServiceParams,
@@ -29,7 +33,7 @@ const ZOOM_SPEED = 0.1;
 
 /** Создать CameraService */
 export function create_camera_service(params: CameraServiceParams): ICameraService {
-    const { logger, event_bus, initial_mode = 'orthographic' } = params;
+    const { logger, event_bus, render_service, initial_mode = 'orthographic' } = params;
 
     // Внутреннее состояние
     let current_mode: CameraMode = initial_mode;
@@ -172,6 +176,42 @@ export function create_camera_service(params: CameraServiceParams): ICameraServi
         return DEFAULT_CAMERA_Z / current_camera.position.z;
     }
 
+    function screen_to_world(x: number, y: number, is_gui = false): Vector3 {
+        // Используем камеру из render_service для совместимости с legacy кодом
+        const cam = is_gui ? render_service.camera_gui : render_service.camera;
+        const raycaster = new Raycaster();
+        const ndc = new Vector2(x, y);
+        raycaster.setFromCamera(ndc, cam);
+        const planeZ = new Plane(new Vector3(0, 0, 1), 0); // плоскость Z=0
+        const intersection = new Vector3();
+        raycaster.ray.intersectPlane(planeZ, intersection);
+        return intersection;
+    }
+
+    function is_visible(mesh: Mesh): boolean {
+        if (mesh.geometry === undefined) {
+            logger.warn('mesh.geometry not found', mesh);
+            return false;
+        }
+        const cam = render_service.camera as OrthographicCamera;
+        if (mesh.geometry.boundingBox === null) {
+            mesh.geometry.computeBoundingBox();
+        }
+        if (mesh.geometry.boundingBox === null) {
+            return false;
+        }
+        const boundingBox = mesh.geometry.boundingBox.clone();
+        boundingBox.applyMatrix4(mesh.matrixWorld);
+
+        const frustum = new Frustum();
+        const cameraViewProjectionMatrix = new Matrix4();
+        cam.updateMatrixWorld();
+        cameraViewProjectionMatrix.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+        frustum.setFromProjectionMatrix(cameraViewProjectionMatrix);
+
+        return frustum.intersectsBox(boundingBox);
+    }
+
     function dispose(): void {
         logger.info('CameraService освобождён');
     }
@@ -195,6 +235,8 @@ export function create_camera_service(params: CameraServiceParams): ICameraServi
         save_state,
         restore_state,
         resize,
+        screen_to_world,
+        is_visible,
         dispose,
     };
 }

@@ -28,13 +28,13 @@ export function CmpSpline(cmp_mesh: EntityBase) {
         Services.event_bus.on('SYS_INPUT_POINTER_UP', (data) => {
             const e = data as { button: number; x: number; y: number };
             if (e.button == 0) {
-                if (!Input.is_shift())
+                if (!Services.input.is_shift())
                     return;
                 const selected_list = Services.selection.selected;
                 if (selected_list.length == 1) {
                     if (selected_list[0].parent == cmp_mesh || selected_list[0] == cmp_mesh) {
                         add_to_history();
-                        const cp = Camera.screen_to_world(e.x, e.y);
+                        const cp = Services.camera.screen_to_world(e.x, e.y);
                         add_point(cp.x, cp.y, true);
                     }
                 }
@@ -74,7 +74,7 @@ export function CmpSpline(cmp_mesh: EntityBase) {
     }
 
     function on_mesh_remove(e: { id: number }) {
-        const mesh = SceneManager.get_mesh_by_id(e.id);
+        const mesh = Services.scene.get_by_id(e.id);
         if (!mesh)
             return;
         if (mesh.parent == cmp_mesh) {
@@ -84,7 +84,7 @@ export function CmpSpline(cmp_mesh: EntityBase) {
     }
 
     function make_helper(point: Vector3, is_first: number) {
-        const mesh = SceneManager.create(IObjectTypes.ENTITY);
+        const mesh = Services.scene.create(IObjectTypes.ENTITY);
         mesh.ignore_history = ['MESH_ADD'];
         mesh.no_saving = true;
         (mesh as any).material = spline_mat_helper;

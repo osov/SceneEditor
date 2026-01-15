@@ -196,19 +196,22 @@ export function create_event_bus_bridge(params: EventBusBridgeParams): IEventBus
                     logger.debug(`[Bridge] New → Legacy: ${new_event} → ${legacy_event}`);
                 }
 
-                if (legacy_bus !== undefined) {
-                    events_in_flight.add(bridge_key);
-                    try {
-                        legacy_bus.trigger(
-                            legacy_event,
-                            transform_new_data(new_event, data),
-                            false
-                        );
-                    } catch {
-                        logger.debug(`Не удалось отправить legacy событие: ${legacy_event}`);
-                    } finally {
-                        events_in_flight.delete(bridge_key);
+                events_in_flight.add(bridge_key);
+                try {
+                    const transformed_data = transform_new_data(new_event, data);
+
+                    // Всегда эмитим на новый EventBus под legacy именем
+                    // (для компонентов, которые слушают legacy события на новом EventBus)
+                    new_event_bus.emit(legacy_event, transformed_data);
+
+                    // Также эмитим на legacy EventBus если он существует
+                    if (legacy_bus !== undefined) {
+                        legacy_bus.trigger(legacy_event, transformed_data, false);
                     }
+                } catch {
+                    logger.debug(`Не удалось отправить legacy событие: ${legacy_event}`);
+                } finally {
+                    events_in_flight.delete(bridge_key);
                 }
             });
 

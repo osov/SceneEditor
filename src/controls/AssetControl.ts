@@ -69,7 +69,7 @@ function AssetControlCreate() {
         current_project = data.name;
         localStorage.setItem("current_project", current_project);
 
-        ResourceManager.set_project_name(current_project);
+        Services.resources.set_project_name(current_project);
 
         const textures: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         const shaders: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
@@ -80,47 +80,47 @@ function AssetControlCreate() {
             // Log.log('Preload', key, paths);
             if (key == "textures") {
                 func = (path: string) => {
-                    return ResourceManager.preload_texture("/" + path);
+                    return Services.resources.preload_texture("/" + path);
                 }
             }
             else if (key == "vertex_programs") {
                 func = (path: string) => {
-                    return ResourceManager.preload_vertex_program("/" + path);
+                    return Services.resources.preload_vertex_program("/" + path);
                 }
             }
             else if (key == "fragment_programs") {
                 func = (path: string) => {
-                    return ResourceManager.preload_fragment_program("/" + path);
+                    return Services.resources.preload_fragment_program("/" + path);
                 }
             }
             else if (key == "materials") {
                 func = (path: string) => {
-                    return ResourceManager.preload_material("/" + path);
+                    return Services.resources.preload_material("/" + path);
                 }
             }
             else if (key == "fonts") {
                 func = (path: string) => {
-                    return ResourceManager.preload_font("/" + path);
+                    return Services.resources.preload_font("/" + path);
                 }
             }
             else if (key == "models") {
                 func = (path: string) => {
-                    return ResourceManager.preload_model("/" + path);
+                    return Services.resources.preload_model("/" + path);
                 }
             }
             else if (key == "atlases") {
                 func = (paths: LoadAtlasData) => {
-                    return ResourceManager.preload_atlas("/" + paths.atlas, "/" + paths.texture);
+                    return Services.resources.preload_atlas("/" + paths.atlas, "/" + paths.texture);
                 }
             }
             else if (key == "scenes") {
                 func = (path: string) => {
-                    return ResourceManager.preload_scene("/" + path);
+                    return Services.resources.preload_scene("/" + path);
                 }
             }
             else if (key == "audios") {
                 func = (path: string) => {
-                    return ResourceManager.preload_audio("/" + path);
+                    return Services.resources.preload_audio("/" + path);
                 }
             }
             else func = async () => { };
@@ -160,8 +160,8 @@ function AssetControlCreate() {
         }
         await Promise.all(other_loaders);
 
-        await ResourceManager.update_from_metadata();
-        await ResourceManager.write_metadata();
+        await Services.resources.update_from_metadata();
+        await Services.resources.write_metadata();
 
         if (folder_content && to_dir == undefined) {
             current_dir = "";
@@ -328,7 +328,7 @@ function AssetControlCreate() {
                     return;
                 event.dataTransfer.clearData();
                 const path = file.getAttribute("data-path") || '';
-                const data = ResourceManager.get_all_textures().find((info) => {
+                const data = Services.resources.get_all_textures().find((info) => {
                     return (info.data.texture as any).path == `${SERVER_URL}${URL_PATHS.ASSETS}/${PROJECT_NAME}/${path}`;
                 });
                 event.dataTransfer.setData("text/plain", `${data?.atlas}/${data?.name}`);
@@ -662,7 +662,7 @@ function AssetControlCreate() {
             callback: async (success, name) => {
                 if (success && name) {
                     const path = `${current_path}/${name}.${SCENE_EXT}`;
-                    ResourceManager.cache_scene(path, data);
+                    Services.resources.cache_scene(path, data);
                     // NOTE: для чего сохраянем как IBaseEntityData[] ?
                     const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: [data] }))
                     if (r && r.result)
@@ -690,13 +690,13 @@ function AssetControlCreate() {
                     if (r.result) {
                         const ext = getFileExt(name);
                         if (texture_ext.includes(ext)) {
-                            ResourceManager.preload_texture("/" + new_path);
+                            Services.resources.preload_texture("/" + new_path);
                         }
                         if (model_ext.includes(ext)) {
-                            ResourceManager.preload_model("/" + new_path);
+                            Services.resources.preload_model("/" + new_path);
                         }
                         if (ext == FONT_EXT) {
-                            ResourceManager.preload_font("/" + new_path);
+                            Services.resources.preload_font("/" + new_path);
                         }
                         if (current_dir)
                             await go_to_dir(current_dir, true);
@@ -845,20 +845,20 @@ function AssetControlCreate() {
                     if (event.ext) {
                         if (event.event_type == "change" || event.event_type == "rename") {
                             if (texture_ext.includes(event.ext))
-                                await ResourceManager.preload_texture("/" + event.path);
+                                await Services.resources.preload_texture("/" + event.path);
                             if (model_ext.includes(event.ext))
-                                await ResourceManager.preload_model("/" + event.path);
+                                await Services.resources.preload_model("/" + event.path);
                             if (event.ext == FONT_EXT)
-                                await ResourceManager.preload_font("/" + event.path);
+                                await Services.resources.preload_font("/" + event.path);
                         }
                         else if (event.event_type == "remove") {
                             if (texture_ext.includes(event.ext)) {
                                 const name = get_file_name(event.path);
-                                ResourceManager.free_texture(name);
+                                Services.resources.free_texture(name);
                             }
                             // if (model_ext.includes(event.ext)) {
                             //     const name = get_file_name(event.path);
-                            //     ResourceManager.free_model(name);
+                            //     Services.resources.free_model(name);
                             // }
                         }
                     }
@@ -983,7 +983,7 @@ function AssetControlCreate() {
             if (asset_elem) {
                 mouse_down_on_asset = true;
             }
-            if (!Input.is_control()) {
+            if (!Services.input.is_control()) {
                 // При нажатии ЛКМ / ПКМ вне всех ассетов либо на ассет не из списка выбранных, и ctrl отпущена, делаем сброс всех выбранных ассетов
                 if (!asset_elem || (asset_elem && !selected_assets.includes(asset_elem))) {
                     clear_selected();
@@ -1008,12 +1008,12 @@ function AssetControlCreate() {
                 mouse_down_on_asset = false;
                 if (asset_elem)
                     set_active(asset_elem);
-                if (!Input.is_control()) {
+                if (!Services.input.is_control()) {
                     clear_selected();
                     if (asset_elem)
                         add_to_selected(asset_elem);
                 }
-                else if (Input.is_control()) {
+                else if (Services.input.is_control()) {
                     if (asset_elem)
                         if (selected_assets.includes(asset_elem))
                             remove_from_selected(asset_elem);
@@ -1055,7 +1055,7 @@ function AssetControlCreate() {
         if (event.key == 'Delete' && !Popups.is_visible()) {
             remove_popup();
         }
-        if (Input.is_control()) {
+        if (Services.input.is_control()) {
             if ((event.key == 'c' || event.key == 'с') && selected_assets.length) {
                 move_assets_data.assets = selected_assets.slice();
                 move_assets_data.move_type = "copy";
@@ -1134,7 +1134,7 @@ function AssetControlCreate() {
         if (!resp || resp.result === 0 || !resp.data)
             return Popups.toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
         const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
-        SceneManager.load_scene(data.scene_data);
+        Services.scene.load_scene(data.scene_data);
         ControlManager.update_graph(true, current_scene.name, true);
     }
 
@@ -1147,7 +1147,7 @@ function AssetControlCreate() {
     ) {
         if (pathToScene.substring(0, 1) != "/")
             pathToScene = `/${pathToScene}`;
-        const info = ResourceManager.get_scene_info(pathToScene);
+        const info = Services.resources.get_scene_info(pathToScene);
         if (!info) {
             return Services.logger.error(`Не удалось получить данные сцены: ${pathToScene}`);
         }
@@ -1157,17 +1157,17 @@ function AssetControlCreate() {
         }
 
         const obj_data = info.data;
-        const root = SceneManager.deserialize_mesh(obj_data, false);
+        const root = Services.scene.deserialize_object(obj_data, false) as any;
 
         // NOTE: ищем уникальное имя для root и всех его детей
         const baseName = obj_data.name;
         let counter = 1;
         let uniqueName = baseName;
-        while (SceneManager.get_mesh_id_by_url(':/' + uniqueName)) {
+        while (Services.scene.get_id_by_url(':/' + uniqueName) !== undefined) {
             uniqueName = `${baseName}_${counter}`;
             counter++;
         }
-        SceneManager.set_mesh_name(root, uniqueName);
+        Services.scene.set_name(root, uniqueName);
 
         if (position) root.set_position(position.x, position.y, position.z);
         // TODO: set_rotation нету в EntityBase
@@ -1178,31 +1178,31 @@ function AssetControlCreate() {
         if (selected.length == 1)
             id_parent = selected[0].mesh_data.id;
 
-        SceneManager.add(root, id_parent);
+        Services.scene.add(root, id_parent);
 
         const mesh_id = root.mesh_data.id;
-        const mesh_data = SceneManager.serialize_mesh(root);
-        const next_id = SceneManager.find_next_id_mesh(root);
+        const mesh_data = Services.scene.serialize_object(root);
+        const next_id = Services.scene.find_next_sibling_id(root);
 
         Services.history.push({
             type: 'import_model',
             description: 'Импорт модели',
             data: { mesh_id, mesh_data, next_id, id_parent },
             undo: (data) => {
-                SceneManager.remove(data.mesh_id);
+                Services.scene.remove_by_id(data.mesh_id);
                 SizeControl.detach();
                 Services.selection.clear();
                 ControlManager.update_graph();
             },
             redo: (data) => {
                 const parent = data.id_parent === -1
-                    ? RenderEngine.scene
-                    : SceneManager.get_mesh_by_id(data.id_parent);
+                    ? Services.render.scene
+                    : Services.scene.get_by_id(data.id_parent);
                 if (parent) {
-                    const m = SceneManager.deserialize_mesh(data.mesh_data, true, parent);
+                    const m = Services.scene.deserialize_object(data.mesh_data, true);
                     parent.add(m);
-                    SceneManager.move_mesh(m, data.id_parent, data.next_id);
-                    Services.selection.set_selected([m]);
+                    Services.scene.move(m, data.id_parent, data.next_id);
+                    Services.selection.set_selected([m as any]);
                     ControlManager.update_graph();
                 }
             }
@@ -1223,7 +1223,7 @@ function AssetControlCreate() {
         };
         const path = current_scene.path as string;
         const name = current_scene.name as string;
-        const data = SceneManager.save_scene();
+        const data = Services.scene.save_scene();
         const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: data }));
         if (r && r.result) {
             history_length_cache[path] = HistoryControl.get_history(current_scene.path).length;
@@ -1238,9 +1238,9 @@ function AssetControlCreate() {
 
     async function on_graph_drop(id: number) {
 
-        const scene_object = SceneManager.get_mesh_by_id(id);
+        const scene_object = Services.scene.get_by_id(id);
         if (scene_object) {
-            const data = SceneManager.serialize_mesh(scene_object);
+            const data = Services.scene.serialize_object(scene_object);
             save_graph_popup(current_dir as string, data);
         }
     }

@@ -52,9 +52,9 @@ export function sound_module() {
 
         AudioManager.set_end_callback(id, (type: SoundEndCallbackType) => {
             if (complete_function) {
-                const sound_mesh = SceneManager.get_mesh_by_id(id) as AudioMesh | null;
+                const sound_mesh = Services.scene.get_by_id(id) as AudioMesh | null;
                 if (sound_mesh) {
-                    complete_function(sound_mesh, type, { play_id: id }, SceneManager.get_mesh_url_by_id(id));
+                    complete_function(sound_mesh, type, { play_id: id }, Services.scene.get_url_by_id(id));
                 }
             }
         });

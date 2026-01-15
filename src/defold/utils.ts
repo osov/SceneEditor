@@ -224,7 +224,7 @@ export function animate_logic(
                 .to({ value: to }, duration * 1000)
                 .onUpdate(() => {
                     if (is_material_property) {
-                        ResourceManager.set_material_uniform_for_mesh(mesh as Slice9Mesh, property, obj.value);
+                        Services.resources.set_material_uniform_for_mesh(mesh as Slice9Mesh, property, obj.value);
                         return;
                     }
                     set_nested_property(mesh, property, obj.value);
@@ -245,7 +245,7 @@ export function animate_logic(
                 .to({ value: currentValue }, duration * 1000)
                 .onUpdate(() => {
                     if (is_material_property) {
-                        ResourceManager.set_material_uniform_for_mesh(mesh as Slice9Mesh, property, obj.value);
+                        Services.resources.set_material_uniform_for_mesh(mesh as Slice9Mesh, property, obj.value);
                         return;
                     }
                     set_nested_property(mesh, property, obj.value);
@@ -270,7 +270,7 @@ export function animate_logic(
         .onUpdate(() => {
             if (is_material_property) {
                 // FIXME: не будет ли ошибкой к примеру при установке для текста, он должен же менятся на прямую
-                ResourceManager.set_material_uniform_for_mesh(mesh as Slice9Mesh, property, obj.value);
+                Services.resources.set_material_uniform_for_mesh(mesh as Slice9Mesh, property, obj.value);
                 return;
             }
             set_nested_property(mesh, property, obj.value);
@@ -297,7 +297,7 @@ export function uh_to_id(uh: string | hash): number {
     if (typeof uh !== 'string' && (uh as any).id != undefined) {
         return (uh as any).id;
     }
-    return SceneManager.get_mesh_id_by_url(uh as string);
+    return Services.scene.get_id_by_url(uh as string);
 }
 
 export function convert_defold_blend_mode_to_threejs(blend_mode: any) {
@@ -417,7 +417,7 @@ export function convert_threejs_pivot_to_defold(x: number, y: number): any {
 export function generate_unique_name(baseName: string): string {
     let counter = 1;
     let uniqueName = baseName;
-    while (SceneManager.get_mesh_by_name(uniqueName)) {
+    while (Services.scene.get_by_name(uniqueName)) {
         uniqueName = `${baseName}_${counter}`;
         counter++;
     }

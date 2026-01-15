@@ -27,7 +27,7 @@ export function register_lua_core() {
     };
 
     (window as any).hash = function (url: string) {
-        const id = SceneManager.get_mesh_id_by_url(url);
+        const id = Services.scene.get_id_by_url(url);
         return { id } as hash;
     };
 

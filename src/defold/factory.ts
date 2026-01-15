@@ -23,7 +23,7 @@ export function factory_module() {
     ) {
         const result = _create(url, position, rotation, properties, scale);
         if (result == null) return null;
-        return SceneManager.get_mesh_url_by_id(result.mesh_data.id);
+        return Services.scene.get_url_by_id(result.mesh_data.id);
     }
 
     function _create(

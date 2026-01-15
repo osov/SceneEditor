@@ -17,18 +17,18 @@ export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEn
     const LD = LinesDrawer();
     const obstacles_lines: TDictionary<any> = {};
 
-    const joystick = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    const joystick = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
     joystick.name = 'joystick';
-    SceneManager.add(joystick);
-    const player_way = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    Services.scene.add(joystick);
+    const player_way = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
     player_way.name = 'player_way';
-    SceneManager.add(player_way);
-    const pathfinder_path = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    Services.scene.add(player_way);
+    const pathfinder_path = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
     pathfinder_path.name = 'pathfinder_path';
-    SceneManager.add(pathfinder_path);
-    const obstacles_container = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+    Services.scene.add(pathfinder_path);
+    const obstacles_container = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
     obstacles_container.name = 'obstacles';
-    SceneManager.add(obstacles_container);
+    Services.scene.add(obstacles_container);
 
     joystick.no_saving = true; joystick.no_removing = true;
     player_way.no_saving = true; player_way.no_removing = true;
@@ -48,8 +48,8 @@ export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEn
     }
 
     Services.event_bus.on('SYS_INPUT_POINTER_DOWN', (e) => {
-        if (Input.is_shift() && navmesh) {
-            const pos = Camera.screen_to_world(e.x, e.y);
+        if (Services.input.is_shift() && navmesh) {
+            const pos = Services.camera.screen_to_world(e.x, e.y);
             const dist = vec2_distance_to(player.model.position, pos)
             const t1 = Date.now()
             const way = navmesh.findPath(player.model.position, pos);
@@ -62,9 +62,9 @@ export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEn
     })
 
     for (const entity of entities) {
-        const geometry = SceneManager.create(IObjectTypes.GO_CONTAINER, {});
+        const geometry = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
         geometry.name = `entity ${entity.id} collision circle`;
-        SceneManager.add(geometry);
+        Services.scene.add(geometry);
         geometry.no_saving = true; geometry.no_removing = true;
         geometry.set_active(user_visible);
         entities_containers[entity.id] = geometry;

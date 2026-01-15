@@ -2,11 +2,12 @@
  * AssetService - сервис управления ассетами
  *
  * Централизованное управление загрузкой/сохранением сцен и файлов.
- * Делегирует к ClientAPI для сетевых операций и SceneManager для сериализации.
+ * Делегирует к ClientAPI для сетевых операций и Services.scene для сериализации.
  */
 
 import type { IDisposable, ILogger, IEventBus } from '../core/di/types';
 import type { IBaseEntityData } from '../render_engine/types';
+import { Services } from '@editor/core';
 
 /** Параметры сервиса */
 export interface AssetServiceParams {
@@ -59,10 +60,6 @@ function get_client_api(): typeof ClientAPI | undefined {
     return (globalThis as unknown as { ClientAPI?: typeof ClientAPI }).ClientAPI;
 }
 
-/** Получить SceneManager из глобального scope */
-function get_scene_manager(): typeof SceneManager | undefined {
-    return (globalThis as unknown as { SceneManager?: typeof SceneManager }).SceneManager;
-}
 
 /** Создать AssetService */
 export function create_asset_service(params: AssetServiceParams): IAssetService {
@@ -86,10 +83,7 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
 
             const scene_data = JSON.parse(response.data) as IBaseEntityData[];
 
-            const scene_manager = get_scene_manager();
-            if (scene_manager !== undefined) {
-                scene_manager.load_scene(scene_data);
-            }
+            Services.scene.load_scene(scene_data);
 
             _current_scene_path = path;
 
@@ -112,13 +106,8 @@ export function create_asset_service(params: AssetServiceParams): IAssetService 
             return { success: false, error: 'ClientAPI недоступен' };
         }
 
-        const scene_manager = get_scene_manager();
-        if (scene_manager === undefined) {
-            return { success: false, error: 'SceneManager недоступен' };
-        }
-
         try {
-            const scene_data = scene_manager.save_scene();
+            const scene_data = Services.scene.save_scene();
             const json_data = JSON.stringify(scene_data, null, 2);
 
             const response = await client_api.save_data(path, json_data);

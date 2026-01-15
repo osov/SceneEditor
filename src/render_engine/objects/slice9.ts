@@ -4,6 +4,7 @@ import { convert_width_height_to_pivot_bb, get_file_name, set_pivot_with_sync_po
 import { EntityPlane } from "./entity_plane";
 import { MaterialUniformType } from "../resource_manager";
 import { hex2rgba, rgb2hex } from "@editor/defold/utils";
+import { Services } from '@editor/core';
 
 // todo optimize material list
 
@@ -156,11 +157,11 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
 
         // NOTE: добавляем или убираем define в зависимости от значения slice
         const slice_value = (parameters.slice_width > 0 || parameters.slice_height > 0) ? '' : undefined;
-        ResourceManager.set_material_define_for_mesh(mesh, 'USE_SLICE', slice_value);
+        Services.resources.set_material_define_for_mesh(mesh, 'USE_SLICE', slice_value);
 
         // NOTE: добавляем или убираем define в зависимости от значения texture
         const texture_value = (parameters.texture != '') ? '' : undefined;
-        ResourceManager.set_material_define_for_mesh(mesh, 'USE_TEXTURE', texture_value);
+        Services.resources.set_material_define_for_mesh(mesh, 'USE_TEXTURE', texture_value);
 
         material.needsUpdate = true;
     }
@@ -171,8 +172,8 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
 
     function set_texture(name: string, atlas = '', uniform_key = 'u_texture') {
         if (name != '') {
-            const texture_data = ResourceManager.get_texture(name, atlas);
-            ResourceManager.set_material_uniform_for_mesh(mesh, uniform_key, texture_data.texture);
+            const texture_data = Services.resources.get_texture(name, atlas);
+            Services.resources.set_material_uniform_for_mesh(mesh, uniform_key, texture_data.texture);
             if (uniform_key == 'u_texture') {
                 parameters.texture = name;
                 parameters.atlas = atlas;
@@ -189,9 +190,9 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         }
         else {
             const material_name = mesh.material.name;
-            const material_info = ResourceManager.get_material_info(material_name);
+            const material_info = Services.resources.get_material_info(material_name);
             if (material_info && material_info.uniforms[uniform_key])
-                ResourceManager.set_material_uniform_for_mesh(mesh, uniform_key, null);
+                Services.resources.set_material_uniform_for_mesh(mesh, uniform_key, null);
             parameters.clip_width = 1;
             parameters.clip_height = 1;
         }
@@ -216,7 +217,7 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
     }
 
     function set_alpha(value: number) {
-        ResourceManager.set_material_uniform_for_mesh(mesh, 'alpha', value);
+        Services.resources.set_material_uniform_for_mesh(mesh, 'alpha', value);
     }
 
     function get_bounds(wp: Vector3, ws: Vector3) {
@@ -254,10 +255,10 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
             data.slice_height = parameters.slice_height;
         }
 
-        const material_info = ResourceManager.get_material_info(material.name);
+        const material_info = Services.resources.get_material_info(material.name);
         if (!material_info) return data;
 
-        const hash = ResourceManager.get_material_hash_by_mesh_id(material.name, mesh.mesh_data.id);
+        const hash = Services.resources.get_material_hash_by_mesh_id(material.name, mesh.mesh_data.id);
         if (!hash) return data;
 
         if (material.blending != NormalBlending) {
@@ -273,7 +274,7 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
                 const uniform = material.uniforms[uniformName];
                 if (uniform.value instanceof Texture) {
                     const texture_name = uniformName == 'u_texture' ? parameters.texture : get_file_name((uniform.value as any).path || '');
-                    const atlas = uniformName == 'u_texture' ? parameters.atlas : ResourceManager.get_atlas_by_texture_name(texture_name) || '';
+                    const atlas = uniformName == 'u_texture' ? parameters.atlas : Services.resources.get_atlas_by_texture_name(texture_name) || '';
                     modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
                 } else if (material_info.uniforms[uniformName].type == MaterialUniformType.COLOR) {
                     modifiedUniforms[uniformName] = rgb2hex(uniform.value);
@@ -309,13 +310,13 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         }
 
         if (data.blending != undefined) {
-            ResourceManager.set_material_property_for_mesh(mesh, 'blending', data.blending);
+            Services.resources.set_material_property_for_mesh(mesh, 'blending', data.blending);
         }
 
         // NOTE: применяем измененные uniforms, если они есть
         if (data.material_uniforms) {
             for (const [key, value] of Object.entries(data.material_uniforms)) {
-                const material_info = ResourceManager.get_material_info(material.name);
+                const material_info = Services.resources.get_material_info(material.name);
                 if (!material_info) continue;
 
                 const uniform_info = material_info.uniforms[key];
@@ -324,9 +325,9 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
                     const [atlas, texture_name] = value.split('/');
                     set_texture(texture_name, atlas, key);
                 } else if (uniform_info.type == MaterialUniformType.COLOR) {
-                    ResourceManager.set_material_uniform_for_mesh(mesh, key, hex2rgba(value));
+                    Services.resources.set_material_uniform_for_mesh(mesh, key, hex2rgba(value));
                 } else {
-                    ResourceManager.set_material_uniform_for_mesh(mesh, key, value);
+                    Services.resources.set_material_uniform_for_mesh(mesh, key, value);
                 }
             }
         }
@@ -350,7 +351,7 @@ export class Slice9Mesh extends EntityPlane {
         super(id);
         this.matrixAutoUpdate = true;
         // NOTE: по хорошему бы наверное default материал переместить из проекта в ресурсы редактора, чтобы он всегда был доступен, или может зашить его в ResourceManager при создании materials - чтобы стандарнтый был сразу в памяти
-        const default_material = ResourceManager.get_material_by_mesh_id('slice9', id)!;
+        const default_material = Services.resources.get_material_by_mesh_id('slice9', id)!;
         const material = custom_material ? custom_material : default_material;
         this.template = CreateSlice9(this, material, width, height, slice_width, slice_height);
         this.material = material;
@@ -402,11 +403,11 @@ export class Slice9Mesh extends EntityPlane {
     }
 
     set_material(material_name: string) {
-        if (!ResourceManager.has_material_by_mesh_id(material_name, this.mesh_data.id)) {
-            ResourceManager.unlink_material_for_mesh(this.material.name, this.mesh_data.id);
+        if (!Services.resources.has_material_by_mesh_id(material_name, this.mesh_data.id)) {
+            Services.resources.unlink_material_for_mesh(this.material.name, this.mesh_data.id);
         }
 
-        const material = ResourceManager.get_material_by_mesh_id(material_name, this.mesh_data.id);
+        const material = Services.resources.get_material_by_mesh_id(material_name, this.mesh_data.id);
         if (!material) return;
 
         this.template.set_material(material);
@@ -459,6 +460,6 @@ export class Slice9Mesh extends EntityPlane {
 
     dispose() {
         super.dispose();
-        ResourceManager.unlink_material_for_mesh(this.material.name, this.mesh_data.id);
+        Services.resources.unlink_material_for_mesh(this.material.name, this.mesh_data.id);
     }
 }

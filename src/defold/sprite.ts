@@ -20,7 +20,7 @@ export function sprite_module() {
             playback_rate?: number
         }
     ) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(url));
+        const mesh = Services.scene.get_by_id(uh_to_id(url));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${url} not found`);
             return;
@@ -36,7 +36,7 @@ export function sprite_module() {
     }
 
     function set_hflip(url: string | hash, flip: boolean) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(url));
+        const mesh = Services.scene.get_by_id(uh_to_id(url));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${url} not found`);
             return;
@@ -49,7 +49,7 @@ export function sprite_module() {
     }
 
     function set_vflip(url: string | hash, flip: boolean) {
-        const mesh = SceneManager.get_mesh_by_id(uh_to_id(url));
+        const mesh = Services.scene.get_by_id(uh_to_id(url));
         if (!mesh) {
             Services.logger.error(`Mesh with url ${url} not found`);
             return;

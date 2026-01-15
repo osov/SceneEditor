@@ -17,11 +17,11 @@ export type TilesInfo =
 
 export function TilePatcher(tilemap_path: string) {
     const tilemap_name = get_file_name(tilemap_path);
-    ResourceManager.set_tilemap_path(tilemap_name, tilemap_path);
+    Services.resources.set_tilemap_path(tilemap_name, tilemap_path);
 
     Services.event_bus.on('SYS_VIEW_INPUT_KEY_DOWN', (data) => {
         const e = data as { key: string };
-        if (Input.is_control() && (e.key == 'l' || e.key == 'д')) {
+        if (Services.input.is_control() && (e.key == 'l' || e.key == 'д')) {
             save_tilesinfo(true);
         }
     });
@@ -32,13 +32,13 @@ export function TilePatcher(tilemap_path: string) {
 
         const filename = get_file_name(path);
         const tiles_data: TilesInfo = {};
-        SceneManager.get_scene_list().forEach(mesh => {
+        Services.scene.get_all().forEach(mesh => {
             if (!is_tile(mesh)) return;
 
             const hash = get_hash_by_mesh(mesh);
 
             const current_texture = `${mesh.get_texture()[1]}/${mesh.get_texture()[0]}`;
-            if (ResourceManager.get_tile_info(filename, hash) != current_texture) {
+            if (Services.resources.get_tile_info(filename, hash) != current_texture) {
                 tiles_data[hash] = {
                     texture: current_texture
                 };
@@ -78,10 +78,10 @@ export function TilePatcher(tilemap_path: string) {
                 tiles_data[hash].color = current_color;
             }
 
-            const material_info = ResourceManager.get_material_info(material.name);
+            const material_info = Services.resources.get_material_info(material.name);
 
             let uniforms: { [key: string]: any } = {};
-            if (optimized) uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh as Slice9Mesh) || {};
+            if (optimized) uniforms = Services.resources.get_changed_uniforms_for_mesh(mesh as Slice9Mesh) || {};
             else if (material.name != default_material_name) {
                 Object.entries(material.uniforms).forEach(([key, value]) => {
                     uniforms[key] = value.value;
@@ -102,7 +102,7 @@ export function TilePatcher(tilemap_path: string) {
                     Object.entries(uniforms).forEach(([key, value]) => {
                         if (value instanceof Texture) {
                             const texture_name = get_file_name((value as any).path);
-                            const atlas = ResourceManager.get_atlas_by_texture_name(texture_name);
+                            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
                             uniforms[key] = `${atlas}/${texture_name}`;
                         }
                     });
@@ -129,12 +129,12 @@ export function TilePatcher(tilemap_path: string) {
 
     async function patch(tiles: SpriteTileInfoDict) {
         Object.entries(tiles).forEach(([id, tile]) => {
-            ResourceManager.set_tile_info(tilemap_name, id, `${tile.tile_info.atlas}/${tile.tile_info.name}`);
+            Services.resources.set_tile_info(tilemap_name, id, `${tile.tile_info.atlas}/${tile.tile_info.name}`);
         });
 
         const dir = tilemap_path.replace(new RegExp(`${tilemap_name}.*$`), '');
         const tilesinfo_path = `${dir}${tilemap_name}.tilesinfo`;
-        const tilesinfo = await ResourceManager.load_asset(tilesinfo_path) as TilesInfo;
+        const tilesinfo = await Services.resources.load_asset(tilesinfo_path) as TilesInfo;
         if (!tilesinfo) {
             Services.logger.debug(`No tilesinfo file found for tilemap ${tilemap_name}`);
             return;
@@ -170,7 +170,7 @@ export function TilePatcher(tilemap_path: string) {
             }
 
             if (info.uniforms) {
-                const material_info = ResourceManager.get_material_info(sprite.material.name);
+                const material_info = Services.resources.get_material_info(sprite.material.name);
                 if (material_info) {
                     Object.entries(info.uniforms).forEach(([uniform_name, uniform_value]) => {
                         // NOTE: для текстур отдельно вызываем set_texture
@@ -179,7 +179,7 @@ export function TilePatcher(tilemap_path: string) {
                             sprite.set_texture(texture_info[1], texture_info[0], uniform_name);
                             return;
                         }
-                        ResourceManager.set_material_uniform_for_mesh(sprite as Slice9Mesh, uniform_name, uniform_value);
+                        Services.resources.set_material_uniform_for_mesh(sprite as Slice9Mesh, uniform_name, uniform_value);
                     });
                 }
             }
