@@ -21,7 +21,7 @@ export function getChangedInfo(info: ChangeInfo) {
         return [isChangedX, isChangedY];
     }
 
-    // NOTE: учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_ 
+    // NOTE: учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_
     const acs = !valueController.acs_ ? valueController.textC_.acs_ : valueController.acs_;
     acs.forEach((ac: any, index: number) => {
         if (!ac.is_changed) return;
@@ -43,7 +43,7 @@ export function getDraggedInfo(info: ChangeInfo) {
     let isDraggedW = false;
 
     // NOTE: варинат как получить какие либо значения из tweakpane не переписывая половину либы
-    // учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_ 
+    // учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_
     const valueController = info.data.event.target.controller.labelController.valueController as any;
     const acs = !valueController.acs_ ? valueController.textC_.acs_ : valueController.acs_;
     acs.forEach((ac: any, index: number) => {

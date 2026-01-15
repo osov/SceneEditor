@@ -1,6 +1,7 @@
 import { AnimationAction, AnimationMixer } from "three";
 import { IObjectTypes } from "../types";
 import { MultipleMaterialMesh, MultipleMaterialMeshSerializeData } from "./multiple_material_mesh";
+import { Services } from '@editor/core';
 
 export interface AnimatedMeshSerializeData extends MultipleMaterialMeshSerializeData {
 	animations: string[],
@@ -17,7 +18,10 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 	constructor(id: number, width = 0, height = 0) {
 		super(id, width, height);
 		this.default_material_name = 'anim_model';
-		EventBus.on('SYS_ON_UPDATE', this.on_mixer_update.bind(this));
+		Services.event_bus.on('SYS_ON_UPDATE', (data) => {
+			const e = data as { dt: number };
+			this.on_mixer_update(e);
+		});
 	}
 
 	set_mesh(name: string) {

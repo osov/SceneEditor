@@ -18,6 +18,7 @@ import { WORLD_SCALAR } from "../config";
 import { Model } from "@editor/render_engine/objects/model";
 import { MultipleMaterialMesh } from "@editor/render_engine/objects/multiple_material_mesh";
 import { AudioMesh, SoundFunctionType, SoundZoneType } from "../render_engine/objects/audio_mesh";
+import { Services } from '@editor/core';
 
 
 declare global {
@@ -170,20 +171,22 @@ function MeshInspectorCreate() {
     }
 
     function subscribe() {
-        EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
+        Services.event_bus.on('SYS_SELECTED_MESH_LIST', (data) => {
+            const e = data as { list: IBaseMeshAndThree[] };
             set_selected_meshes(e.list.map((value: IBaseMeshAndThree) => value.mesh_data.id));
         });
 
-        EventBus.on('SYS_UNSELECTED_MESH_LIST', () => {
+        Services.event_bus.on('SYS_UNSELECTED_MESH_LIST', () => {
             Inspector.clear();
         });
 
-        EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
+        Services.event_bus.on('SYS_HISTORY_UNDO', (data) => {
+            const event = data as THistoryUndo;
             if (event.owner != HistoryOwner.MESH_INSPECTOR) return;
             undo(event);
         });
 
-        EventBus.on('SYS_CHANGED_LAYER_DATA', () => {
+        Services.event_bus.on('SYS_CHANGED_LAYER_DATA', () => {
             set_selected_meshes(_selected_meshes);
         });
     }
@@ -1657,7 +1660,7 @@ function MeshInspectorCreate() {
                 if (children.length > 0) ids.push(...children);
             }
 
-            EventBus.trigger("SYS_GRAPH_ACTIVE", { list: ids, state: item.value });
+            Services.event_bus.emit("SYS_GRAPH_ACTIVE", { list: ids, state: item.value });
         }
     }
 
@@ -2974,7 +2977,7 @@ function MeshInspectorCreate() {
                 }
             }
 
-            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+            Services.event_bus.emit('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 material_index: item.material_index,
                 is_uniform: true,
@@ -3045,7 +3048,7 @@ function MeshInspectorCreate() {
                 ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, item.value);
             }
 
-            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+            Services.event_bus.emit('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 material_index: item.material_index,
                 is_uniform: true,
@@ -3116,7 +3119,7 @@ function MeshInspectorCreate() {
                 ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, item.value);
             }
 
-            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+            Services.event_bus.emit('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 material_index: item.material_index,
                 is_uniform: true,
@@ -3157,7 +3160,7 @@ function MeshInspectorCreate() {
 
             mesh.set_alpha(item.value);
 
-            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+            Services.event_bus.emit('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 material_index: item.material_index,
                 is_uniform: true,
@@ -3239,7 +3242,7 @@ function MeshInspectorCreate() {
                 ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, item.value);
             }
 
-            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+            Services.event_bus.emit('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 material_index: item.material_index,
                 is_uniform: true,
@@ -3311,7 +3314,7 @@ function MeshInspectorCreate() {
                 ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, item.value);
             }
 
-            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+            Services.event_bus.emit('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 material_index: item.material_index,
                 is_uniform: true,
@@ -3382,7 +3385,7 @@ function MeshInspectorCreate() {
                 ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, item.value);
             }
 
-            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+            Services.event_bus.emit('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 material_index: item.material_index,
                 is_uniform: true,
@@ -3458,7 +3461,7 @@ function MeshInspectorCreate() {
                 ResourceManager.set_material_uniform_for_multiple_material_mesh(mesh, item.material_index, item.uniform_name, rgb);
             }
 
-            EventBus.trigger('SYS_MESH_MATERIAL_CHANGED', {
+            Services.event_bus.emit('SYS_MESH_MATERIAL_CHANGED', {
                 mesh_id: item.mesh_id,
                 material_index: item.material_index,
                 is_uniform: true,

@@ -1,6 +1,6 @@
 import { TransformControls, TransformControlsMode } from 'three/examples/jsm/controls/TransformControls.js';
 import { Object3D, Quaternion, Vector3 } from 'three';
-import { MeshPropertyInfo } from './types';
+import { MeshPropertyInfo } from '@editor/shared';
 import { IBaseEntityAndThree } from '../render_engine/types';
 import { MeshProperty } from '../inspectors/MeshInspector';
 import { HistoryOwner, THistoryUndo } from '../modules_editor/modules_editor_const';

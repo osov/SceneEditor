@@ -1,5 +1,6 @@
 import { Tween, Group } from "@tweenjs/tween.js";
 import { TDictionary } from "../modules_editor/modules_editor_const";
+import { Services } from '@editor/core';
 
 declare global {
     const TweenManager: ReturnType<typeof TweenManagerModule>;
@@ -14,7 +15,7 @@ export function TweenManagerModule() {
     const mesh_properties_to_tween: TDictionary<TDictionary<Tween>> = {};
 
     function init() {
-        EventBus.on('SYS_ON_UPDATE', () => {
+        Services.event_bus.on('SYS_ON_UPDATE', () => {
             group.update();
         });
     }

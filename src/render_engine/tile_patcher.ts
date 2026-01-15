@@ -9,6 +9,7 @@ import { get_hash_by_mesh } from "./helpers/utils";
 import { BlendMode, convert_blend_mode_to_threejs, convert_threejs_to_blend_mode } from "@editor/core/render/blend";
 import { get_depth } from "./parsers/tile_parser";
 import { go_to_dir } from "@editor/defold/runtime_stubs";
+import { Services } from '@editor/core';
 
 export type TilesInfo =
     TDictionary<{ texture?: string, layers_mask?: number, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any>, z?: number }>;
@@ -18,7 +19,8 @@ export function TilePatcher(tilemap_path: string) {
     const tilemap_name = get_file_name(tilemap_path);
     ResourceManager.set_tilemap_path(tilemap_name, tilemap_path);
 
-    EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
+    Services.event_bus.on('SYS_VIEW_INPUT_KEY_DOWN', (data) => {
+        const e = data as { key: string };
         if (Input.is_control() && (e.key == 'l' || e.key == 'д')) {
             save_tilesinfo(true);
         }

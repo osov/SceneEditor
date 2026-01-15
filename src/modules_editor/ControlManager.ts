@@ -82,8 +82,8 @@ function ControlManagerCreate() {
             const e = data as { list: number[] };
             const list: IBaseMeshAndThree[] = [];
             for (let i = 0; i < e.list.length; i++) {
-                const m = SceneManager.get_mesh_by_id(e.list[i]) as IBaseMeshAndThree | null;
-                if (m !== null)
+                const m = Services.scene.get_by_id(e.list[i]) as IBaseMeshAndThree | undefined;
+                if (m !== undefined)
                     list.push(m);
             }
             // Используем DI SelectionService
@@ -100,8 +100,8 @@ function ControlManagerCreate() {
             const mesh_list: IBaseMeshAndThree[] = [];
             for (let i = 0; i < e.id_mesh_list.length; i++) {
                 const id = e.id_mesh_list[i];
-                const mesh = SceneManager.get_mesh_by_id(id) as IBaseMeshAndThree | null;
-                if (mesh === null) {
+                const mesh = Services.scene.get_by_id(id) as IBaseMeshAndThree | undefined;
+                if (mesh === undefined) {
                     Services.logger.error('mesh is null', id);
                     continue;
                 }
@@ -109,7 +109,7 @@ function ControlManagerCreate() {
                 let pid = -1;
                 if (parent !== null && is_base_mesh(parent))
                     pid = (parent as IBaseMeshAndThree).mesh_data.id;
-                saved_list.push({ id_mesh: id, pid: pid, next_id: SceneManager.find_next_id_mesh(mesh) });
+                saved_list.push({ id_mesh: id, pid: pid, next_id: Services.scene.find_next_sibling_id(mesh as unknown as ISceneObject) });
                 mesh_list.push(mesh);
             }
             // Используем DI HistoryService
@@ -122,14 +122,14 @@ function ControlManagerCreate() {
                     // Redo будет выполнять то же перемещение
                     for (let i = 0; i < e.id_mesh_list.length; i++) {
                         const id = e.id_mesh_list[i];
-                        SceneManager.move_mesh_id(id, e.pid, e.next_id);
+                        Services.scene.move_by_id(id, e.pid, e.next_id);
                     }
                 },
             });
             // move
             for (let i = 0; i < e.id_mesh_list.length; i++) {
                 const id = e.id_mesh_list[i];
-                SceneManager.move_mesh_id(id, e.pid, e.next_id);
+                Services.scene.move_by_id(id, e.pid, e.next_id);
             }
             Services.selection.set_selected(mesh_list as unknown as ISceneObject[]);
             update_graph();
@@ -137,8 +137,8 @@ function ControlManagerCreate() {
 
         Services.event_bus.on('SYS_GRAPH_CHANGE_NAME', (data) => {
             const e = data as { id: number; name: string };
-            const mesh = SceneManager.get_mesh_by_id(e.id) as IBaseMeshAndThree | null;
-            if (mesh === null) {
+            const mesh = Services.scene.get_by_id(e.id) as IBaseMeshAndThree | undefined;
+            if (mesh === undefined) {
                 Services.logger.error('mesh is null', e.id);
                 return;
             }
@@ -149,23 +149,23 @@ function ControlManagerCreate() {
                 data: { mesh_id: e.id, value: old_name, owner: HistoryOwner.CONTROL_MANAGER },
                 description: 'Rename object',
                 undo: (d) => {
-                    const m = SceneManager.get_mesh_by_id(d.mesh_id) as IBaseMeshAndThree | null;
-                    if (m !== null) {
-                        SceneManager.set_mesh_name(m, d.value);
+                    const m = Services.scene.get_by_id(d.mesh_id) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        Services.scene.set_name(m as unknown as ISceneObject, d.value);
                         Services.selection.set_selected([m as unknown as ISceneObject]);
                         update_graph();
                     }
                 },
                 redo: () => {
-                    const m = SceneManager.get_mesh_by_id(e.id) as IBaseMeshAndThree | null;
-                    if (m !== null) {
-                        SceneManager.set_mesh_name(m, e.name);
+                    const m = Services.scene.get_by_id(e.id) as IBaseMeshAndThree | undefined;
+                    if (m !== undefined) {
+                        Services.scene.set_name(m as unknown as ISceneObject, e.name);
                         Services.selection.set_selected([m as unknown as ISceneObject]);
                         update_graph();
                     }
                 },
             });
-            SceneManager.set_mesh_name(mesh, e.name);
+            Services.scene.set_name(mesh as unknown as ISceneObject, e.name);
             Services.selection.set_selected([mesh as unknown as ISceneObject]);
             update_graph();
         });
@@ -178,9 +178,9 @@ function ControlManagerCreate() {
     function undo_mesh_move(items: HistoryData['MESH_MOVE'][]) {
         const mesh_list: IBaseMeshAndThree[] = [];
         for (const data of items) {
-            const mesh = SceneManager.get_mesh_by_id(data.id_mesh) as IBaseMeshAndThree | null;
-            if (mesh !== null) {
-                SceneManager.move_mesh(mesh, data.pid, data.next_id);
+            const mesh = Services.scene.get_by_id(data.id_mesh) as IBaseMeshAndThree | undefined;
+            if (mesh !== undefined) {
+                Services.scene.move(mesh as unknown as ISceneObject, data.pid, data.next_id);
                 mesh_list.push(mesh);
             }
         }
@@ -297,8 +297,8 @@ function ControlManagerCreate() {
     }
 
     function get_tree_graph() {
-        const graph = SceneManager.make_graph();
-        const scene_list = SceneManager.get_scene_list() as IBaseMeshAndThree[];
+        const graph = Services.scene.make_graph();
+        const scene_list = Services.scene.get_all() as IBaseMeshAndThree[];
         const parentActiveIds = getParentActiveIds(scene_list);
         // Используем DI SelectionService
         const sel_list_ids = Services.selection.selected.map(m => m.mesh_data.id);

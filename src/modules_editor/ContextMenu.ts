@@ -1,6 +1,7 @@
 // import { deepClone } from "../modules/utils";
 import { NodeAction } from "@editor/shared";
 import { new_scene_popup, save_current_scene } from "@editor/defold/runtime_stubs";
+import { Services } from '@editor/core';
 
 declare global {
     const ContextMenu: ReturnType<typeof ContextMenuCreate>;
@@ -213,8 +214,8 @@ function ContextMenuCreate() {
         }
     }
 
-    EventBus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
-    EventBus.on('SYS_INPUT_POINTER_UP', onMouseUp);
+    Services.event_bus.on('SYS_INPUT_POINTER_DOWN', onMouseDown);
+    Services.event_bus.on('SYS_INPUT_POINTER_UP', onMouseUp);
 
     return { open, isVisible };
 }

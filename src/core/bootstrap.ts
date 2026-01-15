@@ -47,10 +47,13 @@ import { register_log } from '../modules/Log';
 import { register_input } from '../modules/InputManager';
 import { register_camera } from '../modules/Camera';
 import { register_editor_modules } from '../modules_editor/Manager_editor';
-import { register_all_legacy_controls } from './legacy/LegacyBridge';
 import { register_size_control } from '../controls/SizeControl';
 import { register_transform_control } from '../controls/TransformControl';
 import { register_camera_control } from '../controls/CameraContol';
+import { register_select_control } from '../controls/SelectControl';
+import { register_history_control } from '../controls/HistoryControl';
+import { register_actions_control } from '../controls/ActionsControl';
+import { register_asset_control } from '../controls/AssetControl';
 
 // Статические импорты встроенных плагинов
 import { create_plugin as create_core_inspector_plugin } from '../plugins/core-inspector';
@@ -395,10 +398,11 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         // 4. Привязка событий ввода (после register_engine для canvas)
         Input.bind_events();
 
-        // 5. Контролы редактора
-        // LegacyBridge создаёт глобальные объекты, делегирующие к DI сервисам
-        register_all_legacy_controls(container);
-        // Реальные контролы (Three.js логика) перезаписывают заглушки
+        // 5. Контролы редактора (window.* глобальные объекты)
+        register_select_control();
+        register_history_control();
+        register_actions_control();
+        register_asset_control();
         register_size_control();
         register_transform_control();
         register_camera_control();

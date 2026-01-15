@@ -1,6 +1,6 @@
 import { Mesh, SphereGeometry, MeshBasicMaterial, Vector3, Vector2, CircleGeometry, LineDashedMaterial, BufferGeometry, Line, Object3DEventMap, Scene } from "three";
 import { IBaseMeshAndThree, IObjectTypes, PivotX, PivotY } from "../render_engine/types";
-import { MeshPropertyInfo } from "./types";
+import { MeshPropertyInfo } from "@editor/shared";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { is_base_mesh } from "../render_engine/helpers/utils";
 import { WORLD_SCALAR } from "../config";

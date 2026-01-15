@@ -1,5 +1,6 @@
 import { AudioListener, Audio } from "three";
 import { TDictionary } from "../modules_editor/modules_editor_const";
+import { Services } from '@editor/core';
 
 declare global {
     const AudioManager: ReturnType<typeof AudioManagerModule>;
@@ -23,7 +24,7 @@ function AudioManagerModule() {
 
     function init() {
         Camera.set_listener(listener);
-        EventBus.on('SYS_ON_UPDATE', () => {
+        Services.event_bus.on('SYS_ON_UPDATE', () => {
             const camera = RenderEngine.camera;
             Sound.set_listener_position(vmath.vector3(camera.position.x, camera.position.y, camera.position.z));
         });

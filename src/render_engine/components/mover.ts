@@ -2,6 +2,7 @@ import { Vector2 } from "three";
 import { EntityBase } from "../objects/entity_base";
 import { IBaseEntityAndThree } from "../types";
 import { lerp } from "../helpers/utils";
+import { Services } from '@editor/core';
 
 export function CmpMover(cmp_mesh: EntityBase) {
     cmp_mesh.userData = { p1: new Vector2(), p2: new Vector2(), s: 1 };
@@ -15,7 +16,8 @@ export function CmpMover(cmp_mesh: EntityBase) {
 
         setTimeout(() => {
             const base_pos = cmp_mesh.parent!.position.clone();
-            EventBus.on('SYS_ON_UPDATE', (e) => {
+            Services.event_bus.on('SYS_ON_UPDATE', (data) => {
+                const e = data as { dt: number };
                 p1.x = base_pos.x + config.p1.x;
                 p1.y = base_pos.y + config.p1.y;
                 p2.x = base_pos.x + config.p2.x;

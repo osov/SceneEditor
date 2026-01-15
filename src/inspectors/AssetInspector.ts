@@ -10,6 +10,7 @@ import type { AssetTextureInfo, AssetMaterialInfo, AssetAudioInfo } from "@edito
 import { hexToRGB, rgbToHex } from "../modules/utils";
 import { convertFilterModeToThreeJS, convertThreeJSFilterToFilterMode, convertWrappingModeToThreeJS, convertThreeJSWrappingToWrappingMode, generateAtlasOptions, generateFragmentProgramOptions, generateTextureOptions, generateVertexProgramOptions } from "./helpers";
 import { HistoryOwner, THistoryUndo } from "../modules_editor/modules_editor_const";
+import { Services } from '@editor/core';
 
 
 declare global {
@@ -83,24 +84,27 @@ function AssetInspectorCreate() {
     }
 
     function subscribe() {
-        EventBus.on('SYS_ASSETS_SELECTED_TEXTURES', (data: { paths: string[] }) => {
-            set_selected_textures(data.paths);
+        Services.event_bus.on('SYS_ASSETS_SELECTED_TEXTURES', (data) => {
+            const e = data as { paths: string[] };
+            set_selected_textures(e.paths);
         });
 
-        EventBus.on('SYS_ASSETS_SELECTED_MATERIALS', (data: { paths: string[] }) => {
-            set_selected_materials(data.paths);
+        Services.event_bus.on('SYS_ASSETS_SELECTED_MATERIALS', (data) => {
+            const e = data as { paths: string[] };
+            set_selected_materials(e.paths);
         });
 
-        EventBus.on('SYS_ASSETS_SELECTED_AUDIOS', (data: { paths: string[] }) => {
+        Services.event_bus.on('SYS_ASSETS_SELECTED_AUDIOS', (data) => {
+            const e = data as { paths: string[] };
             _selected_audios.forEach(audio => {
                 if (audio.id != undefined) {
                     AudioManager.stop(audio.id);
                 }
             });
-            set_selected_audios(data.paths.map(path => ({ path })));
+            set_selected_audios(e.paths.map(path => ({ path })));
         });
 
-        EventBus.on('SYS_ASSETS_CLEAR_SELECTED', () => {
+        Services.event_bus.on('SYS_ASSETS_CLEAR_SELECTED', () => {
             _selected_audios.forEach(audio => {
                 if (audio.id != undefined) {
                     AudioManager.stop(audio.id);
@@ -112,14 +116,15 @@ function AssetInspectorCreate() {
             Inspector.clear();
         });
 
-        EventBus.on('SYS_CHANGED_ATLAS_DATA', () => {
+        Services.event_bus.on('SYS_CHANGED_ATLAS_DATA', () => {
             if (_selected_textures.length > 0) {
                 // NOTE: пока просто пересоздаем поля занаво, так как нет возможности обновить параметры биндинга
                 set_selected_textures(_selected_textures);
             }
         });
 
-        EventBus.on('SYS_HISTORY_UNDO', async (event: THistoryUndo) => {
+        Services.event_bus.on('SYS_HISTORY_UNDO', async (data) => {
+            const event = data as THistoryUndo;
             if (event.owner !== HistoryOwner.ASSET_INSPECTOR) return;
             await undo(event);
         });
@@ -826,7 +831,7 @@ function AssetInspectorCreate() {
 
     async function updateMaterialVertexProgram(data: AssetMaterialInfo<string>[], last: boolean) {
         for (const item of data) {
-            EventBus.trigger('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: get_file_name(item.material_path),
                 is_uniform: false,
                 property: 'vertexShader',
@@ -868,7 +873,7 @@ function AssetInspectorCreate() {
 
     async function updateMaterialFragmentProgram(data: AssetMaterialInfo<string>[], last: boolean) {
         for (const item of data) {
-            EventBus.trigger('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: get_file_name(item.material_path),
                 is_uniform: false,
                 property: 'fragmentShader',
@@ -910,7 +915,7 @@ function AssetInspectorCreate() {
 
     async function updateMaterialTransparent(data: AssetMaterialInfo<boolean>[], last: boolean) {
         for (const item of data) {
-            EventBus.trigger('SYS_MATERIAL_CHANGED', {
+            Services.event_bus.emit('SYS_MATERIAL_CHANGED', {
                 material_name: get_file_name(item.material_path),
                 is_uniform: false,
                 property: 'transparent',

@@ -5,6 +5,7 @@ import { is_base_mesh } from "../helpers/utils";
 import { deepClone } from "../../modules/utils";
 import { HistoryOwner, THistoryUndo } from "../../modules_editor/modules_editor_const";
 import { MeshPropertyInfo } from "@editor/core/render/types";
+import { Services } from '@editor/core';
 
 // Глобальные объекты - связаны с DI сервисами через LegacyBridge
 declare const SelectControl: {
@@ -24,8 +25,12 @@ export function CmpSpline(cmp_mesh: EntityBase) {
     let spline_data: Vector2[] = [];
 
     function init() {
-        EventBus.on('SYS_MESH_REMOVE_BEFORE', on_mesh_remove);
-        EventBus.on('SYS_INPUT_POINTER_UP', (e) => {
+        Services.event_bus.on('SYS_MESH_REMOVE_BEFORE', (data) => {
+            const e = data as { id: number };
+            on_mesh_remove(e);
+        });
+        Services.event_bus.on('SYS_INPUT_POINTER_UP', (data) => {
+            const e = data as { button: number; x: number; y: number };
             if (e.button == 0) {
                 if (!Input.is_shift())
                     return;
@@ -40,15 +45,16 @@ export function CmpSpline(cmp_mesh: EntityBase) {
             }
         });
 
-        EventBus.on('SYS_HISTORY_UNDO', (event: THistoryUndo) => {
+        Services.event_bus.on('SYS_HISTORY_UNDO', (evt_data) => {
+            const event = evt_data as THistoryUndo;
             if (event.owner != HistoryOwner.COMPONENT) return;
-            const data = event.data[0] as MeshPropertyInfo<Vector3>[];
-            if (data[0].index != cmp_mesh.mesh_data.id)
+            const history_data = event.data[0] as MeshPropertyInfo<Vector3>[];
+            if (history_data[0].index != cmp_mesh.mesh_data.id)
                 return;
             const positions = [];
             const ids = [];
-            for (let i = 0; i < data.length; i++) {
-                const it = data[i];
+            for (let i = 0; i < history_data.length; i++) {
+                const it = history_data[i];
                 positions.push(it.value);
                 ids.push(it.mesh_id);
             }

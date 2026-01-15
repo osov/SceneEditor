@@ -2532,9 +2532,10 @@ function InspectorControlCreate() {
             const old_atlas = ResourceManager.get_atlas_by_texture_name(texture_name) || '';
             ResourceManager.override_atlas_texture(old_atlas, atlas, texture_name);
 
-            // NOTE: возможно обновление текстур в мешах должно быть в override_atlas_texture 
-            SceneManager.get_scene_list().forEach((mesh) => {
-                const is_type = mesh.type == IObjectTypes.GO_SPRITE_COMPONENT || mesh.type == IObjectTypes.GUI_BOX;
+            // NOTE: возможно обновление текстур в мешах должно быть в override_atlas_texture
+            Services.scene.get_all().forEach((mesh) => {
+                const mesh_any = mesh as { type?: IObjectTypes };
+                const is_type = mesh_any.type === IObjectTypes.GO_SPRITE_COMPONENT || mesh_any.type === IObjectTypes.GUI_BOX;
                 if (!is_type) return;
 
                 const mesh_typed = mesh as unknown as IBaseMesh;

@@ -100,6 +100,15 @@ export interface ISceneObject extends Object3D {
     };
 }
 
+/** Элемент графа иерархии */
+export interface SceneGraphItem {
+    id: number;
+    pid: number;
+    name: string;
+    visible: boolean;
+    type: ObjectTypes;
+}
+
 /** Интерфейс SceneService */
 export interface ISceneService {
     /** Создать объект сцены */
@@ -126,6 +135,16 @@ export interface ISceneService {
     serialize_object(object: ISceneObject): BaseEntityData;
     /** Получить уникальный ID */
     get_unique_id(): number;
+    /** Переместить объект в иерархии */
+    move(object: ISceneObject, parent_id: number, before_id: number): void;
+    /** Переместить объект по ID */
+    move_by_id(id: number, parent_id: number, before_id: number): void;
+    /** Установить имя объекта */
+    set_name(object: ISceneObject, name: string): void;
+    /** Найти ID следующего sibling объекта */
+    find_next_sibling_id(object: ISceneObject): number;
+    /** Получить граф иерархии сцены */
+    make_graph(): SceneGraphItem[];
     /** Освободить ресурсы */
     dispose(): void;
 }

@@ -11,6 +11,7 @@ import type {
     ISceneService,
     ISceneObject,
     SceneServiceParams,
+    SceneGraphItem,
 } from './types';
 
 /** Объявление глобального SceneManager */
@@ -26,6 +27,11 @@ declare const SceneManager: {
     get_mesh_id_by_url(url: string): number | undefined;
     add(mesh: IBaseEntity, id_parent?: number, id_before?: number): void;
     remove(id: number): void;
+    move_mesh(mesh: IBaseEntity, pid?: number, next_id?: number): void;
+    move_mesh_id(id: number, pid?: number, next_id?: number): void;
+    find_next_id_mesh(mesh: IBaseEntity): number;
+    make_graph(): Array<{ id: number; pid: number; name: string; visible: boolean; type: ObjectTypes }>;
+    get_scene_list(): IBaseEntity[];
 };
 
 /** Проверить является ли объект ISceneObject */
@@ -326,6 +332,104 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
         return mesh_id_to_url.get(id);
     }
 
+    function move(object: ISceneObject, parent_id: number, before_id: number): void {
+        // Делегируем SceneManager
+        if (typeof SceneManager !== 'undefined') {
+            SceneManager.move_mesh(object as unknown as IBaseEntity, parent_id, before_id);
+            event_bus.emit('scene:object_moved', { id: object.mesh_data.id, parent_id, before_id });
+            return;
+        }
+
+        logger.warn('move: SceneManager недоступен, операция не выполнена');
+    }
+
+    function move_by_id(id: number, parent_id: number, before_id: number): void {
+        // Делегируем SceneManager
+        if (typeof SceneManager !== 'undefined') {
+            SceneManager.move_mesh_id(id, parent_id, before_id);
+            event_bus.emit('scene:object_moved', { id, parent_id, before_id });
+            return;
+        }
+
+        // Fallback
+        const object = get_by_id(id);
+        if (object !== undefined) {
+            move(object, parent_id, before_id);
+        } else {
+            logger.error(`move_by_id: объект с id ${id} не найден`);
+        }
+    }
+
+    function set_name(object: ISceneObject, name: string): void {
+        // Делегируем SceneManager
+        if (typeof SceneManager !== 'undefined') {
+            SceneManager.set_mesh_name(object as unknown as IBaseEntity, name);
+            event_bus.emit('scene:object_renamed', { id: object.mesh_data.id, name });
+            return;
+        }
+
+        // Fallback
+        object.name = name;
+        update_mesh_url(object);
+        event_bus.emit('scene:object_renamed', { id: object.mesh_data.id, name });
+    }
+
+    function find_next_sibling_id(object: ISceneObject): number {
+        // Делегируем SceneManager
+        if (typeof SceneManager !== 'undefined') {
+            return SceneManager.find_next_id_mesh(object as unknown as IBaseEntity);
+        }
+
+        // Fallback
+        const parent = object.parent;
+        if (parent === null) {
+            return -1;
+        }
+
+        const index = parent.children.indexOf(object);
+        if (index === -1 || index === parent.children.length - 1) {
+            return -1;
+        }
+
+        for (let i = index + 1; i < parent.children.length; i++) {
+            const child = parent.children[i];
+            if (is_scene_object(child)) {
+                return child.mesh_data.id;
+            }
+        }
+
+        return -1;
+    }
+
+    function make_graph(): SceneGraphItem[] {
+        // Делегируем SceneManager
+        if (typeof SceneManager !== 'undefined') {
+            return SceneManager.make_graph() as SceneGraphItem[];
+        }
+
+        // Fallback
+        const result: SceneGraphItem[] = [];
+        const scene = render_service.scene;
+
+        scene.traverse((child) => {
+            if (is_scene_object(child)) {
+                let pid = -1;
+                if (child.parent !== null && is_scene_object(child.parent)) {
+                    pid = child.parent.mesh_data.id;
+                }
+                result.push({
+                    id: child.mesh_data.id,
+                    pid,
+                    name: child.name,
+                    visible: child.visible,
+                    type: (child.mesh_data.type ?? 'empty') as ObjectTypes,
+                });
+            }
+        });
+
+        return result;
+    }
+
     function dispose(): void {
         clear();
         logger.info('SceneService освобождён');
@@ -344,6 +448,11 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
         deserialize,
         serialize_object,
         get_unique_id,
+        move,
+        move_by_id,
+        set_name,
+        find_next_sibling_id,
+        make_graph,
         dispose,
     };
 }

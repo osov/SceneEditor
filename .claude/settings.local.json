@@ -25,7 +25,8 @@
       "Bash(powershell -Command \"\\(Get-Content ''C:\\\\Users\\\\sov\\\\.claude\\\\projects\\\\D--TS-EDITOR-DEFOLD-SceneEditor\\\\2f0a1795-a515-41a2-bf0c-1ec5dc4988f5\\\\tool-results\\\\mcp-playwright-browser_console_messages-1768403915751.txt'' | ConvertFrom-Json\\)[0..30].text\")",
       "Bash(powershell -Command \"\\(Get-Content ''C:\\\\Users\\\\sov\\\\.claude\\\\projects\\\\D--TS-EDITOR-DEFOLD-SceneEditor\\\\2f0a1795-a515-41a2-bf0c-1ec5dc4988f5\\\\tool-results\\\\mcp-playwright-browser_console_messages-1768403915751.txt'' | ConvertFrom-Json\\) | Group-Object text | Sort-Object Count -Descending | Select-Object -First 20 Count,Name\")",
       "Bash(powershell -Command \"$json = Get-Content ''C:\\\\Users\\\\sov\\\\.claude\\\\projects\\\\D--TS-EDITOR-DEFOLD-SceneEditor\\\\2f0a1795-a515-41a2-bf0c-1ec5dc4988f5\\\\tool-results\\\\mcp-playwright-browser_console_messages-1768403915751.txt'' | ConvertFrom-Json; $json | Group-Object text | Sort-Object Count -Descending | Select-Object -First 15 | ForEach-Object { Write-Host $_Count'': ''$_Name.Substring\\(0, [Math]::Min\\(100, $_Name.Length\\)\\) }\")",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git ls-tree:*)"
     ]
   }
 }

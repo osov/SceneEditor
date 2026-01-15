@@ -7,6 +7,7 @@ import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, CircleG
 import "../../modules/Sound";
 import { uh_to_id } from "@editor/defold/utils";
 import { inspector_force_refresh } from "@editor/defold/runtime_stubs";
+import { Services } from '@editor/core';
 
 export enum SoundFunctionType {
     LINEAR,
@@ -73,7 +74,7 @@ export class AudioMesh extends EntityBase {
         super(id);
         this.layers.disable(RenderEngine.DC_LAYERS.GO_LAYER);
         this.layers.enable(RenderEngine.DC_LAYERS.RAYCAST_LAYER);
-        EventBus.on('SYS_ON_UPDATE', this.updateVisual.bind(this));
+        Services.event_bus.on('SYS_ON_UPDATE', this.updateVisual.bind(this));
     }
 
     get_id() {
@@ -724,7 +725,7 @@ export class AudioMesh extends EntityBase {
     dispose() {
         super.dispose();
         this.removeVisual();
-        EventBus.off('SYS_ON_UPDATE', this.updateVisual.bind(this));
+        Services.event_bus.off('SYS_ON_UPDATE', this.updateVisual.bind(this));
         Sound.remove(SceneManager.get_mesh_url_by_id(this.get_id()));
         AudioManager.free_audio(this.get_id());
     }
