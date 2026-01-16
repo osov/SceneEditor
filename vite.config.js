@@ -15,8 +15,8 @@ const projectsRoot = resolve(__dirname, '..');
 console.log('[vite.config] PROJECT_PATH:', projectPath);
 const dirAssets = [
   { input: "public/**", output: "/", watch: true },
-  { input: `${projectPath}/public/**`, output: "/", watch: true },
-  { input: `${projectPath}/assets/**`, output: "/", watch: true }
+  { input: `${projectPath}/public/**`, output: "/", watch: false },
+  { input: `${projectPath}/assets/**`, output: "/", watch: false }
 ];
 console.log('[vite.config] dirAssets:', JSON.stringify(dirAssets, null, 2));
 

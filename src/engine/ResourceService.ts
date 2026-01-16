@@ -238,6 +238,10 @@ export function create_resource_service(params: ResourceServiceParams): IResourc
         return require_resource_manager().set_material_uniform_for_original(name, uniform_name, value);
     }
 
+    function set_material_shader_for_original(name: string, shader_type: 'vertex' | 'fragment', shader_path: string): void {
+        return require_resource_manager().set_material_shader_for_original(name, shader_type, shader_path);
+    }
+
     function set_material_uniform_for_mesh(mesh: ISceneObject, uniform_name: string, value: unknown): void {
         return require_resource_manager().set_material_uniform_for_mesh(mesh, uniform_name, value);
     }
@@ -432,6 +436,7 @@ export function create_resource_service(params: ResourceServiceParams): IResourc
         set_material_property_for_mesh,
         set_material_property_for_multiple_mesh,
         set_material_uniform_for_original,
+        set_material_shader_for_original,
         set_material_uniform_for_mesh,
         set_material_uniform_for_multiple_material_mesh,
         set_material_define_for_mesh,

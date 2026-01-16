@@ -1221,6 +1221,63 @@ export function ResourceManagerModule() {
         }
     }
 
+    async function set_material_shader_for_original(material_name: string, shader_type: 'vertex' | 'fragment', shader_path: string) {
+        const material_info = get_material_info(material_name);
+        if (!material_info) return;
+
+        // Обновляем путь к шейдеру в info
+        if (shader_type === 'vertex') {
+            material_info.vertexShader = shader_path;
+        } else {
+            material_info.fragmentShader = shader_path;
+        }
+
+        // Загружаем новый шейдер
+        const shader_code = shader_type === 'vertex'
+            ? get_vertex_program(shader_path)
+            : get_fragment_program(shader_path);
+
+        if (!shader_code) {
+            Services.logger.error(`[set_material_shader_for_original] Shader not found: ${shader_path}`);
+            return;
+        }
+
+        // Обновляем шейдер в оригинальном материале
+        const origin = material_info.instances[material_info.origin];
+        if (origin) {
+            if (shader_type === 'vertex') {
+                origin.vertexShader = shader_code;
+            } else {
+                origin.fragmentShader = shader_code;
+            }
+            origin.needsUpdate = true;
+        }
+
+        // Обновляем шейдер во всех копиях
+        Object.keys(material_info.instances).filter((hash) => hash !== material_info.origin).forEach((hash) => {
+            const copy = get_material_by_hash(material_info.name, hash);
+            if (!copy) return;
+            if (shader_type === 'vertex') {
+                copy.vertexShader = shader_code;
+            } else {
+                copy.fragmentShader = shader_code;
+            }
+            copy.needsUpdate = true;
+        });
+
+        // Сохраняем в файл
+        const response = await get_asset_control().get_file_data(material_info.path);
+        if (!response) return;
+
+        const material_data = JSON.parse(response);
+        if (shader_type === 'vertex') {
+            material_data.vertexShader = shader_path;
+        } else {
+            material_data.fragmentShader = shader_path;
+        }
+        await get_asset_control().save_file_data(material_info.path, JSON.stringify(material_data, null, 2));
+    }
+
     function set_material_uniform_for_mesh<T>(mesh: Slice9Mesh, uniform_name: string, value: T) {
         const mesh_id = mesh.mesh_data.id;
         const material_name = mesh.material.name;
@@ -1229,7 +1286,13 @@ export function ResourceManagerModule() {
         if (!material_info) return;
 
         if (set_material_uniform(material_info, mesh_id, 0, uniform_name, value)) {
-            mesh.set_material(material_info.name);
+            // NOTE: Получаем новый материал и применяем его напрямую
+            // Не вызываем mesh.set_material чтобы избежать перезаписи текстуры старым значением
+            const new_material = get_material_by_mesh_id(material_info.name, mesh_id);
+            if (new_material && mesh.material !== new_material) {
+                mesh.material = new_material;
+                mesh.material.needsUpdate = true;
+            }
         }
     }
 
@@ -1928,6 +1991,7 @@ export function ResourceManagerModule() {
         set_material_property_for_mesh,
         set_material_property_for_multiple_mesh,
         set_material_uniform_for_original,
+        set_material_shader_for_original,
         set_material_uniform_for_mesh,
         set_material_uniform_for_multiple_material_mesh,
         set_material_define_for_mesh,

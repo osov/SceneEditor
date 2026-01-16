@@ -342,6 +342,7 @@ export interface IResourceService {
     set_material_property_for_mesh(mesh: ISceneObject, prop: string, value: unknown): void;
     set_material_property_for_multiple_mesh(mesh: ISceneObject, index: number, prop: string, value: unknown): void;
     set_material_uniform_for_original(name: string, uniform_name: string, value: unknown): void;
+    set_material_shader_for_original(name: string, shader_type: 'vertex' | 'fragment', shader_path: string): void;
     set_material_uniform_for_mesh(mesh: ISceneObject, uniform_name: string, value: unknown): void;
     set_material_uniform_for_multiple_material_mesh(mesh: ISceneObject, index: number, uniform_name: string, value: unknown): void;
     set_material_define_for_mesh(mesh: ISceneObject, define: string, value?: string): void;

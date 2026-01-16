@@ -75,7 +75,7 @@ import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plu
 import { Vector2, Vector3, NormalBlending, AdditiveBlending, MultiplyBlending, SubtractiveBlending, NearestFilter, LinearFilter, MinificationTextureFilter, MagnificationTextureFilter, Vector4, Color } from 'three';
 import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
-import { deepClone, degToRad } from '../modules/utils';
+import { deepClone, degToRad, rgbToHex } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
 import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData, MeshAtlasEventData, TextureAtlasEventData } from './InspectorTypes';
 import { MaterialUniformParams, MaterialUniformType, TextureInfo } from '../render_engine/resource_manager';
@@ -514,9 +514,11 @@ function InspectorControlCreate() {
     
     function set_selected_materials(materials_paths: string[]) {
         _selected_materials = materials_paths;
-        
-        // NOTE: обновляем конфиг текстур
+
+        // NOTE: обновляем конфиг текстур и программ
         update_texture_options([Property.TEXTURE, Property.UNIFORM_SAMPLER2D]);
+        update_vertex_program_options();
+        update_fragment_program_options();
 
         const data = _selected_materials.map((path, id) => {
             const result = {id, data: [] as PropertyData<PropertyType>[]}; 
@@ -529,8 +531,11 @@ function InspectorControlCreate() {
             result.data.push({ name: Property.FRAGMENT_PROGRAM, data: material.fragmentShader });
             result.data.push({ name: Property.TRANSPARENT, data: false }); // TODO: восстановить transparent
 
-            type UniformEntry = { type: MaterialUniformType; params?: Record<string, unknown> };
+            type UniformEntry = { type: MaterialUniformType; params?: Record<string, unknown>; hide?: boolean };
             Object.entries(material.uniforms as Record<string, UniformEntry>).forEach(([key, value]) => {
+                // Пропускаем скрытые uniforms (например, u_texture)
+                if (value.hide === true) return;
+
                 switch (value.type) {
                     case MaterialUniformType.SAMPLER2D:
                         _config.forEach((group) => {
@@ -538,8 +543,12 @@ function InspectorControlCreate() {
                             if (!property) return;
                             property.title = key;
                         });
-                        const texture = (material.instances[material.origin]?.uniforms as Record<string, { value: unknown }>)?.[key]?.value as unknown;
-                        result.data.push({ name: Property.UNIFORM_SAMPLER2D, data: `/${get_file_name(texture as string)}` });
+                        // Текстура хранится как Three.js Texture объект, а путь в свойстве .path
+                        const textureValue = (material.instances[material.origin]?.uniforms as Record<string, { value: unknown }>)?.[key]?.value;
+                        const texturePath = (textureValue as { path?: string } | null)?.path ?? '';
+                        const textureName = get_file_name(texturePath);
+                        const textureAtlas = Services.resources.get_atlas_by_texture_name(textureName) || '';
+                        result.data.push({ name: Property.UNIFORM_SAMPLER2D, data: texturePath !== '' ? `${textureAtlas}/${textureName}` : '' });
                         break;
                     case MaterialUniformType.FLOAT:
                         _config.forEach((group) => {
@@ -665,8 +674,9 @@ function InspectorControlCreate() {
                             if (!property) return;
                             property.title = key;
                         });
-                        const color = (material.instances[material.origin]?.uniforms as Record<string, { value: unknown }>)?.[key]?.value as unknown;
-                        result.data.push({ name: Property.UNIFORM_COLOR, data: color as string });
+                        const colorVec = (material.instances[material.origin]?.uniforms as Record<string, { value: unknown }>)?.[key]?.value as Vector3 | undefined;
+                        const colorHex = colorVec !== undefined ? rgbToHex(colorVec) : '#ffffff';
+                        result.data.push({ name: Property.UNIFORM_COLOR, data: colorHex });
                         break;
                 }
             });
@@ -752,6 +762,89 @@ function InspectorControlCreate() {
                     fields.push({ name: Property.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
                     fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
 
+                    // NOTE: uniforms кастомного материала
+                    const obj_material_name = (value as Slice9Mesh).material.name || '';
+                    const obj_material_info = Services.resources.get_material_info(obj_material_name);
+                    if (obj_material_info !== undefined) {
+                        const obj_material_instance = (value as Slice9Mesh).material;
+                        type UniformEntry = { type: MaterialUniformType; params?: Record<string, unknown>; hide?: boolean };
+                        Object.entries(obj_material_info.uniforms as Record<string, UniformEntry>).forEach(([key, uniformDef]) => {
+                            if (uniformDef.hide === true) return;
+
+                            const uniformValue = (obj_material_instance.uniforms as Record<string, { value: unknown }>)?.[key]?.value;
+
+                            switch (uniformDef.type) {
+                                case MaterialUniformType.SAMPLER2D:
+                                    _config.forEach((group) => {
+                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_SAMPLER2D);
+                                        if (!property) return;
+                                        property.title = key;
+                                    });
+                                    const texturePath = (uniformValue as { path?: string } | null)?.path ?? '';
+                                    const textureName = get_file_name(texturePath);
+                                    const textureAtlas = Services.resources.get_atlas_by_texture_name(textureName) || '';
+                                    fields.push({ name: Property.UNIFORM_SAMPLER2D, data: texturePath !== '' ? `${textureAtlas}/${textureName}` : '' });
+                                    break;
+                                case MaterialUniformType.FLOAT:
+                                    _config.forEach((group) => {
+                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_FLOAT);
+                                        if (!property) return;
+                                        property.title = key;
+                                        const uniformData = obj_material_info.uniforms[key] as { params?: { min?: number; max?: number; step?: number } };
+                                        const params = uniformData?.params ?? {};
+                                        property.params = { min: params.min ?? 0, max: params.max ?? 1, step: params.step ?? 0.01 };
+                                    });
+                                    fields.push({ name: Property.UNIFORM_FLOAT, data: uniformValue as number });
+                                    break;
+                                case MaterialUniformType.RANGE:
+                                    _config.forEach((group) => {
+                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_RANGE);
+                                        if (!property) return;
+                                        property.title = key;
+                                        const uniformData = obj_material_info.uniforms[key] as { params?: MaterialUniformParams[MaterialUniformType.RANGE] };
+                                        const params = uniformData?.params ?? { min: 0, max: 1, step: 0.01 };
+                                        property.params = { min: params.min, max: params.max, step: params.step };
+                                    });
+                                    fields.push({ name: Property.UNIFORM_RANGE, data: uniformValue as number });
+                                    break;
+                                case MaterialUniformType.VEC2:
+                                    _config.forEach((group) => {
+                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_VEC2);
+                                        if (!property) return;
+                                        property.title = key;
+                                    });
+                                    fields.push({ name: Property.UNIFORM_VEC2, data: uniformValue as Vector2 });
+                                    break;
+                                case MaterialUniformType.VEC3:
+                                    _config.forEach((group) => {
+                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_VEC3);
+                                        if (!property) return;
+                                        property.title = key;
+                                    });
+                                    fields.push({ name: Property.UNIFORM_VEC3, data: uniformValue as Vector3 });
+                                    break;
+                                case MaterialUniformType.VEC4:
+                                    _config.forEach((group) => {
+                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_VEC4);
+                                        if (!property) return;
+                                        property.title = key;
+                                    });
+                                    fields.push({ name: Property.UNIFORM_VEC4, data: uniformValue as Vector4 });
+                                    break;
+                                case MaterialUniformType.COLOR:
+                                    _config.forEach((group) => {
+                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_COLOR);
+                                        if (!property) return;
+                                        property.title = key;
+                                    });
+                                    const uniformColorVec = uniformValue as Vector3 | undefined;
+                                    const uniformColorHex = uniformColorVec !== undefined ? rgbToHex(uniformColorVec) : '#ffffff';
+                                    fields.push({ name: Property.UNIFORM_COLOR, data: uniformColorHex });
+                                    break;
+                            }
+                        });
+                    }
+
                     // NOTE: отражение только для спрайта
                     if (value.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                         const sprite = value as GoSprite;
@@ -826,6 +919,22 @@ function InspectorControlCreate() {
             const property = group.property_list.find((property) => property.name == Property.MATERIAL);
             if (!property) return;
             (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateMaterialOptions();
+        });
+    }
+
+    function update_vertex_program_options() {
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.VERTEX_PROGRAM);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateVertexProgramOptions();
+        });
+    }
+
+    function update_fragment_program_options() {
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.FRAGMENT_PROGRAM);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateFragmentProgramOptions();
         });
     }
 
@@ -1158,15 +1267,11 @@ function InspectorControlCreate() {
                     expanded: false
                 });
             case PropertyType.LIST_TEXTURES: {
-                // Добавляем пустую опцию для "Нет текстуры"
+                // Плагин thumbnail-list автоматически добавляет опцию "None" для пустого значения
                 const texture_options = (property.params as Array<{ value: string; src: string; path: string }>) ?? [];
-                const options_with_empty = [
-                    { value: '', src: '', path: '' },  // Пустая опция "Нет текстуры"
-                    ...texture_options
-                ];
                 return createEntity(ids, field, property, {
                     view: 'thumbnail-list',
-                    options: options_with_empty
+                    options: texture_options
                 });
             }
             case PropertyType.LIST_TEXT:
@@ -3215,20 +3320,18 @@ function InspectorControlCreate() {
                 }
             }
         });
+        // Обновляем инспектор для отображения новых uniforms материала
+        set_selected_list(_selected_list);
     }
 
     function updateMaterialVertexProgram(info: ChangeInfo) {
         const program = info.data.event.value as string;
         info.ids.forEach((id) => {
-            const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === undefined) return;
-            material.vertexShader = program;
-            const instance = material.instances[material.origin];
-            if (instance !== undefined) {
-                instance.needsUpdate = true;
-            }
+            const material_name = get_file_name(get_basename(_selected_materials[id]));
+            // Сохраняем шейдер через Services.resources
+            Services.resources.set_material_shader_for_original(material_name, 'vertex', program);
             Services.event_bus.emit('materials:changed', {
-                material_name: material.name,
+                material_name: material_name,
                 property: 'vertexShader',
                 value: program
             });
@@ -3238,15 +3341,11 @@ function InspectorControlCreate() {
     function updateMaterialFragmentProgram(info: ChangeInfo) {
         const program = info.data.event.value as string;
         info.ids.forEach((id) => {
-            const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === undefined) return;
-            material.fragmentShader = program;
-            const instance = material.instances[material.origin];
-            if (instance !== undefined) {
-                instance.needsUpdate = true;
-            }
+            const material_name = get_file_name(get_basename(_selected_materials[id]));
+            // Сохраняем шейдер через Services.resources
+            Services.resources.set_material_shader_for_original(material_name, 'fragment', program);
             Services.event_bus.emit('materials:changed', {
-                material_name: material.name,
+                material_name: material_name,
                 property: 'fragmentShader',
                 value: program
             });
@@ -3256,144 +3355,305 @@ function InspectorControlCreate() {
     function updateUniformSampler2D(info: ChangeInfo) {
         const atlas = (info.data.event.value as string).split('/')[0];
         const texture_name = (info.data.event.value as string).split('/')[1];
-        info.ids.forEach((id) => {
-            const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === undefined) return;
+        const texture = Services.resources.get_texture(texture_name, atlas ?? '').texture;
 
-            const instance = material.instances[material.origin];
-            if (instance?.uniforms !== undefined) {
-                const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                if (uniform !== undefined) {
-                    uniform.value = Services.resources.get_texture(texture_name, atlas ?? '').texture;
+        info.ids.forEach((id) => {
+            // Проверяем, есть ли объект в _selected_list (режим объекта)
+            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
+
+            if (mesh !== undefined) {
+                // Режим объекта - обновляем uniform на материале объекта
+                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, texture);
+                const meshMaterial = (mesh as Slice9Mesh).material;
+                if (meshMaterial !== undefined) {
+                    meshMaterial.needsUpdate = true;
+                    Services.event_bus.emit('materials:changed', {
+                        material_name: meshMaterial.name,
+                        property: info.data.property.title,
+                        value: info.data.event.value
+                    });
                 }
-                instance.needsUpdate = true;
+            } else {
+                // Режим материала в ассетах
+                const material_name = get_file_name(get_basename(_selected_materials[id]));
+                const material = Services.resources.get_material_info(material_name);
+                if (material === undefined) return;
+
+                const instance = material.instances[material.origin];
+                if (instance?.uniforms !== undefined) {
+                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
+                    if (uniform !== undefined) {
+                        uniform.value = texture;
+                    }
+                    instance.needsUpdate = true;
+                }
+                // Сохраняем uniform в оригинальный материал
+                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, texture);
+                Services.event_bus.emit('materials:changed', {
+                    material_name: material.name,
+                    property: info.data.property.title,
+                    value: info.data.event.value
+                });
             }
-            Services.event_bus.emit('materials:changed', {
-                material_name: material.name,
-                property: info.data.property.title,
-                value: info.data.event.value
-            });
         });
     }
 
     function updateUniformFloat(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+
         info.ids.forEach((id) => {
-            const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === undefined) return;
-            const instance = material.instances[material.origin];
-            if (instance?.uniforms !== undefined) {
-                const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                if (uniform !== undefined) {
-                    uniform.value = info.data.event.value as number;
+            // Проверяем, есть ли объект в _selected_list (режим объекта)
+            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
+
+            if (mesh !== undefined) {
+                // Режим объекта - обновляем uniform на материале объекта
+                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
+                const meshMaterial = (mesh as Slice9Mesh).material;
+                if (meshMaterial !== undefined) {
+                    meshMaterial.needsUpdate = true;
+                    Services.event_bus.emit('materials:changed', {
+                        material_name: meshMaterial.name,
+                        property: info.data.property.title,
+                        value: value
+                    });
                 }
-                instance.needsUpdate = true;
+            } else {
+                // Режим материала в ассетах
+                const material_name = get_file_name(get_basename(_selected_materials[id]));
+                const material = Services.resources.get_material_info(material_name);
+                if (material === undefined) return;
+                const instance = material.instances[material.origin];
+                if (instance?.uniforms !== undefined) {
+                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
+                    if (uniform !== undefined) {
+                        uniform.value = value;
+                    }
+                    instance.needsUpdate = true;
+                }
+                // Сохраняем uniform в оригинальный материал
+                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
+                Services.event_bus.emit('materials:changed', {
+                    material_name: material.name,
+                    property: info.data.property.title,
+                    value: value
+                });
             }
-            Services.event_bus.emit('materials:changed', {
-                material_name: material.name,
-                property: info.data.property.title,
-                value: info.data.event.value
-            });
         });
     }
 
     function updateUniformRange(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+
         info.ids.forEach((id) => {
-            const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === undefined) return;
-            const instance = material.instances[material.origin];
-            if (instance?.uniforms !== undefined) {
-                const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                if (uniform !== undefined) {
-                    uniform.value = info.data.event.value as number;
+            // Проверяем, есть ли объект в _selected_list (режим объекта)
+            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
+
+            if (mesh !== undefined) {
+                // Режим объекта - обновляем uniform на материале объекта
+                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
+                const meshMaterial = (mesh as Slice9Mesh).material;
+                if (meshMaterial !== undefined) {
+                    meshMaterial.needsUpdate = true;
+                    Services.event_bus.emit('materials:changed', {
+                        material_name: meshMaterial.name,
+                        property: info.data.property.title,
+                        value: value
+                    });
                 }
-                instance.needsUpdate = true;
+            } else {
+                // Режим материала в ассетах
+                const material_name = get_file_name(get_basename(_selected_materials[id]));
+                const material = Services.resources.get_material_info(material_name);
+                if (material === undefined) return;
+                const instance = material.instances[material.origin];
+                if (instance?.uniforms !== undefined) {
+                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
+                    if (uniform !== undefined) {
+                        uniform.value = value;
+                    }
+                    instance.needsUpdate = true;
+                }
+                // Сохраняем uniform в оригинальный материал
+                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
+                Services.event_bus.emit('materials:changed', {
+                    material_name: material.name,
+                    property: info.data.property.title,
+                    value: value
+                });
             }
-            Services.event_bus.emit('materials:changed', {
-                material_name: material.name,
-                property: info.data.property.title,
-                value: info.data.event.value
-            });
         });
     }
 
     function updateUniformVec2(info: ChangeInfo) {
+        const value = info.data.event.value as Vector2;
+
         info.ids.forEach((id) => {
-            const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === undefined) return;
-            const instance = material.instances[material.origin];
-            if (instance?.uniforms !== undefined) {
-                const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                if (uniform !== undefined) {
-                    uniform.value = info.data.event.value as Vector2;
+            // Проверяем, есть ли объект в _selected_list (режим объекта)
+            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
+
+            if (mesh !== undefined) {
+                // Режим объекта - обновляем uniform на материале объекта
+                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
+                const meshMaterial = (mesh as Slice9Mesh).material;
+                if (meshMaterial !== undefined) {
+                    meshMaterial.needsUpdate = true;
+                    Services.event_bus.emit('materials:changed', {
+                        material_name: meshMaterial.name,
+                        property: info.data.property.title,
+                        value: value
+                    });
                 }
-                instance.needsUpdate = true;
+            } else {
+                // Режим материала в ассетах
+                const material_name = get_file_name(get_basename(_selected_materials[id]));
+                const material = Services.resources.get_material_info(material_name);
+                if (material === undefined) return;
+                const instance = material.instances[material.origin];
+                if (instance?.uniforms !== undefined) {
+                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
+                    if (uniform !== undefined) {
+                        uniform.value = value;
+                    }
+                    instance.needsUpdate = true;
+                }
+                // Сохраняем uniform в оригинальный материал
+                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
+                Services.event_bus.emit('materials:changed', {
+                    material_name: material.name,
+                    property: info.data.property.title,
+                    value: value
+                });
             }
-            Services.event_bus.emit('materials:changed', {
-                material_name: material.name,
-                property: info.data.property.title,
-                value: info.data.event.value
-            });
         });
     }
 
     function updateUniformVec3(info: ChangeInfo) {
+        const value = info.data.event.value as Vector3;
+
         info.ids.forEach((id) => {
-            const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === undefined) return;
-            const instance = material.instances[material.origin];
-            if (instance?.uniforms !== undefined) {
-                const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                if (uniform !== undefined) {
-                    uniform.value = info.data.event.value as Vector3;
+            // Проверяем, есть ли объект в _selected_list (режим объекта)
+            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
+
+            if (mesh !== undefined) {
+                // Режим объекта - обновляем uniform на материале объекта
+                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
+                const meshMaterial = (mesh as Slice9Mesh).material;
+                if (meshMaterial !== undefined) {
+                    meshMaterial.needsUpdate = true;
+                    Services.event_bus.emit('materials:changed', {
+                        material_name: meshMaterial.name,
+                        property: info.data.property.title,
+                        value: value
+                    });
                 }
-                instance.needsUpdate = true;
+            } else {
+                // Режим материала в ассетах
+                const material_name = get_file_name(get_basename(_selected_materials[id]));
+                const material = Services.resources.get_material_info(material_name);
+                if (material === undefined) return;
+                const instance = material.instances[material.origin];
+                if (instance?.uniforms !== undefined) {
+                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
+                    if (uniform !== undefined) {
+                        uniform.value = value;
+                    }
+                    instance.needsUpdate = true;
+                }
+                // Сохраняем uniform в оригинальный материал
+                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
+                Services.event_bus.emit('materials:changed', {
+                    material_name: material.name,
+                    property: info.data.property.title,
+                    value: value
+                });
             }
-            Services.event_bus.emit('materials:changed', {
-                material_name: material.name,
-                property: info.data.property.title,
-                value: info.data.event.value
-            });
         });
     }
 
     function updateUniformVec4(info: ChangeInfo) {
+        const value = info.data.event.value as Vector4;
+
         info.ids.forEach((id) => {
-            const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === undefined) return;
-            const instance = material.instances[material.origin];
-            if (instance?.uniforms !== undefined) {
-                const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                if (uniform !== undefined) {
-                    uniform.value = info.data.event.value as Vector4;
+            // Проверяем, есть ли объект в _selected_list (режим объекта)
+            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
+
+            if (mesh !== undefined) {
+                // Режим объекта - обновляем uniform на материале объекта
+                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
+                const meshMaterial = (mesh as Slice9Mesh).material;
+                if (meshMaterial !== undefined) {
+                    meshMaterial.needsUpdate = true;
+                    Services.event_bus.emit('materials:changed', {
+                        material_name: meshMaterial.name,
+                        property: info.data.property.title,
+                        value: value
+                    });
                 }
-                instance.needsUpdate = true;
+            } else {
+                // Режим материала в ассетах
+                const material_name = get_file_name(get_basename(_selected_materials[id]));
+                const material = Services.resources.get_material_info(material_name);
+                if (material === undefined) return;
+                const instance = material.instances[material.origin];
+                if (instance?.uniforms !== undefined) {
+                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
+                    if (uniform !== undefined) {
+                        uniform.value = value;
+                    }
+                    instance.needsUpdate = true;
+                }
+                // Сохраняем uniform в оригинальный материал
+                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
+                Services.event_bus.emit('materials:changed', {
+                    material_name: material.name,
+                    property: info.data.property.title,
+                    value: value
+                });
             }
-            Services.event_bus.emit('materials:changed', {
-                material_name: material.name,
-                property: info.data.property.title,
-                value: info.data.event.value
-            });
         });
     }
 
     function updateUniformColor(info: ChangeInfo) {
+        const color = new Color(info.data.event.value as string);
+        const value = new Vector3(color.r, color.g, color.b);
+
         info.ids.forEach((id) => {
-            const material = Services.resources.get_material_info(_selected_materials[id]);
-            if (material === undefined) return;
-            const color = new Color(info.data.event.value as string);
-            const instance = material.instances[material.origin];
-            if (instance?.uniforms !== undefined) {
-                const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                if (uniform !== undefined) {
-                    uniform.value = new Vector3(color.r, color.g, color.b);
+            // Проверяем, есть ли объект в _selected_list (режим объекта)
+            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
+
+            if (mesh !== undefined) {
+                // Режим объекта - обновляем uniform на материале объекта
+                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
+                const meshMaterial = (mesh as Slice9Mesh).material;
+                if (meshMaterial !== undefined) {
+                    meshMaterial.needsUpdate = true;
+                    Services.event_bus.emit('materials:changed', {
+                        material_name: meshMaterial.name,
+                        property: info.data.property.title,
+                        value: info.data.event.value
+                    });
                 }
-                instance.needsUpdate = true;
+            } else {
+                // Режим материала в ассетах
+                const material_name = get_file_name(get_basename(_selected_materials[id]));
+                const material = Services.resources.get_material_info(material_name);
+                if (material === undefined) return;
+                const instance = material.instances[material.origin];
+                if (instance?.uniforms !== undefined) {
+                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
+                    if (uniform !== undefined) {
+                        uniform.value = value;
+                    }
+                    instance.needsUpdate = true;
+                }
+                // Сохраняем uniform в оригинальный материал
+                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
+                Services.event_bus.emit('materials:changed', {
+                    material_name: material.name,
+                    property: info.data.property.title,
+                    value: info.data.event.value
+                });
             }
-            Services.event_bus.emit('materials:changed', {
-                material_name: material.name,
-                property: info.data.property.title,
-                value: info.data.event.value
-            });
         });
     }
 
@@ -3693,6 +3953,22 @@ function generateFontOptions() {
     return data;
 }
 
+function generateVertexProgramOptions() {
+    const data: {[key in string]: string} = {};
+    Services.resources.get_all_vertex_programs().forEach((path) => {
+        data[path] = path;
+    });
+    return data;
+}
+
+function generateFragmentProgramOptions() {
+    const data: {[key in string]: string} = {};
+    Services.resources.get_all_fragment_programs().forEach((path) => {
+        data[path] = path;
+    });
+    return data;
+}
+
 export function getDefaultInspectorConfig() {
 
     return [
@@ -3721,16 +3997,16 @@ export function getDefaultInspectorConfig() {
                     }
                 },
                 {
-                    name: Property.VERTEX_PROGRAM, 
-                    title: 'Vertex Program', 
-                    type: PropertyType.LIST_TEXT, 
-                    params: {}
+                    name: Property.VERTEX_PROGRAM,
+                    title: 'Vertex Program',
+                    type: PropertyType.LIST_TEXT,
+                    params: generateVertexProgramOptions()
                 },
                 {
-                    name: Property.FRAGMENT_PROGRAM, 
-                    title: 'Fragment Program', 
-                    type: PropertyType.LIST_TEXT, 
-                    params: {}
+                    name: Property.FRAGMENT_PROGRAM,
+                    title: 'Fragment Program',
+                    type: PropertyType.LIST_TEXT,
+                    params: generateFragmentProgramOptions()
                 },
                 {
                     name: Property.TRANSPARENT, 
