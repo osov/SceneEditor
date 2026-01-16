@@ -3,6 +3,7 @@ import { IBaseMesh } from "../types";
 import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
 import { EntityBase } from "./entity_base";
 import { FLOAT_PRECISION, WORLD_SCALAR } from "../../config";
+import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 
 export class EntityPlane extends EntityBase implements IBaseMesh {
@@ -93,5 +94,17 @@ export class EntityPlane extends EntityBase implements IBaseMesh {
         if (_data.color) {
             this.set_color(_data.color);
         }
+    }
+
+    /**
+     * Расширяет базовые поля размером и pivot
+     */
+    override get_inspector_fields(): InspectorFieldDefinition[] {
+        return [
+            ...super.get_inspector_fields(),
+            // Размер и pivot
+            { group: 'transform', property: Property.SIZE, type: PropertyType.VECTOR_2 },
+            { group: 'transform', property: Property.PIVOT, type: PropertyType.LIST_TEXT },
+        ];
     }
 }

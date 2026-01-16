@@ -23,6 +23,7 @@ import type {
 } from 'three';
 import type { ILogger, IEventBus } from '@editor/core/di/types';
 import type { TextureInfo, MaterialInfo, ObjectTypes, BaseEntityData } from '@editor/core/render/types';
+import type { InspectorFieldDefinition } from '@editor/core/inspector/IInspectable';
 
 // Типы для ResourceService из legacy resource_manager
 export interface TextureData {
@@ -136,15 +137,51 @@ export interface RenderServiceParams {
 
 /** Интерфейс объекта сцены */
 export interface ISceneObject extends Object3D {
-    /** Уникальный идентификатор */
+    /** Тип объекта */
+    readonly type: ObjectTypes;
+    /** Уникальный идентификатор и метаданные */
     readonly mesh_data: {
         id: number;
         type?: ObjectTypes;
         name?: string;
         [key: string]: unknown;
     };
+    /** Является ли компонентом */
+    readonly is_component?: boolean;
 
-    // Опциональные свойства для совместимости с legacy интерфейсами (flexible types)
+    // === Базовые методы (обязательные для всех объектов) ===
+    get_position(): Vector3;
+    set_position(x: number, y: number, z?: number): void;
+    get_scale(): Vector2;
+    set_scale(x: number, y: number): void;
+    get_active(): boolean;
+    set_active(active: boolean): void;
+    get_visible(): boolean;
+    set_visible(visible: boolean): void;
+
+    // === Опциональные методы (зависят от типа объекта) ===
+    get_size?(): Vector2;
+    set_size?(w: number, h: number): void;
+    get_color?(): string;
+    set_color?(hex: string): void;
+    get_texture?(): string[];
+    set_texture?(name: string, atlas?: string): void;
+    get_pivot?(): Vector2;
+    set_pivot?(x: number, y: number, is_sync?: boolean): void;
+    get_anchor?(): Vector2;
+    set_anchor?(x: number, y: number): void;
+    get_bounds?(): number[];
+    transform_changed?(): void;
+
+    // === Сериализация ===
+    serialize?(): Record<string, unknown>;
+    deserialize?(data: Record<string, unknown>): void;
+
+    // === Инспектор (IInspectable) ===
+    /** Получить определения полей для инспектора */
+    get_inspector_fields?(): InspectorFieldDefinition[];
+
+    // === Опциональные флаги для совместимости с legacy ===
     /** Ключи которые не записываются в историю */
     ignore_history?: unknown;
     /** Объект не сохраняется в файл сцены */
@@ -153,14 +190,6 @@ export interface ISceneObject extends Object3D {
     no_removing?: boolean;
     /** Callback при изменении трансформации */
     on_transform_changed?: unknown;
-    /** Установить текстуру */
-    set_texture?: (name: string, atlas?: string) => void;
-    /** Получить текстуру [name, atlas] */
-    get_texture?: () => string[];
-    /** Активировать/деактивировать объект */
-    set_active?: (active: boolean) => void;
-    /** Получить цвет объекта */
-    get_color?: () => string;
 }
 
 /** Элемент графа иерархии */

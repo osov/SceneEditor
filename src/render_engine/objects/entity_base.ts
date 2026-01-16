@@ -3,6 +3,7 @@ import { IBaseEntity, IBaseParameters, IObjectTypes, OnTransformChanged } from "
 import { convert_width_height_to_pivot_bb, is_base_mesh } from "../helpers/utils";
 import { WORLD_SCALAR } from "../../config";
 import type { HistoryDataKeys } from "@editor/shared";
+import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 export const shader = new ShaderMaterial({
     vertexShader: 'void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);}',
@@ -146,4 +147,21 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
     }
 
     dispose() { }
+
+    /**
+     * Получить определения полей для инспектора
+     * Базовые поля: тип, имя, активность, позиция, вращение, масштаб
+     */
+    get_inspector_fields(): InspectorFieldDefinition[] {
+        return [
+            // Базовые свойства
+            { group: 'base', property: Property.TYPE, type: PropertyType.STRING, readonly: true },
+            { group: 'base', property: Property.NAME, type: PropertyType.STRING },
+            { group: 'base', property: Property.ACTIVE, type: PropertyType.BOOLEAN },
+            // Трансформация
+            { group: 'transform', property: Property.POSITION, type: PropertyType.VECTOR_3 },
+            { group: 'transform', property: Property.ROTATION, type: PropertyType.VECTOR_3 },
+            { group: 'transform', property: Property.SCALE, type: PropertyType.VECTOR_2 },
+        ];
+    }
 }

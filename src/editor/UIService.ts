@@ -74,6 +74,13 @@ export function create_ui_service(params: UIServiceParams): IUIService {
             })
         );
 
+        // Подписка на загрузку сцены
+        subscriptions.push(
+            event_bus.on('scene:loaded', () => {
+                update_hierarchy();
+            })
+        );
+
         // Подписка на добавление/удаление объектов
         subscriptions.push(
             event_bus.on('scene:object_added', () => {

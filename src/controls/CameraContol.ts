@@ -63,7 +63,8 @@ function CameraControlCreate() {
             control_orthographic.truckSpeed = 1;
             control_orthographic.dollySpeed = 1;
             control_orthographic.dollyToCursor = true;
-            control_orthographic.zoomTo(0.9);
+            // Начальный zoom для просмотра сцены (0.02 = область ~100 единиц)
+            control_orthographic.zoomTo(0.02);
             control_orthographic.addEventListener('controlend', () => save_state())
             control_orthographic.addEventListener('sleep', () => save_state());
 
@@ -78,7 +79,14 @@ function CameraControlCreate() {
             focus();
         });
 
-        set_position(540 / 2, -960 / 2);
+        // Подписка на загрузку сцены для восстановления состояния камеры
+        Services.event_bus.on('asset:scene_loaded', (data) => {
+            const e = data as { path: string };
+            load_state(e.path);
+        });
+
+        // Центрируем камеру на начало координат
+        set_position(0, 0);
     }
 
     function set_position(x: number, y: number, is_transition = false) {
@@ -102,6 +110,8 @@ function CameraControlCreate() {
     }
 
     async function save_state() {
+        // Не сохраняем если сцена не загружена
+        if (active_scene === '') return;
         const state = save();
         const key = 'camera_control_orthographic-' + active_scene;
         localStorage.setItem(key, JSON.stringify(state));

@@ -4,6 +4,7 @@ import { Text } from 'troika-three-text';
 import { IBaseMesh, IObjectTypes } from "../types";
 import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
 import { Services } from '@editor/core';
+import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 
 interface IParameters {
@@ -255,5 +256,32 @@ export class TextMesh extends Text implements IBaseMesh {
 
     transform_changed() {
 
+    }
+
+    /**
+     * Получить определения полей для инспектора
+     * TextMesh не наследует от EntityBase, поэтому включает все базовые поля
+     */
+    get_inspector_fields(): InspectorFieldDefinition[] {
+        return [
+            // Базовые свойства
+            { group: 'base', property: Property.TYPE, type: PropertyType.STRING, readonly: true },
+            { group: 'base', property: Property.NAME, type: PropertyType.STRING },
+            { group: 'base', property: Property.ACTIVE, type: PropertyType.BOOLEAN },
+            // Трансформация
+            { group: 'transform', property: Property.POSITION, type: PropertyType.VECTOR_3 },
+            { group: 'transform', property: Property.ROTATION, type: PropertyType.VECTOR_3 },
+            { group: 'transform', property: Property.SCALE, type: PropertyType.VECTOR_2 },
+            { group: 'transform', property: Property.SIZE, type: PropertyType.VECTOR_2 },
+            { group: 'transform', property: Property.PIVOT, type: PropertyType.LIST_TEXT },
+            // Графика (цвет и альфа)
+            { group: 'graphics', property: Property.COLOR, type: PropertyType.COLOR },
+            { group: 'graphics', property: Property.ALPHA, type: PropertyType.SLIDER, params: { min: 0, max: 1, step: 0.01 } },
+            // Текст
+            { group: 'text', property: Property.TEXT, type: PropertyType.LOG_DATA },
+            { group: 'text', property: Property.FONT, type: PropertyType.LIST_TEXT },
+            { group: 'text', property: Property.FONT_SIZE, type: PropertyType.NUMBER },
+            { group: 'text', property: Property.TEXT_ALIGN, type: PropertyType.LIST_TEXT },
+        ];
     }
 }

@@ -187,26 +187,11 @@ export interface IResourceManager {
 
 /**
  * Типы объектов сцены
+ * Реэкспорт из render_engine/types для совместимости
  */
-export enum ObjectTypes {
-    EMPTY = '',
-    ENTITY = 'base_entity',
-    SLICE9_PLANE = 'base_slice9',
-    TEXT = 'base_text',
-
-    GUI_CONTAINER = 'gui',
-    GUI_BOX = 'box',
-    GUI_TEXT = 'text',
-
-    GO_CONTAINER = 'go',
-    GO_SPRITE_COMPONENT = 'sprite',
-    GO_LABEL_COMPONENT = 'label',
-    GO_MODEL_COMPONENT = 'model',
-    GO_ANIMATED_MODEL_COMPONENT = 'animated_model',
-    GO_AUDIO_COMPONENT = 'audio',
-
-    COMPONENT = 'component',
-}
+import { IObjectTypes } from '@editor/render_engine/types';
+export { IObjectTypes as ObjectTypes };
+type ObjectTypes = IObjectTypes;
 
 /**
  * Базовые данные сущности

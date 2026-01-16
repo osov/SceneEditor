@@ -6,6 +6,7 @@ import { flip_geometry_x, flip_geometry_y, flip_geometry_xy } from "../helpers/u
 import * as THREE from 'three';
 import { DC_LAYERS } from '@editor/engine/RenderService';
 import { Services } from '@editor/core';
+import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 
 export class GuiContainer extends EntityBase {
@@ -20,6 +21,17 @@ export class GuiContainer extends EntityBase {
     set_position(_x: number, _y: number, _z?: number): void { }
     set_pivot(_x: number, _y: number, _is_sync?: boolean): void { }
     set_size(_w: number, _h: number): void { }
+
+    /**
+     * GuiContainer имеет только базовые поля (без трансформации)
+     */
+    override get_inspector_fields(): InspectorFieldDefinition[] {
+        return [
+            { group: 'base', property: Property.TYPE, type: PropertyType.STRING, readonly: true },
+            { group: 'base', property: Property.NAME, type: PropertyType.STRING },
+            { group: 'base', property: Property.ACTIVE, type: PropertyType.BOOLEAN },
+        ];
+    }
 }
 
 export class GoContainer extends EntityBase {
@@ -30,6 +42,8 @@ export class GoContainer extends EntityBase {
         this.layers.disable(DC_LAYERS.GO_LAYER);
         this.layers.disable(DC_LAYERS.GUI_LAYER);
     }
+
+    // GoContainer использует базовые поля из EntityBase (не переопределяем)
 }
 
 export interface GuiBoxSerializeData extends Slice9SerializeData {
@@ -186,6 +200,18 @@ export class GuiBox extends Slice9Mesh {
         }
         this.alpha = this.material.uniforms.alpha.value / inheredAlpha;
     }
+
+    /**
+     * GuiBox добавляет поля якоря к полям Slice9Mesh
+     */
+    override get_inspector_fields(): InspectorFieldDefinition[] {
+        return [
+            ...super.get_inspector_fields(),
+            // Якорь
+            { group: 'anchor', property: Property.ANCHOR, type: PropertyType.VECTOR_2 },
+            { group: 'anchor', property: Property.ANCHOR_PRESET, type: PropertyType.LIST_TEXT },
+        ];
+    }
 }
 
 export interface GuiTextSerializeData extends TextSerializeData {
@@ -252,6 +278,18 @@ export class GuiText extends TextMesh {
             inheredAlpha = data.inheredAlpha;
         }
         this.alpha = this.fillOpacity / inheredAlpha;
+    }
+
+    /**
+     * GuiText добавляет поля якоря к полям TextMesh
+     */
+    override get_inspector_fields(): InspectorFieldDefinition[] {
+        return [
+            ...super.get_inspector_fields(),
+            // Якорь
+            { group: 'anchor', property: Property.ANCHOR, type: PropertyType.VECTOR_2 },
+            { group: 'anchor', property: Property.ANCHOR_PRESET, type: PropertyType.LIST_TEXT },
+        ];
     }
 }
 
@@ -377,10 +415,25 @@ export class GoSprite extends Slice9Mesh {
             this.geometry.attributes.uv.needsUpdate = true;
         }
     }
+
+    /**
+     * GoSprite добавляет поля отражения к полям Slice9Mesh
+     */
+    override get_inspector_fields(): InspectorFieldDefinition[] {
+        return [
+            ...super.get_inspector_fields(),
+            // Отражение
+            { group: 'flip', property: Property.FLIP_VERTICAL, type: PropertyType.BOOLEAN },
+            { group: 'flip', property: Property.FLIP_HORIZONTAL, type: PropertyType.BOOLEAN },
+            { group: 'flip', property: Property.FLIP_DIAGONAL, type: PropertyType.BOOLEAN },
+        ];
+    }
 }
 
 export class GoText extends TextMesh {
     public type = IObjectTypes.GO_LABEL_COMPONENT;
     public is_component = true;
+
+    // GoText использует поля из TextMesh (не переопределяем)
 }
 

@@ -1,10 +1,16 @@
 import includeHtml from "./src/pluginTpl.js";
 import { DynamicPublicDirectory } from "vite-multiple-assets";
 import { defineConfig } from 'vite';
-import { resolve } from "path"
+import { resolve, dirname } from "path"
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Путь к проекту можно передать через переменную окружения
 const projectPath = process.env.PROJECT_PATH || '../test-project';
+
+// Корневая директория для проектов (на уровень выше SceneEditor)
+const projectsRoot = resolve(__dirname, '..');
 
 const dirAssets = [
   { input: "public/**", output: "/", watch: true },
@@ -44,5 +50,20 @@ export default defineConfig({
   base: "./",
   build: { outDir: "dist" },
   publicDir: false,
-  server: { host: true, hmr: true, },
+  server: {
+    host: true,
+    hmr: true,
+    fs: {
+      // Разрешаем доступ к файлам за пределами корня проекта
+      allow: [
+        // Текущий проект
+        resolve(__dirname),
+        // Родительская директория (где находятся все проекты SceneEditor_*)
+        projectsRoot,
+        // node_modules
+        resolve(__dirname, 'node_modules'),
+      ],
+      strict: false,
+    },
+  },
 })

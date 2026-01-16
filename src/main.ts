@@ -11,6 +11,10 @@
 import '@/assets/css/style.css';
 import { PROJECT_NAME } from './config';
 
+// === Glob импорт проектов (Vite анализирует при сборке) ===
+// Модули могут либо экспортировать main(), либо выполнять код при импорте
+const project_modules = import.meta.glob<{ main?: () => void }>('../../*/src/main.ts');
+
 // === DI система ===
 import { bootstrap, shutdown } from './core/bootstrap';
 import { LogLevel } from './core/services/LoggerService';
@@ -33,18 +37,36 @@ import type { IKeybindingsService } from './editor';
 import { get_control_manager } from './modules_editor/ControlManager';
 
 /** Загрузка сцены проекта */
-async function load_project_scene(logger: { error: (msg: string, ...args: unknown[]) => void }): Promise<void> {
+async function load_project_scene(logger: { error: (msg: string, ...args: unknown[]) => void; info: (msg: string, ...args: unknown[]) => void }): Promise<void> {
     if (PROJECT_NAME === '') {
         logger.error('Не передано имя проекта');
         return;
     }
 
+    // Нормализуем имя проекта - убираем ../  префикс если есть
+    const normalized_name = PROJECT_NAME.replace(/^\.\.\//, '');
+
+    // Формируем путь к модулю проекта
+    const module_path = `../../${normalized_name}/src/main.ts`;
+    const loader = project_modules[module_path];
+
+    if (loader === undefined) {
+        // Показываем доступные проекты для отладки
+        const available = Object.keys(project_modules).map(p => p.replace('../../', '').replace('/src/main.ts', ''));
+        logger.error(`Проект "${PROJECT_NAME}" не найден. Доступные: ${available.join(', ') || 'нет'}`);
+        return;
+    }
+
     try {
-        const main_file = await import(`../../${PROJECT_NAME}/src/main.ts`);
-        main_file.main();
+        const main_file = await loader();
+        // Если модуль экспортирует main() - вызываем, иначе код уже выполнился при импорте
+        if (typeof main_file.main === 'function') {
+            main_file.main();
+        }
+        logger.info(`Проект "${normalized_name}" загружен`);
     } catch (e) {
         console.error(e);
-        logger.error('Проект не загружен:', PROJECT_NAME);
+        logger.error('Ошибка загрузки проекта:', normalized_name);
     }
 }
 

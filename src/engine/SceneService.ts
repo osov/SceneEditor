@@ -63,7 +63,7 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
     function create<T extends ObjectTypes>(type: T, params_obj?: Record<string, unknown>, id = -1): ISceneObject {
         let mesh: ISceneObject;
         const p = params_obj || {};
-        const default_size = 32;
+        const default_size = 10;
 
         // base
         if (type === ObjectTypes.ENTITY || type === ObjectTypes.EMPTY) {

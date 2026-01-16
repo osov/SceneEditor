@@ -639,16 +639,17 @@ function SizeControlCreate() {
                 const diff_size = new Vector2();
                 if (is_down) {
                     if (dir[0] > 0 || dir[1] > 0) {
+                        // Нормализуем дельту по мировому масштабу для корректного перевода в локальные координаты
                         if (dir[0] > 0) {
-                            diff_size.x = delta.x;
+                            diff_size.x = delta.x / ws.x;
                             if (cp.x < center_x) {
-                                diff_size.x = - delta.x;
+                                diff_size.x = - delta.x / ws.x;
                             }
                         }
                         if (dir[1] > 0) {
-                            diff_size.y = -delta.y;
+                            diff_size.y = -delta.y / ws.y;
                             if (cp.y > center_y) {
-                                diff_size.y = delta.y;
+                                diff_size.y = delta.y / ws.y;
                             }
                         }
                         const slice = mesh.get_slice();
@@ -673,7 +674,8 @@ function SizeControlCreate() {
     function get_parent_bb(mesh: IBaseMeshAndThree) {
         if (mesh.parent == null) return [0, 0, 0, 0];
         if (mesh.parent instanceof Scene) {
-            return [0, 0, 540, -960];
+            // Для объектов в корне сцены используем bounds самого объекта
+            return mesh.get_bounds();
         }
         else if (is_base_mesh(mesh.parent)) {
             const parent = mesh.parent as IBaseMeshAndThree;

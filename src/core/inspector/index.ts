@@ -34,3 +34,18 @@ export { create_field_type_registry } from './FieldTypeRegistry';
 
 // Контроллер
 export { create_inspector_controller } from './InspectorController';
+
+// IInspectable
+export {
+    Property,
+    is_inspectable,
+    group_fields_by_section,
+    GROUP_TITLES,
+    GROUP_ORDER,
+} from './IInspectable';
+
+export type {
+    InspectorFieldGroup,
+    InspectorFieldDefinition,
+    IInspectable,
+} from './IInspectable';

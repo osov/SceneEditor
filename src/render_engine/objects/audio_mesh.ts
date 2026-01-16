@@ -8,6 +8,7 @@ import { get_audio_manager } from "../AudioManager";
 import { uh_to_id } from "@editor/defold/utils";
 import { Services } from '@editor/core';
 import { DC_LAYERS } from '@editor/engine/RenderService';
+import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 export enum SoundFunctionType {
     LINEAR,
@@ -719,5 +720,24 @@ export class AudioMesh extends EntityBase {
         Services.event_bus.off('engine:update', this.updateVisual.bind(this));
         get_sound().remove(this.get_url());
         get_audio_manager().free_audio(this.get_id());
+    }
+
+    /**
+     * AudioMesh добавляет аудио поля к базовым полям
+     */
+    override get_inspector_fields(): InspectorFieldDefinition[] {
+        return [
+            ...super.get_inspector_fields(),
+            // Аудио
+            { group: 'audio', property: Property.SOUND, type: PropertyType.LIST_TEXT },
+            { group: 'audio', property: Property.VOLUME, type: PropertyType.SLIDER, params: { min: 0, max: 1, step: 0.01 } },
+            { group: 'audio', property: Property.LOOP, type: PropertyType.BOOLEAN },
+            { group: 'audio', property: Property.PAN, type: PropertyType.SLIDER, params: { min: -1, max: 1, step: 0.01 } },
+            { group: 'audio', property: Property.SPEED, type: PropertyType.NUMBER, params: { min: 0.1, max: 10, step: 0.1 } },
+            { group: 'audio', property: Property.SOUND_RADIUS, type: PropertyType.NUMBER, params: { min: 0 } },
+            { group: 'audio', property: Property.MAX_VOLUME_RADIUS, type: PropertyType.NUMBER, params: { min: 0 } },
+            { group: 'audio', property: Property.SOUND_FUNCTION, type: PropertyType.LIST_TEXT },
+            { group: 'audio', property: Property.ZONE_TYPE, type: PropertyType.LIST_TEXT },
+        ];
     }
 }

@@ -1090,8 +1090,17 @@ function AssetControlCreate() {
             get_popups().toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
             return;
         }
-        const data = JSON.parse(resp.data) as TDictionary<BaseEntityData[]>;
-        Services.scene.load_scene(data.scene_data);
+        const parsed = JSON.parse(resp.data) as BaseEntityData[] | { scene_data: BaseEntityData[] };
+
+        // Поддержка обоих форматов: массив [...] или объект {scene_data: [...]}
+        const scene_data = Array.isArray(parsed) ? parsed : parsed.scene_data;
+
+        if (scene_data === undefined) {
+            get_popups().toast.error('Неверный формат файла сцены');
+            return;
+        }
+
+        Services.scene.load_scene(scene_data);
         get_control_manager().update_graph(true, current_scene.name, true);
     }
 

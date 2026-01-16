@@ -31,7 +31,7 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
 import { FSEvent, TDictionary, TRecursiveDict } from '../modules_editor/modules_editor_const';
-import { shader } from './objects/entity_base';
+import { shader } from './objects/slice9';
 import { deepClone, getObjectHash, hexToRGB, rgbToHex } from '../modules/utils';
 import { Slice9Mesh } from './objects/slice9';
 import { IBaseEntityData } from './types';
@@ -617,9 +617,14 @@ export function ResourceManagerModule() {
             return;
         }
 
-        const data = JSON.parse(response) as TDictionary<IBaseEntityData[]>;
-        if (data.scene_data.length > 0)
-            cache_scene(path, data.scene_data[0]);
+        const parsed = JSON.parse(response) as IBaseEntityData[] | { scene_data: IBaseEntityData[] };
+
+        // Поддержка обоих форматов: массив [...] или объект {scene_data: [...]}
+        const scene_data = Array.isArray(parsed) ? parsed : parsed.scene_data;
+
+        if (scene_data !== undefined && scene_data.length > 0) {
+            cache_scene(path, scene_data[0]);
+        }
     }
 
     function cache_scene(path: string, data: IBaseEntityData) {

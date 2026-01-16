@@ -7,6 +7,7 @@ import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils'
 import { hex2rgba, rgb2hex } from "@editor/defold/utils";
 import { Services } from '@editor/core';
 import { DC_LAYERS } from '@editor/engine/RenderService';
+import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 export interface MultipleMaterialMeshSerializeData {
     mesh_name: string,
@@ -267,5 +268,18 @@ export class MultipleMaterialMesh extends EntityPlane {
                     this.children[idx].scale.copy(scale);
             });
         }
+    }
+
+    /**
+     * MultipleMaterialMesh добавляет графические поля для 3D моделей
+     */
+    override get_inspector_fields(): InspectorFieldDefinition[] {
+        return [
+            ...super.get_inspector_fields(),
+            // Графика для моделей
+            { group: 'graphics', property: Property.COLOR, type: PropertyType.COLOR },
+            { group: 'graphics', property: Property.TEXTURE, type: PropertyType.LIST_TEXTURES },
+            { group: 'graphics', property: Property.MATERIAL, type: PropertyType.LIST_TEXT },
+        ];
     }
 } 

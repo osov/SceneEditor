@@ -5,6 +5,7 @@ import { EntityPlane } from "./entity_plane";
 import { MaterialUniformType } from "../resource_manager";
 import { hex2rgba, rgb2hex } from "@editor/defold/utils";
 import { Services } from '@editor/core';
+import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 // todo optimize material list
 
@@ -66,7 +67,6 @@ export const shader = {
             newUV = vUvData.xy + newUV * vUvData.zw;
 #ifdef USE_TEXTURE
             vec4 color = texture2D(u_texture, newUV);
-            //  if (color.a < 0.5) discard;
             gl_FragColor = color * vec4(vColor, alpha);
 #else
             gl_FragColor = vec4(vColor, alpha);
@@ -464,5 +464,22 @@ export class Slice9Mesh extends EntityPlane {
     dispose() {
         super.dispose();
         Services.resources.unlink_material_for_mesh(this.material.name, this.mesh_data.id);
+    }
+
+    /**
+     * Расширяет поля EntityPlane графическими полями
+     */
+    override get_inspector_fields(): InspectorFieldDefinition[] {
+        return [
+            ...super.get_inspector_fields(),
+            // Графика
+            { group: 'graphics', property: Property.COLOR, type: PropertyType.COLOR },
+            { group: 'graphics', property: Property.ALPHA, type: PropertyType.SLIDER, params: { min: 0, max: 1, step: 0.01 } },
+            { group: 'graphics', property: Property.ATLAS, type: PropertyType.LIST_TEXT },
+            { group: 'graphics', property: Property.TEXTURE, type: PropertyType.LIST_TEXTURES },
+            { group: 'graphics', property: Property.MATERIAL, type: PropertyType.LIST_TEXT },
+            { group: 'graphics', property: Property.BLEND_MODE, type: PropertyType.LIST_TEXT },
+            { group: 'graphics', property: Property.SLICE9, type: PropertyType.POINT_2D },
+        ];
     }
 }

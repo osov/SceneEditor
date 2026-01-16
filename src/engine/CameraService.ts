@@ -169,7 +169,7 @@ export function create_camera_service(params: CameraServiceParams): ICameraServi
         logger.debug(`Состояние камеры сохранено для сцены: ${scene_name}`);
     }
 
-    /** Проверить валидность состояния камеры */
+    /** Проверить валидность состояния камеры (формат CameraService) */
     function is_valid_camera_state(state: unknown): state is CameraState {
         if (state === null || typeof state !== 'object') {
             return false;
@@ -191,6 +191,16 @@ export function create_camera_service(params: CameraServiceParams): ICameraServi
         return true;
     }
 
+    /** Проверить формат состояния от CameraControl (camera-controls) */
+    function is_camera_control_state(state: unknown): boolean {
+        if (state === null || typeof state !== 'object') {
+            return false;
+        }
+        const s = state as Record<string, unknown>;
+        // CameraControl сохраняет: { up, target, pos, zoom, focal }
+        return 'pos' in s && 'zoom' in s && typeof s.zoom === 'number';
+    }
+
     function load_scene_state(scene_name: string): void {
         const key = CAMERA_STATE_PREFIX + scene_name;
         const state_json = localStorage.getItem(key);
@@ -200,6 +210,14 @@ export function create_camera_service(params: CameraServiceParams): ICameraServi
         }
         try {
             const parsed = JSON.parse(state_json) as unknown;
+
+            // Проверяем формат CameraControl (camera-controls) - он основной
+            if (is_camera_control_state(parsed)) {
+                // Состояние управляется CameraControl, пропускаем (он сам загрузит)
+                logger.debug('Состояние камеры управляется CameraControl');
+                return;
+            }
+
             if (!is_valid_camera_state(parsed)) {
                 logger.warn('Неверный формат состояния камеры в localStorage, пропускаем восстановление');
                 return;
