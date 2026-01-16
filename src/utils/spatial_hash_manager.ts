@@ -129,7 +129,7 @@ export function SpatialHashManagerCreate<T>(utils: SpatialHashManagerUtils<T>, h
     }
 
     function get_object_by_pos(x: number, y: number) {
-        const result = sp.query_range(x, y, 11, 11);
+        const result = sp.query_range(x, y, 1, 1);
         const point = Point(x, y);
         let shortest_distance = Infinity;
         let id_closest: string | number | undefined;

@@ -116,6 +116,7 @@ export function CellsManagerCreate(hash_cell_size = 20) {
         enable_object: base.enable_object, 
         get_object_by_pos: base.get_object_by_pos,
         get_element_by_id: base.get_element_by_id, 
+        get_elements_in_zone: base.get_elements_in_zone,
         objects: base.objects, 
         all_elements: base.all_elements,
         

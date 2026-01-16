@@ -101,7 +101,7 @@ export function get_level_range(obstacles: Polygon[], padding: number) {
 export function get_level_tiles_range(tiles: SpriteTileInfo[]) {
     let minX = Math.min(...tiles.map(tile => tile.data.x - tile.data.width / 2));
     let minY = Math.min(...tiles.map(tile => tile.data.y - tile.data.height / 2));
-    let maxX = Math.max(...tiles.map(tile => tile.data.y + tile.data.width / 2));
+    let maxX = Math.max(...tiles.map(tile => tile.data.x + tile.data.width / 2));
     let maxY = Math.max(...tiles.map(tile => tile.data.y + tile.data.height / 2));
     return {start: {x: minX, y: minY}, end: {x: maxX, y: maxY}};
 }
