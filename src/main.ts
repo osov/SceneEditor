@@ -61,11 +61,15 @@ async function load_project_scene(logger: { error: (msg: string, ...args: unknow
         const main_file = await loader();
         // Если модуль экспортирует main() - вызываем, иначе код уже выполнился при импорте
         if (typeof main_file.main === 'function') {
-            main_file.main();
+            await main_file.main();
         }
         logger.info(`Проект "${normalized_name}" загружен`);
     } catch (e) {
-        console.error(e);
+        if (e instanceof Error) {
+            console.error('Project load error:', e.message, e.stack);
+        } else {
+            console.error('Project load error (non-Error):', e, typeof e);
+        }
         logger.error('Ошибка загрузки проекта:', normalized_name);
     }
 }

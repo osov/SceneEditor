@@ -632,29 +632,35 @@ function SizeControlCreate() {
                 slice_box_range.scale.x -= slice.x * 2;
                 slice_box_range.scale.y -= slice.y * 2;
                 const cp = Services.camera.screen_to_world(pointer.x, pointer.y);
-                const pp = Services.camera.screen_to_world(prev_point.x, prev_point.y);
-                const delta = cp.clone().sub(pp);
                 const center_x = (bb[0] + bb[2]) / 2;
                 const center_y = (bb[1] + bb[3]) / 2;
-                const diff_size = new Vector2();
                 if (is_down) {
                     if (dir[0] > 0 || dir[1] > 0) {
-                        // Нормализуем дельту по мировому масштабу для корректного перевода в локальные координаты
-                        if (dir[0] > 0) {
-                            diff_size.x = delta.x / ws.x;
-                            if (cp.x < center_x) {
-                                diff_size.x = - delta.x / ws.x;
-                            }
-                        }
-                        if (dir[1] > 0) {
-                            diff_size.y = -delta.y / ws.y;
-                            if (cp.y > center_y) {
-                                diff_size.y = delta.y / ws.y;
-                            }
-                        }
+                        // Вычисляем slice напрямую по абсолютной позиции мыши, а не по дельте
                         const slice = mesh.get_slice();
-                        slice.x -= diff_size.x;
-                        slice.y -= diff_size.y;
+
+                        if (dir[0] > 0) {
+                            // X slice - расстояние от мыши до ближайшего вертикального края
+                            if (cp.x >= center_x) {
+                                // Правая сторона - расстояние от мыши до правого края
+                                slice.x = (bb[2] - cp.x) / ws.x;
+                            } else {
+                                // Левая сторона - расстояние от мыши до левого края
+                                slice.x = (cp.x - bb[0]) / ws.x;
+                            }
+                        }
+
+                        if (dir[1] > 0) {
+                            // Y slice - расстояние от мыши до ближайшего горизонтального края
+                            if (cp.y <= center_y) {
+                                // Нижняя сторона - расстояние от мыши до нижнего края
+                                slice.y = (cp.y - bb[3]) / ws.y;
+                            } else {
+                                // Верхняя сторона - расстояние от мыши до верхнего края
+                                slice.y = (bb[1] - cp.y) / ws.y;
+                            }
+                        }
+
                         if (slice.x < 0) slice.x = 0;
                         if (slice.y < 0) slice.y = 0;
                         mesh.set_slice(slice.x, slice.y);
@@ -707,7 +713,7 @@ function SizeControlCreate() {
             const ay = (cp.y - bb_limit[3]) / size_y;
             is_changed_anchor = true;
             mesh.set_anchor(ax, ay);
-            //log(ax, ay);
+            Services.inspector.refresh_fields([MeshProperty.ANCHOR]);
         }
         else {
             const anchor = mesh.get_anchor();

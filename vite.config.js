@@ -12,10 +12,13 @@ const projectPath = process.env.PROJECT_PATH || '../test-project';
 // Корневая директория для проектов (на уровень выше SceneEditor)
 const projectsRoot = resolve(__dirname, '..');
 
+console.log('[vite.config] PROJECT_PATH:', projectPath);
 const dirAssets = [
   { input: "public/**", output: "/", watch: true },
-  { input: `${projectPath}/{public,assets}/**`, output: "/", watch: true }
+  { input: `${projectPath}/public/**`, output: "/", watch: true },
+  { input: `${projectPath}/assets/**`, output: "/", watch: true }
 ];
+console.log('[vite.config] dirAssets:', JSON.stringify(dirAssets, null, 2));
 
 const mimeTypes = {
   ".html": "text/html",

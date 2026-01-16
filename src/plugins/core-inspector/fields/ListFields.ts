@@ -82,17 +82,31 @@ function create_list_textures_handler(): IFieldTypeHandler {
 
             const texture_options = field.params as Array<{ value: string; src: string }> | undefined;
 
-            // Используем плагин image-list для превью текстур
-            const binding = pane_folder.addBinding(
-                target_object,
-                field.key,
-                {
-                    label: field.title ?? field.key,
-                    readonly: field.readonly,
-                    view: 'thumbnail-list',
-                    options: texture_options ?? [],
-                } as Record<string, unknown>
-            ) as ExtendedBinding;
+            // Если нет опций, добавляем "None" чтобы избежать ошибки плагина
+            const safe_options = (texture_options && texture_options.length > 0)
+                ? texture_options
+                : [{ value: '', src: '' }];
+
+            console.log('[LIST_TEXTURES] Creating binding with options:', JSON.stringify(safe_options, null, 2));
+            console.log('[LIST_TEXTURES] target_object:', target_object, 'field.key:', field.key);
+
+            let binding: ExtendedBinding;
+            try {
+                // Используем плагин image-list для превью текстур
+                binding = pane_folder.addBinding(
+                    target_object,
+                    field.key,
+                    {
+                        label: field.title ?? field.key,
+                        readonly: field.readonly,
+                        view: 'thumbnail-list',
+                        options: safe_options,
+                    } as Record<string, unknown>
+                ) as ExtendedBinding;
+            } catch (e) {
+                console.error('[LIST_TEXTURES] Error creating binding:', e);
+                throw e;
+            }
 
             if (field.on_before_change !== undefined) {
                 (binding as ExtendedBinding).on('beforechange', () => {

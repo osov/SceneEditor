@@ -93,7 +93,6 @@ function AssetControlCreate() {
         for (const key of get_keys(data.paths)) {
             const paths = data.paths[key];
             let func: (...args: any[]) => Promise<any>;
-            // Log.log('Preload', key, paths);
             if (key == "textures") {
                 func = (path: string) => {
                     return Services.resources.preload_texture("/" + path);
@@ -1311,24 +1310,49 @@ function fileIsImg(path: string) {
 export async function run_debug_filemanager(project_to_load: string) {
     const asset_control = get_asset_control();
     let server_ok = false;
-    const resp = await get_client_api().test_server_ok();
-    if (resp) {
-        const text_response = await resp.text();
-        const resp_data = JSON.parse(text_response);
-        server_ok = resp_data.result === 1;
+    try {
+        const resp = await get_client_api().test_server_ok();
+        if (resp) {
+            const text_response = await resp.text();
+            const resp_data = JSON.parse(text_response);
+            server_ok = resp_data.result === 1;
+        }
+    } catch (e) {
+        Services.logger.error('Ошибка проверки сервера:', e);
+        await asset_control.draw_empty_project();
+        return;
     }
     if (server_ok) {
-        const ws_client = WsWrap(
-            () => {
-                Services.event_bus.on('ON_WS_CONNECTED', () => asset_control.reload_current_project());
-            },
-            () => { }, () => { },
-            (m) => {
-                const data = JSON.parse(m as string) as ProtocolWrapper;
-                get_client_api().on_message_socket(data.id as keyof NetMessagesEditor, data.message);
-            }
-        );
-        ws_client.set_reconnect_timer(WS_SERVER_URL, WS_RECONNECT_INTERVAL);
+        // Создаём Promise для ожидания подключения WebSocket
+        let ws_client: ReturnType<typeof WsWrap> | undefined;
+        const ws_connected = new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                ws_client?.stop_reconnect_timer();
+                reject(new Error('WebSocket connection timeout'));
+            }, 10000);
+
+            ws_client = WsWrap(
+                () => {
+                    clearTimeout(timeout);
+                    resolve();
+                    Services.event_bus.on('ON_WS_CONNECTED', () => asset_control.reload_current_project());
+                },
+                () => { },
+                () => { },
+                (m) => {
+                    const data = JSON.parse(m as string) as ProtocolWrapper;
+                    get_client_api().on_message_socket(data.id as keyof NetMessagesEditor, data.message);
+                }
+            );
+            ws_client.set_reconnect_timer(WS_SERVER_URL, WS_RECONNECT_INTERVAL);
+        });
+
+        try {
+            await ws_connected;
+        } catch (e) {
+            Services.logger.error('Ошибка подключения WebSocket:', e);
+            ws_client?.stop_reconnect_timer();
+        }
 
         const sessionResult = await get_client_api().waitForSessionId();
         if (!sessionResult.success) {
@@ -1336,25 +1360,20 @@ export async function run_debug_filemanager(project_to_load: string) {
         }
 
         const projects = await get_client_api().get_projects();
-        const names: string[] = [];
-        // Ищем проект с именем project_to_load и пробуем его загрузить
-        for (const project of projects) {
-            names.push(project);
-        }
+        // Нормализуем имя проекта - убираем ../ префикс если есть
+        const normalized_project_name = project_to_load.replace(/^\.\.\//, '');
         // Достаём данные о последнем открытом проекте
         const current_project = localStorage.getItem("current_project");
         const current_dir = localStorage.getItem("current_dir");
-        //const current_scene_name = localStorage.getItem("current_scene_name");
-        //const current_scene_path = localStorage.getItem("current_scene_path");
-        // Если проект project_to_load существует, пробуем загрузить
-        if (names.includes(project_to_load)) {
-            const r = await get_client_api().load_project(project_to_load);
+        // Если проект normalized_project_name существует, пробуем загрузить
+        if (projects.includes(normalized_project_name)) {
+            const r = await get_client_api().load_project(normalized_project_name);
             if (r.result === 1) {
                 const data = r.data as ProjectLoadData;
                 let assets: FSObject[] | undefined = data.assets;
                 let go_to_dir: string | undefined = undefined;
                 // Если project_to_load это последний открытый проект, будем переходить в последнюю открытую папку
-                if (project_to_load === current_project && current_dir) {
+                if (normalized_project_name === current_project && current_dir) {
                     assets = undefined;
                     go_to_dir = current_dir;
                 }
@@ -1362,10 +1381,10 @@ export async function run_debug_filemanager(project_to_load: string) {
                 IS_LOGGING && Services.logger.debug('Загружен проект', data.name);
                 return;
             } else {
-                Services.logger.warn(`Не удалось загрузить проект ${project_to_load}, result: ${r.result}, message: ${r.message}`);
+                Services.logger.warn(`Не удалось загрузить проект ${normalized_project_name}, result: ${r.result}, message: ${r.message}`);
             }
         }
-        Services.logger.warn(`Не удалось загрузить проект ${project_to_load}`);
+        Services.logger.warn(`Не удалось загрузить проект ${normalized_project_name}`);
     }
     else {
         Services.logger.warn('Сервер не отвечает, невозможно запустить отладчик файлового менеджера');

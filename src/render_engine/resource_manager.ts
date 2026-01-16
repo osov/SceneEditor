@@ -310,10 +310,14 @@ export function ResourceManagerModule() {
     }
 
     function get_project_url(path: string): string {
+        // Если project_path не установлен, Vite обслуживает файлы проекта из корня
+        // В этом случае не нужно добавлять project_name к пути
+        if (!project_path) {
+            return path;
+        }
         if (project_name) {
             return `${project_path}/${project_name}${path}`;
         }
-
         return project_path + path;
     }
 

@@ -193,6 +193,11 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
             const material_info = Services.resources.get_material_info(material_name);
             if (material_info && material_info.uniforms[uniform_key])
                 Services.resources.set_material_uniform_for_mesh(mesh, uniform_key, null);
+            // Сохраняем атлас даже при пустой текстуре для корректной фильтрации в инспекторе
+            if (uniform_key == 'u_texture') {
+                parameters.texture = '';
+                parameters.atlas = atlas;
+            }
             parameters.clip_width = 1;
             parameters.clip_height = 1;
         }
@@ -406,15 +411,29 @@ export class Slice9Mesh extends EntityPlane {
     }
 
     set_material(material_name: string) {
+        // Получаем материал, который должен быть установлен для этого меша
+        const material = Services.resources.get_material_by_mesh_id(material_name, this.mesh_data.id);
+        if (!material) return;
+
+        // Если материал уже установлен (тот же объект), ничего не делаем
+        // Это предотвращает рекурсию: set_material -> set_texture -> set_material_uniform_for_mesh -> set_material
+        if (this.material === material) return;
+
         if (!Services.resources.has_material_by_mesh_id(material_name, this.mesh_data.id)) {
             Services.resources.unlink_material_for_mesh(this.material.name, this.mesh_data.id);
         }
 
-        const material = Services.resources.get_material_by_mesh_id(material_name, this.mesh_data.id);
-        if (!material) return;
+        // Сохраняем текстуру ДО смены материала
+        const texture_name = this.template.parameters.texture;
+        const atlas_name = this.template.parameters.atlas;
 
         this.template.set_material(material);
         this.material = material;
+
+        // Переприменяем текстуру к новому материалу
+        if (texture_name) {
+            this.template.set_texture(texture_name, atlas_name);
+        }
     }
 
     get_bounds() {

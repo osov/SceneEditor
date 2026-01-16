@@ -1,4 +1,4 @@
-import { Vector3, Vector4 } from "three";
+import { Vector2, Vector3, Vector4, Texture, CanvasTexture } from "three";
 
 export const DP_TOL = 0.000001;
 export const TAU = 2 * Math.PI;
@@ -117,6 +117,23 @@ function sortObjectDeep(obj: any): any {
         return obj;
     }
 
+    // Обработка Texture и CanvasTexture - используем uuid вместо всего объекта
+    // чтобы избежать циклических ссылок при JSON.stringify
+    if (obj instanceof Texture || obj instanceof CanvasTexture) {
+        return { __texture_uuid: obj.uuid };
+    }
+
+    // Обработка Vector2, Vector3, Vector4 - клонируем значения
+    if (obj instanceof Vector2) {
+        return { x: obj.x, y: obj.y };
+    }
+    if (obj instanceof Vector3) {
+        return { x: obj.x, y: obj.y, z: obj.z };
+    }
+    if (obj instanceof Vector4) {
+        return { x: obj.x, y: obj.y, z: obj.z, w: obj.w };
+    }
+
     if (Array.isArray(obj)) {
         return obj.map(sortObjectDeep);
     }
@@ -125,8 +142,11 @@ function sortObjectDeep(obj: any): any {
     const result: any = {};
 
     for (const key of sortedKeys) {
-        if (key != 'renderTarget')
-            result[key] = sortObjectDeep(obj[key]);
+        // Пропускаем свойства, которые могут содержать циклические ссылки
+        if (key === 'renderTarget' || key === 'source' || key === 'image') {
+            continue;
+        }
+        result[key] = sortObjectDeep(obj[key]);
     }
 
     return result;

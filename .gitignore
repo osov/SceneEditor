@@ -40,6 +40,6 @@ builtins
 *.editor_settings
 *.internal
 bun.lockb
-
+.playwright-mcp
 
 server_cache.json

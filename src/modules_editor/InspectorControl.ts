@@ -370,6 +370,21 @@ function InspectorControlCreate() {
             }
         });
 
+        // Обновление инспектора при undo/redo
+        Services.event_bus.on('history:undo', () => {
+            if (_selected_list.length > 0) {
+                // Перестраиваем инспектор с актуальными данными объектов
+                set_selected_list(_selected_list);
+            }
+        });
+
+        Services.event_bus.on('history:redo', () => {
+            if (_selected_list.length > 0) {
+                // Перестраиваем инспектор с актуальными данными объектов
+                set_selected_list(_selected_list);
+            }
+        });
+
         // Обновление инспектора при изменении трансформации через гизмо
         Services.event_bus.on('transform:changed', (data) => {
             const e = data as { type: 'translate' | 'rotate' | 'scale' };
@@ -1142,11 +1157,18 @@ function InspectorControlCreate() {
                     picker: 'popup',
                     expanded: false
                 });
-            case PropertyType.LIST_TEXTURES:
+            case PropertyType.LIST_TEXTURES: {
+                // Добавляем пустую опцию для "Нет текстуры"
+                const texture_options = (property.params as Array<{ value: string; src: string; path: string }>) ?? [];
+                const options_with_empty = [
+                    { value: '', src: '', path: '' },  // Пустая опция "Нет текстуры"
+                    ...texture_options
+                ];
                 return createEntity(ids, field, property, {
                     view: 'thumbnail-list',
-                    options: property.params
+                    options: options_with_empty
                 });
+            }
             case PropertyType.LIST_TEXT:
                 return createEntity(ids, field, property, {
                     view: 'search-list',
@@ -2460,6 +2482,7 @@ function InspectorControlCreate() {
     }
 
     function updateTexture(info: ChangeInfo) {
+        console.log('[updateTexture] called with info:', info);
         info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
@@ -2473,8 +2496,12 @@ function InspectorControlCreate() {
             if (info.data.event.value) {
                 const atlas = (mesh as Slice9Mesh).get_texture()[1];
                 const texture = info.data.event.value as string;
+                console.log('[updateTexture] Setting texture:', texture, 'atlas:', atlas, 'on mesh:', id);
                 (mesh as Slice9Mesh).set_texture(texture, atlas);
-            } else (mesh as Slice9Mesh).set_texture('');
+            } else {
+                console.log('[updateTexture] Clearing texture on mesh:', id);
+                (mesh as Slice9Mesh).set_texture('');
+            }
         });
     }
 
@@ -3177,9 +3204,15 @@ function InspectorControlCreate() {
             }
 
             const material_name = info.data.event.value as string;
-            const material_info = Services.resources.get_material_info(material_name);
-            if (material_info !== undefined) {
-                (mesh as unknown as { material: unknown }).material = material_info.instances[material_info.origin];
+            // Используем set_material для корректного применения материала и переприменения текстуры
+            if ('set_material' in mesh && typeof mesh.set_material === 'function') {
+                mesh.set_material(material_name);
+            } else {
+                // Fallback для объектов без set_material
+                const material_info = Services.resources.get_material_info(material_name);
+                if (material_info !== undefined) {
+                    (mesh as unknown as { material: unknown }).material = material_info.instances[material_info.origin];
+                }
             }
         });
     }
@@ -3586,9 +3619,11 @@ function generateTextureOptions() {
 }
 
 function castTextureInfo(info: TextureInfo) {
+    const texture_path = (info.data.texture as any).path ?? '';
     const data = {
         value: info.name,
-        src: (info.data.texture as any).path ?? ''
+        src: texture_path,
+        path: texture_path  // Обязательное поле для плагина thumbnail-list
     } as any;
 
     if (info.atlas != '') {
