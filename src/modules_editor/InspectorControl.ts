@@ -81,9 +81,16 @@ import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontE
 import { MaterialUniformParams, MaterialUniformType, TextureInfo } from '../render_engine/resource_manager';
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 import { GoSprite, FlipMode } from '../render_engine/objects/sub_types';
+import { AudioMesh } from '../render_engine/objects/audio_mesh';
 import { HistoryOwner } from './modules_editor_const';
 import { Services } from '@editor/core';
 import { get_control_manager } from './ControlManager';
+import {
+    is_inspectable,
+    type InspectorFieldDefinition,
+    Property
+} from '../core/inspector/IInspectable';
+import { get_material_uniform_fields } from '../core/inspector/MaterialFieldProvider';
 
 // SizeControl мигрирован на Services.size
 
@@ -105,49 +112,8 @@ export function register_inspector_control() {
     inspector_control_instance = InspectorControlCreate();
 }
 
-export enum Property {
-    ID = 'id',
-    TYPE = 'type',
-    NAME = 'name',
-    VISIBLE = 'visible',
-    ACTIVE = 'active',
-    POSITION = 'position',
-    ROTATION = 'rotation',
-    SCALE = 'scale',
-    SIZE = 'size',
-    PIVOT = 'pivot',
-    ANCHOR = 'anchor',
-    ANCHOR_PRESET = 'anchor_preset',
-    COLOR = 'color',
-    ALPHA = 'alpha',
-    TEXTURE = 'texture',
-    SLICE9 = 'slice9',
-    TEXT = 'text',
-    FONT = 'font',
-    FONT_SIZE = 'font_size',
-    TEXT_ALIGN = 'text_align',
-    ATLAS = 'atlas',
-    ASSET_ATLAS = 'asset_atlas',
-    ATLAS_BUTTON = 'atlas_button',
-    LINE_HEIGHT = 'line_height',
-    BLEND_MODE = 'blend_mode',
-    MIN_FILTER = 'min_filter',
-    MAG_FILTER = 'mag_filter',
-    FLIP_VERTICAL = 'flip_vertical',
-    FLIP_HORIZONTAL = 'flip_horizontal',
-    FLIP_DIAGONAL = 'flip_diagonal',
-    MATERIAL = 'material',
-    VERTEX_PROGRAM = 'vertex_program',
-    FRAGMENT_PROGRAM = 'fragment_program',
-    TRANSPARENT = 'transparent',
-    UNIFORM_SAMPLER2D = 'uniform_sampler2d',
-    UNIFORM_FLOAT = 'uniform_float',
-    UNIFORM_RANGE = 'uniform_range',
-    UNIFORM_VEC2 = 'uniform_vec2',
-    UNIFORM_VEC3 = 'uniform_vec3',
-    UNIFORM_VEC4 = 'uniform_vec4',
-    UNIFORM_COLOR = 'uniform_color'
-}
+// Property enum реэкспортирован из IInspectable для обратной совместимости
+export { Property } from '../core/inspector/IInspectable';
 
 export enum ScreenPointPreset {
     NONE = 'None',
@@ -688,213 +654,198 @@ function InspectorControlCreate() {
         setData(data);
     }
 
+    /**
+     * Получить значение свойства из объекта
+     * Конвертирует внутренние данные объекта в формат для инспектора
+     */
+    function get_property_value(obj: IBaseMeshAndThree, property: Property): unknown {
+        switch (property) {
+            case Property.TYPE:
+                return obj.type;
+            case Property.NAME:
+                return obj.name;
+            case Property.ACTIVE:
+                return obj.get_active();
+            case Property.VISIBLE:
+                return obj.get_visible();
+            case Property.POSITION:
+                return obj.get_position();
+            case Property.ROTATION: {
+                const raw = obj.rotation;
+                return new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
+            }
+            case Property.SCALE:
+                return obj.get_scale();
+            case Property.SIZE:
+                return obj.get_size();
+            case Property.PIVOT:
+                return pivotToScreenPreset(obj.get_pivot());
+            case Property.ANCHOR:
+                return obj.get_anchor();
+            case Property.ANCHOR_PRESET:
+                return anchorToScreenPreset(obj.get_anchor());
+            case Property.COLOR:
+                return obj.get_color();
+            case Property.ALPHA:
+                return (obj as Slice9Mesh).get_alpha();
+            case Property.ATLAS: {
+                const texture_info = (obj as Slice9Mesh).get_texture();
+                return texture_info[1]; // atlas
+            }
+            case Property.TEXTURE: {
+                const texture_info = (obj as Slice9Mesh).get_texture();
+                return texture_info[0]; // texture name
+            }
+            case Property.MATERIAL:
+                return (obj as Slice9Mesh).material.name || '';
+            case Property.BLEND_MODE:
+                return convertThreeJSBlendingToBlendMode((obj as Slice9Mesh).material.blending);
+            case Property.SLICE9:
+                return (obj as Slice9Mesh).get_slice();
+            case Property.TEXT:
+                return (obj as TextMesh).text;
+            case Property.FONT:
+                return (obj as TextMesh).font || '';
+            case Property.FONT_SIZE: {
+                const delta = new Vector3(1 * obj.scale.x, 1 * obj.scale.y);
+                const max_delta = Math.max(delta.x, delta.y);
+                return (obj as TextMesh).fontSize * max_delta;
+            }
+            case Property.TEXT_ALIGN:
+                return (obj as TextMesh).textAlign;
+            case Property.LINE_HEIGHT: {
+                const line_height = (obj as TextMesh).lineHeight;
+                return line_height === 'normal' ? 1 : line_height;
+            }
+            case Property.FLIP_VERTICAL:
+                return (obj as GoSprite).get_flip() === FlipMode.VERTICAL;
+            case Property.FLIP_HORIZONTAL:
+                return (obj as GoSprite).get_flip() === FlipMode.HORIZONTAL;
+            case Property.FLIP_DIAGONAL:
+                return (obj as GoSprite).get_flip() === FlipMode.DIAGONAL;
+            // Аудио свойства
+            case Property.SOUND:
+                return (obj as AudioMesh).get_sound();
+            case Property.VOLUME:
+                return (obj as AudioMesh).get_volume();
+            case Property.LOOP:
+                return (obj as AudioMesh).get_loop();
+            case Property.PAN:
+                return (obj as AudioMesh).get_pan();
+            case Property.SPEED:
+                return (obj as AudioMesh).get_speed();
+            case Property.SOUND_RADIUS:
+                return (obj as AudioMesh).get_sound_radius();
+            case Property.MAX_VOLUME_RADIUS:
+                return (obj as AudioMesh).get_max_volume_radius();
+            case Property.SOUND_FUNCTION:
+                return (obj as AudioMesh).get_sound_function();
+            case Property.ZONE_TYPE:
+                return (obj as AudioMesh).get_zone_type();
+            default:
+                Services.logger.warn(`[get_property_value] Неизвестное свойство: ${property}`);
+                return undefined;
+        }
+    }
+
+    /**
+     * Преобразовать InspectorFieldDefinition в PropertyData для инспектора
+     */
+    function field_definition_to_property_data(
+        def: InspectorFieldDefinition,
+        obj: IBaseMeshAndThree
+    ): PropertyData<PropertyType> {
+        const value = get_property_value(obj, def.property);
+        return {
+            name: def.property,
+            data: value as PropertyValues[PropertyType]
+        };
+    }
+
+    /**
+     * Построить данные инспектора используя IInspectable
+     */
+    function build_inspector_data_from_inspectable(obj: IBaseMeshAndThree): PropertyData<PropertyType>[] {
+        if (!is_inspectable(obj)) {
+            Services.logger.warn(`[build_inspector_data] Объект ${obj.type} не реализует IInspectable`);
+            return [];
+        }
+
+        const field_defs = obj.get_inspector_fields();
+        const fields: PropertyData<PropertyType>[] = [];
+
+        // Обновляем опции для динамических полей
+        update_atlas_options();
+        update_font_options();
+
+        // Для полей с текстурами обновляем список только для выбранного атласа
+        const atlas_field = field_defs.find(f => f.property === Property.ATLAS);
+        if (atlas_field !== undefined) {
+            const atlas = get_property_value(obj, Property.ATLAS) as string;
+            update_texture_options([Property.TEXTURE], () => {
+                const list: { value: string; src: string }[] = [];
+                Services.resources.get_all_textures().forEach((info) => {
+                    if (info.atlas !== atlas) return;
+                    list.push(castTextureInfo(info));
+                });
+                return list;
+            });
+            update_material_options();
+        }
+
+        // Для аудио полей обновляем списки
+        const sound_field = field_defs.find(f => f.property === Property.SOUND);
+        if (sound_field !== undefined) {
+            update_sound_options();
+            update_sound_function_options();
+            update_zone_type_options();
+        }
+
+        // Преобразуем определения полей в данные
+        for (const def of field_defs) {
+            const property_data = field_definition_to_property_data(def, obj);
+            fields.push(property_data);
+        }
+
+        return fields;
+    }
+
     function set_selected_list(list: IBaseMeshAndThree[]) {
         _selected_list = list;
 
-        // IDEA: в значение пихать callback который будет отвечать за обновление
-        /* TODO: все значения должны быть копиями, чтобы инспектор не мог их изменять на прямую, а только самому в ивенте обновления
-                 при этом также нужно будет еще обновлять и при рефреше */
+        // Используем IInspectable для получения полей
         const data = list.map((value) => {
-            const fields = [];
+            // Получаем базовые поля через IInspectable
+            const fields = build_inspector_data_from_inspectable(value);
 
-            fields.push({ name: Property.TYPE, data: value.type });
-            fields.push({ name: Property.NAME, data: value.name });
-            // fields.push({ name: Property.VISIBLE, data: value.get_visible() });
-            fields.push({ name: Property.ACTIVE, data: value.get_active() });
+            // NOTE: uniforms кастомного материала через MaterialFieldProvider
+            if ('material' in value && value.material !== undefined) {
+                const material = (value as Slice9Mesh).material;
+                const material_name = material.name || '';
+                const material_uniforms = material.uniforms as Record<string, { value: unknown }> | null;
 
-            // NOTE: исключаем gui контейнер
-            if (value.type != IObjectTypes.GUI_CONTAINER) {
-
-                // NOTE: трансформация
-                {
-                    fields.push({ name: Property.POSITION, data: value.get_position() });
-
-                    const raw = value.rotation;
-                    const rotation = new Vector3(radToDeg(raw.x), radToDeg(raw.y), radToDeg(raw.z));
-                    fields.push({ name: Property.ROTATION, data: rotation });
-
-                    fields.push({ name: Property.SCALE, data: value.get_scale() });
+                // Проверяем наличие uniforms
+                if (material_uniforms === null) {
+                    return { id: value.mesh_data.id, data: fields };
                 }
 
-                // NOTE: gui поля
-                if ([IObjectTypes.GUI_BOX, IObjectTypes.GUI_TEXT].includes(value.type)) {
-                    fields.push({ name: Property.SIZE, data: value.get_size() });
+                // Получаем поля uniforms через провайдер
+                const uniform_fields = get_material_uniform_fields(material_name, material_uniforms);
 
-                    const pivot_preset = pivotToScreenPreset(value.get_pivot());
-                    fields.push({ name: Property.PIVOT, data: pivot_preset });
-
-                    const anchor_preset = anchorToScreenPreset(value.get_anchor());
-                    fields.push({ name: Property.ANCHOR_PRESET, data: anchor_preset });
-                    fields.push({ name: Property.ANCHOR, data: value.get_anchor() });
-                } else if (IObjectTypes.GO_SPRITE_COMPONENT == value.type || IObjectTypes.GO_LABEL_COMPONENT == value.type) {
-                    fields.push({ name: Property.SIZE, data: value.get_size() });
-                }
-
-                // NOTE: визуальные поля
-                if ([IObjectTypes.SLICE9_PLANE, IObjectTypes.GUI_BOX, IObjectTypes.GO_SPRITE_COMPONENT].includes(value.type)) {
-                    fields.push({ name: Property.COLOR, data: value.get_color() });
-                    fields.push({ name: Property.ALPHA, data: (value as Slice9Mesh).get_alpha() });
-
-                    const atlas = (value as Slice9Mesh).get_texture()[1];
-                    const texture = (value as Slice9Mesh).get_texture()[0];
-                    
-                    // NOTE: обновляем конфиг атласов
-                    update_atlas_options();
-
-                    // NOTE: обновляем конфиг текстур только для выбранного атласа
-                    update_texture_options([Property.TEXTURE], () => {
-                        const list: any[] = [];
-                        Services.resources.get_all_textures().forEach((info) => {
-                            if(info.atlas != atlas) {
-                                return;
-                            }
-                            list.push(castTextureInfo(info));
-                        });
-                        return list;
+                // Обновляем конфиг для каждого поля (заголовки и параметры)
+                for (const uniform_field of uniform_fields) {
+                    // Обновляем заголовок и параметры в конфиге
+                    _config.forEach((group) => {
+                        const property = group.property_list.find((p) => p.name === uniform_field.name);
+                        if (property === undefined) return;
+                        property.title = uniform_field.title;
+                        if (uniform_field.params !== undefined) {
+                            property.params = uniform_field.params;
+                        }
                     });
 
-                    // NOTE: обновляем конфиг материалов
-                    update_material_options();
-
-                    fields.push({ name: Property.ATLAS, data: atlas });
-                    fields.push({ name: Property.TEXTURE, data: texture });
-                    fields.push({ name: Property.MATERIAL, data: (value as Slice9Mesh).material.name || '' });
-                    fields.push({ name: Property.BLEND_MODE, data: convertThreeJSBlendingToBlendMode((value as Slice9Mesh).material.blending) });
-                    fields.push({ name: Property.SLICE9, data: (value as Slice9Mesh).get_slice() });
-
-                    // NOTE: uniforms кастомного материала
-                    const obj_material_name = (value as Slice9Mesh).material.name || '';
-                    const obj_material_info = Services.resources.get_material_info(obj_material_name);
-                    if (obj_material_info !== undefined) {
-                        const obj_material_instance = (value as Slice9Mesh).material;
-                        type UniformEntry = { type: MaterialUniformType; params?: Record<string, unknown>; hide?: boolean };
-                        Object.entries(obj_material_info.uniforms as Record<string, UniformEntry>).forEach(([key, uniformDef]) => {
-                            if (uniformDef.hide === true) return;
-
-                            const uniformValue = (obj_material_instance.uniforms as Record<string, { value: unknown }>)?.[key]?.value;
-
-                            switch (uniformDef.type) {
-                                case MaterialUniformType.SAMPLER2D:
-                                    _config.forEach((group) => {
-                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_SAMPLER2D);
-                                        if (!property) return;
-                                        property.title = key;
-                                    });
-                                    const texturePath = (uniformValue as { path?: string } | null)?.path ?? '';
-                                    const textureName = get_file_name(texturePath);
-                                    const textureAtlas = Services.resources.get_atlas_by_texture_name(textureName) || '';
-                                    fields.push({ name: Property.UNIFORM_SAMPLER2D, data: texturePath !== '' ? `${textureAtlas}/${textureName}` : '' });
-                                    break;
-                                case MaterialUniformType.FLOAT:
-                                    _config.forEach((group) => {
-                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_FLOAT);
-                                        if (!property) return;
-                                        property.title = key;
-                                        const uniformData = obj_material_info.uniforms[key] as { params?: { min?: number; max?: number; step?: number } };
-                                        const params = uniformData?.params ?? {};
-                                        property.params = { min: params.min ?? 0, max: params.max ?? 1, step: params.step ?? 0.01 };
-                                    });
-                                    fields.push({ name: Property.UNIFORM_FLOAT, data: uniformValue as number });
-                                    break;
-                                case MaterialUniformType.RANGE:
-                                    _config.forEach((group) => {
-                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_RANGE);
-                                        if (!property) return;
-                                        property.title = key;
-                                        const uniformData = obj_material_info.uniforms[key] as { params?: MaterialUniformParams[MaterialUniformType.RANGE] };
-                                        const params = uniformData?.params ?? { min: 0, max: 1, step: 0.01 };
-                                        property.params = { min: params.min, max: params.max, step: params.step };
-                                    });
-                                    fields.push({ name: Property.UNIFORM_RANGE, data: uniformValue as number });
-                                    break;
-                                case MaterialUniformType.VEC2:
-                                    _config.forEach((group) => {
-                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_VEC2);
-                                        if (!property) return;
-                                        property.title = key;
-                                    });
-                                    fields.push({ name: Property.UNIFORM_VEC2, data: uniformValue as Vector2 });
-                                    break;
-                                case MaterialUniformType.VEC3:
-                                    _config.forEach((group) => {
-                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_VEC3);
-                                        if (!property) return;
-                                        property.title = key;
-                                    });
-                                    fields.push({ name: Property.UNIFORM_VEC3, data: uniformValue as Vector3 });
-                                    break;
-                                case MaterialUniformType.VEC4:
-                                    _config.forEach((group) => {
-                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_VEC4);
-                                        if (!property) return;
-                                        property.title = key;
-                                    });
-                                    fields.push({ name: Property.UNIFORM_VEC4, data: uniformValue as Vector4 });
-                                    break;
-                                case MaterialUniformType.COLOR:
-                                    _config.forEach((group) => {
-                                        const property = group.property_list.find((p) => p.name == Property.UNIFORM_COLOR);
-                                        if (!property) return;
-                                        property.title = key;
-                                    });
-                                    const uniformColorVec = uniformValue as Vector3 | undefined;
-                                    const uniformColorHex = uniformColorVec !== undefined ? rgbToHex(uniformColorVec) : '#ffffff';
-                                    fields.push({ name: Property.UNIFORM_COLOR, data: uniformColorHex });
-                                    break;
-                            }
-                        });
-                    }
-
-                    // NOTE: отражение только для спрайта
-                    if (value.type === IObjectTypes.GO_SPRITE_COMPONENT) {
-                        const sprite = value as GoSprite;
-                        const currentFlip = sprite.get_flip();
-
-                        switch (currentFlip) {
-                            case FlipMode.NONE:
-                                fields.push({ name: Property.FLIP_DIAGONAL, data: false });
-                                fields.push({ name: Property.FLIP_VERTICAL, data: false });
-                                fields.push({ name: Property.FLIP_HORIZONTAL, data: false });
-                                break;
-                            case FlipMode.VERTICAL:
-                                fields.push({ name: Property.FLIP_DIAGONAL, data: false });
-                                fields.push({ name: Property.FLIP_VERTICAL, data: true });
-                                fields.push({ name: Property.FLIP_HORIZONTAL, data: false });
-                                break;
-                            case FlipMode.HORIZONTAL:
-                                fields.push({ name: Property.FLIP_DIAGONAL, data: false });
-                                fields.push({ name: Property.FLIP_VERTICAL, data: false });
-                                fields.push({ name: Property.FLIP_HORIZONTAL, data: true });
-                                break;
-                            case FlipMode.DIAGONAL:
-                                fields.push({ name: Property.FLIP_DIAGONAL, data: true });
-                                fields.push({ name: Property.FLIP_VERTICAL, data: false });
-                                fields.push({ name: Property.FLIP_HORIZONTAL, data: false });
-                                break;
-                        }
-                    }
-                }
-
-                // NOTE: обновляем конфиг шрифтов
-                update_font_options();
-
-                // NOTE: текстовые поля
-                if ([IObjectTypes.TEXT, IObjectTypes.GUI_TEXT, IObjectTypes.GO_LABEL_COMPONENT].includes(value.type)) {
-                    fields.push({ name: Property.TEXT, data: (value as TextMesh).text });
-                    fields.push({ name: Property.FONT, data: (value as TextMesh).font || '' });
-                    fields.push({ name: Property.COLOR, data: value.get_color() });
-                    fields.push({ name: Property.ALPHA, data: (value as TextMesh).fillOpacity });
-
-                    const delta = new Vector3(1 * value.scale.x, 1 * value.scale.y);
-                    const max_delta = Math.max(delta.x, delta.y);
-                    const font_size = (value as TextMesh).fontSize * max_delta;
-
-                    fields.push({ name: Property.FONT_SIZE, data: font_size });
-                    fields.push({ name: Property.TEXT_ALIGN, data: (value as TextMesh).textAlign });
-
-                    const line_height = (value as TextMesh).lineHeight;
-                    if (line_height == 'normal') fields.push({ name: Property.LINE_HEIGHT, data: 1 });
-                    else fields.push({ name: Property.LINE_HEIGHT, data: line_height });
+                    // Добавляем поле в список
+                    fields.push({ name: uniform_field.name, data: uniform_field.data as PropertyValues[PropertyType] });
                 }
             }
 
@@ -951,6 +902,30 @@ function InspectorControlCreate() {
             const property = group.property_list.find((property) => property.name == Property.FONT);
             if (!property) return;
             (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateFontOptions();
+        });
+    }
+
+    function update_sound_options() {
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.SOUND);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateSoundOptions();
+        });
+    }
+
+    function update_sound_function_options() {
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.SOUND_FUNCTION);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateSoundFunctionOptions();
+        });
+    }
+
+    function update_zone_type_options() {
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.ZONE_TYPE);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateZoneTypeOptions();
         });
     }
 
@@ -3969,6 +3944,30 @@ function generateFragmentProgramOptions() {
     return data;
 }
 
+function generateSoundOptions() {
+    const data: {[key in string]: string} = {};
+    data['Не выбрано'] = '';
+    Services.resources.get_all_sounds().forEach((sound) => {
+        data[sound] = sound;
+    });
+    return data;
+}
+
+function generateSoundFunctionOptions() {
+    return {
+        'Линейная': 'linear',
+        'Квадратичная': 'quadratic',
+        'Экспоненциальная': 'exponential'
+    };
+}
+
+function generateZoneTypeOptions() {
+    return {
+        'Круг': 'circle',
+        'Прямоугольник': 'rectangle'
+    };
+}
+
 export function getDefaultInspectorConfig() {
 
     return [
@@ -4219,6 +4218,65 @@ export function getDefaultInspectorConfig() {
                     name: Property.UNIFORM_COLOR,
                     title: 'Color',
                     type: PropertyType.COLOR
+                }
+            ]
+        },
+        {
+            name: 'audio',
+            title: 'Аудио',
+            property_list: [
+                {
+                    name: Property.SOUND,
+                    title: 'Звук',
+                    type: PropertyType.LIST_TEXT,
+                    params: generateSoundOptions()
+                },
+                {
+                    name: Property.VOLUME,
+                    title: 'Громкость',
+                    type: PropertyType.SLIDER,
+                    params: { min: 0, max: 1, step: 0.01 }
+                },
+                {
+                    name: Property.LOOP,
+                    title: 'Зацикливание',
+                    type: PropertyType.BOOLEAN
+                },
+                {
+                    name: Property.PAN,
+                    title: 'Панорама',
+                    type: PropertyType.SLIDER,
+                    params: { min: -1, max: 1, step: 0.01 }
+                },
+                {
+                    name: Property.SPEED,
+                    title: 'Скорость',
+                    type: PropertyType.NUMBER,
+                    params: { min: 0.1, max: 10, step: 0.1, format: (v: number) => v.toFixed(1) }
+                },
+                {
+                    name: Property.SOUND_RADIUS,
+                    title: 'Радиус звука',
+                    type: PropertyType.NUMBER,
+                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
+                },
+                {
+                    name: Property.MAX_VOLUME_RADIUS,
+                    title: 'Радиус макс. громкости',
+                    type: PropertyType.NUMBER,
+                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
+                },
+                {
+                    name: Property.SOUND_FUNCTION,
+                    title: 'Функция затухания',
+                    type: PropertyType.LIST_TEXT,
+                    params: generateSoundFunctionOptions()
+                },
+                {
+                    name: Property.ZONE_TYPE,
+                    title: 'Тип зоны',
+                    type: PropertyType.LIST_TEXT,
+                    params: generateZoneTypeOptions()
                 }
             ]
         }

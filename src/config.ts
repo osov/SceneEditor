@@ -10,7 +10,9 @@ export const CAMERA_Z = CAMERA_FAR - 1;
 export const WORLD_SCALAR = new URLSearchParams(document.location.search).get('ws') ? parseFloat(new URLSearchParams(document.location.search).get('ws')!) : 1 / 10;
 export const DEFOLD_LIMITS = !true;
 
-export const PROJECT_NAME = new URLSearchParams(document.location.search).get('project') || 'test-project';
+// Имя проекта передаётся через Vite define при сборке
+declare const __PROJECT_NAME__: string;
+export const PROJECT_NAME = __PROJECT_NAME__;
 export const SERVER_URL = 'http://localhost:7007';
 export const WS_SERVER_URL = 'ws://localhost:7001';
 export const WS_RECONNECT_INTERVAL = 10;

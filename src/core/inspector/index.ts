@@ -49,3 +49,14 @@ export type {
     InspectorFieldDefinition,
     IInspectable,
 } from './IInspectable';
+
+// MaterialFieldProvider
+export {
+    get_material_uniform_fields,
+    get_material_inspector_fields,
+} from './MaterialFieldProvider';
+
+export type {
+    UniformFieldInfo,
+    UniformPropertyData,
+} from './MaterialFieldProvider';

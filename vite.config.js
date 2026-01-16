@@ -37,11 +37,18 @@ const mimeTypes = {
   ".basis": "image/basis",
 };
 
+// Вычисляем имя проекта для передачи в браузер
+const projectName = projectPath.replace(/^\.\.\//, '');
+console.log('[vite.config] PROJECT_NAME:', projectName);
+
 export default defineConfig({
   plugins: [
     includeHtml(),
     DynamicPublicDirectory(dirAssets, { ssr: !true, mimeTypes })
   ],
+  define: {
+    __PROJECT_NAME__: JSON.stringify(projectName),
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, "./src"),

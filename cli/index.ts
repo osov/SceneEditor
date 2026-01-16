@@ -139,8 +139,8 @@ async function main() {
         processes.push({ proc: vite, name: 'Vite Dev Server' });
         console.log(`  ✓ Vite на http://localhost:${args['vite-port']}`);
 
-        // 3. Открытие браузера
-        const editor_url = `http://localhost:${args['vite-port']}/?project=${project_path}`;
+        // 3. Открытие браузера (PROJECT_NAME теперь передаётся через Vite define)
+        const editor_url = `http://localhost:${args['vite-port']}/`;
 
         console.log('');
         console.log('════════════════════════════════════════');
