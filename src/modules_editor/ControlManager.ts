@@ -90,10 +90,15 @@ function ControlManagerCreate() {
 
         Services.event_bus.on('hierarchy:moved', (data) => {
             const e = data as { id_mesh_list?: number[]; id?: number; pid?: number; parent_id?: number; next_id?: number };
-            // Поддержка обоих форматов: id_mesh_list или id
-            const id_mesh_list = e.id_mesh_list ?? (e.id !== undefined ? [e.id] : []);
+
+            // Событие от SceneService (только id) - пропускаем, обрабатывается через id_mesh_list от TreeControl
+            if (e.id_mesh_list === undefined) {
+                return;
+            }
+
+            const id_mesh_list = e.id_mesh_list;
             const pid = e.pid ?? e.parent_id ?? -1;
-            // save history
+            // save history - сохраняем текущее состояние ДО перемещения
             const saved_list: HistoryData['MESH_MOVE'][] = [];
             const mesh_list: IBaseMeshAndThree[] = [];
             for (let i = 0; i < id_mesh_list.length; i++) {
@@ -112,22 +117,28 @@ function ControlManagerCreate() {
             }
             const target_pid = pid;
             const target_next_id = e.next_id ?? -1;
-            // NOTE: hierarchy:moved срабатывает ПОСЛЕ перемещения, поэтому НЕ вызываем move_by_id()
-            // Используем DI HistoryService для сохранения pre-move состояния
+
+            // Записываем в историю
             Services.history.push({
                 type: 'MESH_MOVE',
                 data: { items: saved_list, owner: HistoryOwner.CONTROL_MANAGER },
                 description: 'Move objects',
                 undo: (d) => undo_mesh_move(d.items),
                 redo: () => {
-                    // Redo перемещает в целевую позицию
                     for (let i = 0; i < id_mesh_list.length; i++) {
                         const mesh_id = id_mesh_list[i];
                         Services.scene.move_by_id(mesh_id, target_pid, target_next_id);
                     }
                 },
             });
-            // Обновляем выделение без повторного перемещения
+
+            // Выполняем фактическое перемещение
+            for (let i = 0; i < id_mesh_list.length; i++) {
+                const mesh_id = id_mesh_list[i];
+                Services.scene.move_by_id(mesh_id, target_pid, target_next_id);
+            }
+
+            // Обновляем выделение
             Services.selection.set_selected(mesh_list as unknown as ISceneObject[]);
             update_graph();
         });

@@ -164,10 +164,11 @@ export function create_actions_service(params: ActionsServiceParams): IActionsSe
             return;
         }
 
-        // Сохраняем данные для undo
+        // Сохраняем данные для undo с информацией о родителе и порядке
         const deleted_data = selected.map(obj => ({
             data: scene_service.serialize_object(obj),
             parent_id: get_parent_id(obj),
+            next_sibling_id: scene_service.find_next_sibling_id(obj),
         }));
 
         // Удаляем объекты
@@ -181,9 +182,31 @@ export function create_actions_service(params: ActionsServiceParams): IActionsSe
             description: `Удаление ${selected.length} объектов`,
             data: deleted_data,
             undo: (data) => {
+                // Восстанавливаем объекты с оригинальными ID и родителями
                 for (const item of data) {
-                    scene_service.deserialize([item.data]);
+                    const restored = scene_service.deserialize_object(item.data, true);
+
+                    // Добавляем к оригинальному родителю или в корень сцены
+                    if (item.parent_id !== undefined && item.parent_id !== -1) {
+                        const parent = scene_service.get_by_id(item.parent_id);
+                        if (parent !== undefined) {
+                            parent.add(restored);
+                            // Восстанавливаем позицию в иерархии
+                            if (item.next_sibling_id !== undefined && item.next_sibling_id !== -1) {
+                                scene_service.move(restored, item.parent_id, item.next_sibling_id);
+                            }
+                        } else {
+                            scene_service.add(restored);
+                        }
+                    } else {
+                        scene_service.add(restored);
+                        // Восстанавливаем позицию в корне сцены
+                        if (item.next_sibling_id !== undefined && item.next_sibling_id !== -1) {
+                            scene_service.move(restored, -1, item.next_sibling_id);
+                        }
+                    }
                 }
+                event_bus.emit('scene:changed', {});
             },
             redo: (data) => {
                 for (const item of data) {
