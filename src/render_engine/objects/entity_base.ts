@@ -120,13 +120,13 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
         return new Vector2(this.parameters.width, this.parameters.height);
     }
 
-    set_pivot(x: number, y: number, is_sync = false) {
+    set_pivot(_x: number, _y: number, _is_sync = false) {
     }
 
-    set_size(w: number, h: number) {
+    set_size(_w: number, _h: number) {
     }
 
-    set_color(hex_color: string) { }
+    set_color(_hex_color: string) { }
     get_color() { return '' }
 
 

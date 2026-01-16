@@ -1,6 +1,6 @@
 import { Vector3, Vector2, Line, BufferGeometry, LineBasicMaterial } from "three";
 import { CAMERA_Z } from "../config";
-import { make_ramk, rotate_point } from "./helpers/utils";
+import { rotate_point } from "./helpers/utils";
 import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo, preload_tiled_textures, TileInfo, set_world_bounds, set_tileset, RenderMapData } from "./parsers/tile_parser";
 import { IObjectTypes } from "./types";
 import { GoContainer, GoSprite } from "./objects/sub_types";
@@ -65,7 +65,6 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
         }
         // OBJECTS
         for (let object_layer of render_data.objects_layers) {
-            const id_layer = object_layer.id_order;
             let id_object = -1;
             for (let tile of object_layer.objects) {
                 id_object++;
@@ -105,13 +104,13 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
         // TILES
         for (let layer of render_data.layers) {
             const id_layer = layer.id_order;
-            const container = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
+            const container = Services.scene.create(IObjectTypes.GO_CONTAINER, {}) as unknown as GoContainer;
             container.name = layer.layer_name;
             world.add(container);
-            for (let tile of layer.tiles) {
+            for (const tile of layer.tiles) {
                 const tile_id = tile.id & TILE_FLIP_MASK;
                 const tile_info = get_tile_texture(tile_id);
-                if (tile_info != undefined) {
+                if (tile_info !== undefined) {
                     if (tile_info.w < tileSize) {
                         tile_info.w = tileSize;
                         Services.logger.warn('fix tile_info.w', tile_info);
@@ -130,9 +129,9 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                     x = new_pos.x + tile_w / 2;
                     y = new_pos.y + tile_h / 2;
                     const z = get_depth(x, y, id_layer, tile_w, tile_h);
-                    const plane = Services.scene.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
+                    const plane = Services.scene.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h }) as unknown as GoSprite;
                     plane.position.set(x, y, z);
-                    (plane as any).tile_z = z;
+                    (plane as GoSprite & { tile_z: number }).tile_z = z;
                     plane.set_texture(tile_info.name, tile_info.atlas);
                     used_textures.push(tile_info.name);
                     apply_tile_transform(plane, tile.id);
@@ -148,26 +147,24 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
 
         // OBJECTS
         const material = new LineBasicMaterial({ color: 0xff0000 });
-        for (let object_layer of render_data.objects_layers) {
+        for (const object_layer of render_data.objects_layers) {
             const id_layer = object_layer.id_order;
-            let id_object = -1;
-            const container = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
+            const container = Services.scene.create(IObjectTypes.GO_CONTAINER, {}) as unknown as GoContainer;
             container.name = object_layer.layer_name;
             world.add(container);
-            for (let tile of object_layer.objects) {
-                id_object++;
-                if (tile.polygon || tile.polyline) {
+            for (const tile of object_layer.objects) {
+                if (tile.polygon !== undefined || tile.polyline !== undefined) {
                     const cx = tile.x * SUB_SCALAR;
                     const cy = tile.y * SUB_SCALAR;
-                    const points = [];
-                    if (tile.polygon) {
-                        for (let point of tile.polygon) {
+                    const points: Vector2[] = [];
+                    if (tile.polygon !== undefined) {
+                        for (const point of tile.polygon) {
                             points.push(new Vector2(cx + point.x * SUB_SCALAR, cy - point.y * SUB_SCALAR));
                         }
                         points.push(points[0]);
                     }
-                    if (tile.polyline) {
-                        for (let point of tile.polyline) {
+                    if (tile.polyline !== undefined) {
+                        for (const point of tile.polyline) {
                             points.push(new Vector2(cx + point.x * SUB_SCALAR, cy - point.y * SUB_SCALAR));
                         }
                     }
@@ -181,21 +178,21 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
                 else {
                     const tile_id = tile.tile_id & TILE_FLIP_MASK;
                     const tile_info = get_tile_texture(tile_id);
-                    if (tile_info != undefined) {
+                    if (tile_info !== undefined) {
                         const tile_w = tile.width * SUB_SCALAR;
                         const tile_h = tile.height * SUB_SCALAR;
                         const x = tile.x * SUB_SCALAR;
                         const y = tile.y * SUB_SCALAR;
                         const y_depth = tile.y_src * SUB_SCALAR;
                         const z = get_depth(x, y_depth, id_layer, tile_w, tile_h);
-                        const plane = Services.scene.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h });
+                        const plane = Services.scene.create(IObjectTypes.GO_SPRITE_COMPONENT, { width: tile_w, height: tile_h }) as unknown as GoSprite;
                         plane.position.set(x, y, z);
-                        (plane as any).tile_z = z;
+                        (plane as GoSprite & { tile_z: number }).tile_z = z;
                         plane.set_texture(tile_info.name, tile_info.atlas);
                         used_textures.push(tile_info.name);
                         apply_tile_transform(plane, tile.tile_id);
-                        if (tile.rotation)
-                            plane.rotation.z = -tile.rotation! * Math.PI / 180;
+                        if (tile.rotation !== undefined)
+                            plane.rotation.z = -tile.rotation * Math.PI / 180;
                         container.add(plane);
                         plane.name = tile_info.name + '' + plane.mesh_data.id;
                         plane.userData = { tile, id_layer };

@@ -140,7 +140,7 @@ export function get_world_bounds() {
     return { min: bb_min, max: bb_max };
 }
 
-export function get_depth(x: number, y: number, id_layer: number, width = 0, height = 0) {
+export function get_depth(_x: number, y: number, id_layer: number, _width = 0, height = 0) {
     return get_depth_fix(y, height, id_layer, SORT_LAYER);
 }
 

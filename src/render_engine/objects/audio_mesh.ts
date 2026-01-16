@@ -1,12 +1,11 @@
 import { IObjectTypes } from "../types";
 import { EntityBase } from "./entity_base";
 import { DEFAULT_PAN_NORMALIZATION_DISTANCE, DEFAULT_MAX_VOLUME_RADIUS, DEFAULT_SOUND_RADIUS, DEFAULT_FADE_IN_TIME, DEFAULT_FADE_OUT_TIME } from "../../config";
-import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, CircleGeometry, Mesh, MeshBasicMaterial } from "three";
+import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, Mesh, MeshBasicMaterial } from "three";
 
 import { get_sound } from "../../modules/Sound";
 import { get_audio_manager } from "../AudioManager";
 import { uh_to_id } from "@editor/defold/utils";
-import { inspector_force_refresh } from "@editor/defold/runtime_stubs";
 import { Services } from '@editor/core';
 import { DC_LAYERS } from '@editor/engine/RenderService';
 
@@ -175,7 +174,7 @@ export class AudioMesh extends EntityBase {
     set_sound_radius(radius: number) {
         this.soundRadius = Math.max(0, radius);
         get_sound().set_sound_radius(this.get_url(), this.soundRadius);
-        inspector_force_refresh();
+        Services.event_bus.emit('inspector:update', {});
     }
 
     get_sound_radius() {
@@ -210,7 +209,7 @@ export class AudioMesh extends EntityBase {
         }
 
         get_sound().set_zone_type(this.get_url(), zoneType);
-        inspector_force_refresh();
+        Services.event_bus.emit('inspector:update', {});
     }
 
     get_zone_type() {
@@ -220,7 +219,7 @@ export class AudioMesh extends EntityBase {
     set_rectangle_width(width: number) {
         this.rectangleWidth = Math.max(0, width);
         get_sound().set_rectangle_width(this.get_url(), this.rectangleWidth);
-        inspector_force_refresh();
+        Services.event_bus.emit('inspector:update', {});
     }
 
     get_rectangle_width() {
@@ -230,7 +229,7 @@ export class AudioMesh extends EntityBase {
     set_rectangle_height(height: number) {
         this.rectangleHeight = Math.max(0, height);
         get_sound().set_rectangle_height(this.get_url(), this.rectangleHeight);
-        inspector_force_refresh();
+        Services.event_bus.emit('inspector:update', {});
     }
 
     get_rectangle_height() {
@@ -240,7 +239,7 @@ export class AudioMesh extends EntityBase {
     set_rectangle_max_volume_width(width: number) {
         this.rectangleMaxVolumeWidth = Math.max(0, width);
         get_sound().set_rectangle_max_volume_width(this.get_url(), this.rectangleMaxVolumeWidth);
-        inspector_force_refresh();
+        Services.event_bus.emit('inspector:update', {});
     }
 
     get_rectangle_max_volume_width() {
@@ -250,7 +249,7 @@ export class AudioMesh extends EntityBase {
     set_rectangle_max_volume_height(height: number) {
         this.rectangleMaxVolumeHeight = Math.max(0, height);
         get_sound().set_rectangle_max_volume_height(this.get_url(), this.rectangleMaxVolumeHeight);
-        inspector_force_refresh();
+        Services.event_bus.emit('inspector:update', {});
     }
 
     get_rectangle_max_volume_height() {
@@ -309,7 +308,7 @@ export class AudioMesh extends EntityBase {
             if (this.loop) this.play(complete_function);
             else if (complete_function) complete_function();
         });
-        inspector_force_refresh();
+        Services.event_bus.emit('inspector:update', {});
     }
 
     is_spatial() {
@@ -321,14 +320,14 @@ export class AudioMesh extends EntityBase {
     pause() {
         if (this.sound == '' || !this.get_active()) return;
         sound.pause(this.get_url(), true);
-        inspector_force_refresh();
+        Services.event_bus.emit('inspector:update', {});
     }
 
     stop() {
         if (this.sound == '' || !this.get_active()) return;
         get_sound().stop(this.get_url());
         get_sound().set_off(this.get_url(), true);
-        inspector_force_refresh();
+        Services.event_bus.emit('inspector:update', {});
     }
 
     is_playing() {
@@ -380,22 +379,6 @@ export class AudioMesh extends EntityBase {
         this.removeRectangleVisual();
         this.removeRectangleMaxVolumeVisual();
         this.removePanNormalizationVisual();
-    }
-
-    private _createListenerVisual() {
-        const listenerGeometry = new CircleGeometry(15, 32);
-        const listenerMaterial = new MeshBasicMaterial({
-            color: 0xff0000,
-            transparent: true,
-            opacity: 1
-        });
-        this.listenerVisual = new Mesh(listenerGeometry, listenerMaterial);
-
-        const listenerPosition = get_sound().get_listener_position();
-        this.listenerVisual.position.copy(listenerPosition);
-        this.listenerVisual.parent?.localToWorld(this.listenerVisual.position);
-        this.listenerVisual.visible = this.get_active();
-        this.add(this.listenerVisual);
     }
 
     private createSoundRadiusVisual() {

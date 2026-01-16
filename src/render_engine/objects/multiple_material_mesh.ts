@@ -173,13 +173,16 @@ export class MultipleMaterialMesh extends EntityPlane {
                 if (material.uniforms[uniformName]) {
                     const uniform = material.uniforms[uniformName];
                     if (uniform.value instanceof Texture) {
-                        const texture_name = uniformName == 'u_texture' ? this.get_texture(idx)[0] : get_file_name((uniform.value as any).path || '');
-                        const atlas = uniformName == 'u_texture' ? this.get_texture(idx)[1] : Services.resources.get_atlas_by_texture_name(texture_name) || '';
+                        const texture_name = uniformName === 'u_texture' ? this.get_texture(idx)[0] : get_file_name((uniform.value as Texture & { path?: string }).path || '');
+                        const atlas = uniformName === 'u_texture' ? this.get_texture(idx)[1] : Services.resources.get_atlas_by_texture_name(texture_name) || '';
                         modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
-                    } else if (material_info.uniforms[uniformName].type == MaterialUniformType.COLOR) {
-                        modifiedUniforms[uniformName] = rgb2hex(uniform.value);
                     } else {
-                        modifiedUniforms[uniformName] = uniform.value;
+                        const uniformInfo = material_info.uniforms[uniformName] as { type?: string } | undefined;
+                        if (uniformInfo?.type === MaterialUniformType.COLOR) {
+                            modifiedUniforms[uniformName] = rgb2hex(uniform.value);
+                        } else {
+                            modifiedUniforms[uniformName] = uniform.value;
+                        }
                     }
                 }
             }
@@ -223,13 +226,13 @@ export class MultipleMaterialMesh extends EntityPlane {
                     const material_info = Services.resources.get_material_info(info.name);
                     if (!material_info) continue;
 
-                    const uniform_info = material_info.uniforms[key];
+                    const uniform_info = material_info.uniforms[key] as { type?: string } | undefined;
                     if (!uniform_info) continue;
 
-                    if (uniform_info.type == MaterialUniformType.SAMPLER2D && typeof value === 'string') {
+                    if (uniform_info.type === MaterialUniformType.SAMPLER2D && typeof value === 'string') {
                         const [atlas, texture_name] = value.split('/');
                         this.set_texture(texture_name, atlas, index, key);
-                    } else if (uniform_info.type == MaterialUniformType.COLOR) {
+                    } else if (uniform_info.type === MaterialUniformType.COLOR) {
                         Services.resources.set_material_uniform_for_multiple_material_mesh(this, index, key, hex2rgba(value));
                     } else {
                         Services.resources.set_material_uniform_for_multiple_material_mesh(this, index, key, value);

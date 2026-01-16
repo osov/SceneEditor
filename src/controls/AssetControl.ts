@@ -10,7 +10,6 @@ import {
     NetMessagesEditor,
 } from "../modules_editor/modules_editor_const";
 import { span_elem, json_parsable, get_keys } from "../modules/utils";
-import { Messages } from "../modules/modules_const";
 import { contextMenuItem, get_contextmenu } from "../modules_editor/ContextMenu";
 import { NodeAction } from "@editor/shared";
 import { api, get_client_api } from "../modules_editor/ClientAPI";
@@ -442,68 +441,7 @@ function AssetControlCreate() {
         });
     }
 
-    async function _getFileAsync(dataTranfer: DataTransfer) {
-        const files = [];
-        for (var i = 0; i < dataTranfer.items.length; i++) {
-            const item = dataTranfer.items[i];
-            if (item.kind === 'file') {
-                if (typeof item.webkitGetAsEntry === 'function') {
-                    const entry = item.webkitGetAsEntry();
-                    if (entry != null) {
-                        const entryContent = await readEntryContentAsync(entry);
-                        files.push(...entryContent);
-                        continue;
-                    }
-                }
-
-                const file = item.getAsFile();
-                if (file) { files.push(file); }
-            }
-        }
-        return files;
-    };
-
-    function readEntryContentAsync(entry: FileSystemEntry): Promise<File[]> {
-        return new Promise((resolve, _reject) => {
-            let reading = 0;
-            const contents: File[] = [];
-
-            readEntry(entry);
-
-            function readEntry(entry: FileSystemEntry) {
-                if (entry.isFile) {
-                    const file_entry = entry as FileSystemFileEntry;
-                    reading++;
-                    file_entry.file(file => {
-                        reading--;
-                        contents.push(file);
-
-                        if (reading === 0) {
-                            resolve(contents);
-                        }
-                    });
-                } else if (entry.isDirectory) {
-                    const dir_entry = entry as FileSystemDirectoryEntry;
-                    readReaderContent(dir_entry.createReader());
-                }
-            };
-
-            function readReaderContent(reader: FileSystemDirectoryReader) {
-                reading++;
-                reader.readEntries(function (entries) {
-                    reading--;
-                    for (const entry of entries) {
-                        readEntry(entry);
-                    }
-                    if (reading === 0) {
-                        resolve(contents);
-                    }
-                });
-            };
-        });
-    };
-
-    function open_menu(event: any) {
+    function open_menu(event: unknown) {
         const assets_menu_list = toggle_menu_options();
         get_contextmenu().open(assets_menu_list, event, menuContextClick);
     }
@@ -850,7 +788,7 @@ function AssetControlCreate() {
         }
     }
 
-    function on_fs_events(message: Messages['SERVER_FILE_SYSTEM_EVENTS']) {
+    function on_fs_events(message: { events: FSEvent[] }) {
         const events = message.events;
         let renew_required = false;
         if (events && events.length != 0) {

@@ -4,7 +4,7 @@ import { Services } from '@editor/core';
 
 
 export function InputManager(player: DynamicEntity) {
-    function update(dt: number) {
+    function update(_dt: number) {
         const angle = get_angle();
         if (angle == -1) {
             if (player.is_moving) 

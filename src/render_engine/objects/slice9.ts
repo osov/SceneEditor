@@ -160,7 +160,7 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         Services.resources.set_material_define_for_mesh(mesh, 'USE_SLICE', slice_value);
 
         // NOTE: добавляем или убираем define в зависимости от значения texture
-        const texture_value = (parameters.texture != '') ? '' : undefined;
+        const texture_value = (parameters.texture !== '') ? '' : undefined;
         Services.resources.set_material_define_for_mesh(mesh, 'USE_TEXTURE', texture_value);
 
         material.needsUpdate = true;
@@ -273,13 +273,16 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
             if (material.uniforms[uniformName]) {
                 const uniform = material.uniforms[uniformName];
                 if (uniform.value instanceof Texture) {
-                    const texture_name = uniformName == 'u_texture' ? parameters.texture : get_file_name((uniform.value as any).path || '');
-                    const atlas = uniformName == 'u_texture' ? parameters.atlas : Services.resources.get_atlas_by_texture_name(texture_name) || '';
+                    const texture_name = uniformName === 'u_texture' ? parameters.texture : get_file_name((uniform.value as Texture & { path?: string }).path || '');
+                    const atlas = uniformName === 'u_texture' ? parameters.atlas : Services.resources.get_atlas_by_texture_name(texture_name) || '';
                     modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
-                } else if (material_info.uniforms[uniformName].type == MaterialUniformType.COLOR) {
-                    modifiedUniforms[uniformName] = rgb2hex(uniform.value);
                 } else {
-                    modifiedUniforms[uniformName] = uniform.value;
+                    const uniformInfo = material_info.uniforms[uniformName] as { type?: string } | undefined;
+                    if (uniformInfo?.type === MaterialUniformType.COLOR) {
+                        modifiedUniforms[uniformName] = rgb2hex(uniform.value);
+                    } else {
+                        modifiedUniforms[uniformName] = uniform.value;
+                    }
                 }
             }
         }
@@ -319,12 +322,12 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
                 const material_info = Services.resources.get_material_info(material.name);
                 if (!material_info) continue;
 
-                const uniform_info = material_info.uniforms[key];
+                const uniform_info = material_info.uniforms[key] as { type?: string } | undefined;
                 if (!uniform_info) continue;
-                if (uniform_info.type == MaterialUniformType.SAMPLER2D && typeof value === 'string') {
+                if (uniform_info.type === MaterialUniformType.SAMPLER2D && typeof value === 'string') {
                     const [atlas, texture_name] = value.split('/');
                     set_texture(texture_name, atlas, key);
-                } else if (uniform_info.type == MaterialUniformType.COLOR) {
+                } else if (uniform_info.type === MaterialUniformType.COLOR) {
                     Services.resources.set_material_uniform_for_mesh(mesh, key, hex2rgba(value));
                 } else {
                     Services.resources.set_material_uniform_for_mesh(mesh, key, value);

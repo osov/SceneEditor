@@ -189,21 +189,21 @@ export interface IResourceManager {
  * Типы объектов сцены
  */
 export enum ObjectTypes {
-    EMPTY = 'empty',
-    ENTITY = 'entity',
-    SLICE9_PLANE = 'slice9_plane',
-    TEXT = 'text',
+    EMPTY = '',
+    ENTITY = 'base_entity',
+    SLICE9_PLANE = 'base_slice9',
+    TEXT = 'base_text',
 
-    GUI_CONTAINER = 'gui_container',
-    GUI_BOX = 'gui_box',
-    GUI_TEXT = 'gui_text',
+    GUI_CONTAINER = 'gui',
+    GUI_BOX = 'box',
+    GUI_TEXT = 'text',
 
-    GO_CONTAINER = 'go_container',
-    GO_SPRITE_COMPONENT = 'go_sprite_component',
-    GO_LABEL_COMPONENT = 'go_label_component',
-    GO_MODEL_COMPONENT = 'go_model_component',
-    GO_ANIMATED_MODEL_COMPONENT = 'go_animated_model_component',
-    GO_AUDIO_COMPONENT = 'go_audio_component',
+    GO_CONTAINER = 'go',
+    GO_SPRITE_COMPONENT = 'sprite',
+    GO_LABEL_COMPONENT = 'label',
+    GO_MODEL_COMPONENT = 'model',
+    GO_ANIMATED_MODEL_COMPONENT = 'animated_model',
+    GO_AUDIO_COMPONENT = 'audio',
 
     COMPONENT = 'component',
 }

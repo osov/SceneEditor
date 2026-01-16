@@ -9,15 +9,12 @@ export function CmpMover(cmp_mesh: EntityBase) {
     const config: { p1: Vector2, p2: Vector2, s: number } = cmp_mesh.userData as any;
 
     function init() {
-        let dir = 1;
-        let t = 0;
         const p1 = new Vector2();
         const p2 = new Vector2();
 
         setTimeout(() => {
             const base_pos = cmp_mesh.parent!.position.clone();
-            Services.event_bus.on('engine:update', (data) => {
-                const e = data as { dt: number };
+            Services.event_bus.on('engine:update', () => {
                 p1.x = base_pos.x + config.p1.x;
                 p1.y = base_pos.y + config.p1.y;
                 p2.x = base_pos.x + config.p2.x;

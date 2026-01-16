@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Services } from '@editor/core';
 import { NULL_VALUE, ShapeNames } from "../geometry/const";
-import { arc_end, arc_start, clone, point2point, point_at_length, rotate, translate } from "../geometry/logic";
+import { arc_end, arc_start, clone, point_at_length, rotate, translate } from "../geometry/logic";
 import { Point, Segment, Vector } from "../geometry/shapes";
 import { IArc, IPoint, ISegment, PointLike } from "../geometry/types";
 import { EQ, EQ_0, multiply, shape_length } from "../geometry/utils";
@@ -33,8 +33,6 @@ export type MovementData = {
 export function PathUpdater(settings: PlayerMovementSettings, pathfinder_settings: PathFinderSettings) {
     const collision_radius = settings.collision_radius;
     const update_interval = settings.min_update_interval;
-    const min_target_change = settings.min_target_change;
-    const min_angle_change = settings.min_angle_change;
     const path_mult = settings.pred_path_lenght_mult;
     const pathfinder = PathFinder(pathfinder_settings);
 
@@ -137,27 +135,6 @@ export function PathUpdater(settings: PlayerMovementSettings, pathfinder_setting
         return true;
     }
 
-    function check_state_changed(state: ControlsState, last_check_state: ControlsState) {
-        const control = state.control_type;
-        const checked_control = last_check_state.control_type;
-        if (control != checked_control)
-            return true;
-
-        if (control == ControlType.FP || control == ControlType.GP) {
-            const target = state.target;
-            const checked_target = last_check_state.target;
-            if (target != undefined && checked_target != undefined && point2point(checked_target, target)[0] >= min_target_change)
-                return true;
-        }
-
-        if (control == ControlType.JS) {
-            const angle = state.angle;
-            const checked_angle = last_check_state.angle;
-            if (angle != undefined && checked_angle != undefined && Math.abs(angle - checked_angle) >= min_angle_change)
-                return true;
-        }
-    }
-
     function path_from_angle(cp: IPoint, angle: number, length: number) {
         const dir = Vector(1, 0);
         rotate(dir, angle);
@@ -165,17 +142,6 @@ export function PathUpdater(settings: PlayerMovementSettings, pathfinder_setting
         const ep = clone(cp);
         translate(ep, dir.x, dir.y);
         return Segment(Point(cp.x, cp.y), Point(ep.x, ep.y));
-    }
-
-    function path_to_points_amount(path_data: PathData, amount: number) {
-        if (amount == 1 && path_data.path.length > 0) {
-            const first = path_data.path[0];
-            if (first.name == ShapeNames.Segment) return (first as ISegment).start;
-            else return arc_start(first as IArc);
-        }
-        else if (amount == 0) return false;
-        const step = path_data.length / (amount - 1);
-        return path_to_points_step(path_data.path, step);
     }
 
     function path_to_points_step(path: (ISegment | IArc)[], step: number) {

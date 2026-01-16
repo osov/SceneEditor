@@ -240,33 +240,17 @@ export function ObstraclePolygonsManagerCreate(hash_cell_size = 40, obst_padding
     }
 
     function polygon_union_mult(polygons: TGeometry[]) {
-        if (polygons.length == 0) return [[]];
+        if (polygons.length === 0) return [[]];
         let result: TGeometry = polygons[0];
         for (let i = 1; i < polygons.length; i++) {
-            result = martinez.union(result, polygons[i]);
+            const unionResult = martinez.union(result as martinez.Geometry, polygons[i] as martinez.Geometry);
+            if (unionResult !== null) {
+                result = unionResult as TGeometry;
+            }
         }
         return result;
     }
     
-    function polygon_intersection_mult(polygons: TGeometry[]) {
-        if (polygons.length == 0) return [[]];
-        let result: TGeometry = polygons[0];
-        for (let i = 1; i < polygons.length; i++) {
-            result = martinez.intersection(result, polygons[i]);
-        }
-        return result;
-    }
-
-    function polygon_intersection(poly_A: TGeometry, poly_B: TGeometry) {
-        const result = martinez.intersection(poly_A, poly_B);
-        return result;
-    }
-
-    function polygon_diff(poly_A: TGeometry, poly_B: TGeometry) {
-        const result = martinez.diff(poly_A, poly_B);
-        return result;
-    }
-
     return {
         add_object: base.add_object, 
         set_objects: base.set_objects, 

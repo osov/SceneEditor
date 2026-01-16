@@ -1,4 +1,3 @@
-import { TDictionary } from "@editor/modules_editor/modules_editor_const";
 import { GoContainer } from "@editor/render_engine/objects/sub_types";
 import { IObjectTypes } from "@editor/render_engine/types";
 import { PolyPoints } from "navmesh";
@@ -12,21 +11,20 @@ import { point } from "./geometry/logic";
 import { Services } from '@editor/core';
 
 
-export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEntity[], obstacles: ISegment[], passable_polygons: PolyPoints[], navmesh: any) {
-    
-    const LD = LinesDrawer();
-    const obstacles_lines: TDictionary<any> = {};
+export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEntity[], _obstacles: ISegment[], passable_polygons: PolyPoints[], navmesh: unknown) {
 
-    const joystick = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
+    const LD = LinesDrawer();
+
+    const joystick = Services.scene.create(IObjectTypes.GO_CONTAINER, {}) as unknown as GoContainer;
     joystick.name = 'joystick';
     Services.scene.add(joystick);
-    const player_way = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
+    const player_way = Services.scene.create(IObjectTypes.GO_CONTAINER, {}) as unknown as GoContainer;
     player_way.name = 'player_way';
     Services.scene.add(player_way);
-    const pathfinder_path = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
+    const pathfinder_path = Services.scene.create(IObjectTypes.GO_CONTAINER, {}) as unknown as GoContainer;
     pathfinder_path.name = 'pathfinder_path';
     Services.scene.add(pathfinder_path);
-    const obstacles_container = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
+    const obstacles_container = Services.scene.create(IObjectTypes.GO_CONTAINER, {}) as unknown as GoContainer;
     obstacles_container.name = 'obstacles';
     Services.scene.add(obstacles_container);
 
@@ -34,35 +32,34 @@ export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEn
     player_way.no_saving = true; player_way.no_removing = true;
     pathfinder_path.no_saving = true; pathfinder_path.no_removing = true;
     obstacles_container.no_saving = true; obstacles_container.no_removing = true;
-    const user_visible = !(new URLSearchParams(document.location.search).get('user') == '0');
+    const user_visible = !(new URLSearchParams(document.location.search).get('user') === '0');
 
     const entities_containers: Dict<GoContainer> = {};
 
-    if (passable_polygons) {
+    if (passable_polygons !== undefined) {
         for (const poly of passable_polygons) {
-            // for (const poly of cell.rectangle) {
-            //     LD.draw_polygon(poly, obstacles_container, COLORS.GREEN)
-            // }
             LD.draw_polygon(poly, obstacles_container, COLORS.GREEN)
         }
     }
 
-    Services.event_bus.on('input:pointer_down', (e) => {
-        if (Services.input.is_shift() && navmesh) {
+    const navmesh_typed = navmesh as { findPath: (from: { x: number, y: number }, to: { x: number, y: number }) => Array<{ x: number, y: number }> } | undefined;
+    Services.event_bus.on('input:pointer_down', (evt) => {
+        const e = evt as { x: number, y: number };
+        if (Services.input.is_shift() && navmesh_typed !== undefined) {
             const pos = Services.camera.screen_to_world(e.x, e.y);
             const dist = vec2_distance_to(player.model.position, pos)
             const t1 = Date.now()
-            const way = navmesh.findPath(player.model.position, pos);
+            const way = navmesh_typed.findPath(player.model.position, pos);
             const t2 = Date.now()
             Services.logger.debug('time', t2 - t1, dist);
-            if (way && way.length > 0) {
+            if (way !== undefined && way.length > 0) {
                 LD.draw_multiline(way, obstacles_container, COLORS.WHITE);
             }
         }
     })
 
     for (const entity of entities) {
-        const geometry = Services.scene.create(IObjectTypes.GO_CONTAINER, {});
+        const geometry = Services.scene.create(IObjectTypes.GO_CONTAINER, {}) as unknown as GoContainer;
         geometry.name = `entity ${entity.id} collision circle`;
         Services.scene.add(geometry);
         geometry.no_saving = true; geometry.no_removing = true;
@@ -70,7 +67,7 @@ export function DrawingPhysicsManager(player: DynamicEntity, entities: DynamicEn
         entities_containers[entity.id] = geometry;
     }
 
-    function update(dt: number) {
+    function update(_dt: number) {
         if (pathfinder_path.children.length != 0) {
             for (const child of pathfinder_path.children) {
                 child.remove();

@@ -162,7 +162,7 @@ export class TextMesh extends Text implements IBaseMesh {
     }
 
     set_font(name: string, is_sync = true) {
-        this.font = Services.resources.get_font(name);
+        this.font = Services.resources.get_font(name) ?? null;
         this.parameters.font = name;
         if (is_sync)
             this.sync();
@@ -172,7 +172,7 @@ export class TextMesh extends Text implements IBaseMesh {
         return ['', ''];
     }
 
-    set_texture(name: string, atlas = '') {
+    set_texture(_name: string, _atlas = '') {
     }
 
     set_active(val: boolean) {

@@ -1,4 +1,4 @@
-import { Vector2, Vector3 } from "three";
+import { Vector3 } from "three";
 import { Aabb, createSpatialHash } from "./spatial_hash";
 import { IBaseEntityAndThree } from "../render_engine/types";
 import { Services } from '@editor/core';
@@ -59,12 +59,12 @@ export function createRegionManager(cell_size: number, object_size: number) {
     }
 
     function on_enter_region(id_region: string, id_mesh: string) {
-        Services.event_bus.emit('REGION_ENTER', {id_mesh, id_region}, false);
+        Services.event_bus.emit('REGION_ENTER', {id_mesh, id_region});
         //log('Enter:', id_mesh, 'in region:', id_region);
     }
 
     function on_leave_region(id_region: string, id_mesh: string) {
-        Services.event_bus.emit('REGION_LEAVE', {id_mesh, id_region}, false);
+        Services.event_bus.emit('REGION_LEAVE', {id_mesh, id_region});
         //log('Leave:', id_mesh, 'in region:', id_region);
     }
 

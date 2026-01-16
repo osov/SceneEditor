@@ -1,5 +1,5 @@
 import { IS_LOGGING, SERVER_URL } from "../config";
-import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, ProtocolWrapper, TRecursiveDict, DEL_INFO_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, OPEN_EXPLORER_CMD, DataFormatType } from "./modules_editor_const";
+import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, TRecursiveDict, DEL_INFO_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, OPEN_EXPLORER_CMD, DataFormatType } from "./modules_editor_const";
 import { Services } from '@editor/core';
 import { get_popups } from './Popups';
 
@@ -245,6 +245,7 @@ async function try_fetch(input: string | URL | globalThis.Request, init?: Reques
         const result = await fetch(input, init);
         return result;
     } catch (e) {
-        Services.logger.error(e);
+        Services.logger.error((e as Error).message);
+        return undefined;
     }
 }

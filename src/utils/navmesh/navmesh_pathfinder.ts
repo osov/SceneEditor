@@ -14,7 +14,6 @@ export function PathFinder() {
     
 
     const OBST_PADDING = 20 * 0.1 * 0.7;
-    const PADDING_DIAG = Math.sqrt(OBST_PADDING ** 2 + OBST_PADDING ** 2);
     const POLYGON_SPATIAL_HASH_CELL_SIZE = 40;
     const POLYGON_CELL_SIZE = 40;
     const OFFSET_ARC_SEGMENTS = 3;
@@ -22,7 +21,7 @@ export function PathFinder() {
     const start = {x: 0, y: 0};
     const end = {x: 0, y: 0};
 
-    function find_path(req_path: ISegment, location: string, collision_radius: number) {
+    function find_path(req_path: ISegment, location: string, _collision_radius: number) {
         let path_points: PointLike[] = [];
         const navmesh = locations_navmesh[location];
         if (navmesh) {
@@ -32,10 +31,6 @@ export function PathFinder() {
             }
         }
         return path_points;
-    }
-
-    function enable_object(location: string, object_id: number | string, enable: boolean) {
-        ///
     }
 
     function set_location_navmesh(location: string, navmesh: NavMesh) {
@@ -114,7 +109,7 @@ export function PathFinder() {
         let t3 = Services.time.now_ms();
 
         Services.logger.debug('get_level_size time', t3 - t2);
-        Services.logger.debug(start, end);
+        Services.logger.debug(`start: ${JSON.stringify(start)}, end: ${JSON.stringify(end)}`);
         const cells = cell_manager.make_cells(start, end);
         let t4 = Services.time.now_ms();
         Services.logger.debug('make_cells time', t4 - t3);

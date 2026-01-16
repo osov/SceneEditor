@@ -45,7 +45,9 @@ function AudioManagerModule() {
         const sound = new Audio(listener);
         const panner = listener.context.createStereoPanner();
         const buffer = Services.resources.get_sound_buffer(name);
-        sound.setBuffer(buffer);
+        if (buffer !== undefined) {
+            sound.setBuffer(buffer);
+        }
         sounds[id] = sound;
         panners[id] = panner;
         gains[id] = listener.context.createGain();

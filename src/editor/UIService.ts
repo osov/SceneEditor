@@ -64,20 +64,8 @@ export function create_ui_service(params: UIServiceParams): IUIService {
     function init(): void {
         logger.debug('Инициализация UIService...');
 
-        // Подписка на изменение выделения
-        subscriptions.push(
-            event_bus.on('selection:changed', (data) => {
-                const typed = data as { selected: ISceneObject[] };
-                update_inspector(typed.selected);
-            })
-        );
-
-        // Подписка на очистку выделения
-        subscriptions.push(
-            event_bus.on('selection:cleared', () => {
-                update_inspector([]);
-            })
-        );
+        // NOTE: InspectorControl подписан на selection:mesh_list напрямую,
+        // не дублируем подписку здесь
 
         // Подписка на обновление иерархии
         subscriptions.push(

@@ -48,8 +48,6 @@
   },
   "include": [
     "src",
-    "@types",
-    "../SceneEditor_Kopateli/src",
-    "../SceneEditor_Djam/src"
+    "@types"
   ]
 }

@@ -9,7 +9,7 @@ import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plu
 import { Vector2, Vector3, Vector4 } from 'three';
 import { FLOAT_PRECISION } from '../config';
 import { Refreshable } from '@tweakpane/core/dist/blade/common/api/refreshable';
-import { select_file } from '@editor/defold/runtime_stubs';
+import { get_asset_control } from '@editor/controls/AssetControl';
 import { Services } from '@editor/core';
 
 /** Тип Inspector */
@@ -233,7 +233,7 @@ function InspectorModule() {
                     const path = img.getAttribute('path')
                         ?.replace(/.*?\/assets\//, '')
                         .replace('")', '') ?? '';
-                    select_file(path);
+                    get_asset_control().select_file(path);
                 });
             }
         });

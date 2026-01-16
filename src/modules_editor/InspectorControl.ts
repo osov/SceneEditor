@@ -370,6 +370,24 @@ function InspectorControlCreate() {
             }
         });
 
+        // Обновление инспектора при изменении трансформации через гизмо
+        Services.event_bus.on('transform:changed', (data) => {
+            const e = data as { type: 'translate' | 'rotate' | 'scale' };
+            if (_selected_list.length === 0) return;
+
+            switch (e.type) {
+                case 'translate':
+                    refresh([Property.POSITION]);
+                    break;
+                case 'rotate':
+                    refresh([Property.ROTATION]);
+                    break;
+                case 'scale':
+                    refresh([Property.SCALE, Property.SIZE, Property.FONT_SIZE]);
+                    break;
+            }
+        });
+
         // Обработчик undo для MESH_NAME из InspectorControl
         Services.event_bus.on('history:undone', (data) => {
             const event = data as { type: string; data: unknown[]; owner?: number };
@@ -529,7 +547,8 @@ function InspectorControlCreate() {
                             const property = group.property_list.find((property) => property.name == Property.UNIFORM_RANGE);
                             if (!property) return;
                             property.title = key;
-                            const params = material.uniforms[key].params as unknown as MaterialUniformParams[MaterialUniformType.RANGE];
+                            const uniformData = material.uniforms[key] as { params?: MaterialUniformParams[MaterialUniformType.RANGE] };
+                            const params = uniformData?.params ?? { min: 0, max: 1, step: 0.01 };
                             property.params = {
                                 min: params.min,
                                 max: params.max,
@@ -544,7 +563,8 @@ function InspectorControlCreate() {
                             const property = group.property_list.find((property) => property.name == Property.UNIFORM_VEC2);
                             if (!property) return;
                             property.title = key;
-                            const params = material.uniforms[key].params as unknown as MaterialUniformParams[MaterialUniformType.VEC2];
+                            const uniformData = material.uniforms[key] as { params?: MaterialUniformParams[MaterialUniformType.VEC2] };
+                            const params = uniformData?.params ?? { x: { min: 0, max: 1, step: 0.01 }, y: { min: 0, max: 1, step: 0.01 } };
                             property.params = {
                                 x: {
                                     min: params.x.min,
@@ -566,7 +586,9 @@ function InspectorControlCreate() {
                             const property = group.property_list.find((property) => property.name == Property.UNIFORM_VEC3);
                             if (!property) return;
                             property.title = key;
-                            const params = material.uniforms[key].params as unknown as MaterialUniformParams[MaterialUniformType.VEC3];
+                            const uniformData = material.uniforms[key] as { params?: MaterialUniformParams[MaterialUniformType.VEC3] };
+                            const defaultRange = { min: 0, max: 1, step: 0.01 };
+                            const params = uniformData?.params ?? { x: defaultRange, y: defaultRange, z: defaultRange };
                             property.params = {
                                 x: {
                                     min: params.x.min,
@@ -593,7 +615,9 @@ function InspectorControlCreate() {
                             const property = group.property_list.find((property) => property.name == Property.UNIFORM_VEC4);
                             if (!property) return;
                             property.title = key;
-                            const params = material.uniforms[key].params as unknown as MaterialUniformParams[MaterialUniformType.VEC4];
+                            const uniformData = material.uniforms[key] as { params?: MaterialUniformParams[MaterialUniformType.VEC4] };
+                            const defaultRange = { min: 0, max: 1, step: 0.01 };
+                            const params = uniformData?.params ?? { x: defaultRange, y: defaultRange, z: defaultRange, w: defaultRange };
                             property.params = {
                                 x: {
                                     min: params.x.min,

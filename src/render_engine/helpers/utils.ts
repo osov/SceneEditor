@@ -212,9 +212,10 @@ export function get_material_hash(material: ShaderMaterial) {
         return 'error';
     }
 
-    const not_readonly_uniforms: { [uniform: string]: IUniform<any> } = {};
+    const not_readonly_uniforms: { [uniform: string]: IUniform<unknown> } = {};
     Object.entries(material.uniforms).forEach(([key, uniform]) => {
-        if (material_info.uniforms[key].readonly) {
+        const uniformInfo = material_info.uniforms[key] as { readonly?: boolean } | undefined;
+        if (uniformInfo?.readonly) {
             return;
         }
         not_readonly_uniforms[key] = uniform;
@@ -241,7 +242,8 @@ export function updateEachMaterialWhichHasTexture(texture: Texture) {
         const material_info = Services.resources.get_material_info(material);
         if (!material_info) return;
         Object.entries(material_info.uniforms).forEach(([uniform_name, uniform]) => {
-            if (uniform.type != MaterialUniformType.SAMPLER2D) return;
+            const uniformTyped = uniform as { type?: string };
+            if (uniformTyped.type === undefined || uniformTyped.type !== MaterialUniformType.SAMPLER2D) return;
             Object.values(material_info.instances).forEach((inst) => {
                 if (inst.uniforms[uniform_name] && inst.uniforms[uniform_name].value != null) {
                     if ((inst.uniforms[uniform_name] as IUniform<Texture>).value.uuid != texture.uuid) return;

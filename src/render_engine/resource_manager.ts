@@ -40,7 +40,7 @@ import { api, get_client_api } from '../modules_editor/ClientAPI';
 import { URL_PATHS } from '../modules_editor/modules_editor_const';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { IS_LOGGING } from '@editor/config';
-import { get_file_data, save_file_data } from '@editor/defold/runtime_stubs';
+import { get_asset_control } from '@editor/controls/AssetControl';
 import { get_container } from '../core/di/Container';
 import { TOKENS } from '../core/di/tokens';
 import { Services } from '@editor/core';
@@ -293,7 +293,8 @@ export function ResourceManagerModule() {
     }
 
     function subscribe() {
-        Services.event_bus.on('SERVER_FILE_SYSTEM_EVENTS', async (e) => {
+        Services.event_bus.on('SERVER_FILE_SYSTEM_EVENTS', async (evt) => {
+            const e = evt as { events: FSEvent[] };
             for (const event of e.events) {
                 await on_file_change(event);
             }
@@ -325,7 +326,7 @@ export function ResourceManagerModule() {
     }
 
     async function on_vertex_shader_change(path: string) {
-        const vertexShader = await get_file_data(path);
+        const vertexShader = await get_asset_control().get_file_data(path);
         if (!vertexShader) return;
 
         vertex_programs[path] = vertexShader;
@@ -351,7 +352,7 @@ export function ResourceManagerModule() {
     }
 
     async function on_fragment_shader_change(path: string) {
-        const fragmentShader = await get_file_data(path);
+        const fragmentShader = await get_asset_control().get_file_data(path);
         if (!fragmentShader) return;
 
         fragment_programs[path] = fragmentShader;
@@ -611,7 +612,7 @@ export function ResourceManagerModule() {
     }
 
     async function preload_scene(path: string) {
-        const response = await get_file_data(path);
+        const response = await get_asset_control().get_file_data(path);
         if (!response) {
             return;
         }
@@ -773,7 +774,7 @@ export function ResourceManagerModule() {
             IS_LOGGING && Services.logger.warn('vertex program exists', path);
             return;
         }
-        const shader_program = await get_file_data(path);
+        const shader_program = await get_asset_control().get_file_data(path);
         if (!shader_program) {
             return;
         }
@@ -799,7 +800,7 @@ export function ResourceManagerModule() {
             IS_LOGGING && Services.logger.warn('fragment program exists', path);
             return;
         }
-        const shader_program = await get_file_data(path);
+        const shader_program = await get_asset_control().get_file_data(path);
         if (!shader_program) {
             return;
         }
@@ -808,7 +809,7 @@ export function ResourceManagerModule() {
     }
 
     async function load_material(path: string) {
-        const response = await get_file_data(path);
+        const response = await get_asset_control().get_file_data(path);
         if (!response) {
             return;
         }
@@ -1190,7 +1191,7 @@ export function ResourceManagerModule() {
 
         if (is_save && !is_readonly) {
             // NOTE: обновляем значение в файле
-            const response = await get_file_data(material_info.path);
+            const response = await get_asset_control().get_file_data(material_info.path);
             if (!response) return;
 
             const material_data = JSON.parse(response);
@@ -1206,7 +1207,7 @@ export function ResourceManagerModule() {
                 material_data.data[uniform_name] = value;
             }
 
-            await save_file_data(material_info.path, JSON.stringify(material_data, null, 2));
+            await get_asset_control().save_file_data(material_info.path, JSON.stringify(material_data, null, 2));
             // TODO: нужно сделать так чтобы не обновляли повторно, после того как файл запишеться
         }
     }
@@ -1431,8 +1432,12 @@ export function ResourceManagerModule() {
         return changed_uniforms_data;
     }
 
+    function get_fonts() {
+        return Object.keys(fonts);
+    }
+
     function get_all_fonts() {
-        return fonts;
+        return Object.keys(fonts);
     }
 
     function get_all_vertex_programs() {
@@ -1932,6 +1937,7 @@ export function ResourceManagerModule() {
         add_atlas,
         has_atlas,
         del_atlas,
+        get_fonts,
         get_all_fonts,
         get_all_atlases,
         get_all_textures,

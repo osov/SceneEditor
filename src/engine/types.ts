@@ -143,6 +143,24 @@ export interface ISceneObject extends Object3D {
         name?: string;
         [key: string]: unknown;
     };
+
+    // Опциональные свойства для совместимости с legacy интерфейсами (flexible types)
+    /** Ключи которые не записываются в историю */
+    ignore_history?: unknown;
+    /** Объект не сохраняется в файл сцены */
+    no_saving?: boolean;
+    /** Объект нельзя удалять */
+    no_removing?: boolean;
+    /** Callback при изменении трансформации */
+    on_transform_changed?: unknown;
+    /** Установить текстуру */
+    set_texture?: (name: string, atlas?: string) => void;
+    /** Получить текстуру [name, atlas] */
+    get_texture?: () => string[];
+    /** Активировать/деактивировать объект */
+    set_active?: (active: boolean) => void;
+    /** Получить цвет объекта */
+    get_color?: () => string;
 }
 
 /** Элемент графа иерархии */
@@ -156,8 +174,8 @@ export interface SceneGraphItem {
 
 /** Интерфейс SceneService */
 export interface ISceneService {
-    /** Создать объект сцены */
-    create<T extends ObjectTypes>(type: T, params?: Record<string, unknown>, id?: number): ISceneObject;
+    /** Создать объект сцены (тип может быть ObjectTypes, IObjectTypes или string) */
+    create(type: string, params?: Record<string, unknown>, id?: number): ISceneObject;
     /** Добавить объект в сцену */
     add(object: ISceneObject, parent_id?: number, before_id?: number): void;
     /** Добавить объект к родителю */
@@ -247,7 +265,7 @@ export interface IResourceService {
     preload_fragment_program(path: string): Promise<void>;
 
     // === Текстуры и атласы ===
-    add_texture(key: string, texture: Texture, atlasName?: string): void;
+    add_texture(path: string, atlas: string, texture: Texture, override?: boolean): void;
     get_texture(name: string, atlas: string): TextureData;
     get_texture_from_atlas(atlas: string, name: string): TextureInfo | undefined;
     get_atlas_textures(atlas: string): TextureInfo[];
@@ -267,7 +285,7 @@ export interface IResourceService {
     load_model(path: string): Promise<Object3D>;
     get_model(name: string): Object3D | undefined;
     get_all_models(): string[];
-    find_animation(model_name: string, animation_name: string): AnimationClip | undefined;
+    find_animation(model_name: string, animation_name: string): { model: string, animation: string, clip: AnimationClip } | null;
     get_animations_by_model(model_name: string): AnimationClip[];
     get_all_model_animations(model_name: string): string[];
 
@@ -297,8 +315,8 @@ export interface IResourceService {
     set_material_uniform_for_original(name: string, uniform_name: string, value: unknown): void;
     set_material_uniform_for_mesh(mesh: ISceneObject, uniform_name: string, value: unknown): void;
     set_material_uniform_for_multiple_material_mesh(mesh: ISceneObject, index: number, uniform_name: string, value: unknown): void;
-    set_material_define_for_mesh(mesh: ISceneObject, define: string, value: string): void;
-    set_material_define_for_multiple_material_mesh(mesh: ISceneObject, index: number, define: string, value: string): void;
+    set_material_define_for_mesh(mesh: ISceneObject, define: string, value?: string): void;
+    set_material_define_for_multiple_material_mesh(mesh: ISceneObject, index: number, define: string, value?: string): void;
     unlink_material_for_mesh(name: string, mesh_id: number): void;
     unlink_material_for_multiple_material_mesh(name: string, mesh_id: number, index: number): void;
     get_info_about_unique_materials(name: string): unknown[];

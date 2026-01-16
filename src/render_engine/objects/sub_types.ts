@@ -17,9 +17,9 @@ export class GuiContainer extends EntityBase {
         this.layers.disable(DC_LAYERS.GUI_LAYER);
     }
 
-    set_position(x: number, y: number, z?: number): void { }
-    set_pivot(x: number, y: number, is_sync?: boolean): void { }
-    set_size(w: number, h: number): void { }
+    set_position(_x: number, _y: number, _z?: number): void { }
+    set_pivot(_x: number, _y: number, _is_sync?: boolean): void { }
+    set_size(_w: number, _h: number): void { }
 }
 
 export class GoContainer extends EntityBase {
@@ -268,7 +268,7 @@ export class GoSprite extends Slice9Mesh {
 
     private original_uv: Float32Array | null = null;
 
-    set_pivot(x: number, y: number, is_sync?: boolean): void { }
+    set_pivot(_x: number, _y: number, _is_sync?: boolean): void { }
 
     get_uv(): Float32Array {
         const geometry = this.geometry;

@@ -82,7 +82,7 @@ export function CmpSpline(cmp_mesh: EntityBase) {
         }
     }
 
-    function make_helper(point: Vector3, is_first: number) {
+    function make_helper(point: Vector3, _is_first: number) {
         const mesh = Services.scene.create(IObjectTypes.ENTITY);
         mesh.ignore_history = ['MESH_ADD'];
         mesh.no_saving = true;

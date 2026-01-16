@@ -1,6 +1,6 @@
 // import { deepClone } from "../modules/utils";
 import { NodeAction } from "@editor/shared";
-import { new_scene_popup, save_current_scene } from "@editor/defold/runtime_stubs";
+import { get_asset_control } from "@editor/controls/AssetControl";
 import { Services } from '@editor/core';
 
 /** Тип ContextMenu */
@@ -212,15 +212,15 @@ function ContextMenuCreate() {
         const current_dir = localStorage.getItem("current_dir") || '';
 
         if (action == NodeAction.new_scene) {
-            new_scene_popup(current_dir);
+            get_asset_control().new_scene_popup(current_dir);
         }
 
         if (action == NodeAction.scene_save) {
-            save_current_scene();
+            get_asset_control().save_current_scene();
         }
 
         if (action == NodeAction.scene_save_as) {
-            new_scene_popup(current_dir, true, true);
+            get_asset_control().new_scene_popup(current_dir, true, true);
         }
     }
 

@@ -136,18 +136,10 @@ export function create_inspector_service(params: InspectorServiceParams): IInspe
 
         current_data = data;
 
-        // Передаём данные в legacy InspectorControl
-        const inspector = try_get_inspector_control();
-        if (inspector !== undefined) {
-            try {
-                inspector.set_selected_list(objects as unknown as import('../render_engine/types').IBaseMeshAndThree[]);
-            } catch (error) {
-                logger.debug('Ошибка обновления InspectorControl:', error);
-            }
-        }
+        // NOTE: InspectorControl подписан на selection:mesh_list напрямую,
+        // не вызываем set_selected_list здесь чтобы избежать дублирования
 
         event_bus.emit('inspector:updated', { objects, data });
-        logger.debug(`Инспектор обновлён для ${objects.length} объектов`);
     }
 
     function get_fields_for_object(object: ISceneObject): PropertyData<PropertyType>[] {

@@ -4,7 +4,7 @@ import { interpolate_with_wrapping } from "./math_utils";
 
 
 export function AnimatedMeshManager(entities: DynamicEntity[], sort_layer: number) {
-    function update(dt: number) {
+    function update(_dt: number) {
         for (const entity of entities) {
             update_model(entity);
         }

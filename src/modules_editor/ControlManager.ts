@@ -89,43 +89,45 @@ function ControlManagerCreate() {
         });
 
         Services.event_bus.on('hierarchy:moved', (data) => {
-            const e = data as { id_mesh_list: number[]; pid: number; next_id: number };
+            const e = data as { id_mesh_list?: number[]; id?: number; pid?: number; parent_id?: number; next_id?: number };
+            // Поддержка обоих форматов: id_mesh_list или id
+            const id_mesh_list = e.id_mesh_list ?? (e.id !== undefined ? [e.id] : []);
+            const pid = e.pid ?? e.parent_id ?? -1;
             // save history
             const saved_list: HistoryData['MESH_MOVE'][] = [];
             const mesh_list: IBaseMeshAndThree[] = [];
-            for (let i = 0; i < e.id_mesh_list.length; i++) {
-                const id = e.id_mesh_list[i];
+            for (let i = 0; i < id_mesh_list.length; i++) {
+                const id = id_mesh_list[i];
                 const mesh = Services.scene.get_by_id(id) as IBaseMeshAndThree | undefined;
                 if (mesh === undefined) {
                     Services.logger.error('mesh is null', id);
                     continue;
                 }
                 const parent = mesh.parent;
-                let pid = -1;
+                let current_pid = -1;
                 if (parent !== null && is_base_mesh(parent))
-                    pid = (parent as IBaseMeshAndThree).mesh_data.id;
-                saved_list.push({ id_mesh: id, pid: pid, next_id: Services.scene.find_next_sibling_id(mesh as unknown as ISceneObject) });
+                    current_pid = (parent as IBaseMeshAndThree).mesh_data.id;
+                saved_list.push({ id_mesh: id, pid: current_pid, next_id: Services.scene.find_next_sibling_id(mesh as unknown as ISceneObject) });
                 mesh_list.push(mesh);
             }
-            // Используем DI HistoryService
+            const target_pid = pid;
+            const target_next_id = e.next_id ?? -1;
+            // NOTE: hierarchy:moved срабатывает ПОСЛЕ перемещения, поэтому НЕ вызываем move_by_id()
+            // Используем DI HistoryService для сохранения pre-move состояния
             Services.history.push({
                 type: 'MESH_MOVE',
                 data: { items: saved_list, owner: HistoryOwner.CONTROL_MANAGER },
                 description: 'Move objects',
                 undo: (d) => undo_mesh_move(d.items),
                 redo: () => {
-                    // Redo будет выполнять то же перемещение
-                    for (let i = 0; i < e.id_mesh_list.length; i++) {
-                        const id = e.id_mesh_list[i];
-                        Services.scene.move_by_id(id, e.pid, e.next_id);
+                    // Redo перемещает в целевую позицию
+                    for (let i = 0; i < id_mesh_list.length; i++) {
+                        const mesh_id = id_mesh_list[i];
+                        Services.scene.move_by_id(mesh_id, target_pid, target_next_id);
                     }
                 },
             });
-            // move
-            for (let i = 0; i < e.id_mesh_list.length; i++) {
-                const id = e.id_mesh_list[i];
-                Services.scene.move_by_id(id, e.pid, e.next_id);
-            }
+            // Обновляем выделение без повторного перемещения
             Services.selection.set_selected(mesh_list as unknown as ISceneObject[]);
             update_graph();
         });

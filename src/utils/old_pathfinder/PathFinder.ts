@@ -13,7 +13,7 @@ import { vector_from_points, vec_angle, segment, clone, rotate_vec_90CW,
     shape_box, point_at_length, split_at_length, split, shape_vector, intersect, point2point, point2segment 
 } from "../geometry/logic";
 import { Vector, Segment, Arc } from "../geometry/shapes";
-import { shape_length, normalize, multiply, add, EQ_0, vector_slope, EQ } from "../geometry/utils";
+import { shape_length, normalize, multiply, add, EQ_0, vector_slope } from "../geometry/utils";
 import { GoContainer } from "@editor/render_engine/objects/sub_types";
 import { TLinesDrawer } from "../lines_drawer";
 
@@ -25,7 +25,7 @@ const path_tree_root: PathNode = {
 };
 
 export function PathFinder(settings: PathFinderSettings) {
-    const logger = Log.get_with_prefix('pathfinder');
+    const logger = Services.logger;
     
     const max_intervals = settings.max_path_intervals;
     const collision_min_error = settings.collision_min_error;
@@ -77,10 +77,6 @@ export function PathFinder(settings: PathFinderSettings) {
         path_data.time = Services.time.now();
         path_data.cur_time = path_data.time;
         return path_data;
-    }
-
-    function default_update_way(way_required: ISegment, collision_radius: number, control_type: ControlType) {
-        return predict_way(way_required, collision_radius, control_type);
     }
 
     function find_clear_space(target: IPoint, collision_radius: number, checks_number = 4) {
@@ -495,48 +491,6 @@ export function PathFinder(settings: PathFinderSettings) {
 
 
     /**
-     * Строит все варианты путей с касательными отрезками из точки start к окуружностям с collision_radius на вершинах сегмента препятствия
-     */
-    function make_all_sideways(start: IPoint, target: IPoint, obstacle: ISegment, parent_node: PathNode | undefined, collision_radius: number) {
-        const result: PathNode[] = [];
-        for (const dir of [CCW, CW]) {
-            for (const vertice of [obstacle.start, obstacle.end]) {
-                const dist = shape_length(vector_from_points(start, vertice));
-                // Проверяем, на каком расстоянии от вершины препятствия находится start
-                if (dist > collision_radius - collision_min_error) {
-                    let node: PathNode;
-                    // Если расстояние больше радиуса столкновения, строим отрезок
-                    if (dist > collision_radius) {
-                        node = make_way(
-                            start,
-                            vertice,
-                            collision_radius,
-                            dir,
-                            parent_node
-                        );
-                    }
-                    // Если расстояние меньше радиуса столкновения, но в пределах погрешности collision_min_error,
-                    // значит, start уже находится возле данной вершины. Пробуем строить путь дальше, от вершины к цели движения
-                    else {
-                        node = make_way_bypass_vertice(
-                            start,
-                            target,
-                            vertice,
-                            dir,
-                            parent_node
-                        );
-                    }
-                    result.push(node);
-                }
-                else {
-                    // Error, start уже слишком близко к препятствию
-                }
-            }
-        }
-        return result;
-    }
-
-    /**
      * Построение двух вариантов обхода препятствия с определением дуги пути для обхода вершины загораживающей путь
      */
     function make_sideways_bypass_vertice(start: IPoint, target: IPoint, obstacle: ISegment, vertice: IPoint, clockwise = CW, parent_node?: PathNode, collision_radius?: number) {
@@ -635,7 +589,6 @@ export function PathFinder(settings: PathFinderSettings) {
 
             // Если путь не будет отклоняться сильнее предыдущего пути, строим дугу для обхода вершины
             else {
-                const obstacle_vec = vector_from_points(same_side_touch_vertice, diff_side_touch_vertice);
                 // const obstacle_norm = (!clockwise) ? obstacle_vec.rotate90CCW() : obstacle_vec.rotate90CW();
                 const v2v_vec = shape_vector(vert_to_vert);
                 const vec_S = clone(v2v_vec);
@@ -681,7 +634,6 @@ export function PathFinder(settings: PathFinderSettings) {
         const v2v_length = shape_length(vert_to_vert);
         // Путь пролегает между этими вершинами. Проверяем что расстояние между ними больше двух радиусов столкновения, иначе строить путь нет смысла.
         if (v2v_length > 2 * R) {
-            const obstacle_vec = vector_from_points(diff_side_touch_vertice, same_side_touch_vertice);
             // const obstacle_norm = (!clockwise) ? obstacle_vec.rotate90CW() : obstacle_vec.rotate90CCW();
             // const obstacle_block_angle = obstacle_norm.slope();
 
@@ -856,7 +808,6 @@ export function PathFinder(settings: PathFinderSettings) {
         else
             rotate_vec_90CCW(end_vec);
 
-        let _end_angle = vector_slope(end_vec);
         let allowed_way = undefined;
 
         end_vec = _correct_vec_angle_to_dir(end_vec, data, rotate_dir);

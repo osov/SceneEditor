@@ -43,7 +43,7 @@ export enum LogicMainTarget {
 }
 
 
-export function PhysicSystemCreate(obstacles: Line<any>[], debug = true) {
+export function PhysicSystemCreate(obstacles: Line<any>[], _debug = true) {
     const physic_world = new System();
     
     const entities: DynamicEntity[] = [];
@@ -91,7 +91,7 @@ export function PhysicSystemCreate(obstacles: Line<any>[], debug = true) {
         }
     }
 
-    function update_obstacles_physic(body: Body, dt: number) {
+    function update_obstacles_physic(body: Body, _dt: number) {
         physic_world.checkOne(body, (r) => {
             const { a, b, overlapV } = r;
             if (!a.isStatic && !b.isStatic) return;
@@ -103,7 +103,7 @@ export function PhysicSystemCreate(obstacles: Line<any>[], debug = true) {
     }
     
 
-    function update_soft_physic(body: Body, dt: number) {
+    function update_soft_physic(body: Body, _dt: number) {
         physic_world.checkOne(body, (r) => {
             const { a, b, overlapV } = r;
             if (a.isStatic || b.isStatic) return;
@@ -170,7 +170,7 @@ export function make_segments_with_id_from_data(obstacles_data: ObstacleTileData
     return all_obstacles;
 }
 
-export function make_obstacles_from_geometry(geometry_data: ISegment[], world_scalar: number) {
+export function make_obstacles_from_geometry(geometry_data: ISegment[], _world_scalar: number) {
     const all_obstacles: Line[] = [];
     for (const S of geometry_data) {
         const line = new Line(S.start, S.end, obstacle_options);

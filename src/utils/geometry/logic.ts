@@ -1,4 +1,4 @@
-import { DP_TOL, NULL_VALUE, ShapeNames, TAU } from "./const";
+import { NULL_VALUE, ShapeNames, TAU } from "./const";
 import { LINE_A, p1, p2, p3, p4, VEC_A, VEC_B, VEC_C, VOID_BOX } from "./helpers";
 import { Point, Arc, Vector, Box, Segment, Circle, Line } from "./shapes";
 import { AnyShape, I_NULL_VALUE, IArc, IBox, ICircle, ILine, IPoint, ISegment, IVector, PointLike } from "./types";
@@ -1548,7 +1548,7 @@ export function point2line(pt: IPoint, line: ILine): [number, ISegment] {
 }
 
 export function point2circle(pt: IPoint, circle: ICircle): [number, ISegment] {
-    const [dist2center, shortest_dist] = point_distance_to(pt, circle.pc);
+    const [dist2center, _shortest_dist] = point_distance_to(pt, circle.pc);
     if (EQ_0(dist2center)) {
         return [circle.r, Segment(pt, arc_start(circle_to_arc(circle)))];
     } else {
@@ -1597,7 +1597,7 @@ export function point2segment(pt: IPoint, segment: ISegment): [number, ISegment]
 export function point2arc(pt: IPoint, arc: IArc): [number, ISegment] {
     const circle = Circle(clone(arc.pc), arc.r);
     const dist_and_segment = [];
-    const [dist, shortest_segment] = point2circle(pt, circle);
+    const [_dist, shortest_segment] = point2circle(pt, circle);
     if (point_on(shortest_segment.end, arc)) {
         dist_and_segment.push(point2circle(pt, circle));
     }
@@ -1745,7 +1745,7 @@ export function circle2line(circle: ICircle, line: ILine): [number, ISegment] {
     if (ip.length > 0) {
         return [0, Segment(ip[0], ip[0])];
     }
-    const [dist_from_center, shortest_segment_from_center] = point2line(circle.pc, line);
+    const [_dist_from_center, shortest_segment_from_center] = point2line(circle.pc, line);
     const [dist, shortest_segment] = point2circle(shortest_segment_from_center.end, circle);
     reverse(shortest_segment);
     return [dist, shortest_segment];

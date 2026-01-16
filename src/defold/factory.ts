@@ -4,7 +4,7 @@ import { MultipleMaterialMesh } from "@editor/render_engine/objects/multiple_mat
 import { Slice9Mesh } from "@editor/render_engine/objects/slice9";
 import { TextMesh } from "@editor/render_engine/objects/text";
 import { Vector3, Quaternion } from "three";
-import { load_part_of_scene_in_pos } from "./runtime_stubs";
+import { get_asset_control } from '@editor/controls/AssetControl';
 import { Services } from '@editor/core';
 
 declare global {
@@ -40,7 +40,7 @@ export function factory_module() {
             if (!url.includes('.scn'))
                 url += '.scn';
         }
-        return load_part_of_scene_in_pos(
+        return get_asset_control().loadPartOfSceneInPos(
             url,
             position ? new Vector3().copy(position) : undefined,
             rotation ? new Quaternion().copy(rotation) : undefined,

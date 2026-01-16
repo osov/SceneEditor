@@ -74,8 +74,8 @@ export function create_resource_service(params: ResourceServiceParams): IResourc
     }
 
     // === Текстуры и атласы ===
-    function add_texture(key: string, texture: Texture, atlasName?: string): void {
-        return require_resource_manager().add_texture(key, texture, atlasName);
+    function add_texture(path: string, atlas: string, texture: Texture, override?: boolean): void {
+        return require_resource_manager().add_texture(path, atlas, texture, override);
     }
 
     function get_texture(name: string, atlas: string): TextureData {
@@ -147,7 +147,7 @@ export function create_resource_service(params: ResourceServiceParams): IResourc
         return require_resource_manager().get_all_models();
     }
 
-    function find_animation(model_name: string, animation_name: string): AnimationClip | undefined {
+    function find_animation(model_name: string, animation_name: string): { model: string, animation: string, clip: AnimationClip } | null {
         return require_resource_manager().find_animation(model_name, animation_name);
     }
 
@@ -246,11 +246,11 @@ export function create_resource_service(params: ResourceServiceParams): IResourc
         return require_resource_manager().set_material_uniform_for_multiple_material_mesh(mesh, index, uniform_name, value);
     }
 
-    function set_material_define_for_mesh(mesh: ISceneObject, define: string, value: string): void {
+    function set_material_define_for_mesh(mesh: ISceneObject, define: string, value?: string): void {
         return require_resource_manager().set_material_define_for_mesh(mesh, define, value);
     }
 
-    function set_material_define_for_multiple_material_mesh(mesh: ISceneObject, index: number, define: string, value: string): void {
+    function set_material_define_for_multiple_material_mesh(mesh: ISceneObject, index: number, define: string, value?: string): void {
         return require_resource_manager().set_material_define_for_multiple_material_mesh(mesh, index, define, value);
     }
 
