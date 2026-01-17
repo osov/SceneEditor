@@ -1,0 +1,73 @@
+{
+  "tasks": {
+    "task-1768656003283-dzuzfp": {
+      "taskId": "task-1768656003283-dzuzfp",
+      "type": "refactor",
+      "description": "Декомпозиция InspectorControl.ts (4283 строки) на PropertyHandlers, PropertyHistory и PropertyConverters",
+      "priority": "critical",
+      "status": "pending",
+      "progress": 0,
+      "assignedTo": [],
+      "tags": [
+        "inspector",
+        "refactoring",
+        "phase-1"
+      ],
+      "createdAt": "2026-01-17T13:20:03.283Z",
+      "startedAt": null,
+      "completedAt": null
+    },
+    "task-1768656003412-80g8cw": {
+      "taskId": "task-1768656003412-80g8cw",
+      "type": "refactor",
+      "description": "Интеграция IInspectable интерфейса с объектами сцены (GoSprite, GuiBox, GoLabel и т.д.)",
+      "priority": "high",
+      "status": "pending",
+      "progress": 0,
+      "assignedTo": [],
+      "tags": [
+        "inspector",
+        "integration",
+        "phase-2"
+      ],
+      "createdAt": "2026-01-17T13:20:03.412Z",
+      "startedAt": null,
+      "completedAt": null
+    },
+    "task-1768656003546-kbfv4j": {
+      "taskId": "task-1768656003546-kbfv4j",
+      "type": "refactor",
+      "description": "Рефакторинг TreeControl.ts (2557 строк) - отделение данных от DOM",
+      "priority": "high",
+      "status": "pending",
+      "progress": 0,
+      "assignedTo": [],
+      "tags": [
+        "hierarchy",
+        "refactoring",
+        "phase-3"
+      ],
+      "createdAt": "2026-01-17T13:20:03.546Z",
+      "startedAt": null,
+      "completedAt": null
+    },
+    "task-1768656003696-kz3ytb": {
+      "taskId": "task-1768656003696-kz3ytb",
+      "type": "refactor",
+      "description": "Унификация Inspector.ts и InspectorControl.ts - устранение дублирования",
+      "priority": "normal",
+      "status": "pending",
+      "progress": 0,
+      "assignedTo": [],
+      "tags": [
+        "inspector",
+        "cleanup",
+        "phase-4"
+      ],
+      "createdAt": "2026-01-17T13:20:03.696Z",
+      "startedAt": null,
+      "completedAt": null
+    }
+  },
+  "version": "3.0.0"
+}

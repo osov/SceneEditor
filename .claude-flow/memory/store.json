@@ -1,0 +1,62 @@
+{
+  "entries": {
+    "architecture-state": {
+      "key": "architecture-state",
+      "value": {
+        "completed": {
+          "di_container": true,
+          "plugin_system": true,
+          "inspector_types": true,
+          "event_bus": true,
+          "base_services": true,
+          "service_provider": true,
+          "bootstrap": true,
+          "engine_services": [
+            "RenderService",
+            "SceneService",
+            "ResourceService",
+            "CameraService"
+          ],
+          "editor_services": [
+            "SelectionService",
+            "HistoryService",
+            "TransformService",
+            "ActionsService",
+            "HierarchyService",
+            "UIService",
+            "InspectorService",
+            "SizeService",
+            "KeybindingsService",
+            "NotificationService",
+            "AssetService"
+          ]
+        },
+        "in_progress": {
+          "SizeControl": "partial",
+          "AssetControl": "used in old places"
+        },
+        "need_migration": {
+          "large_files": {
+            "InspectorControl.ts": "4283 lines",
+            "TreeControl.ts": "2557 lines",
+            "resource_manager.ts": "87 KB"
+          },
+          "ui_modules": [
+            "Inspector.ts",
+            "ControlManager.ts",
+            "Popups.ts",
+            "ContextMenu.ts",
+            "ClientAPI.ts"
+          ]
+        }
+      },
+      "metadata": {
+        "category": "project-state"
+      },
+      "storedAt": "2026-01-17T13:17:13.587Z",
+      "accessCount": 0,
+      "lastAccessed": "2026-01-17T13:17:13.587Z"
+    }
+  },
+  "version": "3.0.0"
+}
