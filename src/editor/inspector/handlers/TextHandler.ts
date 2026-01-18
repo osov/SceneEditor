@@ -22,6 +22,8 @@ interface ITextMesh extends IBaseMeshAndThree {
     textAlign: 'left' | 'right' | 'center' | 'justify';
     lineHeight: number;
     set_text?: (text: string) => void;
+    set_font?: (name: string, is_sync?: boolean) => void;
+    get_font_name?: () => string;
 }
 
 /** Создать TextHandler */
@@ -130,7 +132,10 @@ export function create_text_handler(params?: HandlerParams): IPropertyHandler {
         for (const mesh of meshes) {
             if (!is_text_mesh(mesh)) continue;
 
-            const font = mesh.font ?? '';
+            // Используем get_font_name() для получения имени шрифта
+            const font = typeof mesh.get_font_name === 'function'
+                ? mesh.get_font_name()
+                : '';
             values_by_id.set(mesh.mesh_data.id, font);
 
             if (first_font === undefined) {
@@ -149,11 +154,15 @@ export function create_text_handler(params?: HandlerParams): IPropertyHandler {
 
     function update_font(context: UpdateContext): void {
         const { meshes, value } = context;
-        const font = value as string;
+        const font_name = value as string;
 
         for (const mesh of meshes) {
             if (!is_text_mesh(mesh)) continue;
-            mesh.font = font;
+
+            // Вызываем set_font() вместо прямого присваивания
+            if (typeof mesh.set_font === 'function') {
+                mesh.set_font(font_name);
+            }
         }
     }
 

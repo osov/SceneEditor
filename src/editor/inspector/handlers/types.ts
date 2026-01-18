@@ -34,6 +34,8 @@ export interface UpdateContext {
     axis_info: ChangeAxisInfo;
     /** Является ли последним событием в серии (отпускание мыши) */
     is_last: boolean;
+    /** Дополнительные данные действия (для ITEM_LIST и других) */
+    action_data?: unknown;
 }
 
 /** Контекст чтения свойства */

@@ -9,12 +9,16 @@ export { create_transform_handler } from './TransformHandler';
 export { create_graphics_handler } from './GraphicsHandler';
 export { create_text_handler } from './TextHandler';
 export { create_audio_handler } from './AudioHandler';
+export { create_model_handler } from './ModelHandler';
+export { create_animation_handler } from './AnimationHandler';
 
 import type { IPropertyHandler, HandlerParams } from './types';
 import { create_transform_handler } from './TransformHandler';
 import { create_graphics_handler } from './GraphicsHandler';
 import { create_text_handler } from './TextHandler';
 import { create_audio_handler } from './AudioHandler';
+import { create_model_handler } from './ModelHandler';
+import { create_animation_handler } from './AnimationHandler';
 import { Property } from '../../../core/inspector/IInspectable';
 
 /** Создать все handlers */
@@ -24,6 +28,8 @@ export function create_all_handlers(params?: HandlerParams): IPropertyHandler[] 
         create_graphics_handler(params),
         create_text_handler(params),
         create_audio_handler(params),
+        create_model_handler(params),
+        create_animation_handler(params),
     ];
 }
 

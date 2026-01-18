@@ -169,6 +169,10 @@ export class TextMesh extends Text implements IBaseMesh {
             this.sync();
     }
 
+    get_font_name(): string {
+        return this.parameters.font;
+    }
+
     get_texture() {
         return ['', ''];
     }
@@ -259,6 +263,13 @@ export class TextMesh extends Text implements IBaseMesh {
     }
 
     /**
+     * Получить список доступных шрифтов
+     */
+    get_available_fonts(): string[] {
+        return Services.resources.get_all_fonts();
+    }
+
+    /**
      * Получить определения полей для инспектора
      * TextMesh не наследует от EntityBase, поэтому включает все базовые поля
      */
@@ -279,7 +290,7 @@ export class TextMesh extends Text implements IBaseMesh {
             { group: 'graphics', property: Property.ALPHA, type: PropertyType.SLIDER, params: { min: 0, max: 1, step: 0.01 } },
             // Текст
             { group: 'text', property: Property.TEXT, type: PropertyType.LOG_DATA },
-            { group: 'text', property: Property.FONT, type: PropertyType.LIST_TEXT },
+            { group: 'text', property: Property.FONT, type: PropertyType.LIST_TEXT, params: { options: this.get_available_fonts() } },
             { group: 'text', property: Property.FONT_SIZE, type: PropertyType.NUMBER },
             { group: 'text', property: Property.TEXT_ALIGN, type: PropertyType.LIST_TEXT },
         ];

@@ -84,7 +84,7 @@ export class AudioMesh extends EntityBase {
 
     /** Получить URL объекта (безопасно, т.к. объект уже в сцене) */
     private get_url(): string {
-        const url = this.get_url();
+        const url = Services.scene.get_url_by_id(this.mesh_data.id);
         if (url === undefined) throw new Error(`AudioMesh URL not found for id: ${this.get_id()}`);
         return url;
     }
@@ -197,6 +197,16 @@ export class AudioMesh extends EntityBase {
                 get_sound().set_rectangle_height(this.get_url(), 0);
                 get_sound().set_rectangle_max_volume_width(this.get_url(), 0);
                 get_sound().set_rectangle_max_volume_height(this.get_url(), 0);
+
+                // Восстанавливаем дефолтные значения радиусов если они были сброшены
+                if (this.soundRadius === 0) {
+                    this.soundRadius = DEFAULT_SOUND_RADIUS;
+                    get_sound().set_sound_radius(this.get_url(), DEFAULT_SOUND_RADIUS);
+                }
+                if (this.maxVolumeRadius === 0) {
+                    this.maxVolumeRadius = DEFAULT_MAX_VOLUME_RADIUS;
+                    get_sound().set_max_volume_radius(this.get_url(), DEFAULT_MAX_VOLUME_RADIUS);
+                }
             } else if (zoneType === SoundZoneType.RECTANGULAR) {
                 this.soundRadius = 0;
                 this.maxVolumeRadius = 0;
@@ -320,8 +330,21 @@ export class AudioMesh extends EntityBase {
 
     pause() {
         if (this.sound == '' || !this.get_active()) return;
-        sound.pause(this.get_url(), true);
+        get_sound().pause(this.get_url(), true);
         Services.event_bus.emit('inspector:update', {});
+    }
+
+    resume() {
+        if (this.sound == '' || !this.get_active()) return;
+        get_sound().pause(this.get_url(), false);
+        Services.event_bus.emit('inspector:update', {});
+    }
+
+    is_paused() {
+        if (!this.get_active()) return false;
+        const sound_module = get_sound();
+        // Проверяем активен ли звук но на паузе
+        return !sound_module.is_sound_playing(this.get_url()) && sound_module.is_off(this.get_url()) === false;
     }
 
     stop() {
@@ -728,16 +751,29 @@ export class AudioMesh extends EntityBase {
     override get_inspector_fields(): InspectorFieldDefinition[] {
         return [
             ...super.get_inspector_fields(),
-            // Аудио
+            // Аудио - основные
             { group: 'audio', property: Property.SOUND, type: PropertyType.LIST_TEXT },
             { group: 'audio', property: Property.VOLUME, type: PropertyType.SLIDER, params: { min: 0, max: 1, step: 0.01 } },
             { group: 'audio', property: Property.LOOP, type: PropertyType.BOOLEAN },
             { group: 'audio', property: Property.PAN, type: PropertyType.SLIDER, params: { min: -1, max: 1, step: 0.01 } },
             { group: 'audio', property: Property.SPEED, type: PropertyType.NUMBER, params: { min: 0.1, max: 10, step: 0.1 } },
+            // Аудио - контролы воспроизведения
+            { group: 'audio', property: Property.AUDIO_PLAY_PAUSE, type: PropertyType.BUTTON, title: this.is_playing() ? '⏸ Пауза' : '▶ Играть' },
+            { group: 'audio', property: Property.AUDIO_STOP, type: PropertyType.BUTTON, title: '⏹ Стоп' },
+            // Аудио - пространственные
+            { group: 'audio', property: Property.ZONE_TYPE, type: PropertyType.LIST_TEXT },
+            { group: 'audio', property: Property.SOUND_FUNCTION, type: PropertyType.LIST_TEXT },
             { group: 'audio', property: Property.SOUND_RADIUS, type: PropertyType.NUMBER, params: { min: 0 } },
             { group: 'audio', property: Property.MAX_VOLUME_RADIUS, type: PropertyType.NUMBER, params: { min: 0 } },
-            { group: 'audio', property: Property.SOUND_FUNCTION, type: PropertyType.LIST_TEXT },
-            { group: 'audio', property: Property.ZONE_TYPE, type: PropertyType.LIST_TEXT },
+            { group: 'audio', property: Property.PAN_NORMALIZATION, type: PropertyType.NUMBER, params: { min: 0 } },
+            // Аудио - прямоугольные зоны
+            { group: 'audio', property: Property.RECTANGLE_WIDTH, type: PropertyType.NUMBER, params: { min: 0 } },
+            { group: 'audio', property: Property.RECTANGLE_HEIGHT, type: PropertyType.NUMBER, params: { min: 0 } },
+            { group: 'audio', property: Property.RECTANGLE_MAX_WIDTH, type: PropertyType.NUMBER, params: { min: 0 } },
+            { group: 'audio', property: Property.RECTANGLE_MAX_HEIGHT, type: PropertyType.NUMBER, params: { min: 0 } },
+            // Аудио - fade
+            { group: 'audio', property: Property.FADE_IN_TIME, type: PropertyType.NUMBER, params: { min: 0, step: 0.1 } },
+            { group: 'audio', property: Property.FADE_OUT_TIME, type: PropertyType.NUMBER, params: { min: 0, step: 0.1 } },
         ];
     }
 }

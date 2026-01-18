@@ -7,7 +7,7 @@ import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils'
 import { hex2rgba, rgb2hex } from "@editor/defold/utils";
 import { Services } from '@editor/core';
 import { DC_LAYERS } from '@editor/engine/RenderService';
-import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
+import type { InspectorFieldDefinition } from "@editor/core/inspector";
 
 export interface MultipleMaterialMeshSerializeData {
     mesh_name: string,
@@ -22,7 +22,7 @@ export class MultipleMaterialMesh extends EntityPlane {
     protected materials: ShaderMaterial[] = [];
     protected textures: string[][] = [];
 
-    protected default_material_name = 'model';
+    protected default_material_name = 'slice9';
 
     constructor(id: number, width = 0, height = 0) {
         super(id);
@@ -271,15 +271,14 @@ export class MultipleMaterialMesh extends EntityPlane {
     }
 
     /**
-     * MultipleMaterialMesh добавляет графические поля для 3D моделей
+     * MultipleMaterialMesh использует базовые поля инспектора
+     * NOTE: Графические поля (COLOR, TEXTURE, MATERIAL) убраны так как
+     * get_color() возвращает undefined при пустом массиве materials
      */
     override get_inspector_fields(): InspectorFieldDefinition[] {
         return [
             ...super.get_inspector_fields(),
-            // Графика для моделей
-            { group: 'graphics', property: Property.COLOR, type: PropertyType.COLOR },
-            { group: 'graphics', property: Property.TEXTURE, type: PropertyType.LIST_TEXTURES },
-            { group: 'graphics', property: Property.MATERIAL, type: PropertyType.LIST_TEXT },
+            // Пока без дополнительных полей - нужно исправить get_color
         ];
     }
 } 

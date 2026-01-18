@@ -2,6 +2,7 @@ import { AudioListener, Audio } from "three";
 import { TDictionary } from "../modules_editor/modules_editor_const";
 import { Services } from '@editor/core';
 import { get_sound } from '../modules/Sound';
+import '../defold/vmath';
 
 /** Тип AudioManager */
 export type AudioManagerType = ReturnType<typeof AudioManagerModule>;

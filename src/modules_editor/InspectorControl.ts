@@ -81,7 +81,9 @@ import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontE
 import { MaterialUniformParams, MaterialUniformType, TextureInfo } from '../render_engine/resource_manager';
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 import { GoSprite, FlipMode } from '../render_engine/objects/sub_types';
-import { AudioMesh } from '../render_engine/objects/audio_mesh';
+import { AudioMesh, SoundFunctionType, SoundZoneType } from '../render_engine/objects/audio_mesh';
+import { MultipleMaterialMesh } from '../render_engine/objects/multiple_material_mesh';
+import { AnimatedMesh } from '../render_engine/objects/animated_mesh';
 import { HistoryOwner } from './modules_editor_const';
 import { Services } from '@editor/core';
 import { get_control_manager } from './ControlManager';
@@ -690,14 +692,27 @@ function InspectorControlCreate() {
                 return (obj as Slice9Mesh).get_alpha();
             case Property.ATLAS: {
                 const texture_info = (obj as Slice9Mesh).get_texture();
-                return texture_info[1]; // atlas
+                return texture_info ? texture_info[1] : ''; // atlas
             }
             case Property.TEXTURE: {
+                // MultipleMaterialMesh и Slice9Mesh имеют разные форматы get_texture
+                if ('textures' in obj) {
+                    // MultipleMaterialMesh - возвращает [name, atlas, uniform_key]
+                    const texture_info = (obj as MultipleMaterialMesh).get_texture(0);
+                    return texture_info ? texture_info[0] : '';
+                }
+                // Slice9Mesh - возвращает [name, atlas]
                 const texture_info = (obj as Slice9Mesh).get_texture();
-                return texture_info[0]; // texture name
+                return texture_info ? texture_info[0] : ''; // texture name
             }
-            case Property.MATERIAL:
+            case Property.MATERIAL: {
+                // MultipleMaterialMesh имеет массив материалов
+                if ('materials' in obj && Array.isArray((obj as MultipleMaterialMesh).materials)) {
+                    const materials = (obj as MultipleMaterialMesh).materials;
+                    return materials.length > 0 ? (materials[0].name || '') : '';
+                }
                 return (obj as Slice9Mesh).material.name || '';
+            }
             case Property.BLEND_MODE:
                 return convertThreeJSBlendingToBlendMode((obj as Slice9Mesh).material.blending);
             case Property.SLICE9:
@@ -705,7 +720,7 @@ function InspectorControlCreate() {
             case Property.TEXT:
                 return (obj as TextMesh).text;
             case Property.FONT:
-                return (obj as TextMesh).font || '';
+                return (obj as TextMesh).get_font_name();
             case Property.FONT_SIZE: {
                 const delta = new Vector3(1 * obj.scale.x, 1 * obj.scale.y);
                 const max_delta = Math.max(delta.x, delta.y);
@@ -742,6 +757,47 @@ function InspectorControlCreate() {
                 return (obj as AudioMesh).get_sound_function();
             case Property.ZONE_TYPE:
                 return (obj as AudioMesh).get_zone_type();
+            case Property.PAN_NORMALIZATION:
+                return (obj as AudioMesh).get_pan_normalization_distance();
+            case Property.RECTANGLE_WIDTH:
+                return (obj as AudioMesh).get_rectangle_width();
+            case Property.RECTANGLE_HEIGHT:
+                return (obj as AudioMesh).get_rectangle_height();
+            case Property.RECTANGLE_MAX_WIDTH:
+                return (obj as AudioMesh).get_rectangle_max_volume_width();
+            case Property.RECTANGLE_MAX_HEIGHT:
+                return (obj as AudioMesh).get_rectangle_max_volume_height();
+            case Property.FADE_IN_TIME:
+                return (obj as AudioMesh).get_fade_in_time();
+            case Property.FADE_OUT_TIME:
+                return (obj as AudioMesh).get_fade_out_time();
+            case Property.AUDIO_PLAY_PAUSE:
+                // Кнопка воспроизведения/паузы - возвращаем callback
+                return () => {
+                    const audio = obj as AudioMesh;
+                    if (audio.is_playing()) {
+                        // Если играет - ставим на паузу
+                        audio.pause();
+                    } else if (audio.is_paused()) {
+                        // Если на паузе - возобновляем
+                        audio.resume();
+                    } else {
+                        // Если остановлен - начинаем проигрывание
+                        audio.play();
+                    }
+                };
+            case Property.AUDIO_STOP:
+                // Кнопка стоп - возвращаем callback
+                return () => {
+                    (obj as AudioMesh).stop();
+                };
+            // 3D модели
+            case Property.MESH_NAME:
+                return (obj as MultipleMaterialMesh).get_mesh_name();
+            case Property.ANIMATIONS:
+                return Object.keys((obj as AnimatedMesh).get_animation_list());
+            case Property.CURRENT_ANIMATION:
+                return (obj as AnimatedMesh).get_animation();
             default:
                 Services.logger.warn(`[get_property_value] Неизвестное свойство: ${property}`);
                 return undefined;
@@ -801,6 +857,19 @@ function InspectorControlCreate() {
             update_zone_type_options();
         }
 
+        // Для модельных полей обновляем списки мешей
+        const mesh_field = field_defs.find(f => f.property === Property.MESH_NAME);
+        if (mesh_field !== undefined) {
+            update_mesh_options();
+        }
+
+        // Для анимированных моделей обновляем списки анимаций
+        const animation_field = field_defs.find(f => f.property === Property.CURRENT_ANIMATION);
+        if (animation_field !== undefined && 'get_animation_list' in obj) {
+            const anim_list = Object.keys((obj as AnimatedMesh).get_animation_list());
+            update_animation_options(anim_list);
+        }
+
         // Преобразуем определения полей в данные
         for (const def of field_defs) {
             const property_data = field_definition_to_property_data(def, obj);
@@ -824,8 +893,8 @@ function InspectorControlCreate() {
                 const material_name = material.name || '';
                 const material_uniforms = material.uniforms as Record<string, { value: unknown }> | null;
 
-                // Проверяем наличие uniforms
-                if (material_uniforms === null) {
+                // Проверяем наличие uniforms и имя материала
+                if (material_uniforms === null || material_name === '') {
                     return { id: value.mesh_data.id, data: fields };
                 }
 
@@ -926,6 +995,22 @@ function InspectorControlCreate() {
             const property = group.property_list.find((property) => property.name == Property.ZONE_TYPE);
             if (!property) return;
             (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateZoneTypeOptions();
+        });
+    }
+
+    function update_mesh_options() {
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.MESH_NAME);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateMeshOptions();
+        });
+    }
+
+    function update_animation_options(animations: string[]) {
+        _config.forEach((group) => {
+            const property = group.property_list.find((property) => property.name == Property.CURRENT_ANIMATION);
+            if (!property) return;
+            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateAnimationOptions(animations);
         });
     }
 
@@ -1766,6 +1851,26 @@ function InspectorControlCreate() {
             case Property.FLIP_VERTICAL: updateFlipVertical(info); break;
             case Property.FLIP_HORIZONTAL: updateFlipHorizontal(info); break;
             case Property.FLIP_DIAGONAL: updateFlipDiagonal(info); break;
+            // Аудио свойства
+            case Property.SOUND: updateAudioSound(info); break;
+            case Property.VOLUME: updateAudioVolume(info); break;
+            case Property.LOOP: updateAudioLoop(info); break;
+            case Property.PAN: updateAudioPan(info); break;
+            case Property.SPEED: updateAudioSpeed(info); break;
+            case Property.SOUND_RADIUS: updateAudioSoundRadius(info); break;
+            case Property.MAX_VOLUME_RADIUS: updateAudioMaxVolumeRadius(info); break;
+            case Property.SOUND_FUNCTION: updateAudioSoundFunction(info); break;
+            case Property.ZONE_TYPE: updateAudioZoneType(info); break;
+            case Property.PAN_NORMALIZATION: updateAudioPanNormalization(info); break;
+            case Property.RECTANGLE_WIDTH: updateAudioRectangleWidth(info); break;
+            case Property.RECTANGLE_HEIGHT: updateAudioRectangleHeight(info); break;
+            case Property.RECTANGLE_MAX_WIDTH: updateAudioRectangleMaxWidth(info); break;
+            case Property.RECTANGLE_MAX_HEIGHT: updateAudioRectangleMaxHeight(info); break;
+            case Property.FADE_IN_TIME: updateAudioFadeInTime(info); break;
+            case Property.FADE_OUT_TIME: updateAudioFadeOutTime(info); break;
+            // 3D модели
+            case Property.MESH_NAME: updateMeshName(info); break;
+            case Property.CURRENT_ANIMATION: updateCurrentAnimation(info); break;
         }
     }
 
@@ -3668,13 +3773,189 @@ function InspectorControlCreate() {
             if (item.type === IObjectTypes.GO_SPRITE_COMPONENT) {
                 const sprite = item as GoSprite;
                 sprite.set_flip(FlipMode.NONE);
-                if(info.data.event.value) { 
+                if(info.data.event.value) {
                     sprite.set_flip(FlipMode.DIAGONAL);
                 }
             }
         });
 
         refresh([Property.FLIP_VERTICAL, Property.FLIP_HORIZONTAL]);
+    }
+
+    // === Аудио функции обновления ===
+
+    function updateAudioSound(info: ChangeInfo) {
+        const value = info.data.event.value as string;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_sound(value);
+            }
+        });
+    }
+
+    function updateAudioVolume(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_volume(value);
+            }
+        });
+    }
+
+    function updateAudioLoop(info: ChangeInfo) {
+        const value = info.data.event.value as boolean;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_loop(value);
+            }
+        });
+    }
+
+    function updateAudioPan(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_pan(value);
+            }
+        });
+    }
+
+    function updateAudioSpeed(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_speed(value);
+            }
+        });
+    }
+
+    function updateAudioSoundRadius(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_sound_radius(value);
+            }
+        });
+    }
+
+    function updateAudioMaxVolumeRadius(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_max_volume_radius(value);
+            }
+        });
+    }
+
+    function updateAudioSoundFunction(info: ChangeInfo) {
+        const stringValue = info.data.event.value as string;
+        // Конвертируем строку в enum
+        let value: SoundFunctionType;
+        switch (stringValue) {
+            case 'linear': value = SoundFunctionType.LINEAR; break;
+            case 'quadratic': value = SoundFunctionType.QUADRATIC; break;
+            case 'exponential': value = SoundFunctionType.EXPONENTIAL; break;
+            default: value = SoundFunctionType.LINEAR;
+        }
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_sound_function(value);
+            }
+        });
+    }
+
+    function updateAudioZoneType(info: ChangeInfo) {
+        const stringValue = info.data.event.value as string;
+        // Конвертируем строку в enum
+        const value = stringValue === 'rectangle' ? SoundZoneType.RECTANGULAR : SoundZoneType.CIRCULAR;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_zone_type(value);
+            }
+        });
+    }
+
+    function updateAudioPanNormalization(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_pan_normalization_distance(value);
+            }
+        });
+    }
+
+    function updateAudioRectangleWidth(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_rectangle_width(value);
+            }
+        });
+    }
+
+    function updateAudioRectangleHeight(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_rectangle_height(value);
+            }
+        });
+    }
+
+    function updateAudioRectangleMaxWidth(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_rectangle_max_volume_width(value);
+            }
+        });
+    }
+
+    function updateAudioRectangleMaxHeight(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_rectangle_max_volume_height(value);
+            }
+        });
+    }
+
+    function updateAudioFadeInTime(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_fade_in_time(value);
+            }
+        });
+    }
+
+    function updateAudioFadeOutTime(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                (item as AudioMesh).set_fade_out_time(value);
+            }
+        });
+    }
+
+    // === 3D модели функции обновления ===
+
+    function updateMeshName(info: ChangeInfo) {
+        const value = info.data.event.value as string;
+        _selected_list.forEach((item) => {
+            if ('set_mesh' in item) {
+                (item as MultipleMaterialMesh).set_mesh(value);
+            }
+        });
+    }
+
+    function updateCurrentAnimation(info: ChangeInfo) {
+        const value = info.data.event.value as string;
+        _selected_list.forEach((item) => {
+            if ('set_animation' in item) {
+                (item as AnimatedMesh).set_animation(value);
+            }
+        });
     }
 
     init();
@@ -3968,6 +4249,24 @@ function generateZoneTypeOptions() {
     };
 }
 
+function generateMeshOptions() {
+    const data: { [key: string]: string } = {};
+    data['Не выбрано'] = '';
+    Services.resources.get_all_models().forEach((mesh) => {
+        data[mesh] = mesh;
+    });
+    return data;
+}
+
+function generateAnimationOptions(animations: string[]) {
+    const data: { [key: string]: string } = {};
+    data['Нет анимации'] = '';
+    for (const anim of animations) {
+        data[anim] = anim;
+    }
+    return data;
+}
+
 export function getDefaultInspectorConfig() {
 
     return [
@@ -4222,6 +4521,24 @@ export function getDefaultInspectorConfig() {
             ]
         },
         {
+            name: 'model',
+            title: 'Модель',
+            property_list: [
+                {
+                    name: Property.MESH_NAME,
+                    title: 'Меш',
+                    type: PropertyType.LIST_TEXT,
+                    params: generateMeshOptions()
+                },
+                {
+                    name: Property.CURRENT_ANIMATION,
+                    title: 'Анимация',
+                    type: PropertyType.LIST_TEXT,
+                    params: generateAnimationOptions([])
+                }
+            ]
+        },
+        {
             name: 'audio',
             title: 'Аудио',
             property_list: [
@@ -4255,6 +4572,16 @@ export function getDefaultInspectorConfig() {
                     params: { min: 0.1, max: 10, step: 0.1, format: (v: number) => v.toFixed(1) }
                 },
                 {
+                    name: Property.AUDIO_PLAY_PAUSE,
+                    title: '▶ Играть / ⏸ Пауза',
+                    type: PropertyType.BUTTON
+                },
+                {
+                    name: Property.AUDIO_STOP,
+                    title: '⏹ Стоп',
+                    type: PropertyType.BUTTON
+                },
+                {
                     name: Property.SOUND_RADIUS,
                     title: 'Радиус звука',
                     type: PropertyType.NUMBER,
@@ -4277,6 +4604,48 @@ export function getDefaultInspectorConfig() {
                     title: 'Тип зоны',
                     type: PropertyType.LIST_TEXT,
                     params: generateZoneTypeOptions()
+                },
+                {
+                    name: Property.PAN_NORMALIZATION,
+                    title: 'Нормализация панорамы',
+                    type: PropertyType.NUMBER,
+                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
+                },
+                {
+                    name: Property.RECTANGLE_WIDTH,
+                    title: 'Ширина зоны',
+                    type: PropertyType.NUMBER,
+                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
+                },
+                {
+                    name: Property.RECTANGLE_HEIGHT,
+                    title: 'Высота зоны',
+                    type: PropertyType.NUMBER,
+                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
+                },
+                {
+                    name: Property.RECTANGLE_MAX_WIDTH,
+                    title: 'Ширина макс. громкости',
+                    type: PropertyType.NUMBER,
+                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
+                },
+                {
+                    name: Property.RECTANGLE_MAX_HEIGHT,
+                    title: 'Высота макс. громкости',
+                    type: PropertyType.NUMBER,
+                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
+                },
+                {
+                    name: Property.FADE_IN_TIME,
+                    title: 'Время нарастания',
+                    type: PropertyType.NUMBER,
+                    params: { min: 0, step: 0.1, format: (v: number) => v.toFixed(1) }
+                },
+                {
+                    name: Property.FADE_OUT_TIME,
+                    title: 'Время затухания',
+                    type: PropertyType.NUMBER,
+                    params: { min: 0, step: 0.1, format: (v: number) => v.toFixed(1) }
                 }
             ]
         }

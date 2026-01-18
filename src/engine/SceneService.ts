@@ -397,15 +397,26 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
     function load_scene(data: BaseEntityData[], sub_name = ''): void {
         const scene = render_service.scene;
 
+        // Рекурсивно вызывает after_deserialize для всех AudioMesh объектов
+        function init_audio_meshes(mesh: ISceneObject): void {
+            if (mesh instanceof AudioMesh) {
+                mesh.after_deserialize();
+            }
+            mesh.children.forEach(child => {
+                if (is_base_mesh(child)) {
+                    init_audio_meshes(child as unknown as ISceneObject);
+                }
+            });
+        }
+
         if (sub_name === '') {
             clear();
             for (let i = 0; i < data.length; i++) {
                 const it = data[i];
                 const mesh = deserialize_object(it, false);
                 scene.add(mesh);
-                if (mesh instanceof AudioMesh) {
-                    mesh.after_deserialize();
-                }
+                // Инициализируем все AudioMesh включая вложенные
+                init_audio_meshes(mesh);
             }
         } else {
             const container = create(ObjectTypes.GO_CONTAINER, {});

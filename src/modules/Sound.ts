@@ -56,6 +56,7 @@ interface SoundInstance {
     fadeDuration: number;
     forceControl: boolean;
     isActive: boolean;
+    isPaused: boolean;
     isEnabled: boolean;
     off: boolean;
 }
@@ -136,6 +137,7 @@ function SoundModule() {
             fadeDuration: 0,
             forceControl: false,
             isActive: false,
+            isPaused: false,
             isEnabled: true,
             off: true
         };
@@ -424,6 +426,7 @@ function SoundModule() {
         instance.currentVolume = 0;
         instance.targetVolume = 0;
         instance.isActive = false;
+        instance.isPaused = false;
     }
 
     function start_fade(url: string | hash, targetVolume: number, duration: number): void {
@@ -618,7 +621,8 @@ function SoundModule() {
 
     function is_sound_playing(url: string | hash): boolean {
         const instance = instances.get(url);
-        return instance ? instance.isActive : false;
+        // Звук играет если он активен и не на паузе
+        return instance ? (instance.isActive && !instance.isPaused) : false;
     }
 
     function set_sound_pan(url: string | hash, pan: number): void {
@@ -667,12 +671,37 @@ function SoundModule() {
         return !instance || instance.off;
     }
 
+    function pause(url: string | hash, paused: boolean): void {
+        const instance = instances.get(url);
+        if (!instance) return;
+
+        if (paused) {
+            // Ставим на паузу - сохраняем состояние и останавливаем воспроизведение
+            if (instance.isActive && !instance.isPaused) {
+                sound.stop(url);
+                instance.isPaused = true;
+                // Не сбрасываем isActive чтобы помнить что звук был активен
+            }
+        } else {
+            // Снимаем с паузы - возобновляем воспроизведение
+            if (instance.isActive && instance.isPaused) {
+                instance.isPaused = false;
+                sound.play(url, {
+                    gain: instance.currentVolume,
+                    pan: instance.data.pan,
+                    speed: instance.data.speed
+                });
+            }
+        }
+    }
+
     return {
         create,
         remove,
         update,
         play,
         stop,
+        pause,
         set_listener_position,
         set_sound_radius,
         set_zone_type,

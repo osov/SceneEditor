@@ -2,6 +2,7 @@ import { AnimationAction, AnimationMixer } from "three";
 import { IObjectTypes } from "../types";
 import { MultipleMaterialMesh, MultipleMaterialMeshSerializeData } from "./multiple_material_mesh";
 import { Services } from '@editor/core';
+import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 export interface AnimatedMeshSerializeData extends MultipleMaterialMeshSerializeData {
 	animations: string[],
@@ -17,7 +18,8 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 
 	constructor(id: number, width = 0, height = 0) {
 		super(id, width, height);
-		this.default_material_name = 'anim_model';
+		// NOTE: используем slice9 как базовый материал, специфичные материалы можно задать при необходимости
+		this.default_material_name = 'slice9';
 		Services.event_bus.on('engine:update', (data) => {
 			const e = data as { dt: number };
 			this.on_mixer_update(e);
@@ -36,7 +38,10 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 		if (this.mixer)
 			this.mixer.update(e.dt);
 		for (let i = 0; i < this.materials.length; i++) {
-			Services.resources.set_material_uniform_for_original(this.materials[i].name, 'offsetZ', this.position.z);
+			const material = this.materials[i];
+			if (material !== null && material !== undefined) {
+				Services.resources.set_material_uniform_for_original(material.name, 'offsetZ', this.position.z);
+			}
 		}
 	}
 
@@ -123,5 +128,19 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 		if (data.current_animation) {
 			this.set_animation(data.current_animation);
 		}
+	}
+
+	/**
+	 * AnimatedMesh добавляет поля модели и текущей анимации
+	 * NOTE: ANIMATIONS (ITEM_LIST) временно убрано - тип не настроен в конфигурации
+	 */
+	override get_inspector_fields(): InspectorFieldDefinition[] {
+		return [
+			...super.get_inspector_fields(),
+			// Модель
+			{ group: 'model', property: Property.MESH_NAME, type: PropertyType.LIST_TEXT },
+			// Текущая анимация
+			{ group: 'model', property: Property.CURRENT_ANIMATION, type: PropertyType.LIST_TEXT },
+		];
 	}
 }

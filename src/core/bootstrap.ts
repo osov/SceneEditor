@@ -49,6 +49,9 @@ import { register_transform_control } from '../controls/TransformControl';
 import { register_camera_control } from '../controls/CameraContol';
 // ActionsControl удалён - используем Services.actions
 import { register_asset_control } from '../controls/AssetControl';
+import { register_sound } from '../modules/Sound';
+import { register_audio_manager } from '../render_engine/AudioManager';
+import { register_lua_core } from '../defold/core';
 
 // Статические импорты встроенных плагинов
 import { create_plugin as create_core_inspector_plugin } from '../plugins/core-inspector';
@@ -434,14 +437,23 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         // 1. Resource manager
         register_resource_manager();
 
-        // 2. Привязка событий ввода
+        // 2. Defold Lua core (глобальные модули: vmath, go, sound, etc.)
+        register_lua_core();
+
+        // 3. Sound system
+        register_sound();
+
+        // 4. AudioManager
+        register_audio_manager();
+
+        // 5. Привязка событий ввода
         const input_service = container.resolve<IInputService>(TOKENS.Input);
         input_service.bind_events(canvas);
 
-        // 3. Инициализация SelectionService
+        // 6. Инициализация SelectionService
         selection_service.init();
 
-        // 4. Контролы редактора
+        // 7. Контролы редактора
         register_asset_control();
         register_size_control();
         register_transform_control();

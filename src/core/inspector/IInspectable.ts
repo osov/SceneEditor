@@ -16,7 +16,8 @@ export type InspectorFieldGroup =
     | 'flip'       // Отражение (только для GoSprite)
     | 'text'       // Текстовые свойства (шрифт, размер, выравнивание)
     | 'uniforms'   // Материальные юниформы
-    | 'audio';     // Аудио свойства
+    | 'audio'      // Аудио свойства
+    | 'model';     // 3D модели и анимации
 
 /** Ключи свойств для инспектора */
 export enum Property {
@@ -85,6 +86,22 @@ export enum Property {
     MAX_VOLUME_RADIUS = 'max_volume_radius',
     SOUND_FUNCTION = 'sound_function',
     ZONE_TYPE = 'zone_type',
+    PAN_NORMALIZATION = 'pan_normalization',
+    FADE_IN_TIME = 'fade_in_time',
+    FADE_OUT_TIME = 'fade_out_time',
+    RECTANGLE_WIDTH = 'rectangle_width',
+    RECTANGLE_HEIGHT = 'rectangle_height',
+    RECTANGLE_MAX_WIDTH = 'rectangle_max_width',
+    RECTANGLE_MAX_HEIGHT = 'rectangle_max_height',
+
+    // 3D модели
+    MESH_NAME = 'mesh_name',
+    ANIMATIONS = 'animations',
+    CURRENT_ANIMATION = 'current_animation',
+
+    // Аудио контролы воспроизведения
+    AUDIO_PLAY_PAUSE = 'audio_play_pause',
+    AUDIO_STOP = 'audio_stop',
 }
 
 /** Определение поля инспектора */
@@ -154,6 +171,7 @@ export const GROUP_TITLES: Record<InspectorFieldGroup, string> = {
     text: 'Текст',
     uniforms: 'Материал',
     audio: 'Аудио',
+    model: 'Модель',
 };
 
 /** Порядок групп в инспекторе */
@@ -166,4 +184,5 @@ export const GROUP_ORDER: InspectorFieldGroup[] = [
     'text',
     'uniforms',
     'audio',
+    'model',
 ];
