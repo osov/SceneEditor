@@ -96,6 +96,8 @@ export enum Property {
 
     // 3D модели
     MESH_NAME = 'mesh_name',
+    MODEL_SCALE = 'model_scale',
+    MODEL_MATERIALS = 'model_materials',
     ANIMATIONS = 'animations',
     CURRENT_ANIMATION = 'current_animation',
 

@@ -21,11 +21,22 @@ export const FLOAT_PRECISION = 4;
 
 export const MIN_VOLUME = 0.0;
 export const MAX_VOLUME = 2.0;
+// Начальные значения при создании аудио объекта (0 = не пространственный звук)
 export const DEFAULT_SOUND_RADIUS = 0;
 export const DEFAULT_MAX_VOLUME_RADIUS = DEFAULT_SOUND_RADIUS;
 export const DEFAULT_PAN_NORMALIZATION_DISTANCE = 0;
 export const DEFAULT_FADE_IN_TIME = 1.0;
 export const DEFAULT_FADE_OUT_TIME = 1.0;
+
+// Дефолтные значения при переключении на круговую зону
+export const DEFAULT_CIRCULAR_SOUND_RADIUS = 100;
+export const DEFAULT_CIRCULAR_MAX_VOLUME_RADIUS = 50;
+
+// Дефолтные значения для прямоугольной аудио зоны
+export const DEFAULT_RECTANGLE_WIDTH = 100;
+export const DEFAULT_RECTANGLE_HEIGHT = 100;
+export const DEFAULT_RECTANGLE_MAX_WIDTH = 50;
+export const DEFAULT_RECTANGLE_MAX_HEIGHT = 50;
 
 export type _UserMessages = {
     REGION_ENTER: { id_mesh: string, id_region: string }

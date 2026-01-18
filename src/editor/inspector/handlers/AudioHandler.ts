@@ -385,7 +385,8 @@ export function create_audio_handler(_params?: HandlerParams): IPropertyHandler 
         }
     }
 
-    // === Play/Pause Button ===
+    // === Play/Stop Button ===
+    // NOTE: Используем stop вместо pause, так как в звуковом модуле нет настоящей паузы
 
     function read_play_pause(context: ReadContext): ReadResult<() => void> {
         const { meshes } = context;
@@ -395,7 +396,7 @@ export function create_audio_handler(_params?: HandlerParams): IPropertyHandler 
             for (const mesh of meshes) {
                 if (!is_audio_mesh(mesh)) continue;
                 if (mesh.is_playing()) {
-                    mesh.pause();
+                    mesh.stop();
                 } else {
                     mesh.play();
                 }
@@ -415,7 +416,7 @@ export function create_audio_handler(_params?: HandlerParams): IPropertyHandler 
         for (const mesh of meshes) {
             if (!is_audio_mesh(mesh)) continue;
             if (mesh.is_playing()) {
-                mesh.pause();
+                mesh.stop();
             } else {
                 mesh.play();
             }

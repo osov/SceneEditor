@@ -7,7 +7,7 @@ import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils'
 import { hex2rgba, rgb2hex } from "@editor/defold/utils";
 import { Services } from '@editor/core';
 import { DC_LAYERS } from '@editor/engine/RenderService';
-import type { InspectorFieldDefinition } from "@editor/core/inspector";
+import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 export interface MultipleMaterialMeshSerializeData {
     mesh_name: string,
@@ -271,14 +271,27 @@ export class MultipleMaterialMesh extends EntityPlane {
     }
 
     /**
+     * Получить список названий материалов
+     */
+    get_material_names(): string[] {
+        return this.materials.map(m => m.name);
+    }
+
+    /**
      * MultipleMaterialMesh использует базовые поля инспектора
      * NOTE: Графические поля (COLOR, TEXTURE, MATERIAL) убраны так как
      * get_color() возвращает undefined при пустом массиве materials
      */
     override get_inspector_fields(): InspectorFieldDefinition[] {
+        const material_names = this.get_material_names();
         return [
             ...super.get_inspector_fields(),
-            // Пока без дополнительных полей - нужно исправить get_color
+            // Масштаб модели
+            { group: 'model', property: Property.MODEL_SCALE, type: PropertyType.NUMBER, params: { min: 0.01, step: 0.1 } },
+            // Материалы модели (если есть)
+            ...(material_names.length > 0 ? [
+                { group: 'model', property: Property.MODEL_MATERIALS, type: PropertyType.ITEM_LIST, params: { options: material_names } },
+            ] : []) as InspectorFieldDefinition[],
         ];
     }
 } 

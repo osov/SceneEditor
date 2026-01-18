@@ -11,7 +11,8 @@ export interface AnimatedMeshSerializeData extends MultipleMaterialMeshSerialize
 
 export class AnimatedMesh extends MultipleMaterialMesh {
 	public type = IObjectTypes.GO_ANIMATED_MODEL_COMPONENT;
-	private mixer = new AnimationMixer(this);
+	// NOTE: ленивая инициализация - mixer создается после загрузки модели
+	private mixer: AnimationMixer | null = null;
 	private animations_list: { [k: string]: AnimationAction } = {};
 	private activeAction: AnimationAction | null = null;
 	private lastAction: AnimationAction | null = null;
@@ -31,12 +32,16 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 		this.animations_list = {};
 		this.activeAction = null;
 		this.lastAction = null;
-		this.mixer = new AnimationMixer(this.children[0]);
+		// NOTE: создаем mixer после загрузки модели когда children[0] доступен
+		if (this.children.length > 0) {
+			this.mixer = new AnimationMixer(this.children[0]);
+		}
 	}
 
 	on_mixer_update(e: { dt: number }) {
-		if (this.mixer)
+		if (this.mixer !== null) {
 			this.mixer.update(e.dt);
+		}
 		for (let i = 0; i < this.materials.length; i++) {
 			const material = this.materials[i];
 			if (material !== null && material !== undefined) {
@@ -49,9 +54,18 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 		const clip = Services.resources.find_animation(name, this.mesh_name);
 		if (!clip)
 			return Services.logger.error('Animation not found', name);
-		const animationAction = this.mixer.clipAction(clip.clip)
+
+		// NOTE: создаем mixer если его нет (ленивая инициализация)
+		if (this.mixer === null && this.children.length > 0) {
+			this.mixer = new AnimationMixer(this.children[0]);
+		}
+		if (this.mixer === null) {
+			return Services.logger.error('Cannot add animation - mixer not initialized');
+		}
+
+		const animationAction = this.mixer.clipAction(clip.clip);
 		this.animations_list[name] = animationAction;
-		if (Object.keys(this.animations_list).length == 1) {
+		if (Object.keys(this.animations_list).length === 1) {
 			this.activeAction = animationAction;
 			animationAction.play();
 		}
@@ -83,19 +97,27 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 	}
 
 	set_animation(alias: string, offset = 0) {
-		if (this.animations_list[alias]) {
-			const toAction = this.animations_list[alias];
-			if (toAction != this.activeAction) {
-				this.lastAction = this.activeAction;
-				this.activeAction = toAction;
-				const t = 0.3;
-				this.lastAction!.fadeOut(t);
-				this.activeAction.reset();
-				this.activeAction.fadeIn(t);
-				this.activeAction.startAt(offset);
-				this.activeAction.play();
-			}
+		if (this.animations_list[alias] === undefined) {
+			Services.logger.warn(`Animation "${alias}" not found. Available: ${Object.keys(this.animations_list).join(', ') || 'none'}`);
+			return;
 		}
+
+		const toAction = this.animations_list[alias];
+		if (toAction === this.activeAction) return;
+
+		this.lastAction = this.activeAction;
+		this.activeAction = toAction;
+		const fade_duration = 0.3;
+
+		// fadeOut только если есть предыдущая анимация
+		if (this.lastAction !== null) {
+			this.lastAction.fadeOut(fade_duration);
+		}
+
+		this.activeAction.reset();
+		this.activeAction.fadeIn(fade_duration);
+		this.activeAction.startAt(offset);
+		this.activeAction.play();
 	}
 
 	get_animation() {
@@ -118,6 +140,11 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 	deserialize(data: AnimatedMeshSerializeData) {
 		super.deserialize(data);
 
+		// NOTE: инициализируем mixer после загрузки модели
+		if (this.children.length > 0 && this.mixer === null) {
+			this.mixer = new AnimationMixer(this.children[0]);
+		}
+
 		if (data.animations) {
 			for (const animation of data.animations) {
 				// NOTE: для обратной совместимости, после пересохранения всех сцен которые содежат аним модели можно удалить
@@ -131,16 +158,25 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 	}
 
 	/**
+	 * Получить список доступных анимаций
+	 */
+	get_available_animations(): string[] {
+		return Object.keys(this.animations_list);
+	}
+
+	/**
 	 * AnimatedMesh добавляет поля модели и текущей анимации
 	 * NOTE: ANIMATIONS (ITEM_LIST) временно убрано - тип не настроен в конфигурации
 	 */
 	override get_inspector_fields(): InspectorFieldDefinition[] {
+		const available_animations = this.get_available_animations();
 		return [
 			...super.get_inspector_fields(),
 			// Модель
 			{ group: 'model', property: Property.MESH_NAME, type: PropertyType.LIST_TEXT },
-			// Текущая анимация
-			{ group: 'model', property: Property.CURRENT_ANIMATION, type: PropertyType.LIST_TEXT },
+			// Текущая анимация (с доступными опциями)
+			{ group: 'model', property: Property.CURRENT_ANIMATION, type: PropertyType.LIST_TEXT,
+			  params: { options: available_animations } },
 		];
 	}
 }

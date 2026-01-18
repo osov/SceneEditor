@@ -698,19 +698,24 @@ function SizeControlCreate() {
         const mesh = selected_list[0];
         const wp = new Vector3();
         mesh.getWorldPosition(wp);
+        // bounds родителя - для ограничения при перемещении якоря
         const bb_limit = get_parent_bb(mesh);
+        // bounds самого объекта - для отображения якоря
+        const mesh_bb = mesh.get_bounds();
         if (is_set_pos) {
             const cp = Services.camera.screen_to_world(pointer.x, pointer.y);
-            if (cp.x < bb_limit[0]) cp.x = bb_limit[0];
-            if (cp.x > bb_limit[2]) cp.x = bb_limit[2];
-            if (cp.y > bb_limit[1]) cp.y = bb_limit[1];
-            if (cp.y < bb_limit[3]) cp.y = bb_limit[3];
+            // Ограничиваем позицию якоря bounds'ами самого объекта
+            if (cp.x < mesh_bb[0]) cp.x = mesh_bb[0];
+            if (cp.x > mesh_bb[2]) cp.x = mesh_bb[2];
+            if (cp.y > mesh_bb[1]) cp.y = mesh_bb[1];
+            if (cp.y < mesh_bb[3]) cp.y = mesh_bb[3];
             anchor_mesh.position.x = cp.x;
             anchor_mesh.position.y = cp.y;
-            const size_x = bb_limit[2] - bb_limit[0];
-            const size_y = bb_limit[1] - bb_limit[3];
-            const ax = (cp.x - bb_limit[0]) / size_x;
-            const ay = (cp.y - bb_limit[3]) / size_y;
+            // Вычисляем anchor как процент от размера объекта
+            const size_x = mesh_bb[2] - mesh_bb[0];
+            const size_y = mesh_bb[1] - mesh_bb[3];
+            const ax = size_x > 0 ? (cp.x - mesh_bb[0]) / size_x : 0.5;
+            const ay = size_y > 0 ? (cp.y - mesh_bb[3]) / size_y : 0.5;
             is_changed_anchor = true;
             mesh.set_anchor(ax, ay);
             Services.inspector.refresh_fields([MeshProperty.ANCHOR]);
@@ -723,11 +728,12 @@ function SizeControlCreate() {
                 return;
             }
             else {
+                // Отображаем якорь относительно bounds самого объекта
                 const target = new Vector2();
-                const size_x = bb_limit[2] - bb_limit[0];
-                const size_y = bb_limit[1] - bb_limit[3];
-                target.x = anchor.x * size_x + bb_limit[0];
-                target.y = anchor.y * size_y + bb_limit[3];
+                const size_x = mesh_bb[2] - mesh_bb[0];
+                const size_y = mesh_bb[1] - mesh_bb[3];
+                target.x = anchor.x * size_x + mesh_bb[0];
+                target.y = anchor.y * size_y + mesh_bb[3];
                 anchor_mesh.position.x = target.x;
                 anchor_mesh.position.y = target.y;
             }

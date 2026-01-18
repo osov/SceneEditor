@@ -28,14 +28,7 @@ function create_list_text_handler(): IFieldTypeHandler {
 
             const list_options = field.params as Record<string, string> | undefined;
 
-            // Преобразуем в формат для TweakPane
-            const options: Array<{ text: string; value: string }> = [];
-            if (list_options !== undefined) {
-                for (const [text, value] of Object.entries(list_options)) {
-                    options.push({ text, value });
-                }
-            }
-
+            // search-list ожидает объект {key: value}, НЕ массив
             // Используем плагин search-list для поиска
             const binding = pane_folder.addBinding(
                 target_object,
@@ -44,7 +37,7 @@ function create_list_text_handler(): IFieldTypeHandler {
                     label: field.title ?? field.key,
                     readonly: field.readonly,
                     view: 'search-list',
-                    options,
+                    options: list_options ?? {},
                 } as Record<string, unknown>
             ) as ExtendedBinding;
 

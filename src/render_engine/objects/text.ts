@@ -290,7 +290,8 @@ export class TextMesh extends Text implements IBaseMesh {
             { group: 'graphics', property: Property.ALPHA, type: PropertyType.SLIDER, params: { min: 0, max: 1, step: 0.01 } },
             // Текст
             { group: 'text', property: Property.TEXT, type: PropertyType.LOG_DATA },
-            { group: 'text', property: Property.FONT, type: PropertyType.LIST_TEXT, params: { options: this.get_available_fonts() } },
+            // NOTE: params для FONT не передаём - он динамический и обновляется через update_font_options()
+            { group: 'text', property: Property.FONT, type: PropertyType.LIST_TEXT },
             { group: 'text', property: Property.FONT_SIZE, type: PropertyType.NUMBER },
             { group: 'text', property: Property.TEXT_ALIGN, type: PropertyType.LIST_TEXT },
         ];

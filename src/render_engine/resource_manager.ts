@@ -747,8 +747,10 @@ export function ResourceManagerModule() {
         path = get_project_url(path);
 
         const name = get_file_name(path);
+        Services.logger.info('[preload_font] Loading font:', name, path);
+
         if (!override && fonts[name]) {
-            Services.logger.warn('font exists', name, path);
+            Services.logger.warn('[preload_font] Font exists:', name, path);
             return true;
         }
 
@@ -757,9 +759,11 @@ export function ResourceManagerModule() {
                 font: path,
                 characters: font_characters
             }, () => {
-                if (fonts[name])
-                    Services.logger.warn('font exists already', name, path);
+                if (fonts[name]) {
+                    Services.logger.warn('[preload_font] Font exists already:', name, path);
+                }
                 fonts[name] = path;
+                Services.logger.info('[preload_font] Font loaded successfully:', name);
                 resolve(true);
             });
         });

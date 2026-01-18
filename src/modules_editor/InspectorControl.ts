@@ -77,7 +77,7 @@ import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad, rgbToHex } from '../modules/utils';
 import { radToDeg } from 'three/src/math/MathUtils';
-import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData, MeshAtlasEventData, TextureAtlasEventData } from './InspectorTypes';
+import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontEventData, FontSizeEventData, NameEventData, PivotEventData, PositionEventData, RotationEventData, ScaleEventData, SizeEventData, SliceEventData, TextAlignEventData, TextEventData, TextureEventData, VisibleEventData, LineHeightEventData, BlendModeEventData, MinFilterEventData, MagFilterEventData, UVEventData, MaterialEventData, MeshAtlasEventData, TextureAtlasEventData, MeshModelNameEventData } from './InspectorTypes';
 import { MaterialUniformParams, MaterialUniformType, TextureInfo } from '../render_engine/resource_manager';
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 import { GoSprite, FlipMode } from '../render_engine/objects/sub_types';
@@ -155,6 +155,7 @@ export enum PropertyType {
     SLIDER,
     LIST_TEXT,
     LIST_TEXTURES,
+    ITEM_LIST,
     BUTTON,
     POINT_2D,
     LOG_DATA,
@@ -184,6 +185,7 @@ export type PropertyParams = {
     [PropertyType.SLIDER]: { min: number, max: number, step: number };
     [PropertyType.LIST_TEXT]: { [key in string]: string };
     [PropertyType.LIST_TEXTURES]: { value: string, src: string }[];
+    [PropertyType.ITEM_LIST]: { pickText?: string, emptyText?: string, options: string[], onOptionClick?: (option: string) => boolean };
     [PropertyType.BUTTON]: {};
     [PropertyType.POINT_2D]: { x: { min: number, max: number, step?: number, format?: (value: number) => string, disabled?: boolean }, y: { min: number, max: number, step?: number, format?: (value: number) => string, disabled?: boolean } };
     [PropertyType.LOG_DATA]: {};
@@ -200,7 +202,8 @@ export type PropertyValues = {
     [PropertyType.SLIDER]: number;
     [PropertyType.LIST_TEXT]: string; //  selected key
     [PropertyType.LIST_TEXTURES]: string; // selected key;
-    [PropertyType.BUTTON]: (...args: any[]) => void;
+    [PropertyType.ITEM_LIST]: string[];
+    [PropertyType.BUTTON]: (...args: unknown[]) => void;
     [PropertyType.POINT_2D]: { x: number, y: number };
     [PropertyType.LOG_DATA]: string;
 }
@@ -222,7 +225,9 @@ export interface InspectorGroup {
 
 export interface PropertyData<T extends PropertyType> {
     name: string;
-    data: PropertyValues[T]; // values 
+    data: PropertyValues[T]; // values
+    type?: T; // тип поля из InspectorFieldDefinition
+    params?: PropertyParams[T]; // параметры из InspectorFieldDefinition
 }
 
 export interface ObjectData {
@@ -405,6 +410,11 @@ function InspectorControlCreate() {
                 // NOTE: ищем информацию о поле в соответсвующем конфиге
                 const property: PropertyItem<PropertyType> | undefined = getPropertyItemByName(field.name);
                 if (!property) continue; // пропускаем в случае ошибки
+
+                // NOTE: применяем params из field если они определены (из IInspectable)
+                if (field.params !== undefined) {
+                    property.params = field.params;
+                }
 
                 info.push({ field, property });
             }
@@ -707,8 +717,8 @@ function InspectorControlCreate() {
             }
             case Property.MATERIAL: {
                 // MultipleMaterialMesh имеет массив материалов
-                if ('materials' in obj && Array.isArray((obj as MultipleMaterialMesh).materials)) {
-                    const materials = (obj as MultipleMaterialMesh).materials;
+                if ('get_materials' in obj && typeof (obj as MultipleMaterialMesh).get_materials === 'function') {
+                    const materials = (obj as MultipleMaterialMesh).get_materials();
                     return materials.length > 0 ? (materials[0].name || '') : '';
                 }
                 return (obj as Slice9Mesh).material.name || '';
@@ -794,6 +804,10 @@ function InspectorControlCreate() {
             // 3D модели
             case Property.MESH_NAME:
                 return (obj as MultipleMaterialMesh).get_mesh_name();
+            case Property.MODEL_SCALE:
+                return (obj as MultipleMaterialMesh).get_scale().x;
+            case Property.MODEL_MATERIALS:
+                return (obj as MultipleMaterialMesh).get_materials().map(m => m.name);
             case Property.ANIMATIONS:
                 return Object.keys((obj as AnimatedMesh).get_animation_list());
             case Property.CURRENT_ANIMATION:
@@ -814,7 +828,9 @@ function InspectorControlCreate() {
         const value = get_property_value(obj, def.property);
         return {
             name: def.property,
-            data: value as PropertyValues[PropertyType]
+            data: value as PropertyValues[PropertyType],
+            type: def.type,
+            params: def.params as PropertyParams[PropertyType]
         };
     }
 
@@ -968,7 +984,7 @@ function InspectorControlCreate() {
 
     function update_font_options() {
         _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.FONT);
+            const property = group.property_list.find((property) => property.name === Property.FONT);
             if (!property) return;
             (property.params as PropertyParams[PropertyType.LIST_TEXT]) = generateFontOptions();
         });
@@ -1335,6 +1351,7 @@ function InspectorControlCreate() {
                 });
             }
             case PropertyType.LIST_TEXT:
+                // search-list ожидает объект {key: value}, НЕ массив
                 return createEntity(ids, field, property, {
                     view: 'search-list',
                     options: property.params
@@ -1355,6 +1372,30 @@ function InspectorControlCreate() {
                 });
             case PropertyType.BUTTON:
                 return createButton(field as PropertyData<PropertyType.BUTTON>, property as PropertyItem<PropertyType.BUTTON>, { title: property.title });
+            case PropertyType.ITEM_LIST: {
+                // ITEM_LIST отображает список элементов (например материалы) где каждый можно выбрать из options
+                const item_list_params = property.params as PropertyParams[PropertyType.ITEM_LIST];
+                const options = item_list_params?.options ?? [];
+                // Преобразуем options в формат для search-list: { label: value }
+                const list_options: { [key: string]: string } = {};
+                for (const opt of options) {
+                    list_options[opt] = opt;
+                }
+                // Если нет опций, показываем пустой текст
+                if (options.length === 0) {
+                    list_options[item_list_params?.emptyText ?? 'Нет элементов'] = '';
+                }
+                // NOTE: ITEM_LIST хранит массив, но search-list ожидает одно значение
+                // Преобразуем массив в первый элемент для отображения
+                const current_value = field.data as string[];
+                if (Array.isArray(current_value) && current_value.length > 0) {
+                    field.data = current_value[0] as PropertyValues[PropertyType];
+                }
+                return createEntity(ids, field, property, {
+                    view: 'search-list',
+                    options: list_options
+                });
+            }
             default:
                 Services.logger.error(`Unable to cast ${field.name}`);
                 return undefined;
@@ -1807,6 +1848,7 @@ function InspectorControlCreate() {
             case Property.MIN_FILTER: saveMinFilter(info.ids); break;
             case Property.MAG_FILTER: saveMagFilter(info.ids); break;
             case Property.MATERIAL: saveMaterial(info.ids); break;
+            case Property.MESH_NAME: saveMeshModelName(info.ids); break;
         }
     }
 
@@ -1870,6 +1912,8 @@ function InspectorControlCreate() {
             case Property.FADE_OUT_TIME: updateAudioFadeOutTime(info); break;
             // 3D модели
             case Property.MESH_NAME: updateMeshName(info); break;
+            case Property.MODEL_SCALE: updateModelScale(info); break;
+            case Property.MODEL_MATERIALS: updateModelMaterials(info); break;
             case Property.CURRENT_ANIMATION: updateCurrentAnimation(info); break;
         }
     }
@@ -3377,6 +3421,41 @@ function InspectorControlCreate() {
         });
     }
 
+    function saveMeshModelName(ids: number[]) {
+        const mesh_names: MeshModelNameEventData[] = [];
+        ids.forEach((id) => {
+            const mesh = _selected_list.find((item) => {
+                return item.mesh_data.id === id;
+            });
+
+            if (mesh === undefined) {
+                Services.logger.error('[saveMeshModelName] Mesh not found for id:', id);
+                return;
+            }
+
+            const mesh_with_name = mesh as { get_mesh_name?: () => string };
+            if (typeof mesh_with_name.get_mesh_name === 'function') {
+                mesh_names.push({ id_mesh: id, mesh_name: mesh_with_name.get_mesh_name() });
+            }
+        });
+
+        Services.history.push({
+            type: 'MESH_MODEL_NAME',
+            description: 'Изменение модели',
+            data: { items: mesh_names, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as MeshModelNameEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as (IBaseMeshAndThree & { set_mesh(name: string): void }) | undefined;
+                    if (m !== undefined) {
+                        m.set_mesh(item.mesh_name);
+                    }
+                }
+                Services.ui.update_hierarchy();
+            },
+            redo: () => {},
+        });
+    }
+
     function updateMaterial(info: ChangeInfo) {
         info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
@@ -3958,6 +4037,26 @@ function InspectorControlCreate() {
         });
     }
 
+    function updateModelScale(info: ChangeInfo) {
+        const value = info.data.event.value as number;
+        _selected_list.forEach((item) => {
+            if ('set_scale' in item) {
+                (item as MultipleMaterialMesh).set_scale(value, value);
+            }
+        });
+    }
+
+    function updateModelMaterials(info: ChangeInfo) {
+        const value = info.data.event.value as string[];
+        _selected_list.forEach((item) => {
+            if ('set_material' in item) {
+                value.forEach((name, index) => {
+                    (item as MultipleMaterialMesh).set_material(name, index);
+                });
+            }
+        });
+    }
+
     init();
     return { setupConfig, setData, set_selected_textures, set_selected_materials, set_selected_list, refresh, clear }
 }
@@ -4531,6 +4630,18 @@ export function getDefaultInspectorConfig() {
                     params: generateMeshOptions()
                 },
                 {
+                    name: Property.MODEL_SCALE,
+                    title: 'Масштаб',
+                    type: PropertyType.NUMBER,
+                    params: { min: 0.01, step: 0.1, format: (v: number) => v.toFixed(2) }
+                },
+                {
+                    name: Property.MODEL_MATERIALS,
+                    title: 'Материалы',
+                    type: PropertyType.ITEM_LIST,
+                    params: { options: [], pick_text: 'Выберите материал', empty_text: 'Нет материалов' }
+                },
+                {
                     name: Property.CURRENT_ANIMATION,
                     title: 'Анимация',
                     type: PropertyType.LIST_TEXT,
@@ -4573,7 +4684,7 @@ export function getDefaultInspectorConfig() {
                 },
                 {
                     name: Property.AUDIO_PLAY_PAUSE,
-                    title: '▶ Играть / ⏸ Пауза',
+                    title: '▶ Играть / ⏹ Стоп',
                     type: PropertyType.BUTTON
                 },
                 {

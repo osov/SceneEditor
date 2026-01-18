@@ -1,6 +1,18 @@
 import { IObjectTypes } from "../types";
 import { EntityBase } from "./entity_base";
-import { DEFAULT_PAN_NORMALIZATION_DISTANCE, DEFAULT_MAX_VOLUME_RADIUS, DEFAULT_SOUND_RADIUS, DEFAULT_FADE_IN_TIME, DEFAULT_FADE_OUT_TIME } from "../../config";
+import {
+    DEFAULT_PAN_NORMALIZATION_DISTANCE,
+    DEFAULT_MAX_VOLUME_RADIUS,
+    DEFAULT_SOUND_RADIUS,
+    DEFAULT_FADE_IN_TIME,
+    DEFAULT_FADE_OUT_TIME,
+    DEFAULT_CIRCULAR_SOUND_RADIUS,
+    DEFAULT_CIRCULAR_MAX_VOLUME_RADIUS,
+    DEFAULT_RECTANGLE_WIDTH,
+    DEFAULT_RECTANGLE_HEIGHT,
+    DEFAULT_RECTANGLE_MAX_WIDTH,
+    DEFAULT_RECTANGLE_MAX_HEIGHT,
+} from "../../config";
 import { EllipseCurve, Line, LineBasicMaterial, Vector3, BufferGeometry, Mesh, MeshBasicMaterial } from "three";
 
 import { get_sound } from "../../modules/Sound";
@@ -71,11 +83,15 @@ export class AudioMesh extends EntityBase {
     private rectangleVisual: Line | null = null;
     private rectangleMaxVolumeVisual: Line | null = null;
 
+    // Сохраняем bound функцию для корректного удаления listener
+    private boundUpdateVisual: () => void;
+
     constructor(id: number) {
         super(id);
         this.layers.disable(DC_LAYERS.GO_LAYER);
         this.layers.enable(DC_LAYERS.RAYCAST_LAYER);
-        Services.event_bus.on('engine:update', this.updateVisual.bind(this));
+        this.boundUpdateVisual = this.updateVisual.bind(this);
+        Services.event_bus.on('engine:update', this.boundUpdateVisual);
     }
 
     get_id() {
@@ -198,14 +214,14 @@ export class AudioMesh extends EntityBase {
                 get_sound().set_rectangle_max_volume_width(this.get_url(), 0);
                 get_sound().set_rectangle_max_volume_height(this.get_url(), 0);
 
-                // Восстанавливаем дефолтные значения радиусов если они были сброшены
+                // Устанавливаем дефолтные значения радиусов при переключении на круг
                 if (this.soundRadius === 0) {
-                    this.soundRadius = DEFAULT_SOUND_RADIUS;
-                    get_sound().set_sound_radius(this.get_url(), DEFAULT_SOUND_RADIUS);
+                    this.soundRadius = DEFAULT_CIRCULAR_SOUND_RADIUS;
+                    get_sound().set_sound_radius(this.get_url(), DEFAULT_CIRCULAR_SOUND_RADIUS);
                 }
                 if (this.maxVolumeRadius === 0) {
-                    this.maxVolumeRadius = DEFAULT_MAX_VOLUME_RADIUS;
-                    get_sound().set_max_volume_radius(this.get_url(), DEFAULT_MAX_VOLUME_RADIUS);
+                    this.maxVolumeRadius = DEFAULT_CIRCULAR_MAX_VOLUME_RADIUS;
+                    get_sound().set_max_volume_radius(this.get_url(), DEFAULT_CIRCULAR_MAX_VOLUME_RADIUS);
                 }
             } else if (zoneType === SoundZoneType.RECTANGULAR) {
                 this.soundRadius = 0;
@@ -213,6 +229,24 @@ export class AudioMesh extends EntityBase {
 
                 get_sound().set_sound_radius(this.get_url(), 0);
                 get_sound().set_max_volume_radius(this.get_url(), 0);
+
+                // Устанавливаем дефолтные значения для прямоугольника если они были нулевыми
+                if (this.rectangleWidth === 0) {
+                    this.rectangleWidth = DEFAULT_RECTANGLE_WIDTH;
+                    get_sound().set_rectangle_width(this.get_url(), DEFAULT_RECTANGLE_WIDTH);
+                }
+                if (this.rectangleHeight === 0) {
+                    this.rectangleHeight = DEFAULT_RECTANGLE_HEIGHT;
+                    get_sound().set_rectangle_height(this.get_url(), DEFAULT_RECTANGLE_HEIGHT);
+                }
+                if (this.rectangleMaxVolumeWidth === 0) {
+                    this.rectangleMaxVolumeWidth = DEFAULT_RECTANGLE_MAX_WIDTH;
+                    get_sound().set_rectangle_max_volume_width(this.get_url(), DEFAULT_RECTANGLE_MAX_WIDTH);
+                }
+                if (this.rectangleMaxVolumeHeight === 0) {
+                    this.rectangleMaxVolumeHeight = DEFAULT_RECTANGLE_MAX_HEIGHT;
+                    get_sound().set_rectangle_max_volume_height(this.get_url(), DEFAULT_RECTANGLE_MAX_HEIGHT);
+                }
             }
 
             this.removeVisual();
@@ -740,7 +774,7 @@ export class AudioMesh extends EntityBase {
     dispose() {
         super.dispose();
         this.removeVisual();
-        Services.event_bus.off('engine:update', this.updateVisual.bind(this));
+        Services.event_bus.off('engine:update', this.boundUpdateVisual);
         get_sound().remove(this.get_url());
         get_audio_manager().free_audio(this.get_id());
     }
@@ -758,7 +792,7 @@ export class AudioMesh extends EntityBase {
             { group: 'audio', property: Property.PAN, type: PropertyType.SLIDER, params: { min: -1, max: 1, step: 0.01 } },
             { group: 'audio', property: Property.SPEED, type: PropertyType.NUMBER, params: { min: 0.1, max: 10, step: 0.1 } },
             // Аудио - контролы воспроизведения
-            { group: 'audio', property: Property.AUDIO_PLAY_PAUSE, type: PropertyType.BUTTON, title: this.is_playing() ? '⏸ Пауза' : '▶ Играть' },
+            { group: 'audio', property: Property.AUDIO_PLAY_PAUSE, type: PropertyType.BUTTON, title: this.is_playing() ? '⏹ Стоп' : '▶ Играть' },
             { group: 'audio', property: Property.AUDIO_STOP, type: PropertyType.BUTTON, title: '⏹ Стоп' },
             // Аудио - пространственные
             { group: 'audio', property: Property.ZONE_TYPE, type: PropertyType.LIST_TEXT },

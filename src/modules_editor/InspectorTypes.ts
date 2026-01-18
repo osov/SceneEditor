@@ -129,3 +129,8 @@ export interface MaterialEventData {
     id_mesh: number;
     material: string;
 }
+
+export interface MeshModelNameEventData {
+    id_mesh: number;
+    mesh_name: string;
+}
