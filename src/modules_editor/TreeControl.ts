@@ -15,6 +15,11 @@ import { DEFOLD_LIMITS } from "../config";
 import { ComponentType } from "../render_engine/components/container_component";
 import { Services } from '@editor/core';
 import type { ISceneObject } from '@editor/engine/types';
+import {
+    has_update as diff_has_update,
+    get_changes as diff_get_changes,
+    type TreeItem,
+} from '../editor/hierarchy';
 
 // Alias для совместимости
 type paramsTexture = ParamsTexture;
@@ -45,31 +50,17 @@ export function get_tree_control(): TreeControlType {
 export function register_tree_control() {
     tree_control_instance = TreeControlCreate();
 }
-interface Item {
-    id: number;
-    pid: number; // parent id родителя или 0 если это верх иерархии
-    name: string;
-    visible: boolean; // визуально отображаем чуть затемненным(что отключено)
-    selected?: boolean; // выделен ли
-    icon: string; // значок
-    no_drag?: boolean; // нельзя брать тащить
-    no_drop?: boolean; // нельзя положить внутрь
-    no_rename?: boolean; // нельзя переименовывать(нужно будет для префабов например или корня сцены)
-    no_remove?: boolean; // нельзя удалить
-}
+// Item - локальный alias для TreeItem из hierarchy модуля
+type Item = TreeItem;
 
-export type TreeItem = Item;
+// Реэкспорт для обратной совместимости
+export type { TreeItem };
 
 interface Contexts {
     [scene: string]: { [id: number]: boolean };
 }
 
-interface ChangesInfo {
-    structureChanged: boolean;
-    modifiedItems: Item[];
-    newItems: Item[];
-    deletedItems: number[];
-};
+// ChangesInfo импортируется как TreeChangesInfo из hierarchy модуля
 
 function TreeControlCreate() {
     let treeList: Item[] = [];
@@ -224,87 +215,8 @@ function TreeControlCreate() {
         scrollToLastSelected();
     }
 
-    function isItemsEqual(item1: Item, item2: Item): boolean {
-        return item1.name === item2.name &&
-            item1.pid === item2.pid &&
-            item1.selected === item2.selected &&
-            item1.icon === item2.icon &&
-            item1.visible === item2.visible &&
-            item1.no_drag === item2.no_drag &&
-            item1.no_drop === item2.no_drop &&
-            item1.no_rename === item2.no_rename &&
-            item1.no_remove === item2.no_remove;
-    }
-
-    function hasUpdate(newList: Item[], oldList: Item[]): boolean {
-        if (newList.length !== oldList.length) return true;
-
-        const oldMap: TDictionary<Item> = {};
-        const newMap: TDictionary<Item> = {};
-
-        oldList.forEach(item => {
-            oldMap[item.id] = item;
-        });
-
-        newList.forEach(item => {
-            newMap[item.id] = item;
-        });
-
-        for (const id in newMap) {
-            const newItem = newMap[id];
-            const oldItem = oldMap[id];
-            if (!oldItem) return true;
-
-            if (!isItemsEqual(newItem, oldItem)) {
-                return true;
-            }
-        }
-
-        for (const id in oldMap) {
-            if (!newMap[id]) return true;
-        }
-
-        const oldGroups: TDictionary<Item[]> = {};
-        const newGroups: TDictionary<Item[]> = {};
-
-        oldList.forEach(item => {
-            if (!oldGroups[item.pid]) oldGroups[item.pid] = [];
-            oldGroups[item.pid].push(item);
-        });
-
-        newList.forEach(item => {
-            if (!newGroups[item.pid]) newGroups[item.pid] = [];
-            newGroups[item.pid].push(item);
-        });
-
-        for (const pid in newGroups) {
-            const oldGroup = oldGroups[pid] || [];
-            const newGroup = newGroups[pid];
-
-            if (oldGroup.length !== newGroup.length) {
-                return true;
-            }
-
-            const oldPositions: TDictionary<number> = {};
-            const newPositions: TDictionary<number> = {};
-
-            oldGroup.forEach((item, index) => {
-                oldPositions[item.id] = index;
-            });
-
-            newGroup.forEach((item, index) => {
-                newPositions[item.id] = index;
-            });
-
-            for (const itemId in oldPositions) {
-                if (oldPositions[itemId] !== newPositions[itemId]) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
+    // hasUpdate делегируется к TreeDiffService
+    const hasUpdate = diff_has_update;
 
     function isTreeExists() {
         return divTree.querySelector('.tree');
@@ -396,95 +308,8 @@ function TreeControlCreate() {
         toggleEventListenerTexture();
     }
 
-    function getChanges(newList: Item[], oldList: Item[]): ChangesInfo {
-        const oldMap: TDictionary<Item> = {};
-        const newMap: TDictionary<Item> = {};
-
-        oldList.forEach(item => { oldMap[item.id] = item; });
-        newList.forEach(item => { newMap[item.id] = item; });
-
-        const modifiedItems: Item[] = [];
-        const newItems: Item[] = [];
-        const deletedItems: number[] = [];
-
-        let structureChanged = false;
-        for (const id in newMap) {
-            const newItem = newMap[id];
-            const oldItem = oldMap[id];
-
-            // NOTE: проверяем на добавление элемента
-
-            if (!oldItem) newItems.push(newItem);
-            else {
-                // NOTE: проверяем на изменение родителя
-                if (newItem.pid != oldItem.pid) {
-                    structureChanged = true;
-                }
-
-                // NOTE: проверяем на изменение свойств
-                if (!isItemsEqual(newItem, oldItem)) {
-                    modifiedItems.push(newItem);
-                }
-            }
-        }
-
-        for (const id in oldMap) {
-            if (!newMap[id]) {
-                deletedItems.push(Number(id));
-                structureChanged = true;
-            }
-        }
-
-        const oldGroups: TDictionary<Item[]> = {};
-        const newGroups: TDictionary<Item[]> = {};
-
-        oldList.forEach(item => {
-            if (!oldGroups[item.pid]) oldGroups[item.pid] = [];
-            oldGroups[item.pid].push(item);
-        });
-
-        newList.forEach(item => {
-            if (!newGroups[item.pid]) newGroups[item.pid] = [];
-            newGroups[item.pid].push(item);
-        });
-
-        for (const pid in newGroups) {
-
-            // NOTE: проверяем на изменение размера группы
-
-            const oldGroup = oldGroups[pid] || [];
-            const newGroup = newGroups[pid];
-
-            if (oldGroup.length != newGroup.length) {
-                structureChanged = true;
-                break;
-            }
-
-            // NOTE: проверяем на изменение порядка в группе
-
-            const oldPositions: TDictionary<number> = {};
-            const newPositions: TDictionary<number> = {};
-
-            oldGroup.forEach((item, index) => { oldPositions[item.id] = index; });
-            newGroup.forEach((item, index) => { newPositions[item.id] = index; });
-
-            for (const itemId in oldPositions) {
-                if (oldPositions[itemId] != newPositions[itemId]) {
-                    structureChanged = true;
-                    break;
-                }
-            }
-
-            if (structureChanged) break;
-        }
-
-        return {
-            structureChanged,
-            modifiedItems,
-            newItems,
-            deletedItems
-        };
-    }
+    // getChanges делегируется к TreeDiffService
+    const getChanges = diff_get_changes;
 
     function updateItem(item: Item) {
         const existingItem = getElementById(item.id);

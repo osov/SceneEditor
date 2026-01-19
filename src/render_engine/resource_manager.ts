@@ -24,7 +24,8 @@ NOTE: API для материалов:
 */
 
 import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4, AudioLoader, Wrapping } from 'three';
-import { copy_material, get_file_name, get_material_hash } from './helpers/utils';
+import { copy_material } from './helpers/material';
+import { get_file_name } from './helpers/file';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
@@ -934,6 +935,40 @@ export function ResourceManagerModule() {
             return null;
         }
         return material_info;
+    }
+
+    /**
+     * Вычисляет хеш материала на основе его свойств (без readonly юниформов)
+     */
+    function get_material_hash(material: ShaderMaterial): string {
+        const material_info = get_material_info(material.name);
+        if (material_info === null) {
+            Services.logger.error('Material info not found', material.name);
+            return 'error';
+        }
+
+        const not_readonly_uniforms: { [uniform: string]: IUniform<unknown> } = {};
+        Object.entries(material.uniforms).forEach(([key, uniform]) => {
+            const uniformInfo = material_info.uniforms[key] as { readonly?: boolean } | undefined;
+            if (uniformInfo?.readonly) {
+                return;
+            }
+            not_readonly_uniforms[key] = uniform;
+        });
+
+        const hash = getObjectHash({
+            blending: material.blending,
+            uniforms: not_readonly_uniforms,
+            defines: material.defines,
+            depthTest: material.depthTest,
+            stencilWrite: material.stencilWrite,
+            stencilRef: material.stencilRef,
+            stencilFunc: material.stencilFunc,
+            stencilZPass: material.stencilZPass,
+            colorWrite: material.colorWrite,
+        });
+
+        return hash;
     }
 
     function is_material_origin_hash(material_name: string, hash: string) {

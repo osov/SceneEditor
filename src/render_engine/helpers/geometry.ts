@@ -1,0 +1,110 @@
+// Утилиты для геометрических операций
+
+import { BufferGeometry, Line, LineDashedMaterial, Vector2, Vector3 } from "three";
+import { IBaseMeshAndThree } from "../types";
+import { is_base_mesh } from "./mesh";
+
+export function flip_geometry_x(geometry: BufferGeometry) {
+    const uv = geometry.attributes.uv;
+    for (let i = 0; i < uv.count; i++)
+        uv.setX(i, 1 - uv.getX(i));
+    return geometry;
+}
+
+export function flip_geometry_y(geometry: BufferGeometry) {
+    const uv = geometry.attributes.uv;
+    for (let i = 0; i < uv.count; i++)
+        uv.setY(i, 1 - uv.getY(i));
+    return geometry;
+}
+
+export function flip_geometry_xy(geometry: BufferGeometry) {
+    const uv = geometry.attributes.uv;
+    for (let i = 0; i < uv.count; i++) {
+        const tempX = uv.getX(i);
+        uv.setX(i, 1 - uv.getY(i)); // Меняем X на Y
+        uv.setY(i, 1 - tempX);      // Меняем Y на X
+    }
+    return geometry;
+}
+
+export function rotate_point(point: Vector3, size: Vector2, angle_deg: number) {
+    const pivot = new Vector2(point.x - size.x / 2, point.y - size.y / 2);
+    return rotate_point_pivot(point, pivot, angle_deg);
+}
+
+export function rotate_point_pivot(point: Vector3, pivot: Vector2, angle_deg: number) {
+    const angle = angle_deg * Math.PI / 180;
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+
+    const xTranslated = point.x - pivot.x;
+    const yTranslated = point.y - pivot.y;
+
+    const xRotated = xTranslated * cosA - yTranslated * sinA;
+    const yRotated = xTranslated * sinA + yTranslated * cosA;
+
+    const xNew = xRotated + pivot.x;
+    const yNew = yRotated + pivot.y;
+
+    return { x: xNew, y: yNew };
+}
+
+export function convert_width_height_to_pivot_bb(w: number, h: number, ax = 0.5, ay = 0.5) {
+    // left_bottom, left_top, right_top, right_bottom
+    return [
+        new Vector2(-w * ax, -h * ay),
+        new Vector2(-w * ax, h * (1 - ay)),
+        new Vector2(w * (1 - ax), h * (1 - ay)),
+        new Vector2(w * (1 - ax), -h * ay),
+    ]
+}
+
+export function set_pivot_with_sync_pos(mesh: IBaseMeshAndThree, width: number, height: number, old_pivot_x: number, old_pivot_y: number, new_pivot_x: number, new_pivot_y: number) {
+    const scale = mesh.scale;
+    const op = convert_width_height_to_pivot_bb(width * scale.x, height * scale.y, old_pivot_x, old_pivot_y);
+    const old_positions: Vector3[] = [];
+    for (let i = 0; i < mesh.children.length; i++) {
+        const m = mesh.children[i];
+        if (is_base_mesh(m)) {
+            const v = new Vector3();
+            m.getWorldPosition(v);
+            old_positions.push(v);
+        }
+    }
+    const wp = new Vector3();
+    mesh.getWorldPosition(wp);
+    mesh.set_pivot(new_pivot_x, new_pivot_y);
+    const np = convert_width_height_to_pivot_bb(width * scale.x, height * scale.y, new_pivot_x, new_pivot_y);
+    mesh.set_size(width, height);
+    mesh.position.x += - np[0].x + op[0].x;
+    mesh.position.y += - np[1].y + op[1].y;
+    mesh.transform_changed();
+    for (let i = 0; i < mesh.children.length; i++) {
+        const m = mesh.children[i];
+        if (is_base_mesh(m)) {
+            const l = m.parent!.worldToLocal(old_positions[i]);
+            m.position.copy(l);
+            (m as IBaseMeshAndThree).transform_changed();
+        }
+    }
+}
+
+export function make_ramk(width: number, height: number) {
+    const offset = 0.5;
+    const points = [
+        new Vector3(-offset, offset, 0),
+        new Vector3(offset, offset, 0),
+        new Vector3(offset, - offset, 0),
+        new Vector3(-offset, - offset, 0),
+        new Vector3(-offset, offset, 0),
+    ];
+
+    const geometry = new BufferGeometry().setFromPoints(points);
+    const line = new Line(geometry, new LineDashedMaterial({ color: 0xffaa00, dashSize: 0.005, gapSize: 0.005 }));
+    line.scale.set(width, height, 1);
+    line.position.x = width / 2;
+    line.position.y = -height / 2;
+    line.computeLineDistances();
+    return line;
+}

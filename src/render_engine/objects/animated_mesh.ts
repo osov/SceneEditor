@@ -170,13 +170,18 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 	 */
 	override get_inspector_fields(): InspectorFieldDefinition[] {
 		const available_animations = this.get_available_animations();
+		// Формируем params в формате search-list: { 'label': 'value', ... }
+		const animation_options: Record<string, string> = { 'Нет анимации': '' };
+		for (const anim of available_animations) {
+			animation_options[anim] = anim;
+		}
 		return [
 			...super.get_inspector_fields(),
 			// Модель
 			{ group: 'model', property: Property.MESH_NAME, type: PropertyType.LIST_TEXT },
 			// Текущая анимация (с доступными опциями)
 			{ group: 'model', property: Property.CURRENT_ANIMATION, type: PropertyType.LIST_TEXT,
-			  params: { options: available_animations } },
+			  params: animation_options },
 		];
 	}
 }

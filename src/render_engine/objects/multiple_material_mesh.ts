@@ -98,9 +98,20 @@ export class MultipleMaterialMesh extends EntityPlane {
     }
 
     set_mesh(name: string) {
+        // Обработка пустого значения - очистка меша
+        if (name === '') {
+            this.mesh_name = '';
+            this.materials = [];
+            if (this.children.length > 0) {
+                this.remove(this.children[0]);
+            }
+            return;
+        }
+
         const src = Services.resources.get_model(name);
-        if (!src)
+        if (src === undefined) {
             return Services.logger.error('Mesh not found', name);
+        }
 
         this.mesh_name = name;
         this.materials = [];

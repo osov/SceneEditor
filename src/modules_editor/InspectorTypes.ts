@@ -134,3 +134,8 @@ export interface MeshModelNameEventData {
     id_mesh: number;
     mesh_name: string;
 }
+
+export interface ModelMaterialsEventData {
+    id_mesh: number;
+    materials: string[];
+}
