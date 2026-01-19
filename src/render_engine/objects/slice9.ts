@@ -6,72 +6,17 @@ import { MaterialUniformType } from "../resource_manager";
 import { hex2rgba, rgb2hex } from "@editor/defold/utils";
 import { Services } from '@editor/core';
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
+import { SLICE9_VERTEX_SHADER, SLICE9_FRAGMENT_SHADER } from "../shaders/builtin";
 
 // todo optimize material list
 
+/**
+ * Встроенный шейдер для slice9
+ * Шейдеры вынесены в src/render_engine/shaders/builtin/
+ */
 export const shader = {
-    vertexShader: `
-        attribute vec4 uvData; 
-        attribute vec3 color;  
-#ifdef USE_SLICE
-        attribute vec4 sliceData; 
-        varying vec4 vSliceData; 
-#endif
-        varying vec2 vUv;
-        varying vec4 vUvData;
-        varying vec3 vColor; 
-        
-
-        void main() {
-            vColor = color;
-            vUv = uv; 
-            vUvData = uvData;
-#ifdef USE_SLICE
-            vSliceData = sliceData;
-#endif
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }`,
-
-    fragmentShader: `
-        varying vec2 vUv;
-        varying vec4 vUvData;
-        varying vec3 vColor; 
-#ifdef USE_TEXTURE
-        uniform sampler2D u_texture;
-#endif
-#ifdef USE_SLICE
-        varying vec4 vSliceData; 
-
-        float map(float value, float originalMin, float originalMax, float newMin, float newMax) {
-            return (value - originalMin) / (originalMax - originalMin) * (newMax - newMin) + newMin;
-        }
-
-        float processAxis(float coord, float texBorder, float winBorder) {
-            return (coord < winBorder) ? map(coord, 0.0, winBorder, 0.0, texBorder) :
-                (coord > (1.0 - winBorder)) ? map(coord, 1.0 - winBorder, 1.0, 1.0 - texBorder, 1.0) :
-                map(coord, winBorder, 1.0 - winBorder, texBorder, 1.0 - texBorder);
-        }
-
-#endif
-        uniform float alpha;
-
-        void main(void) {
-#ifdef USE_SLICE
-            vec2 newUV = vec2(
-                processAxis(vUv.x, vSliceData.z, vSliceData.x),
-                processAxis(vUv.y, vSliceData.w, vSliceData.y)
-            );
-#else
-            vec2 newUV = vUv;
-#endif
-            newUV = vUvData.xy + newUV * vUvData.zw;
-#ifdef USE_TEXTURE
-            vec4 color = texture2D(u_texture, newUV);
-            gl_FragColor = color * vec4(vColor, alpha);
-#else
-            gl_FragColor = vec4(vColor, alpha);
-#endif
-        }`
+    vertexShader: SLICE9_VERTEX_SHADER,
+    fragmentShader: SLICE9_FRAGMENT_SHADER
 };
 
 export interface Slice9SerializeData {

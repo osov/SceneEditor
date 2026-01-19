@@ -19,8 +19,8 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 
 	constructor(id: number, width = 0, height = 0) {
 		super(id, width, height);
-		// NOTE: используем slice9 как базовый материал, специфичные материалы можно задать при необходимости
-		this.default_material_name = 'slice9';
+		// NOTE: используем anim_model как базовый материал для анимированных моделей
+		this.default_material_name = 'anim_model';
 		Services.event_bus.on('engine:update', (data) => {
 			const e = data as { dt: number };
 			this.on_mixer_update(e);

@@ -89,7 +89,7 @@ async function main() {
     }
 
     // Определяем путь к проекту
-    const project_path = args.project ?? 'test-project';
+    const project_path = args.project ?? 'TestProject_Claude';
     const should_open = args.open && !args['no-open'];
 
     console.log('');

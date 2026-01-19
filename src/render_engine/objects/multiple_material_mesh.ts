@@ -22,7 +22,7 @@ export class MultipleMaterialMesh extends EntityPlane {
     protected materials: ShaderMaterial[] = [];
     protected textures: string[][] = [];
 
-    protected default_material_name = 'slice9';
+    protected default_material_name = 'model';
 
     constructor(id: number, width = 0, height = 0) {
         super(id);
@@ -93,6 +93,13 @@ export class MultipleMaterialMesh extends EntityPlane {
         return this.materials;
     }
 
+    /**
+     * Получить имя материала первого слота (для совместимости с Property.MATERIAL)
+     */
+    get_material_name(): string {
+        return this.materials[0]?.name ?? '';
+    }
+
     get_mesh_name() {
         return this.mesh_name;
     }
@@ -110,8 +117,10 @@ export class MultipleMaterialMesh extends EntityPlane {
 
         const src = Services.resources.get_model(name);
         if (src === undefined) {
-            return Services.logger.error('Mesh not found', name);
+            return Services.logger.error('[set_mesh] Model not found:', name, 'Available models:', Services.resources.get_all_models());
         }
+
+        Services.logger.info('[set_mesh] Setting mesh:', name, 'Using material:', this.default_material_name);
 
         this.mesh_name = name;
         this.materials = [];
@@ -126,7 +135,12 @@ export class MultipleMaterialMesh extends EntityPlane {
                     old_maps.push(old_material.map);
                 }
 
-                const new_material = Services.resources.get_material_by_mesh_id(this.default_material_name, this.mesh_data.id)!;
+                const new_material = Services.resources.get_material_by_mesh_id(this.default_material_name, this.mesh_data.id);
+                if (new_material === null) {
+                    Services.logger.error('[set_mesh] Material not found:', this.default_material_name, 'Available materials:', Services.resources.get_all_materials());
+                    return;
+                }
+                Services.logger.info('[set_mesh] Material applied:', new_material.name, 'uniforms:', Object.keys(new_material.uniforms));
                 this.materials.push(new_material);
                 child.material = new_material;
             }
@@ -294,14 +308,13 @@ export class MultipleMaterialMesh extends EntityPlane {
      * get_color() возвращает undefined при пустом массиве materials
      */
     override get_inspector_fields(): InspectorFieldDefinition[] {
-        const material_names = this.get_material_names();
         return [
             ...super.get_inspector_fields(),
             // Масштаб модели
             { group: 'model', property: Property.MODEL_SCALE, type: PropertyType.NUMBER, params: { min: 0.01, step: 0.1 } },
-            // Материалы модели (если есть)
-            ...(material_names.length > 0 ? [
-                { group: 'model', property: Property.MODEL_MATERIALS, type: PropertyType.ITEM_LIST, params: { options: material_names } },
+            // Материал модели (первый слот) - для нескольких слотов нужен отдельный UI
+            ...(this.materials.length > 0 ? [
+                { group: 'model', property: Property.MATERIAL, type: PropertyType.LIST_TEXT, params: {} },
             ] : []) as InspectorFieldDefinition[],
         ];
     }

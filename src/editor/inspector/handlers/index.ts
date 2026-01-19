@@ -5,31 +5,37 @@
  */
 
 export * from './types';
+export { create_base_handler } from './BaseHandler';
 export { create_transform_handler } from './TransformHandler';
 export { create_graphics_handler } from './GraphicsHandler';
 export { create_text_handler } from './TextHandler';
 export { create_audio_handler } from './AudioHandler';
 export { create_model_handler } from './ModelHandler';
 export { create_animation_handler } from './AnimationHandler';
+export { create_flip_handler } from './FlipHandler';
 
 import type { IPropertyHandler, HandlerParams } from './types';
+import { create_base_handler } from './BaseHandler';
 import { create_transform_handler } from './TransformHandler';
 import { create_graphics_handler } from './GraphicsHandler';
 import { create_text_handler } from './TextHandler';
 import { create_audio_handler } from './AudioHandler';
 import { create_model_handler } from './ModelHandler';
 import { create_animation_handler } from './AnimationHandler';
+import { create_flip_handler } from './FlipHandler';
 import { Property } from '../../../core/inspector/IInspectable';
 
 /** Создать все handlers */
 export function create_all_handlers(params?: HandlerParams): IPropertyHandler[] {
     return [
+        create_base_handler(params),
         create_transform_handler(params),
         create_graphics_handler(params),
         create_text_handler(params),
         create_audio_handler(params),
         create_model_handler(params),
         create_animation_handler(params),
+        create_flip_handler(params),
     ];
 }
 

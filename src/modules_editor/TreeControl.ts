@@ -7,7 +7,7 @@
 import { deepClone } from "../modules/utils";
 import { contextMenuItem, get_contextmenu } from "./ContextMenu";
 import { get_popups } from "./Popups";
-import { NodeAction, NodeActionGui, NodeActionGo, worldGo, worldGui, componentsGo, ParamsTexture } from "../shared/types";
+import { NodeAction, worldGui, ParamsTexture } from "../shared/types";
 import { IObjectTypes } from '../render_engine/types';
 import { Vector2, Mesh } from "three";
 import { ASSET_SCENE_GRAPH, TDictionary } from "./modules_editor_const";
@@ -19,6 +19,9 @@ import {
     has_update as diff_has_update,
     get_changes as diff_get_changes,
     type TreeItem,
+    TreeSelectionServiceCreate,
+    type ItemsBetweenConfig,
+    TreeContextMenuServiceCreate,
 } from '../editor/hierarchy';
 
 // Alias для совместимости
@@ -121,6 +124,48 @@ function TreeControlCreate() {
     let elementCache: TDictionary<HTMLElement> = {}; // кэш элементов по ID
     let currentDropPosition: string | null = null; // текущая позиция drop (top, bottom, bg)
 
+    // Сервис управления выделением
+    const selection_service = TreeSelectionServiceCreate();
+
+    // Конфигурация для сервиса выделения
+    const selection_config: ItemsBetweenConfig = {
+        is_parent_expanded: (parentId: number) => {
+            const parentElement = getElementById(parentId);
+            if (parentElement === null) return false;
+
+            const parentLi = parentElement.closest('li');
+            if (parentLi === null) return false;
+
+            return parentLi.classList.contains('active');
+        }
+    };
+
+    // Сервис контекстного меню
+    const context_menu_service = TreeContextMenuServiceCreate({
+        is_valid_paste: (target_item) => {
+            if (target_item === null) return false;
+            // Специальный случай: если элемент в корне сцены (pid == -1),
+            // проверяем валидность вставки как дочерний
+            if (target_item.pid === -1) {
+                const copyList = Services.actions.copy_list;
+                return Services.actions.is_valid_action(
+                    item_to_scene_object(target_item),
+                    copyList,
+                    true
+                ) !== false;
+            }
+            return Services.actions.is_valid_action(item_to_scene_object(target_item)) !== false;
+        },
+        is_valid_paste_child: (target_item) => {
+            if (target_item === null) return false;
+            const copyList = Services.actions.copy_list;
+            return Services.actions.is_valid_action(
+                item_to_scene_object(target_item),
+                copyList,
+                true
+            ) !== false;
+        }
+    });
 
     function init() {
         paintIdenticalLive(".searchInTree", "#wr_tree .tree__item_name", "color_green", 777);
@@ -833,138 +878,13 @@ function TreeControlCreate() {
         return undefined;
     }
 
+    /**
+     * Получает ID элементов между двумя позициями для Shift-выделения
+     * Делегирует логику в TreeSelectionService
+     */
     function getItemsBetween(startId: number, endId: number): number[] {
-        const result: number[] = [];
         const flatItems = getFlatItemsList();
-
-        if (flatItems.length == 0) {
-            return [startId, endId];
-        }
-
-        const startIndex = flatItems.findIndex(item => item.id == startId);
-        const endIndex = flatItems.findIndex(item => item.id == endId);
-
-        if (startIndex == -1 || endIndex == -1) {
-            return [startId, endId];
-        }
-
-        const minIndex = Math.min(startIndex, endIndex);
-        const maxIndex = Math.max(startIndex, endIndex);
-
-        const startItem = flatItems[startIndex];
-        const endItem = flatItems[endIndex];
-        const commonLevel = getCommonHierarchyLevel(startItem, endItem, flatItems);
-
-        for (let i = minIndex; i <= maxIndex; i++) {
-            const item = flatItems[i];
-
-            if (canIncludeInHierarchicalSelection(item, startItem, endItem, commonLevel, flatItems)) {
-                result.push(item.id);
-            }
-        }
-
-        return result;
-    }
-
-    function getCommonHierarchyLevel(startItem: Item, endItem: Item, flatItems: Item[]): number {
-        if (startItem.pid == endItem.pid) {
-            return getItemLevel(startItem, flatItems);
-        }
-
-        const startAncestors = getAncestors(startItem, flatItems);
-        const endAncestors = getAncestors(endItem, flatItems);
-
-        for (let i = 0; i < startAncestors.length; i++) {
-            const ancestor = startAncestors[i];
-            if (endAncestors.some(endAncestor => endAncestor.id === ancestor.id)) {
-                return getItemLevel(ancestor, flatItems);
-            }
-        }
-
-        return 0;
-    }
-
-    function getItemLevel(item: Item, flatItems: Item[]): number {
-        let level = 0;
-        let currentItem = item;
-
-        while (currentItem.pid !== -2 && currentItem.pid !== 0) {
-            const parent = flatItems.find(p => p.id === currentItem.pid);
-            if (!parent) break;
-            currentItem = parent;
-            level++;
-        }
-
-        return level;
-    }
-
-    function getAncestors(item: Item, flatItems: Item[]): Item[] {
-        const ancestors: Item[] = [];
-        let currentItem = item;
-
-        while (currentItem.pid !== -2 && currentItem.pid !== 0) {
-            const parent = flatItems.find(p => p.id === currentItem.pid);
-            if (!parent) break;
-            ancestors.push(parent);
-            currentItem = parent;
-        }
-
-        return ancestors;
-    }
-
-    function canIncludeInHierarchicalSelection(
-        item: Item,
-        startItem: Item,
-        endItem: Item,
-        commonLevel: number,
-        flatItems: Item[]
-    ): boolean {
-        const itemLevel = getItemLevel(item, flatItems);
-
-        if (itemLevel == commonLevel) {
-            return true;
-        }
-
-        if (itemLevel > commonLevel) {
-            let parent = item;
-            let currentLevel = itemLevel;
-            while (currentLevel > commonLevel) {
-                const parentItem = flatItems.find(p => p.id === parent.pid);
-                if (!parentItem) break;
-                parent = parentItem;
-                currentLevel--;
-            }
-
-            const parentInRange = isItemInRange(parent, startItem, endItem, flatItems);
-            const parentExpanded = isParentExpanded(parent.id);
-            return parentInRange && parentExpanded;
-        }
-
-        return false;
-    }
-
-    function isItemInRange(item: Item, startItem: Item, endItem: Item, flatItems: Item[]): boolean {
-        const startIndex = flatItems.findIndex(i => i.id === startItem.id);
-        const endIndex = flatItems.findIndex(i => i.id === endItem.id);
-        const itemIndex = flatItems.findIndex(i => i.id === item.id);
-
-        if (startIndex === -1 || endIndex === -1 || itemIndex === -1) {
-            return false;
-        }
-
-        const minIndex = Math.min(startIndex, endIndex);
-        const maxIndex = Math.max(startIndex, endIndex);
-        return itemIndex >= minIndex && itemIndex <= maxIndex;
-    }
-
-    function isParentExpanded(parentId: number): boolean {
-        const parentElement = getElementById(parentId);
-        if (!parentElement) return false;
-
-        const parentLi = parentElement.closest('li');
-        if (!parentLi) return false;
-
-        return parentLi.classList.contains('active');
+        return selection_service.get_items_between(startId, endId, flatItems, selection_config);
     }
 
     function getFlatItemsList(): Item[] {
@@ -1753,127 +1673,6 @@ function TreeControlCreate() {
 
     }
 
-    function getItemCM(text: string, action: number): contextMenuItem {
-        let not_active = false;
-
-        if (action == NodeAction.rename)
-            if (itemDrag?.no_rename || itemDrag?.id == -1) not_active = true;
-
-        if (action == NodeAction.CTRL_X || action == NodeAction.remove)
-            if (itemDrag?.no_remove || itemDrag?.id == -1) not_active = true;
-
-        if (action == NodeAction.CTRL_C || action == NodeAction.CTRL_D)
-            if (itemDrag?.id == -1) not_active = true;
-
-        if (action == NodeAction.CTRL_V) {
-            let canPaste = Services.actions.is_valid_action(item_to_scene_object(itemDrag)) == false;
-            if (itemDrag?.pid == -1) {
-                // если itemDrag в корне сцены, то canPaste c учетом asChild
-                const copyList = Services.actions.copy_list;
-                canPaste = Services.actions.is_valid_action(item_to_scene_object(itemDrag), copyList, true) == false;
-            }
-            if (itemDrag?.id == -1) not_active = true;
-            else if (canPaste) not_active = true;
-        }
-
-        if (action == NodeAction.CTRL_B) {
-            const canPaste = Services.actions.is_valid_action(item_to_scene_object(itemDrag)) == false;
-            if (itemDrag?.id == -1) {
-                if (canPaste) not_active = true;
-            }
-            else { if (itemDrag?.no_drop || canPaste) not_active = true; }
-        }
-
-        // внутри component ничего нельзя создавать
-        // if (NodeAction.add_component_spline == action) not_active = true;
-        // запрещено все кроме удаления и дублирования
-        if (itemDrag?.icon.indexOf('component') > -1 && ![NodeAction.remove, NodeAction.CTRL_D].includes(action)) not_active = true;
-
-        // можно только удалить для базовой сущности
-        if (itemDrag?.icon == "base_entity" && action != NodeAction.remove) not_active = true;
-
-        if (DEFOLD_LIMITS) {
-            // внутри Go нельзя создавать gui
-            if (NodeActionGui.includes(action) && worldGo.includes(itemDrag?.icon)) not_active = true;
-
-            // внутри Gui нельзя создавать Go
-            if (NodeActionGo.includes(action) && worldGui.includes(itemDrag?.icon)) not_active = true;
-
-            // внутри gui_container нельзя создавать gui_container
-            if (action == NodeAction.add_gui_container && worldGui.includes(itemDrag?.icon)) not_active = true;
-
-            // внутри sprite\label\model ничего нельзя создавать
-            if ([...NodeActionGui, ...NodeActionGo].includes(action) && componentsGo.includes(itemDrag?.icon)) not_active = true;
-
-            // в корне можно создавать только  GO_CONTAINER \ GUI_CONTAINER
-            const blackList = [
-                NodeAction.add_gui_box,
-                NodeAction.add_gui_text,
-                NodeAction.add_go_sprite_component,
-                NodeAction.add_go_label_component,
-                NodeAction.add_go_model_component,
-                NodeAction.add_go_animated_model_component,
-                NodeAction.add_go_audio_component
-            ];
-            if (itemDrag?.id == -1 && blackList.includes(action)) not_active = true;
-        }
-
-        return { text, action, not_active };
-    }
-
-    function getContextMenuItems(): contextMenuItem[] {
-        const cm_list: contextMenuItem[] = [];
-        cm_list.push(getItemCM('Переименовать', NodeAction.rename));
-        cm_list.push(getItemCM('Вырезать', NodeAction.CTRL_X));
-        cm_list.push(getItemCM('Копировать', NodeAction.CTRL_C));
-
-        cm_list.push(getItemCM('Вставить', NodeAction.CTRL_V));
-        cm_list.push(getItemCM('Вставить дочерним', NodeAction.CTRL_B));
-
-        cm_list.push(getItemCM('Дублировать', NodeAction.CTRL_D));
-        cm_list.push(getItemCM('Удалить', NodeAction.remove));
-        cm_list.push({ text: 'line' });
-
-        cm_list.push({
-            text: 'Создать UI', children: [
-                getItemCM('Добавить контейнер', NodeAction.add_gui_container),
-                getItemCM('Добавить блок', NodeAction.add_gui_box),
-                getItemCM('Добавить текст', NodeAction.add_gui_text),
-                { text: 'line' },
-                {
-                    text: 'Расширенные', children: [
-                        getItemCM('Добавить кнопку', -5),
-                        getItemCM('Добавить прогресс бар', -5),
-                        getItemCM('Добавить скрол', -5),
-                    ]
-                },
-            ]
-        });
-
-        cm_list.push({ text: 'line' });
-        cm_list.push({
-            text: 'Game', children: [
-                getItemCM('Добавить контейнер', NodeAction.add_go_container),
-                getItemCM('Добавить спрайт', NodeAction.add_go_sprite_component),
-                getItemCM('Добавить надпись', NodeAction.add_go_label_component),
-                getItemCM('Добавить модель', NodeAction.add_go_model_component),
-                getItemCM('Добавить аним-модель', NodeAction.add_go_animated_model_component),
-                getItemCM('Добавить звук', NodeAction.add_go_audio_component),
-            ]
-        });
-
-
-        cm_list.push({ text: 'line' });
-        cm_list.push({
-            text: 'Компонент', children: [
-                getItemCM('Сплайн', NodeAction.add_component_spline),
-                getItemCM('Движение', NodeAction.add_component_mover),
-            ]
-        });
-
-        return cm_list;
-    }
-
     function openMenuContext(event: any): void {
         if (!itemDrag) return;
         if (!event.target.closest(".tree__item")) return;
@@ -1883,7 +1682,8 @@ function TreeControlCreate() {
             divTree.classList.add('no_scrolling');
         }
 
-        get_contextmenu().open(getContextMenuItems(), event, menuContextClick);
+        const menu_items = context_menu_service.get_menu_items(itemDrag);
+        get_contextmenu().open(menu_items as contextMenuItem[], event, menuContextClick);
     }
 
     function setCutList(is_clear: boolean = false) {

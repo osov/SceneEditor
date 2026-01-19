@@ -23,14 +23,14 @@ NOTE: API для материалов:
         get_info_about_unique_materials
 */
 
-import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4, AudioLoader, Wrapping } from 'three';
+import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4, AudioLoader, Wrapping, ShaderChunk } from 'three';
 import { copy_material } from './helpers/material';
 import { get_file_name } from './helpers/file';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
+import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
+import { ColladaLoader, type Collada } from 'three/examples/jsm/loaders/ColladaLoader';
 import { FSEvent, TDictionary, TRecursiveDict } from '../modules_editor/modules_editor_const';
 import { shader } from './objects/slice9';
 import { deepClone, getObjectHash, hexToRGB, rgbToHex } from '../modules/utils';
@@ -218,6 +218,23 @@ export function ResourceManagerModule() {
     let project_path = '';
     let project_name = '';
 
+    /**
+     * Обрабатывает #include директивы в шейдерах, заменяя их на код из Three.js ShaderChunk.
+     * Это необходимо для ShaderMaterial, который не обрабатывает includes автоматически.
+     */
+    function process_shader_includes(shader_source: string): string {
+        const include_pattern = /^\s*#include\s+<(\w+)>/gm;
+        return shader_source.replace(include_pattern, (_match, chunk_name: string) => {
+            const chunk = (ShaderChunk as Record<string, string>)[chunk_name];
+            if (chunk !== undefined) {
+                // Рекурсивно обрабатываем вложенные includes
+                return process_shader_includes(chunk);
+            }
+            Services.logger.warn('[process_shader_includes] Unknown shader chunk:', chunk_name);
+            return `// Unknown chunk: ${chunk_name}`;
+        });
+    }
+
     function init() {
         gen_textures();
         create_default_materials();
@@ -291,6 +308,80 @@ export function ResourceManagerModule() {
         slice9_info.material_hash_to_meshes_info[slice9_info.origin] = [];
 
         materials['slice9'] = slice9_info;
+
+        // Создаём builtin материал 'model' для 3D моделей (будет перезаписан при загрузке проекта)
+        create_builtin_material('model');
+
+        // Создаём builtin материал 'anim_model' для анимированных моделей
+        create_builtin_material('anim_model');
+    }
+
+    /**
+     * Создаёт базовый builtin материал с простыми шейдерами.
+     * Используется как fallback до загрузки реальных материалов из проекта.
+     */
+    function create_builtin_material(name: string) {
+        const material = new ShaderMaterial({
+            vertexShader: shader.vertexShader,
+            fragmentShader: shader.fragmentShader,
+            transparent: true,
+            uniforms: {
+                u_texture: { value: null },
+                u_color: { value: new Vector3(1, 1, 1) },
+            },
+        });
+        material.name = name;
+
+        const info: MaterialInfo = {
+            name,
+            path: `__builtin__/${name}.mtr`,
+            vertexShader: '__builtin__',
+            fragmentShader: '__builtin__',
+            uniforms: {
+                u_texture: {
+                    type: MaterialUniformType.SAMPLER2D,
+                    params: {},
+                    readonly: false,
+                    hide: true,
+                },
+                u_color: {
+                    type: MaterialUniformType.COLOR,
+                    params: {},
+                    readonly: false,
+                    hide: false,
+                },
+            },
+            origin: '',
+            instances: {},
+            mesh_info_to_material_hashes: {},
+            material_hash_to_meshes_info: {},
+            material_hash_to_changed_uniforms: {},
+        };
+
+        // Вычисляем hash
+        const not_readonly_uniforms: Record<string, IUniform> = {};
+        Object.entries(material.uniforms).forEach(([key, uniform]) => {
+            if (info.uniforms[key]?.readonly) {
+                return;
+            }
+            not_readonly_uniforms[key] = uniform;
+        });
+
+        info.origin = getObjectHash({
+            uniforms: not_readonly_uniforms,
+            defines: material.defines,
+            depthTest: material.depthTest,
+            stencilWrite: material.stencilWrite,
+            stencilRef: material.stencilRef,
+            stencilFunc: material.stencilFunc,
+            stencilZPass: material.stencilZPass,
+            colorWrite: material.colorWrite,
+        });
+
+        info.instances[info.origin] = material;
+        info.material_hash_to_meshes_info[info.origin] = [];
+
+        materials[name] = info;
     }
 
     function subscribe() {
@@ -846,11 +937,22 @@ export function ResourceManagerModule() {
         const material = new ShaderMaterial();
         material.name = material_info.name;
 
+        // Получаем шейдеры и обрабатываем #include директивы
         const vertexShader = get_vertex_program(data.vertexShader);
-        material.vertexShader = (vertexShader) ? vertexShader : shader.vertexShader;
+        Services.logger.info('[load_material]', name, 'vertexShader path:', data.vertexShader, 'loaded:', vertexShader !== undefined);
+        const processedVertexShader = vertexShader !== undefined
+            ? process_shader_includes(vertexShader)
+            : shader.vertexShader;
+        Services.logger.info('[load_material]', name, 'processedVertexShader length:', processedVertexShader.length);
+        material.vertexShader = processedVertexShader;
 
-        const fragmentShader = get_fragment_program(data.fragmentShader)
-        material.fragmentShader = (fragmentShader) ? fragmentShader : shader.fragmentShader;
+        const fragmentShader = get_fragment_program(data.fragmentShader);
+        Services.logger.info('[load_material]', name, 'fragmentShader path:', data.fragmentShader, 'loaded:', fragmentShader !== undefined);
+        const processedFragmentShader = fragmentShader !== undefined
+            ? process_shader_includes(fragmentShader)
+            : shader.fragmentShader;
+        Services.logger.info('[load_material]', name, 'processedFragmentShader length:', processedFragmentShader.length);
+        material.fragmentShader = processedFragmentShader;
 
         material.transparent = data.transparent;
 
@@ -1716,52 +1818,85 @@ export function ResourceManagerModule() {
     }
 
     async function preload_model(path: string) {
-        let model_name = get_model_name(path);
+        const model_name = get_model_name(path);
 
         const response = await api.GET(URL_PATHS.ASSETS + `/${project_name}${path}`);
         if (!response || !response.ok) {
-            Services.logger.error('Failed to load model:', path, 'Status:', response?.status);
+            Services.logger.error('[preload_model] Failed to check model:', path, 'Status:', response?.status);
             return;
         }
 
+        // URL для загрузки через loader - кодируем пробелы и спецсимволы
+        const load_url = get_project_url(path)
+            .split('/')
+            .map(segment => encodeURIComponent(segment))
+            .join('/');
+
+        Services.logger.info('[preload_model] Loading model:', model_name, 'URL:', load_url, 'Animations in path:', path);
+
         if (path.toLowerCase().endsWith('.fbx')) {
-            return new Promise<Group>(async (resolve, _) => {
+            return new Promise<Group>((resolve, reject) => {
                 const loader = new FBXLoader(manager);
-                loader.load(get_project_url(path), (mesh) => {
-                    if (model_name != '')
-                        models[model_name] = mesh;
-                    add_animations(mesh.animations, path);
-                    resolve(mesh);
-                });
-            })
+                loader.load(
+                    load_url,
+                    (mesh: Group) => {
+                        if (model_name !== '')
+                            models[model_name] = mesh;
+                        Services.logger.info('[preload_model] FBX loaded:', model_name, 'Animations count:', mesh.animations.length);
+                        add_animations(mesh.animations, path);
+                        resolve(mesh);
+                    },
+                    undefined,
+                    (error: unknown) => {
+                        Services.logger.error('[preload_model] FBX load error:', path, error);
+                        reject(error);
+                    }
+                );
+            });
         }
         else if (path.toLowerCase().endsWith('.gltf') || path.toLowerCase().endsWith('.glb')) {
-            return new Promise<Group>(async (resolve, _) => {
+            return new Promise<Group>((resolve, reject) => {
                 const loader = new GLTFLoader(manager);
                 loader.setDRACOLoader(dracoLoader);
-                loader.load(get_project_url(path), (gltf) => {
-                    //log(gltf)
-                    const has_mesh = has_skinned_mesh(gltf.scene);
-                    if (has_mesh && model_name != '')
-                        models[model_name] = gltf.scene;
-                    add_animations(gltf.animations, path);
-                    resolve(gltf.scene);
-                });
-            })
+                loader.load(
+                    load_url,
+                    (gltf: GLTF) => {
+                        const has_mesh = has_skinned_mesh(gltf.scene);
+                        if (has_mesh && model_name !== '')
+                            models[model_name] = gltf.scene;
+                        Services.logger.info('[preload_model] GLTF loaded:', model_name, 'Animations count:', gltf.animations.length);
+                        add_animations(gltf.animations, path);
+                        resolve(gltf.scene);
+                    },
+                    undefined,
+                    (error: unknown) => {
+                        Services.logger.error('[preload_model] GLTF load error:', path, error);
+                        reject(error);
+                    }
+                );
+            });
         }
         else if (path.toLowerCase().endsWith('.dae')) {
-            return new Promise<Scene>(async (resolve, _) => {
+            return new Promise<Scene>((resolve, reject) => {
                 const loader = new ColladaLoader(manager);
-                loader.load(get_project_url(path), (collada) => {
-                    //log(collada)
-                    const has_mesh = has_skinned_mesh(collada.scene);
-                    if (has_mesh)
-                        models[model_name] = collada.scene;
-                    resolve(collada.scene);
-                });
-            })
+                loader.load(
+                    load_url,
+                    (collada: Collada) => {
+                        const has_mesh = has_skinned_mesh(collada.scene);
+                        if (has_mesh)
+                            models[model_name] = collada.scene;
+                        Services.logger.info('[preload_model] Collada loaded:', model_name);
+                        resolve(collada.scene);
+                    },
+                    undefined,
+                    (error: unknown) => {
+                        Services.logger.error('[preload_model] Collada load error:', path, error);
+                        reject(error);
+                    }
+                );
+            });
         }
-        Services.logger.error('Model not supported', path);
+        Services.logger.error('[preload_model] Model format not supported:', path);
         return null;
     }
 

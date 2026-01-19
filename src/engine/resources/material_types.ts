@@ -100,39 +100,4 @@ export interface IShaderService {
     get_all_fragment_programs(): string[];
 }
 
-/**
- * Интерфейс сервиса материалов
- */
-export interface IMaterialService {
-    // Загрузка
-    preload_material(path: string): Promise<MaterialInfo | undefined>;
-    load_material(path: string): Promise<MaterialInfo | undefined>;
-
-    // Получение информации
-    get_material_info(name: string): MaterialInfo | null;
-    has_material(name: string): boolean;
-    is_material_origin_hash(material_name: string, hash: string): boolean;
-    get_material_by_hash(material_name: string, hash: string): ShaderMaterial | null;
-    get_material_hash_by_mesh_id(material_name: string, mesh_id: number, index?: number): string | null;
-    get_material_by_mesh_id(material_name: string, mesh_id: number, index?: number): ShaderMaterial | null;
-    has_material_by_mesh_id(material_name: string, mesh_id: number, index?: number): boolean;
-
-    // Изменение юниформов
-    set_material_uniform_for_original<T>(material_name: string, uniform_name: string, value: T, is_save?: boolean): Promise<void>;
-    set_material_uniform_for_mesh(mesh_id: number, material_name: string, index: number, uniform_name: string, value: unknown): void;
-
-    // Изменение define
-    set_material_define_for_mesh(mesh_id: number, material_name: string, index: number, define_name: string, value: unknown): void;
-
-    // Связь меш-материал
-    unlink_material_for_mesh(material_name: string, mesh_id: number, index?: number): void;
-
-    // Списки
-    get_all_materials(): string[];
-    get_info_about_unique_materials(material_name: string): Array<{
-        hash: string;
-        material: ShaderMaterial;
-        meshes_count: number;
-    }>;
-    get_changed_uniforms_for_mesh(material_name: string, mesh_id: number, index?: number): string[];
-}
+// IMaterialService теперь определён в MaterialService.ts

@@ -87,6 +87,9 @@ function AssetControlCreate() {
 
         Services.resources.set_project_name(current_project);
 
+        // DEBUG: логируем пути материалов от сервера
+        Services.logger.info('[load_project] Materials from server:', data.paths.materials);
+
         const textures: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         const shaders: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         const other: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];

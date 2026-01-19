@@ -74,6 +74,8 @@ export interface HandlerParams {
     on_transform_changed?: () => void;
     /** Callback для обновления размера */
     on_size_changed?: () => void;
+    /** Callback для полного обновления инспектора (при смене материала) */
+    on_refresh_inspector?: () => void;
 }
 
 /** Тип вычисления среднего для multi-select */

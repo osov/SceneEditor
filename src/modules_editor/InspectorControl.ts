@@ -69,10 +69,11 @@ import { FolderApi } from '@tweakpane/core';
 import { IBaseMesh, IBaseMeshAndThree, IObjectTypes } from '../render_engine/types';
 import * as TweakpaneImagePlugin from 'tweakpane4-image-list-plugin';
 import * as TweakpaneSearchListPlugin from 'tweakpane4-search-list-plugin';
+import * as TweakpaneItemListPlugin from 'tweakpane4-item-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plugin';
-import { Vector2, Vector3, NormalBlending, AdditiveBlending, MultiplyBlending, SubtractiveBlending, NearestFilter, LinearFilter, MinificationTextureFilter, MagnificationTextureFilter, Vector4, Color } from 'three';
+import { Vector2, Vector3, NearestFilter, LinearFilter, MinificationTextureFilter, MagnificationTextureFilter, Vector4, Color } from 'three';
 import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad, rgbToHex } from '../modules/utils';
@@ -81,7 +82,7 @@ import { ActiveEventData, AlphaEventData, AnchorEventData, ColorEventData, FontE
 import { MaterialUniformParams, MaterialUniformType } from '../render_engine/resource_manager';
 import { get_basename, get_file_name } from "../render_engine/helpers/utils";
 import { GoSprite, FlipMode } from '../render_engine/objects/sub_types';
-import { AudioMesh, SoundFunctionType, SoundZoneType } from '../render_engine/objects/audio_mesh';
+import { AudioMesh } from '../render_engine/objects/audio_mesh';
 import { MultipleMaterialMesh } from '../render_engine/objects/multiple_material_mesh';
 import { AnimatedMesh } from '../render_engine/objects/animated_mesh';
 import { HistoryOwner } from './modules_editor_const';
@@ -113,6 +114,30 @@ import {
     type Folder,
     type ChangeEvent,
 } from '../editor/inspector/ui';
+import {
+    InspectorOptionsUpdaterCreate,
+    type IInspectorOptionsUpdater,
+    // Preset converters (Phase 18)
+    ScreenPointPreset,
+    pivot_to_screen_preset,
+    screen_preset_to_pivot_value,
+    anchor_to_screen_preset,
+    screen_preset_to_anchor_value,
+    // Blend converters (Phase 18)
+    BlendMode,
+    convert_blend_mode_to_threejs,
+    convert_threejs_blending_to_blend_mode,
+    // TweakPane utils (Phase 18)
+    get_changed_info,
+    get_dragged_info,
+    // Inspector config (Phase 18)
+    create_default_inspector_config,
+    // Axis disabled utils (Phase 18)
+    try_disabled_value_by_axis,
+    // Audio update utils (Phase 18)
+    update_audio_sound_function,
+    update_audio_zone_type,
+} from './inspector_module';
 
 // SizeControl мигрирован на Services.size
 
@@ -137,19 +162,8 @@ export function register_inspector_control() {
 // Property enum реэкспортирован из IInspectable для обратной совместимости
 export { Property } from '../core/inspector/IInspectable';
 
-export enum ScreenPointPreset {
-    NONE = 'None',
-    CENTER = 'Center',
-    TOP_LEFT = 'Top Left',
-    TOP_CENTER = 'Top Center',
-    TOP_RIGHT = 'Top Right',
-    LEFT_CENTER = 'Left Center',
-    RIGHT_CENTER = 'Right Center',
-    BOTTOM_LEFT = 'Bottom Left',
-    BOTTOM_CENTER = 'Bottom Center',
-    BOTTOM_RIGHT = 'Bottom Right',
-    CUSTOM = 'Custom'
-}
+// ScreenPointPreset и BlendMode реэкспортированы из inspector_module (Phase 18)
+export { ScreenPointPreset, BlendMode } from './inspector_module';
 
 export enum TextAlign {
     NONE = 'None',
@@ -179,14 +193,6 @@ export enum PropertyType {
     BUTTON,
     POINT_2D,
     LOG_DATA,
-}
-
-export enum BlendMode {
-    NORMAL = 'normal',
-    ADD = 'add',
-    MULTIPLY = 'multiply',
-    SUBTRACT = 'subtract',
-    // CUSTOM = 'custom'
 }
 
 export enum FilterMode {
@@ -229,14 +235,20 @@ export type PropertyValues = {
 }
 
 
+/**
+ * Определение свойства в группе инспектора
+ */
 export interface PropertyItem<T extends PropertyType> {
-    name: string;
+    name: Property | string;
     title: string;
     type: T;
-    params?: PropertyParams[T]; // зависит от типа
+    params?: PropertyParams[T];
     readonly?: boolean;
 }
 
+/**
+ * Группа свойств инспектора
+ */
 export interface InspectorGroup {
     name: string;
     title: string;
@@ -296,6 +308,9 @@ function InspectorControlCreate() {
     /** Провайдер опций для списков (Phase 15) */
     let _options_providers: IOptionsProviders;
 
+    /** Updater для опций списков (извлечено в Phase 18) */
+    let _options_updater: IInspectorOptionsUpdater;
+
     function init() {
         _inspector = new Pane({
             container: document.querySelector('.inspector__body') as HTMLElement,
@@ -312,6 +327,10 @@ function InspectorControlCreate() {
             on_update_ui: () => {
                 Services.ui.update_hierarchy();
             },
+            on_refresh_inspector: () => {
+                // Полное обновление инспектора при смене материала
+                set_selected_list(_selected_list);
+            },
         });
 
         // Инициализация провайдера опций (Phase 15)
@@ -319,12 +338,20 @@ function InspectorControlCreate() {
 
         registerPlugins();
         setupConfig(getDefaultInspectorConfig());
+
+        // Инициализация updater для опций (Phase 18)
+        _options_updater = InspectorOptionsUpdaterCreate(
+            () => _config,
+            _options_providers
+        );
+
         subscribeEvents();
     }
 
     function registerPlugins() {
         _inspector.registerPlugin(TweakpaneImagePlugin);
         _inspector.registerPlugin(TweakpaneSearchListPlugin);
+        _inspector.registerPlugin(TweakpaneItemListPlugin);
         _inspector.registerPlugin(TextareaPlugin);
         _inspector.registerPlugin(ExtendedPointNdInputPlugin);
         _inspector.registerPlugin(TweakpaneExtendedBooleanPlugin);
@@ -713,11 +740,11 @@ function InspectorControlCreate() {
             case Property.SIZE:
                 return obj.get_size();
             case Property.PIVOT:
-                return pivotToScreenPreset(obj.get_pivot());
+                return pivot_to_screen_preset(obj.get_pivot());
             case Property.ANCHOR:
                 return obj.get_anchor();
             case Property.ANCHOR_PRESET:
-                return anchorToScreenPreset(obj.get_anchor());
+                return anchor_to_screen_preset(obj.get_anchor());
             case Property.COLOR:
                 return obj.get_color();
             case Property.ALPHA:
@@ -746,7 +773,7 @@ function InspectorControlCreate() {
                 return (obj as Slice9Mesh).material.name || '';
             }
             case Property.BLEND_MODE:
-                return convertThreeJSBlendingToBlendMode((obj as Slice9Mesh).material.blending);
+                return convert_threejs_blending_to_blend_mode((obj as Slice9Mesh).material.blending);
             case Property.SLICE9:
                 return (obj as Slice9Mesh).get_slice();
             case Property.TEXT:
@@ -892,6 +919,13 @@ function InspectorControlCreate() {
             update_zone_type_options();
         }
 
+        // Для полей с материалами обновляем список материалов (для 3D моделей)
+        const material_field = field_defs.find(f => f.property === Property.MATERIAL);
+        if (material_field !== undefined) {
+            material_field.params = _options_providers.get_material_options();
+            update_material_options();
+        }
+
         // Для модельных полей обновляем списки мешей (обновляем params в field_defs)
         const mesh_field = field_defs.find(f => f.property === Property.MESH_NAME);
         if (mesh_field !== undefined) {
@@ -962,93 +996,50 @@ function InspectorControlCreate() {
         setData(data);
     }
 
+    // === Функции обновления опций (делегируют в _options_updater, Phase 18) ===
+
     function update_atlas_options() {
-        _config.forEach((group) => {
-            const properties = [Property.ASSET_ATLAS, Property.ATLAS];
-            const property = group.property_list.find((property) => properties.includes(property.name as Property));
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = _options_providers.get_atlas_options();
-        });
+        _options_updater.update_atlas_options();
     }
 
     function update_material_options() {
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.MATERIAL);
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = _options_providers.get_material_options();
-        });
+        _options_updater.update_material_options();
     }
 
     function update_vertex_program_options() {
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.VERTEX_PROGRAM);
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = _options_providers.get_vertex_program_options();
-        });
+        _options_updater.update_vertex_program_options();
     }
 
     function update_fragment_program_options() {
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.FRAGMENT_PROGRAM);
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = _options_providers.get_fragment_program_options();
-        });
+        _options_updater.update_fragment_program_options();
     }
 
     function update_texture_options(properties: Property[], method = () => _options_providers.get_texture_options()) {
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => properties.includes(property.name as Property));
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXTURES]) = method();
-        });
+        _options_updater.update_texture_options(properties, method);
     }
 
     function update_font_options() {
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name === Property.FONT);
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = _options_providers.get_font_options();
-        });
+        _options_updater.update_font_options();
     }
 
     function update_sound_options() {
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.SOUND);
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = _options_providers.get_sound_options();
-        });
+        _options_updater.update_sound_options();
     }
 
     function update_sound_function_options() {
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.SOUND_FUNCTION);
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = _options_providers.get_sound_function_options();
-        });
+        _options_updater.update_sound_function_options();
     }
 
     function update_zone_type_options() {
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.ZONE_TYPE);
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = _options_providers.get_zone_type_options();
-        });
+        _options_updater.update_zone_type_options();
     }
 
     function update_mesh_options() {
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.MESH_NAME);
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = _options_providers.get_mesh_options();
-        });
+        _options_updater.update_mesh_options();
     }
 
     function update_animation_options(animations: string[]) {
-        _config.forEach((group) => {
-            const property = group.property_list.find((property) => property.name == Property.CURRENT_ANIMATION);
-            if (!property) return;
-            (property.params as PropertyParams[PropertyType.LIST_TEXT]) = _options_providers.get_animation_options(animations);
-        });
+        _options_updater.update_animation_options(animations);
     }
 
     function refresh(properties: Property[]) {
@@ -1068,9 +1059,9 @@ function InspectorControlCreate() {
                         break;
                     case Property.SCALE: value.data = item.get_scale(); break;
                     case Property.SIZE: value.data = item.get_size(); break;
-                    case Property.PIVOT: value.data = pivotToScreenPreset(item.get_pivot()); break;
+                    case Property.PIVOT: value.data = pivot_to_screen_preset(item.get_pivot()); break;
                     case Property.ANCHOR: value.data = item.get_anchor(); break;
-                    case Property.ANCHOR_PRESET: value.data = anchorToScreenPreset(item.get_anchor()); break;
+                    case Property.ANCHOR_PRESET: value.data = anchor_to_screen_preset(item.get_anchor()); break;
                     case Property.SLICE9: value.data = (item as Slice9Mesh).get_slice(); break;
                     case Property.FONT_SIZE:
                         const delta = new Vector3(1 * item.scale.x, 1 * item.scale.y);
@@ -1394,27 +1385,16 @@ function InspectorControlCreate() {
             case PropertyType.BUTTON:
                 return create_button(property.title, (field as PropertyData<PropertyType.BUTTON>).data, { title: property.title });
             case PropertyType.ITEM_LIST: {
-                // ITEM_LIST отображает список элементов (например материалы) где каждый можно выбрать из options
+                // ITEM_LIST отображает список элементов (например материалы) где каждый можно изменить
                 const item_list_params = property.params as PropertyParams[PropertyType.ITEM_LIST];
-                const options = item_list_params?.options ?? [];
-                // Преобразуем options в формат для search-list: { label: value }
-                const list_options: { [key: string]: string } = {};
-                for (const opt of options) {
-                    list_options[opt] = opt;
-                }
-                // Если нет опций, показываем пустой текст
-                if (options.length === 0) {
-                    list_options[item_list_params?.emptyText ?? 'Нет элементов'] = '';
-                }
-                // NOTE: ITEM_LIST хранит массив, но search-list ожидает одно значение
-                // Преобразуем массив в первый элемент для отображения
-                const current_value = field.data as string[];
-                if (Array.isArray(current_value) && current_value.length > 0) {
-                    field.data = current_value[0] as PropertyValues[PropertyType];
-                }
+                // Для MODEL_MATERIALS используем все доступные материалы как options
+                const all_materials = Object.values(_options_providers.get_material_options());
                 return createEntity(ids, field, property, {
-                    view: 'search-list',
-                    options: list_options
+                    view: 'item-list',
+                    pickText: item_list_params?.pickText ?? 'Выбрать',
+                    emptyText: item_list_params?.emptyText ?? 'Нет элементов',
+                    options: all_materials,
+                    onOptionClick: item_list_params?.onOptionClick
                 });
             }
             default:
@@ -1536,264 +1516,9 @@ function InspectorControlCreate() {
     // render_entities импортируется из '../editor/inspector/ui'
 
     // NOTE: проверяем нужно ли поставить прочерк в случае разных значений
+    // Логика вынесена в inspector_module/axis_disabled_utils.ts (Phase 18)
     function tryDisabledValueByAxis(info: ChangeInfo) {
-        // TODO: сделать проверку на прочерк для всех векторных полей, использую функцию которя будет возвращать значения из меша по принемаемому Property
-        tryDisabledPositionValueByAxis(info);
-        tryDisabledRotationValueByAxis(info);
-        tryDisabledScaleValueByAxis(info);
-        tryDisabledSizeValueByAxis(info);
-        tryDisabledAnchorValueByAxis(info);
-        tryDisabledSliceValueByAxis(info);
-    }
-
-    function tryDisabledPositionValueByAxis(info: ChangeInfo) {
-        if (info.data.field.name != Property.POSITION) {
-            return;
-        }
-
-        let combX, combY, combZ = false;
-
-        // NOTE: ищем несовпадения по осям
-        let prevPosition: Vector3;
-        for (let i = 0; i < info.ids.length; i++) {
-            const id = info.ids[i];
-            const mesh = _selected_list.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Services.logger.error('[tryDisabledPositionValueByAxis] Mesh not found for id:', id);
-                return;
-            }
-
-            if (i == 0) {
-                prevPosition = new Vector3();
-                prevPosition.copy(mesh.position);
-            } else {
-                if (!combX) combX = prevPosition!.x != mesh.position.x;
-                if (!combY) combY = prevPosition!.y != mesh.position.y;
-                if (!combZ) combZ = prevPosition!.z != mesh.position.z;
-
-                if (combX && combY && combZ) {
-                    break;
-                }
-
-                prevPosition!.copy(mesh.position);
-            }
-        }
-
-        // NOTE: рисуем '-' в нужном input теге
-        const inputs = info.data.event.target.controller.view.valueElement.querySelectorAll('input');
-        if (combX) inputs[0].value = '-';
-        if (combY) inputs[1].value = '-';
-        if (combZ) inputs[2].value = '-';
-    }
-
-    function tryDisabledRotationValueByAxis(info: ChangeInfo) {
-        if (info.data.field.name != Property.ROTATION) {
-            return;
-        }
-
-        let combX, combY, combZ = false;
-
-        // NOTE: ищем несовпадения по осям
-        let prevRotation: Vector3;
-        for (let i = 0; i < info.ids.length; i++) {
-            const id = info.ids[i];
-            const mesh = _selected_list.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Services.logger.error('[tryDisabledRotationValueByAxis] Mesh not found for id:', id);
-                return;
-            }
-
-            if (i == 0) {
-                prevRotation = new Vector3();
-                prevRotation.copy(mesh.rotation);
-            } else {
-                if (!combX) combX = prevRotation!.x != mesh.rotation.x;
-                if (!combY) combY = prevRotation!.y != mesh.rotation.y;
-                if (!combZ) combZ = prevRotation!.z != mesh.rotation.z;
-
-                if (combX && combY && combZ) {
-                    break;
-                }
-
-                prevRotation!.copy(mesh.rotation);
-            }
-        }
-
-        // NOTE: рисуем '-' в нужном input теге
-        const inputs = info.data.event.target.controller.view.valueElement.querySelectorAll('input');
-        if (combX) inputs[0].value = '-';
-        if (combY) inputs[1].value = '-';
-        if (combZ) inputs[2].value = '-';
-    }
-
-    function tryDisabledScaleValueByAxis(info: ChangeInfo) {
-        if (info.data.field.name != Property.SCALE) {
-            return;
-        }
-
-        let combX, combY;
-
-        // NOTE: ищем несовпадения по осям
-        let prevScale: Vector2;
-        for (let i = 0; i < info.ids.length; i++) {
-            const id = info.ids[i];
-            const mesh = _selected_list.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Services.logger.error('[tryDisabledScaleValueByAxis] Mesh not found for id:', id);
-                return;
-            }
-
-            if (i == 0) {
-                prevScale = new Vector2();
-                prevScale.copy(mesh.get_scale());
-            } else {
-                if (!combX) combX = prevScale!.x != mesh.get_scale().x;
-                if (!combY) combY = prevScale!.y != mesh.get_scale().y;
-
-                if (combX && combY) {
-                    break;
-                }
-
-                prevScale!.copy(mesh.get_scale());
-            }
-        }
-
-        // NOTE: рисуем '-' в нужном input теге
-        const inputs = info.data.event.target.controller.view.valueElement.querySelectorAll('input');
-        if (combX) inputs[0].value = '-';
-        if (combY) inputs[1].value = '-';
-    }
-
-    function tryDisabledSizeValueByAxis(info: ChangeInfo) {
-        if (info.data.field.name != Property.SIZE) {
-            return;
-        }
-
-        let combX, combY;
-
-        // NOTE: ищем несовпадения по осям
-        let prevSize: Vector2;
-        for (let i = 0; i < info.ids.length; i++) {
-            const id = info.ids[i];
-            const mesh = _selected_list.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Services.logger.error('[tryDisabledSizeValueByAxis] Mesh not found for id:', id);
-                return;
-            }
-
-            if (i == 0) {
-                prevSize = new Vector2();
-                prevSize.copy(mesh.get_size());
-            } else {
-                if (!combX) combX = prevSize!.x != mesh.get_size().x;
-                if (!combY) combY = prevSize!.y != mesh.get_size().y;
-
-                if (combX && combY) {
-                    break;
-                }
-
-                prevSize!.copy(mesh.get_size());
-            }
-        }
-
-        // NOTE: рисуем '-' в нужном input теге
-        const inputs = info.data.event.target.controller.view.valueElement.querySelectorAll('input');
-        if (combX) inputs[0].value = '-';
-        if (combY) inputs[1].value = '-';
-    }
-
-    function tryDisabledAnchorValueByAxis(info: ChangeInfo) {
-        if (info.data.field.name != Property.ANCHOR) {
-            return;
-        }
-
-        let combX, combY;
-
-        // NOTE: ищем несовпадения по осям
-        let prevAnchor: Vector2;
-        for (let i = 0; i < info.ids.length; i++) {
-            const id = info.ids[i];
-            const mesh = _selected_list.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Services.logger.error('[tryDisabledAnchorValueByAxis] Mesh not found for id:', id);
-                return;
-            }
-
-            if (i == 0) {
-                prevAnchor = new Vector2();
-                prevAnchor.copy(mesh.get_anchor());
-            } else {
-                if (!combX) combX = prevAnchor!.x != mesh.get_anchor().x;
-                if (!combY) combY = prevAnchor!.y != mesh.get_anchor().y;
-
-                if (combX && combY) {
-                    break;
-                }
-
-                prevAnchor!.copy(mesh.get_anchor());
-            }
-        }
-
-        // NOTE: рисуем '-' в нужном input теге
-        const inputs = info.data.event.target.controller.view.valueElement.querySelectorAll('input');
-        if (combX) inputs[0].value = '-';
-        if (combY) inputs[1].value = '-';
-    }
-
-    function tryDisabledSliceValueByAxis(info: ChangeInfo) {
-        if (info.data.field.name != Property.SLICE9) {
-            return;
-        }
-
-        let combX, combY;
-
-        // NOTE: ищем несовпадения по осям
-        let prevSlice: Vector2;
-        for (let i = 0; i < info.ids.length; i++) {
-            const id = info.ids[i];
-            const mesh = _selected_list.find((item) => {
-                return item.mesh_data.id == id;
-            });
-
-            if (mesh == undefined) {
-                Services.logger.error('[tryDisabledSliceValueByAxis] Mesh not found for id:', id);
-                return;
-            }
-
-            if (i == 0) {
-                prevSlice = new Vector2();
-                prevSlice.copy((mesh as Slice9Mesh).get_slice());
-            } else {
-                if (!combX) combX = prevSlice!.x != (mesh as Slice9Mesh).get_slice().x;
-                if (!combY) combY = prevSlice!.y != (mesh as Slice9Mesh).get_slice().y;
-
-                if (combX && combY) {
-                    break;
-                }
-
-                prevSlice!.copy((mesh as Slice9Mesh).get_slice());
-            }
-        }
-
-        // NOTE: рисуем '-' в нужном input теге
-        const inputs = info.data.event.target.controller.view.valueElement.querySelectorAll('input');
-        if (combX) inputs[0].value = '-';
-        if (combY) inputs[1].value = '-';
+        try_disabled_value_by_axis(info, _selected_list, Services.logger.error.bind(Services.logger));
     }
 
     function saveValue(info: BeforeChangeInfo) {
@@ -1834,8 +1559,8 @@ function InspectorControlCreate() {
      * Создаёт UpdateContext из ChangeInfo для использования с handlers (Phase 14)
      */
     function create_update_context(info: ChangeInfo): UpdateContext {
-        const [isDraggedX, isDraggedY, isDraggedZ] = getDraggedInfo(info);
-        const [isChangedX, isChangedY, isChangedZ] = getChangedInfo(info);
+        const [isDraggedX, isDraggedY, isDraggedZ] = get_dragged_info(info);
+        const [isChangedX, isChangedY, isChangedZ] = get_changed_info(info);
 
         const axis_info: ChangeAxisInfo = {
             changed_x: isChangedX,
@@ -2154,8 +1879,8 @@ function InspectorControlCreate() {
     }
 
     function updatePosition(info: ChangeInfo) {
-        const [isDraggedX, isDraggedY, isDraggedZ] = getDraggedInfo(info);
-        const [isChangedX, isChangedY, isChangedZ] = getChangedInfo(info);
+        const [isDraggedX, isDraggedY, isDraggedZ] = get_dragged_info(info);
+        const [isChangedX, isChangedY, isChangedZ] = get_changed_info(info);
 
         const pos = info.data.event.value as Vector3;
 
@@ -2239,7 +1964,7 @@ function InspectorControlCreate() {
     }
 
     function updateRotation(info: ChangeInfo) {
-        const [isChangedX, isChangedY, isChangedZ] = getChangedInfo(info);
+        const [isChangedX, isChangedY, isChangedZ] = get_changed_info(info);
 
         const rawRot = info.data.event.value as Vector3;
         const rot = new Vector3(degToRad(rawRot.x), degToRad(rawRot.y), degToRad(rawRot.z));
@@ -2301,7 +2026,7 @@ function InspectorControlCreate() {
     }
 
     function updateScale(info: ChangeInfo) {
-        const [isChangedX, isChangedY] = getChangedInfo(info);
+        const [isChangedX, isChangedY] = get_changed_info(info);
 
         const scale = info.data.event.value as Vector3;
 
@@ -2373,8 +2098,8 @@ function InspectorControlCreate() {
     }
 
     function updateSize(info: ChangeInfo) {
-        const [isDraggedX, isDraggedY] = getDraggedInfo(info);
-        const [isChangedX, isChangedY] = getChangedInfo(info);
+        const [isDraggedX, isDraggedY] = get_dragged_info(info);
+        const [isChangedX, isChangedY] = get_changed_info(info);
 
         const size = info.data.event.value as Vector2;
 
@@ -2463,7 +2188,7 @@ function InspectorControlCreate() {
             }
 
             const pivot_preset = info.data.event.value as ScreenPointPreset;
-            const pivot = screenPresetToPivotValue(pivot_preset);
+            const pivot = screen_preset_to_pivot_value(pivot_preset);
             mesh.set_pivot(pivot.x, pivot.y, true);
         });
 
@@ -2503,7 +2228,7 @@ function InspectorControlCreate() {
     }
 
     function updateAnchor(info: ChangeInfo) {
-        const [isChangedX, isChangedY] = getChangedInfo(info);
+        const [isChangedX, isChangedY] = get_changed_info(info);
 
         const anchor = info.data.event.value as Vector2;
 
@@ -2575,7 +2300,7 @@ function InspectorControlCreate() {
                 return;
             }
 
-            const anchor = screenPresetToAnchorValue(info.data.event.value as ScreenPointPreset);
+            const anchor = screen_preset_to_anchor_value(info.data.event.value as ScreenPointPreset);
             if (anchor) {
                 mesh.set_anchor(anchor.x, anchor.y);
             }
@@ -2780,7 +2505,7 @@ function InspectorControlCreate() {
     }
 
     function updateSlice(info: ChangeInfo) {
-        const [isChangedX, isChangedY] = getChangedInfo(info);
+        const [isChangedX, isChangedY] = get_changed_info(info);
 
         const slice = info.data.event.value as Vector2;
 
@@ -3208,7 +2933,7 @@ function InspectorControlCreate() {
             }
 
             const blend_mode = info.data.event.value as BlendMode;
-            const threeBlendMode = convertBlendModeToThreeJS(blend_mode);
+            const threeBlendMode = convert_blend_mode_to_threejs(blend_mode);
             (mesh as any).material.blending = threeBlendMode;
         });
     }
@@ -3505,23 +3230,24 @@ function InspectorControlCreate() {
     }
 
     function updateMaterial(info: ChangeInfo) {
+        const new_material_name = info.data.event.value as string;
+
         info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => {
                 return item.mesh_data.id == id;
             });
 
-            if (mesh == undefined) {
-                Services.logger.error('[updateMaterial] Mesh not found for id:', id);
+            if (mesh === undefined) {
+                Services.logger.error('updateMaterial: Mesh not found for id:', id);
                 return;
             }
 
-            const material_name = info.data.event.value as string;
             // Используем set_material для корректного применения материала и переприменения текстуры
             if ('set_material' in mesh && typeof mesh.set_material === 'function') {
-                mesh.set_material(material_name);
+                mesh.set_material(new_material_name);
             } else {
                 // Fallback для объектов без set_material
-                const material_info = Services.resources.get_material_info(material_name);
+                const material_info = Services.resources.get_material_info(new_material_name);
                 if (material_info !== undefined) {
                     (mesh as unknown as { material: unknown }).material = material_info.instances[material_info.origin];
                 }
@@ -3559,309 +3285,74 @@ function InspectorControlCreate() {
         });
     }
 
-    function updateUniformSampler2D(info: ChangeInfo) {
-        const atlas = (info.data.event.value as string).split('/')[0];
-        const texture_name = (info.data.event.value as string).split('/')[1];
-        const texture = Services.resources.get_texture(texture_name, atlas ?? '').texture;
-
+    // === Uniform update helper (Phase 18 consolidation) ===
+    // Общая логика обновления uniform-ов вынесена в одну функцию
+    function updateUniformInternal(info: ChangeInfo, uniformValue: unknown, eventValue?: unknown) {
+        const emitValue = eventValue ?? uniformValue;
         info.ids.forEach((id) => {
-            // Проверяем, есть ли объект в _selected_list (режим объекта)
             const mesh = _selected_list.find((item) => item.mesh_data.id === id);
-
             if (mesh !== undefined) {
-                // Режим объекта - обновляем uniform на материале объекта
-                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, texture);
+                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, uniformValue);
                 const meshMaterial = (mesh as Slice9Mesh).material;
                 if (meshMaterial !== undefined) {
                     meshMaterial.needsUpdate = true;
                     Services.event_bus.emit('materials:changed', {
                         material_name: meshMaterial.name,
                         property: info.data.property.title,
-                        value: info.data.event.value
+                        value: emitValue
                     });
                 }
             } else {
-                // Режим материала в ассетах
                 const material_name = get_file_name(get_basename(_selected_materials[id]));
                 const material = Services.resources.get_material_info(material_name);
                 if (material === undefined) return;
-
                 const instance = material.instances[material.origin];
                 if (instance?.uniforms !== undefined) {
                     const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                    if (uniform !== undefined) {
-                        uniform.value = texture;
-                    }
+                    if (uniform !== undefined) uniform.value = uniformValue;
                     instance.needsUpdate = true;
                 }
-                // Сохраняем uniform в оригинальный материал
-                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, texture);
+                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, uniformValue);
                 Services.event_bus.emit('materials:changed', {
                     material_name: material.name,
                     property: info.data.property.title,
-                    value: info.data.event.value
+                    value: emitValue
                 });
             }
         });
+    }
+
+    function updateUniformSampler2D(info: ChangeInfo) {
+        const textureValue = info.data.event.value as string;
+        const [atlas, texture_name] = textureValue.split('/');
+        const texture = Services.resources.get_texture(texture_name, atlas ?? '').texture;
+        updateUniformInternal(info, texture, info.data.event.value);
     }
 
     function updateUniformFloat(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-
-        info.ids.forEach((id) => {
-            // Проверяем, есть ли объект в _selected_list (режим объекта)
-            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
-
-            if (mesh !== undefined) {
-                // Режим объекта - обновляем uniform на материале объекта
-                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
-                const meshMaterial = (mesh as Slice9Mesh).material;
-                if (meshMaterial !== undefined) {
-                    meshMaterial.needsUpdate = true;
-                    Services.event_bus.emit('materials:changed', {
-                        material_name: meshMaterial.name,
-                        property: info.data.property.title,
-                        value: value
-                    });
-                }
-            } else {
-                // Режим материала в ассетах
-                const material_name = get_file_name(get_basename(_selected_materials[id]));
-                const material = Services.resources.get_material_info(material_name);
-                if (material === undefined) return;
-                const instance = material.instances[material.origin];
-                if (instance?.uniforms !== undefined) {
-                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                    if (uniform !== undefined) {
-                        uniform.value = value;
-                    }
-                    instance.needsUpdate = true;
-                }
-                // Сохраняем uniform в оригинальный материал
-                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
-                Services.event_bus.emit('materials:changed', {
-                    material_name: material.name,
-                    property: info.data.property.title,
-                    value: value
-                });
-            }
-        });
+        updateUniformInternal(info, info.data.event.value as number);
     }
 
     function updateUniformRange(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-
-        info.ids.forEach((id) => {
-            // Проверяем, есть ли объект в _selected_list (режим объекта)
-            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
-
-            if (mesh !== undefined) {
-                // Режим объекта - обновляем uniform на материале объекта
-                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
-                const meshMaterial = (mesh as Slice9Mesh).material;
-                if (meshMaterial !== undefined) {
-                    meshMaterial.needsUpdate = true;
-                    Services.event_bus.emit('materials:changed', {
-                        material_name: meshMaterial.name,
-                        property: info.data.property.title,
-                        value: value
-                    });
-                }
-            } else {
-                // Режим материала в ассетах
-                const material_name = get_file_name(get_basename(_selected_materials[id]));
-                const material = Services.resources.get_material_info(material_name);
-                if (material === undefined) return;
-                const instance = material.instances[material.origin];
-                if (instance?.uniforms !== undefined) {
-                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                    if (uniform !== undefined) {
-                        uniform.value = value;
-                    }
-                    instance.needsUpdate = true;
-                }
-                // Сохраняем uniform в оригинальный материал
-                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
-                Services.event_bus.emit('materials:changed', {
-                    material_name: material.name,
-                    property: info.data.property.title,
-                    value: value
-                });
-            }
-        });
+        updateUniformInternal(info, info.data.event.value as number);
     }
 
     function updateUniformVec2(info: ChangeInfo) {
-        const value = info.data.event.value as Vector2;
-
-        info.ids.forEach((id) => {
-            // Проверяем, есть ли объект в _selected_list (режим объекта)
-            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
-
-            if (mesh !== undefined) {
-                // Режим объекта - обновляем uniform на материале объекта
-                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
-                const meshMaterial = (mesh as Slice9Mesh).material;
-                if (meshMaterial !== undefined) {
-                    meshMaterial.needsUpdate = true;
-                    Services.event_bus.emit('materials:changed', {
-                        material_name: meshMaterial.name,
-                        property: info.data.property.title,
-                        value: value
-                    });
-                }
-            } else {
-                // Режим материала в ассетах
-                const material_name = get_file_name(get_basename(_selected_materials[id]));
-                const material = Services.resources.get_material_info(material_name);
-                if (material === undefined) return;
-                const instance = material.instances[material.origin];
-                if (instance?.uniforms !== undefined) {
-                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                    if (uniform !== undefined) {
-                        uniform.value = value;
-                    }
-                    instance.needsUpdate = true;
-                }
-                // Сохраняем uniform в оригинальный материал
-                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
-                Services.event_bus.emit('materials:changed', {
-                    material_name: material.name,
-                    property: info.data.property.title,
-                    value: value
-                });
-            }
-        });
+        updateUniformInternal(info, info.data.event.value as Vector2);
     }
 
     function updateUniformVec3(info: ChangeInfo) {
-        const value = info.data.event.value as Vector3;
-
-        info.ids.forEach((id) => {
-            // Проверяем, есть ли объект в _selected_list (режим объекта)
-            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
-
-            if (mesh !== undefined) {
-                // Режим объекта - обновляем uniform на материале объекта
-                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
-                const meshMaterial = (mesh as Slice9Mesh).material;
-                if (meshMaterial !== undefined) {
-                    meshMaterial.needsUpdate = true;
-                    Services.event_bus.emit('materials:changed', {
-                        material_name: meshMaterial.name,
-                        property: info.data.property.title,
-                        value: value
-                    });
-                }
-            } else {
-                // Режим материала в ассетах
-                const material_name = get_file_name(get_basename(_selected_materials[id]));
-                const material = Services.resources.get_material_info(material_name);
-                if (material === undefined) return;
-                const instance = material.instances[material.origin];
-                if (instance?.uniforms !== undefined) {
-                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                    if (uniform !== undefined) {
-                        uniform.value = value;
-                    }
-                    instance.needsUpdate = true;
-                }
-                // Сохраняем uniform в оригинальный материал
-                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
-                Services.event_bus.emit('materials:changed', {
-                    material_name: material.name,
-                    property: info.data.property.title,
-                    value: value
-                });
-            }
-        });
+        updateUniformInternal(info, info.data.event.value as Vector3);
     }
 
     function updateUniformVec4(info: ChangeInfo) {
-        const value = info.data.event.value as Vector4;
-
-        info.ids.forEach((id) => {
-            // Проверяем, есть ли объект в _selected_list (режим объекта)
-            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
-
-            if (mesh !== undefined) {
-                // Режим объекта - обновляем uniform на материале объекта
-                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
-                const meshMaterial = (mesh as Slice9Mesh).material;
-                if (meshMaterial !== undefined) {
-                    meshMaterial.needsUpdate = true;
-                    Services.event_bus.emit('materials:changed', {
-                        material_name: meshMaterial.name,
-                        property: info.data.property.title,
-                        value: value
-                    });
-                }
-            } else {
-                // Режим материала в ассетах
-                const material_name = get_file_name(get_basename(_selected_materials[id]));
-                const material = Services.resources.get_material_info(material_name);
-                if (material === undefined) return;
-                const instance = material.instances[material.origin];
-                if (instance?.uniforms !== undefined) {
-                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                    if (uniform !== undefined) {
-                        uniform.value = value;
-                    }
-                    instance.needsUpdate = true;
-                }
-                // Сохраняем uniform в оригинальный материал
-                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
-                Services.event_bus.emit('materials:changed', {
-                    material_name: material.name,
-                    property: info.data.property.title,
-                    value: value
-                });
-            }
-        });
+        updateUniformInternal(info, info.data.event.value as Vector4);
     }
 
     function updateUniformColor(info: ChangeInfo) {
         const color = new Color(info.data.event.value as string);
         const value = new Vector3(color.r, color.g, color.b);
-
-        info.ids.forEach((id) => {
-            // Проверяем, есть ли объект в _selected_list (режим объекта)
-            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
-
-            if (mesh !== undefined) {
-                // Режим объекта - обновляем uniform на материале объекта
-                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, value);
-                const meshMaterial = (mesh as Slice9Mesh).material;
-                if (meshMaterial !== undefined) {
-                    meshMaterial.needsUpdate = true;
-                    Services.event_bus.emit('materials:changed', {
-                        material_name: meshMaterial.name,
-                        property: info.data.property.title,
-                        value: info.data.event.value
-                    });
-                }
-            } else {
-                // Режим материала в ассетах
-                const material_name = get_file_name(get_basename(_selected_materials[id]));
-                const material = Services.resources.get_material_info(material_name);
-                if (material === undefined) return;
-                const instance = material.instances[material.origin];
-                if (instance?.uniforms !== undefined) {
-                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                    if (uniform !== undefined) {
-                        uniform.value = value;
-                    }
-                    instance.needsUpdate = true;
-                }
-                // Сохраняем uniform в оригинальный материал
-                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, value);
-                Services.event_bus.emit('materials:changed', {
-                    material_name: material.name,
-                    property: info.data.property.title,
-                    value: info.data.event.value
-                });
-            }
-        });
+        updateUniformInternal(info, value, info.data.event.value);
     }
 
     function updateFlipVertical(info: ChangeInfo) {
@@ -3911,158 +3402,62 @@ function InspectorControlCreate() {
 
     // === Аудио функции обновления ===
 
+    // === Audio update helper (Phase 18 consolidation) ===
+    function updateAudioInternal<T>(value: T, setter: (audio: AudioMesh, v: T) => void) {
+        _selected_list.forEach((item) => {
+            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
+                setter(item as AudioMesh, value);
+            }
+        });
+    }
+
     function updateAudioSound(info: ChangeInfo) {
-        const value = info.data.event.value as string;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_sound(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as string, (a, v) => a.set_sound(v));
     }
-
     function updateAudioVolume(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_volume(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_volume(v));
     }
-
     function updateAudioLoop(info: ChangeInfo) {
-        const value = info.data.event.value as boolean;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_loop(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as boolean, (a, v) => a.set_loop(v));
     }
-
     function updateAudioPan(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_pan(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_pan(v));
     }
-
     function updateAudioSpeed(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_speed(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_speed(v));
     }
-
     function updateAudioSoundRadius(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_sound_radius(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_sound_radius(v));
     }
-
     function updateAudioMaxVolumeRadius(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_max_volume_radius(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_max_volume_radius(v));
     }
-
     function updateAudioSoundFunction(info: ChangeInfo) {
-        const stringValue = info.data.event.value as string;
-        // Конвертируем строку в enum
-        let value: SoundFunctionType;
-        switch (stringValue) {
-            case 'linear': value = SoundFunctionType.LINEAR; break;
-            case 'quadratic': value = SoundFunctionType.QUADRATIC; break;
-            case 'exponential': value = SoundFunctionType.EXPONENTIAL; break;
-            default: value = SoundFunctionType.LINEAR;
-        }
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_sound_function(value);
-            }
-        });
+        update_audio_sound_function(_selected_list, info.data.event.value as string);
     }
-
     function updateAudioZoneType(info: ChangeInfo) {
-        const stringValue = info.data.event.value as string;
-        // Конвертируем строку в enum
-        const value = stringValue === 'rectangle' ? SoundZoneType.RECTANGULAR : SoundZoneType.CIRCULAR;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_zone_type(value);
-            }
-        });
+        update_audio_zone_type(_selected_list, info.data.event.value as string);
     }
-
     function updateAudioPanNormalization(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_pan_normalization_distance(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_pan_normalization_distance(v));
     }
-
     function updateAudioRectangleWidth(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_rectangle_width(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_rectangle_width(v));
     }
-
     function updateAudioRectangleHeight(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_rectangle_height(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_rectangle_height(v));
     }
-
     function updateAudioRectangleMaxWidth(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_rectangle_max_volume_width(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_rectangle_max_volume_width(v));
     }
-
     function updateAudioRectangleMaxHeight(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_rectangle_max_volume_height(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_rectangle_max_volume_height(v));
     }
-
     function updateAudioFadeInTime(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_fade_in_time(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_fade_in_time(v));
     }
-
     function updateAudioFadeOutTime(info: ChangeInfo) {
-        const value = info.data.event.value as number;
-        _selected_list.forEach((item) => {
-            if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-                (item as AudioMesh).set_fade_out_time(value);
-            }
-        });
+        updateAudioInternal(info.data.event.value as number, (a, v) => a.set_fade_out_time(v));
     }
 
     // === 3D модели функции обновления ===
@@ -4115,569 +3510,13 @@ function InspectorControlCreate() {
     return { setupConfig, setData, set_selected_textures, set_selected_materials, set_selected_list, refresh, clear }
 }
 
-function getChangedInfo(info: ChangeInfo) {
-    let isChangedX = false;
-    let isChangedY = false;
-    let isChangedZ = false;
-    let isChangedW = false;
+// Функции get_changed_info, get_dragged_info, preset/blend converters перенесены в inspector_module (Phase 18)
+// Конфигурация инспектора перенесена в inspector_module/inspector_config.ts (Phase 18)
 
-    // NOTE: варинат как получить какие либо значения из tweakpane не переписывая половину либы
-    const valueController = info.data.event.target.controller.labelController.valueController as any;
-
-    // NOTE: для 2D пикера
-    const picker = valueController.pickerC_;
-    if (picker && picker.is_changed) {
-        isChangedX = true;
-        isChangedY = true;
-        return [isChangedX, isChangedY];
-    }
-
-    // NOTE: учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_ 
-    const acs = !valueController.acs_ ? valueController.textC_.acs_ : valueController.acs_;
-    acs.forEach((ac: any, index: number) => {
-        if (!ac.is_changed) return;
-        switch (index) {
-            case 0: isChangedX = true; break;
-            case 1: isChangedY = true; break;
-            case 2: isChangedZ = true; break;
-            case 3: isChangedW = true; break;
-        }
-    });
-
-    return [isChangedX, isChangedY, isChangedZ, isChangedW];
-}
-
-function getDraggedInfo(info: ChangeInfo) {
-    let isDraggedX = false;
-    let isDraggedY = false;
-    let isDraggedZ = false;
-    let isDraggedW = false;
-
-    // NOTE: варинат как получить какие либо значения из tweakpane не переписывая половину либы
-    // учитываем что если Point2D то NumberTextController-ы будут в textC_.acs_, а если 3D/4D то сразу в acs_ 
-    const valueController = info.data.event.target.controller.labelController.valueController as any;
-    const acs = !valueController.acs_ ? valueController.textC_.acs_ : valueController.acs_;
-    acs.forEach((ac: any, index: number) => {
-        if (!ac.is_drag) return;
-        switch (index) {
-            case 0: isDraggedX = true; break;
-            case 1: isDraggedY = true; break;
-            case 2: isDraggedZ = true; break;
-            case 3: isDraggedW = true; break;
-        }
-    });
-
-    return [isDraggedX, isDraggedY, isDraggedZ, isDraggedW];
-}
-
-function pivotToScreenPreset(pivot: Vector2) {
-    if (pivot.x == 0.5 && pivot.y == 0.5) {
-        return ScreenPointPreset.CENTER;
-    } else if (pivot.x == 0 && pivot.y == 1) {
-        return ScreenPointPreset.TOP_LEFT;
-    } else if (pivot.x == 0.5 && pivot.y == 1) {
-        return ScreenPointPreset.TOP_CENTER;
-    } else if (pivot.x == 1 && pivot.y == 1) {
-        return ScreenPointPreset.TOP_RIGHT;
-    } else if (pivot.x == 0 && pivot.y == 0.5) {
-        return ScreenPointPreset.LEFT_CENTER;
-    } else if (pivot.x == 1 && pivot.y == 0.5) {
-        return ScreenPointPreset.RIGHT_CENTER;
-    } else if (pivot.x == 0 && pivot.y == 0) {
-        return ScreenPointPreset.BOTTOM_LEFT;
-    } else if (pivot.x == 0.5 && pivot.y == 0) {
-        return ScreenPointPreset.BOTTOM_CENTER;
-    } else if (pivot.x == 1 && pivot.y == 0) {
-        return ScreenPointPreset.BOTTOM_RIGHT;
-    }
-
-    return ScreenPointPreset.CENTER;
-}
-
-function screenPresetToPivotValue(preset: ScreenPointPreset) {
-    switch (preset) {
-        case ScreenPointPreset.CENTER: return new Vector2(0.5, 0.5);
-        case ScreenPointPreset.TOP_LEFT: return new Vector2(0, 1);
-        case ScreenPointPreset.TOP_CENTER: return new Vector2(0.5, 1);
-        case ScreenPointPreset.TOP_RIGHT: return new Vector2(1, 1);
-        case ScreenPointPreset.LEFT_CENTER: return new Vector2(0, 0.5);
-        case ScreenPointPreset.RIGHT_CENTER: return new Vector2(1, 0.5);
-        case ScreenPointPreset.BOTTOM_LEFT: return new Vector2(0, 0);
-        case ScreenPointPreset.BOTTOM_CENTER: return new Vector2(0.5, 0);
-        case ScreenPointPreset.BOTTOM_RIGHT: return new Vector2(1, 0);
-        default: return new Vector2(0.5, 0.5);
-    }
-}
-
-function anchorToScreenPreset(anchor: Vector2) {
-    if (anchor.x == 0.5 && anchor.y == 0.5) {
-        return ScreenPointPreset.CENTER;
-    } else if (anchor.x == 0 && anchor.y == 1) {
-        return ScreenPointPreset.TOP_LEFT;
-    } else if (anchor.x == 0.5 && anchor.y == 1) {
-        return ScreenPointPreset.TOP_CENTER;
-    } else if (anchor.x == 1 && anchor.y == 1) {
-        return ScreenPointPreset.TOP_RIGHT;
-    } else if (anchor.x == 0 && anchor.y == 0.5) {
-        return ScreenPointPreset.LEFT_CENTER;
-    } else if (anchor.x == 1 && anchor.y == 0.5) {
-        return ScreenPointPreset.RIGHT_CENTER;
-    } else if (anchor.x == 0 && anchor.y == 0) {
-        return ScreenPointPreset.BOTTOM_LEFT;
-    } else if (anchor.x == 0.5 && anchor.y == 0) {
-        return ScreenPointPreset.BOTTOM_CENTER;
-    } else if (anchor.x == 1 && anchor.y == 0) {
-        return ScreenPointPreset.BOTTOM_RIGHT;
-    } else if (anchor.x == -1 && anchor.y == -1) {
-        return ScreenPointPreset.NONE;
-    }
-
-    return ScreenPointPreset.CUSTOM;
-}
-
-function screenPresetToAnchorValue(preset: ScreenPointPreset) {
-    switch (preset) {
-        case ScreenPointPreset.CENTER: return new Vector2(0.5, 0.5);
-        case ScreenPointPreset.TOP_LEFT: return new Vector2(0, 1);
-        case ScreenPointPreset.TOP_CENTER: return new Vector2(0.5, 1);
-        case ScreenPointPreset.TOP_RIGHT: return new Vector2(1, 1);
-        case ScreenPointPreset.LEFT_CENTER: return new Vector2(0, 0.5);
-        case ScreenPointPreset.RIGHT_CENTER: return new Vector2(1, 0.5);
-        case ScreenPointPreset.BOTTOM_LEFT: return new Vector2(0, 0);
-        case ScreenPointPreset.BOTTOM_CENTER: return new Vector2(0.5, 0);
-        case ScreenPointPreset.BOTTOM_RIGHT: return new Vector2(1, 0);
-        case ScreenPointPreset.NONE: return new Vector2(-1, -1);
-        default: return new Vector2(0.5, 0.5);
-    }
-}
-
-function convertBlendModeToThreeJS(blend_mode: BlendMode): number {
-    switch (blend_mode) {
-        case BlendMode.NORMAL:
-            return NormalBlending;
-        case BlendMode.ADD:
-            return AdditiveBlending;
-        case BlendMode.MULTIPLY:
-            return MultiplyBlending;
-        case BlendMode.SUBTRACT:
-            return SubtractiveBlending;
-        // case BlendMode.CUSTOM:
-        //     return CustomBlending;
-        default:
-            return NormalBlending;
-    }
-}
-
-function convertThreeJSBlendingToBlendMode(blending: number): BlendMode {
-    switch (blending) {
-        case NormalBlending:
-            return BlendMode.NORMAL;
-        case AdditiveBlending:
-            return BlendMode.ADD;
-        case MultiplyBlending:
-            return BlendMode.MULTIPLY;
-        case SubtractiveBlending:
-            return BlendMode.SUBTRACT;
-        default:
-            return BlendMode.NORMAL;
-    }
-}
-
-// Функции generate* перенесены в src/editor/inspector/options/OptionsProviders.ts (Phase 15)
-
+/**
+ * Получить конфигурацию инспектора по умолчанию
+ * Обёртка для обратной совместимости
+ */
 export function getDefaultInspectorConfig() {
-
-    return [
-        {
-            name: 'base',
-            title: '',
-            property_list: [
-                { name: Property.TYPE, title: 'Тип', type: PropertyType.STRING, readonly: true },
-                { name: Property.NAME, title: 'Название', type: PropertyType.STRING },
-                // { name: Property.VISIBLE, title: 'Видимый', type: PropertyType.BOOLEAN },
-                { name: Property.ACTIVE, title: 'Активный', type: PropertyType.BOOLEAN },
-                {
-                    name: Property.ASSET_ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: get_options_providers().get_atlas_options()
-                },
-                { name: Property.ATLAS_BUTTON, title: 'Атлас менеджер', type: PropertyType.BUTTON },
-                {
-                    name: Property.MIN_FILTER, title: 'Фильтр уменьшения', type: PropertyType.LIST_TEXT, params: {
-                        'nearest': FilterMode.NEAREST,
-                        'linear': FilterMode.LINEAR
-                    }
-                },
-                {
-                    name: Property.MAG_FILTER, title: 'Фильтр увеличения', type: PropertyType.LIST_TEXT, params: {
-                        'nearest': FilterMode.NEAREST,
-                        'linear': FilterMode.LINEAR
-                    }
-                },
-                {
-                    name: Property.VERTEX_PROGRAM,
-                    title: 'Vertex Program',
-                    type: PropertyType.LIST_TEXT,
-                    params: get_options_providers().get_vertex_program_options()
-                },
-                {
-                    name: Property.FRAGMENT_PROGRAM,
-                    title: 'Fragment Program',
-                    type: PropertyType.LIST_TEXT,
-                    params: get_options_providers().get_fragment_program_options()
-                },
-                {
-                    name: Property.TRANSPARENT, 
-                    title: 'Transparent', 
-                    type: PropertyType.BOOLEAN
-                }
-            ]
-        },
-        {
-            name: 'transform',
-            title: 'Трансформ',
-            property_list: [
-                {
-                    name: Property.POSITION, title: 'Позиция', type: PropertyType.VECTOR_3, params: {
-                        x: { format: (v: number) => v.toFixed(2), step: 0.1 },
-                        y: { format: (v: number) => v.toFixed(2), step: 0.1 },
-                        z: { format: (v: number) => v.toFixed(2), step: 0.1 },
-                    }
-                },
-                {
-                    name: Property.ROTATION, title: 'Вращение', type: PropertyType.VECTOR_3, params: {
-                        x: { format: (v: number) => v.toFixed(2) },
-                        y: { format: (v: number) => v.toFixed(2) },
-                        z: { format: (v: number) => v.toFixed(2) }
-                    }
-                },
-                {
-                    name: Property.SCALE, title: 'Маштаб', type: PropertyType.VECTOR_2, params: {
-                        x: { format: (v: number) => v.toFixed(2) },
-                        y: { format: (v: number) => v.toFixed(2) },
-                    }
-                },
-                {
-                    name: Property.PIVOT, title: 'Точка опоры', type: PropertyType.LIST_TEXT, params: {
-                        'Центр': ScreenPointPreset.CENTER,
-                        'Левый Верхний': ScreenPointPreset.TOP_LEFT,
-                        'Центр Сверху': ScreenPointPreset.TOP_CENTER,
-                        'Правый Верхний': ScreenPointPreset.TOP_RIGHT,
-                        'Центр Слева': ScreenPointPreset.LEFT_CENTER,
-                        'Центр Справа': ScreenPointPreset.RIGHT_CENTER,
-                        'Левый Нижний': ScreenPointPreset.BOTTOM_LEFT,
-                        'Центр Снизу': ScreenPointPreset.BOTTOM_CENTER,
-                        'Правый Нижний': ScreenPointPreset.BOTTOM_RIGHT
-                    }
-                },
-                {
-                    name: Property.SIZE, title: 'Размер', type: PropertyType.VECTOR_2, params: {
-                        x: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
-                        y: { min: 0, max: 0xFFFFFFFF, step: 1, format: (v: number) => v.toFixed(2) },
-                    }
-                }
-            ]
-        },
-        {
-            name: 'anchor',
-            title: 'Якорь',
-            property_list: [
-                {
-                    name: Property.ANCHOR, title: 'Значение', type: PropertyType.POINT_2D, params: {
-                        x: { min: -1, max: 1, format: (v: number) => v.toFixed(2) },
-                        y: { min: -1, max: 1, format: (v: number) => v.toFixed(2) }
-                    }
-                },
-                {
-                    name: Property.ANCHOR_PRESET, title: 'Пресет', type: PropertyType.LIST_TEXT, params: {
-                        'Не выбрано': ScreenPointPreset.NONE,
-                        'Центр': ScreenPointPreset.CENTER,
-                        'Левый Верхний': ScreenPointPreset.TOP_LEFT,
-                        'Центр Сверху': ScreenPointPreset.TOP_CENTER,
-                        'Правый Верхний': ScreenPointPreset.TOP_RIGHT,
-                        'Центр Слева': ScreenPointPreset.LEFT_CENTER,
-                        'Центр Справа': ScreenPointPreset.RIGHT_CENTER,
-                        'Левый Нижний': ScreenPointPreset.BOTTOM_LEFT,
-                        'Центр Снизу': ScreenPointPreset.BOTTOM_CENTER,
-                        'Правый Нижний': ScreenPointPreset.BOTTOM_RIGHT,
-                        'Индивидуальный': ScreenPointPreset.CUSTOM
-                    }
-                }
-            ]
-        },
-        {
-            name: 'graphics',
-            title: 'Визуал',
-            property_list: [
-                { name: Property.COLOR, title: 'Цвет', type: PropertyType.COLOR },
-                { name: Property.ALPHA, title: 'Прозрачность', type: PropertyType.NUMBER, params: { min: 0, max: 1, step: 0.1 } },
-                { name: Property.ATLAS, title: 'Атлас', type: PropertyType.LIST_TEXT, params: get_options_providers().get_atlas_options() },
-                {
-                    name: Property.TEXTURE, title: 'Текстура', type: PropertyType.LIST_TEXTURES, params: get_options_providers().get_texture_options()
-                },
-                {
-                    name: Property.MATERIAL, title: 'Материал', type: PropertyType.LIST_TEXT, params: get_options_providers().get_material_options()
-                },
-                {
-                    name: Property.SLICE9, title: 'Slice9', type: PropertyType.POINT_2D, params: {
-                        x: { min: 0, max: 100, format: (v: number) => v.toFixed(2) },
-                        y: { min: 0, max: 100, format: (v: number) => v.toFixed(2) }
-                    }
-                },
-                {
-                    name: Property.BLEND_MODE, title: 'Режим смешивания', type: PropertyType.LIST_TEXT, params: {
-                        'Нормальный': BlendMode.NORMAL,
-                        'Сложение': BlendMode.ADD,
-                        'Умножение': BlendMode.MULTIPLY,
-                        'Вычитание': BlendMode.SUBTRACT,
-                        // 'Пользовательский': BlendMode.CUSTOM
-                    }
-                },
-            ]
-        },
-        {
-            name: 'flip',
-            title: 'Отражение',
-            property_list: [
-                { name: Property.FLIP_VERTICAL, title: 'По вертикали', type: PropertyType.BOOLEAN },
-                { name: Property.FLIP_HORIZONTAL, title: 'По горизонтали', type: PropertyType.BOOLEAN },
-                { name: Property.FLIP_DIAGONAL, title: 'По диагонали', type: PropertyType.BOOLEAN }
-            ]
-        },
-        {
-            name: 'text',
-            title: 'Текст',
-            property_list: [
-                { name: Property.TEXT, title: 'Текст', type: PropertyType.LOG_DATA },
-                {
-                    name: Property.FONT, title: 'Шрифт', type: PropertyType.LIST_TEXT, params: get_options_providers().get_font_options()
-                },
-                {
-                    name: Property.FONT_SIZE, title: 'Размер шрифта', type: PropertyType.NUMBER, params: {
-                        min: 8, step: 1, format: (v: number) => v.toFixed(0)
-                    }
-                },
-                {
-                    name: Property.TEXT_ALIGN, title: 'Выравнивание', type: PropertyType.LIST_TEXT, params: {
-                        'Центр': TextAlign.CENTER,
-                        'Слева': TextAlign.LEFT,
-                        'Справа': TextAlign.RIGHT,
-                        'По ширине': TextAlign.JUSTIFY
-                    }
-                },
-                {
-                    name: Property.LINE_HEIGHT, title: 'Высота строки', type: PropertyType.NUMBER, params: {
-                        min: 0.5, max: 3, step: 0.1, format: (v: number) => v.toFixed(2)
-                    }
-                }
-            ]
-        },
-        {
-            name: 'uniforms',
-            title: 'Uniforms',
-            property_list: [
-                {
-                    name: Property.UNIFORM_SAMPLER2D,
-                    title: 'Sampler2D',
-                    type: PropertyType.LIST_TEXTURES,
-                    params: get_options_providers().get_texture_options()
-                },
-                {
-                    name: Property.UNIFORM_FLOAT,
-                    title: 'Float',
-                    type: PropertyType.NUMBER,
-                    params: {
-                        min: 0,
-                        max: 1,
-                        step: 0.1,
-                        format: (v: number) => v.toFixed(2)
-                    }
-                },
-                {
-                    name: Property.UNIFORM_RANGE,
-                    title: 'Range',
-                    type: PropertyType.SLIDER,
-                    params: {
-                        min: 0,
-                        max: 100,
-                        step: 0.1
-                    }
-                },
-                {
-                    name: Property.UNIFORM_VEC2,
-                    title: 'Vec2',
-                    type: PropertyType.VECTOR_2,
-                    params: {
-                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
-                    }
-                },
-                {
-                    name: Property.UNIFORM_VEC3,
-                    title: 'Vec3',
-                    type: PropertyType.VECTOR_3,
-                    params: {
-                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
-                    }
-                },
-                {
-                    name: Property.UNIFORM_VEC4,
-                    title: 'Vec4',
-                    type: PropertyType.VECTOR_4,
-                    params: {
-                        x: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        y: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        z: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) },
-                        w: { min: -1000, max: 1000, step: 0.1, format: (v: number) => v.toFixed(2) }
-                    }
-                },
-                {
-                    name: Property.UNIFORM_COLOR,
-                    title: 'Color',
-                    type: PropertyType.COLOR
-                }
-            ]
-        },
-        {
-            name: 'model',
-            title: 'Модель',
-            property_list: [
-                {
-                    name: Property.MESH_NAME,
-                    title: 'Меш',
-                    type: PropertyType.LIST_TEXT,
-                    params: get_options_providers().get_mesh_options()
-                },
-                {
-                    name: Property.MODEL_SCALE,
-                    title: 'Масштаб',
-                    type: PropertyType.NUMBER,
-                    params: { min: 0.01, step: 0.1, format: (v: number) => v.toFixed(2) }
-                },
-                {
-                    name: Property.MODEL_MATERIALS,
-                    title: 'Материалы',
-                    type: PropertyType.ITEM_LIST,
-                    params: { options: [], pick_text: 'Выберите материал', empty_text: 'Нет материалов' }
-                },
-                {
-                    name: Property.CURRENT_ANIMATION,
-                    title: 'Анимация',
-                    type: PropertyType.LIST_TEXT,
-                    params: get_options_providers().get_animation_options([])
-                }
-            ]
-        },
-        {
-            name: 'audio',
-            title: 'Аудио',
-            property_list: [
-                {
-                    name: Property.SOUND,
-                    title: 'Звук',
-                    type: PropertyType.LIST_TEXT,
-                    params: get_options_providers().get_sound_options()
-                },
-                {
-                    name: Property.VOLUME,
-                    title: 'Громкость',
-                    type: PropertyType.SLIDER,
-                    params: { min: 0, max: 1, step: 0.01 }
-                },
-                {
-                    name: Property.LOOP,
-                    title: 'Зацикливание',
-                    type: PropertyType.BOOLEAN
-                },
-                {
-                    name: Property.PAN,
-                    title: 'Панорама',
-                    type: PropertyType.SLIDER,
-                    params: { min: -1, max: 1, step: 0.01 }
-                },
-                {
-                    name: Property.SPEED,
-                    title: 'Скорость',
-                    type: PropertyType.NUMBER,
-                    params: { min: 0.1, max: 10, step: 0.1, format: (v: number) => v.toFixed(1) }
-                },
-                {
-                    name: Property.AUDIO_PLAY_PAUSE,
-                    title: '▶ Играть / ⏹ Стоп',
-                    type: PropertyType.BUTTON
-                },
-                {
-                    name: Property.AUDIO_STOP,
-                    title: '⏹ Стоп',
-                    type: PropertyType.BUTTON
-                },
-                {
-                    name: Property.SOUND_RADIUS,
-                    title: 'Радиус звука',
-                    type: PropertyType.NUMBER,
-                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
-                },
-                {
-                    name: Property.MAX_VOLUME_RADIUS,
-                    title: 'Радиус макс. громкости',
-                    type: PropertyType.NUMBER,
-                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
-                },
-                {
-                    name: Property.SOUND_FUNCTION,
-                    title: 'Функция затухания',
-                    type: PropertyType.LIST_TEXT,
-                    params: get_options_providers().get_sound_function_options()
-                },
-                {
-                    name: Property.ZONE_TYPE,
-                    title: 'Тип зоны',
-                    type: PropertyType.LIST_TEXT,
-                    params: get_options_providers().get_zone_type_options()
-                },
-                {
-                    name: Property.PAN_NORMALIZATION,
-                    title: 'Нормализация панорамы',
-                    type: PropertyType.NUMBER,
-                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
-                },
-                {
-                    name: Property.RECTANGLE_WIDTH,
-                    title: 'Ширина зоны',
-                    type: PropertyType.NUMBER,
-                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
-                },
-                {
-                    name: Property.RECTANGLE_HEIGHT,
-                    title: 'Высота зоны',
-                    type: PropertyType.NUMBER,
-                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
-                },
-                {
-                    name: Property.RECTANGLE_MAX_WIDTH,
-                    title: 'Ширина макс. громкости',
-                    type: PropertyType.NUMBER,
-                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
-                },
-                {
-                    name: Property.RECTANGLE_MAX_HEIGHT,
-                    title: 'Высота макс. громкости',
-                    type: PropertyType.NUMBER,
-                    params: { min: 0, step: 1, format: (v: number) => v.toFixed(0) }
-                },
-                {
-                    name: Property.FADE_IN_TIME,
-                    title: 'Время нарастания',
-                    type: PropertyType.NUMBER,
-                    params: { min: 0, step: 0.1, format: (v: number) => v.toFixed(1) }
-                },
-                {
-                    name: Property.FADE_OUT_TIME,
-                    title: 'Время затухания',
-                    type: PropertyType.NUMBER,
-                    params: { min: 0, step: 0.1, format: (v: number) => v.toFixed(1) }
-                }
-            ]
-        }
-    ];
+    return create_default_inspector_config(get_options_providers());
 }

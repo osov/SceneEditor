@@ -1,7 +1,7 @@
 /**
  * GraphicsHandler - обработчик графических свойств
  *
- * Обрабатывает: color, alpha, texture, material, blend_mode, slice9
+ * Обрабатывает: color, alpha, texture, atlas, material, blend_mode, slice9
  */
 
 import { Vector2, type Blending } from 'three';
@@ -46,13 +46,14 @@ interface IMeshWithMaterial extends IBaseMeshAndThree {
 }
 
 /** Создать GraphicsHandler */
-export function create_graphics_handler(_params?: HandlerParams): IPropertyHandler {
+export function create_graphics_handler(params?: HandlerParams): IPropertyHandler {
     const converters = get_property_converters();
 
     const properties: Property[] = [
         Property.COLOR,
         Property.ALPHA,
         Property.TEXTURE,
+        Property.ATLAS,
         Property.SLICE9,
         Property.BLEND_MODE,
         Property.MATERIAL,
@@ -66,6 +67,8 @@ export function create_graphics_handler(_params?: HandlerParams): IPropertyHandl
                 return read_alpha(context);
             case Property.TEXTURE:
                 return read_texture(context);
+            case Property.ATLAS:
+                return read_atlas(context);
             case Property.SLICE9:
                 return read_slice9(context);
             case Property.BLEND_MODE:
@@ -87,6 +90,9 @@ export function create_graphics_handler(_params?: HandlerParams): IPropertyHandl
                 break;
             case Property.TEXTURE:
                 update_texture(context);
+                break;
+            case Property.ATLAS:
+                update_atlas(context);
                 break;
             case Property.SLICE9:
                 update_slice9(context);
@@ -253,6 +259,52 @@ export function create_graphics_handler(_params?: HandlerParams): IPropertyHandl
         }
     }
 
+    // === Atlas ===
+
+    function read_atlas(context: ReadContext): ReadResult<string> {
+        const { meshes } = context;
+        const values_by_id = new Map<number, string>();
+
+        let first_atlas: string | undefined;
+        let has_differences = false;
+
+        for (const mesh of meshes) {
+            const mesh_with_texture = mesh as IMeshWithTexture;
+            if (typeof mesh_with_texture.get_texture !== 'function') continue;
+
+            const [, atlas] = mesh_with_texture.get_texture();
+            values_by_id.set(mesh.mesh_data.id, atlas);
+
+            if (first_atlas === undefined) {
+                first_atlas = atlas;
+            } else if (first_atlas !== atlas) {
+                has_differences = true;
+            }
+        }
+
+        return {
+            value: has_differences ? undefined : first_atlas,
+            values_by_id,
+            has_differences,
+        };
+    }
+
+    function update_atlas(context: UpdateContext): void {
+        const { meshes, value } = context;
+        const atlas = value as string;
+
+        for (const mesh of meshes) {
+            const mesh_with_texture = mesh as IMeshWithTexture;
+            if (typeof mesh_with_texture.set_texture !== 'function') continue;
+
+            // При смене атласа сбрасываем текстуру на пустую
+            mesh_with_texture.set_texture('', atlas);
+        }
+
+        // Обновить инспектор чтобы показать текстуры нового атласа
+        params?.on_refresh_inspector?.();
+    }
+
     // === Slice9 ===
 
     function read_slice9(context: ReadContext): ReadResult<Vector2> {
@@ -383,6 +435,9 @@ export function create_graphics_handler(_params?: HandlerParams): IPropertyHandl
 
             mesh_with_material.set_material(material);
         }
+
+        // Обновить инспектор чтобы показать uniforms нового материала
+        params?.on_refresh_inspector?.();
     }
 
     return {
