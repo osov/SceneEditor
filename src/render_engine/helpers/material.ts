@@ -15,6 +15,8 @@ export function copy_material(material: ShaderMaterial) {
         blending: material.blending,
 
         depthTest: material.depthTest,
+        depthWrite: material.depthWrite,
+        depthFunc: material.depthFunc,
         stencilWrite: material.stencilWrite,
         stencilRef: material.stencilRef,
         stencilFunc: material.stencilFunc,

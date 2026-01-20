@@ -37,6 +37,18 @@ export interface UniformPropertyData {
     title: string;
     /** Параметры для UI */
     params?: Record<string, unknown>;
+    /** Индекс слота материала (для MultipleMaterialMesh) */
+    slot_index?: number;
+}
+
+/** Данные слота материала для инспектора */
+export interface MaterialSlotData {
+    /** Индекс слота */
+    slot_index: number;
+    /** Имя материала */
+    material_name: string;
+    /** Поля uniforms для этого слота */
+    uniform_fields: UniformPropertyData[];
 }
 
 /**
@@ -184,6 +196,58 @@ export function get_material_uniform_fields(
     }
 
     return fields;
+}
+
+/**
+ * Получить поля uniforms для конкретного слота материала
+ * Добавляет slot_index к каждому полю для правильной маршрутизации обновлений
+ *
+ * @param material_name - Имя материала
+ * @param material_uniforms - Uniforms материала
+ * @param slot_index - Индекс слота материала
+ * @returns Массив данных полей для инспектора с slot_index
+ */
+export function get_material_slot_uniform_fields(
+    material_name: string,
+    material_uniforms: Record<string, { value: unknown }>,
+    slot_index: number
+): UniformPropertyData[] {
+    const fields = get_material_uniform_fields(material_name, material_uniforms);
+
+    // Добавляем slot_index к каждому полю
+    return fields.map((field) => ({
+        ...field,
+        slot_index
+    }));
+}
+
+/**
+ * Получить данные всех слотов материалов для MultipleMaterialMesh
+ *
+ * @param materials - Массив материалов из get_materials()
+ * @returns Массив данных слотов с полями uniforms
+ */
+export function get_all_material_slots_data(
+    materials: Array<{ name: string; uniforms: Record<string, { value: unknown }> }>
+): MaterialSlotData[] {
+    const slots: MaterialSlotData[] = [];
+
+    for (let i = 0; i < materials.length; i++) {
+        const material = materials[i];
+        const uniform_fields = get_material_slot_uniform_fields(
+            material.name,
+            material.uniforms,
+            i
+        );
+
+        slots.push({
+            slot_index: i,
+            material_name: material.name,
+            uniform_fields
+        });
+    }
+
+    return slots;
 }
 
 /**

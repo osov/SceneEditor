@@ -324,6 +324,12 @@ export function create_default_inspector_config(options_providers: IOptionsProvi
                     params: { options: [], pickText: 'Выбрать материал', emptyText: 'Нет материалов' }
                 },
                 {
+                    name: Property.SLOT_MATERIAL,
+                    title: 'Материал',
+                    type: PropertyType.LIST_TEXT,
+                    params: options_providers.get_material_options()
+                },
+                {
                     name: Property.CURRENT_ANIMATION,
                     title: 'Анимация',
                     type: PropertyType.LIST_TEXT,

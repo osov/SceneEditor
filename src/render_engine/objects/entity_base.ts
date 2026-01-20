@@ -1,4 +1,4 @@
-import { BufferGeometry, Mesh, Object3DEventMap, PlaneGeometry, ShaderMaterial, Vector2, Vector3 } from "three";
+import { BufferGeometry, Mesh, Object3DEventMap, PlaneGeometry, Quaternion, ShaderMaterial, Vector2, Vector3 } from "three";
 import { IBaseEntity, IBaseParameters, IObjectTypes, OnTransformChanged } from "../types";
 import { convert_width_height_to_pivot_bb, is_base_mesh } from "../helpers/utils";
 import { WORLD_SCALAR } from "../../config";
@@ -60,6 +60,20 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
         return new Vector2(this.scale.x, this.scale.y);
     }
 
+    /**
+     * Устанавливает вращение через кватернион
+     */
+    set_rotation(rotation: Quaternion): void {
+        this.quaternion.copy(rotation);
+        this.transform_changed();
+    }
+
+    /**
+     * Возвращает копию кватерниона вращения
+     */
+    get_rotation(): Quaternion {
+        return this.quaternion.clone();
+    }
 
     get_bounds() {
         const wp = new Vector3();

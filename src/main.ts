@@ -149,6 +149,10 @@ function register_default_keybindings(keybindings: IKeybindingsService, containe
         history.redo();
     });
 
+    keybindings.register({ key: 'z', ctrl: true, shift: true, description: 'Повторить (альт.)' }, () => {
+        history.redo();
+    });
+
     // === Сохранение ===
     keybindings.register({ key: 's', ctrl: true, description: 'Сохранить' }, () => {
         event_bus.emit('editor:save', {});

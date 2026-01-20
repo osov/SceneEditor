@@ -80,9 +80,21 @@ export function register_sound() {
 }
 
 function SoundModule() {
-    // TODO: найти лучший способ хранения с ключом hash без алокации, как вариант брать hash как number напрямую по id
-    const instances = new Map<string | hash, SoundInstance>();
-    let listenerPosition: vmath.vector3;
+    // Используем string | number как ключ: для string - напрямую, для hash - извлекаем id
+    const instances = new Map<string | number, SoundInstance>();
+    // Храним ссылки на обработчики событий для корректного удаления
+    const update_handlers = new Map<string | number, () => void>();
+    let listenerPosition = vmath.vector3(0, 0, 0);
+
+    /**
+     * Нормализует ключ для Map: string остаётся string, hash преобразуется в number (id)
+     */
+    function get_map_key(url: string | hash): string | number {
+        if (typeof url === 'string') {
+            return url;
+        }
+        return (url as unknown as { id: number }).id;
+    }
 
     function create(
         url: string | hash,
@@ -104,9 +116,15 @@ function SoundModule() {
         rectangleMaxVolumeHeight: number = DEFAULT_RECTANGLE_MAX_VOLUME_HEIGHT
     ): string | hash {
 
-        // TODO: нужен лучший способ проверки существования звука
-        if (!go.get(url, "gain")) {
-            Services.logger.error('Sound not found or not set');
+        // Проверяем существование звука через try-catch, т.к. go.get может выбросить ошибку
+        try {
+            const gain = go.get(url, "gain");
+            if (gain === undefined) {
+                Services.logger.error('Sound not found or not set');
+                return -1;
+            }
+        } catch {
+            Services.logger.error('Sound not found or invalid url');
             return -1;
         }
 
@@ -143,25 +161,35 @@ function SoundModule() {
         };
 
         // NOTE: мы же можем использовать этот ивент для обновления ? как вариант вручную где-то потом вызывать update_sound
-        Services.event_bus.on('engine:update', () => update(url));
+        // Сохраняем ссылку на обработчик для корректного удаления
+        const map_key = get_map_key(url);
+        const update_handler = () => update(url);
+        update_handlers.set(map_key, update_handler);
+        Services.event_bus.on('engine:update', update_handler);
 
-        instances.set(url, instance);
+        instances.set(map_key, instance);
 
         return url;
     }
 
     function remove(url: string | hash): void {
-        const instance = instances.get(url);
+        const map_key = get_map_key(url);
+        const instance = instances.get(map_key);
 
-        if (instance) {
+        if (instance !== undefined) {
             stop(url);
-            instances.delete(url);
-            Services.event_bus.off('engine:update', () => update(url));
+            instances.delete(map_key);
+            // Удаляем обработчик используя сохраненную ссылку
+            const update_handler = update_handlers.get(map_key);
+            if (update_handler !== undefined) {
+                Services.event_bus.off('engine:update', update_handler);
+                update_handlers.delete(map_key);
+            }
         }
     }
 
     function update(url: string | hash): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) {
             return;
         }
@@ -227,7 +255,7 @@ function SoundModule() {
     }
 
     function handle_listener_in_range(url: string | hash, distance: number, listenerPos: vmath.vector3, soundPos: vmath.vector3): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         const newTargetVolume = calculate_volume_by_distance(instance, distance);
@@ -253,7 +281,7 @@ function SoundModule() {
     }
 
     function handle_listener_out_of_range(url: string | hash): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         if (instance.isActive && instance.targetVolume > 0) {
@@ -388,7 +416,7 @@ function SoundModule() {
     }
 
     function play(url: string | hash, complete_function?: () => void): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance || instance.isActive) return;
 
         instance.currentVolume = 0;
@@ -418,7 +446,7 @@ function SoundModule() {
     }
 
     function stop(url: string | hash): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance || !instance.isActive) return;
 
         sound.stop(url);
@@ -430,7 +458,7 @@ function SoundModule() {
     }
 
     function start_fade(url: string | hash, targetVolume: number, duration: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         if (instance.fadeDuration > 0 && Math.abs(instance.targetVolume - targetVolume) < 0.001) {
@@ -444,7 +472,7 @@ function SoundModule() {
     }
 
     function update_fading(url: string | hash): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance || instance.fadeDuration <= 0) return;
 
         const currentTime = Services.time.now_with_ms();
@@ -469,164 +497,164 @@ function SoundModule() {
     }
 
     function set_sound_position(url: string | hash, position: vmath.vector3): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.data.position = position;
     }
 
     function set_sound_radius(url: string | hash, radius: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.data.soundRadius = Math.max(0, radius);
     }
 
     function set_zone_type(url: string | hash, zoneType: SoundZoneType): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.data.zoneType = zoneType;
     }
 
     function set_rectangle_width(url: string | hash, width: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.data.rectangleWidth = Math.max(0, width);
     }
 
     function set_rectangle_height(url: string | hash, height: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.data.rectangleHeight = Math.max(0, height);
     }
 
     function set_rectangle_max_volume_width(url: string | hash, width: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.data.rectangleMaxVolumeWidth = Math.max(0, width);
     }
 
     function set_rectangle_max_volume_height(url: string | hash, height: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.data.rectangleMaxVolumeHeight = Math.max(0, height);
     }
 
     function set_max_volume_radius(url: string | hash, radius: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (instance) {
             instance.data.maxVolumeRadius = Math.max(0, radius);
         }
     }
 
     function set_pan_normalization_distance(url: string | hash, distance: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (instance) {
             instance.data.panNormalizationDistance = Math.max(0, distance);
         }
     }
 
     function set_sound_function(url: string | hash, func: SoundFunctionType): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (instance) {
             instance.data.soundFunction = func;
         }
     }
 
     function set_fade_in_time(url: string | hash, time: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (instance) {
             instance.data.fadeInTime = Math.max(0, time);
         }
     }
 
     function set_fade_out_time(url: string | hash, time: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (instance) {
             instance.data.fadeOutTime = Math.max(0, time);
         }
     }
 
     function set_max_volume(url: string | hash, maxVolume: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.data.maxVolume = Math.max(0, Math.min(2, maxVolume));
     }
 
     function get_max_volume(url: string | hash): number {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.maxVolume : DEFAULT_MAX_VOLUME;
     }
 
     function get_sound_radius(url: string | hash): number {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.soundRadius : 0;
     }
 
     function get_zone_type(url: string | hash): SoundZoneType {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.zoneType : SoundZoneType.CIRCULAR;
     }
 
     function get_rectangle_width(url: string | hash): number {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.rectangleWidth : DEFAULT_RECTANGLE_WIDTH;
     }
 
     function get_rectangle_height(url: string | hash): number {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.rectangleHeight : DEFAULT_RECTANGLE_HEIGHT;
     }
 
     function get_rectangle_max_volume_width(url: string | hash): number {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.rectangleMaxVolumeWidth : 0;
     }
 
     function get_rectangle_max_volume_height(url: string | hash): number {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.rectangleMaxVolumeHeight : 0;
     }
 
     function get_max_volume_radius(url: string | hash): number {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.maxVolumeRadius : 0;
     }
 
     function get_pan_normalization_distance(url: string | hash): number {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.panNormalizationDistance : 0;
     }
 
     function get_sound_function(url: string | hash): SoundFunctionType {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.soundFunction : SoundFunctionType.LINEAR;
     }
 
     function get_fade_in_time(url: string | hash): number {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.fadeInTime : 0;
     }
 
     function get_fade_out_time(url: string | hash): number {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return instance ? instance.data.fadeOutTime : 0;
     }
 
     function is_sound_playing(url: string | hash): boolean {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         // Звук играет если он активен и не на паузе
         return instance ? (instance.isActive && !instance.isPaused) : false;
     }
 
     function set_sound_pan(url: string | hash, pan: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.data.pan = pan;
@@ -634,7 +662,7 @@ function SoundModule() {
     }
 
     function set_sound_speed(url: string | hash, speed: number): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.data.speed = speed;
@@ -642,21 +670,21 @@ function SoundModule() {
     }
 
     function set_sound_loop(url: string | hash, loop: boolean): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.data.loop = loop;
     }
 
     function set_active(url: string | hash, active: boolean): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.isEnabled = active;
     }
 
     function set_off(url: string | hash, state: boolean): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         instance.off = state;
@@ -667,12 +695,12 @@ function SoundModule() {
     }
 
     function is_off(url: string | hash): boolean {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         return !instance || instance.off;
     }
 
     function pause(url: string | hash, paused: boolean): void {
-        const instance = instances.get(url);
+        const instance = instances.get(get_map_key(url));
         if (!instance) return;
 
         if (paused) {

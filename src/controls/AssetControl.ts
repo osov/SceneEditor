@@ -1,4 +1,7 @@
-// TODO: если перемещаем файл материала, то нужно обновить путь до него в ResourceManager
+// TODO: [низкий приоритет] если перемещаем файл материала, то нужно обновить путь до него в ResourceManager
+//   - При перемещении: обновить MaterialInfo.path
+//   - При переименовании: изменить ключ в словаре materials + обновить path
+//   - Требует добавления обработки в on_fs_events для .mtr файлов
 
 import { IS_LOGGING, PROJECT_NAME, SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
 import {
@@ -732,10 +735,10 @@ function AssetControlCreate() {
             const path = active_asset?.getAttribute('data-path');
             to_remove.push(path as string);
         }
-        let result = 1;
+        let result = true;
         for (const path of to_remove) {
             const r = await get_client_api().remove(path);
-            result == result && r.result;
+            result = result && (r.result === 1);
         }
         if (!result)
             error_popup(`Некоторые файлы не удалось удалить`);
@@ -766,26 +769,44 @@ function AssetControlCreate() {
 
     async function duplicate_asset(path: string, name: string) {
         const ext = "." + getFileExt(name);
-        let base_name = name.replace(ext, "");
+        const base_name = name.replace(ext, "");
         const get_folder_resp = await get_client_api().get_folder(current_dir as string);
         if (!get_folder_resp || get_folder_resp.result === 0) return;
         const folder_content = get_folder_resp.data as FSObject[];
-        const names: string[] = [];
-        let names_counter = 0;
+
+        // Ищем максимальный номер среди существующих копий
+        // Паттерн: "base_name (N).ext" или "base_name.ext"
+        const copy_regex = new RegExp(String.raw`^${escapeRegex(base_name)}\s*\((\d+)\)$`);
+        let max_number = 0;
+        let has_original = false;
+
         folder_content.forEach(elem => {
             const elem_ext = "." + getFileExt(elem.name);
+            if (elem_ext !== ext) return;
+
             const elem_base_name = elem.name.replace(elem_ext, "");
-            // TODO: Возможно стоит полностью скопировать логику выдачи имён для дублей у файловой системы
-            const regex = new RegExp(String.raw`^(${escapeRegex(base_name)})\s*\(\d+\)$`);
-            const match = elem_base_name.match(regex);
-            const matched_elem_name = match ? match[1] : elem_base_name;
-            if (matched_elem_name == base_name && elem_ext == ext) {
-                names_counter++;
-                names.push(elem.name);
+
+            // Проверяем оригинальное имя
+            if (elem_base_name === base_name) {
+                has_original = true;
+                return;
+            }
+
+            // Проверяем копии с номерами
+            const match = elem_base_name.match(copy_regex);
+            if (match !== null) {
+                const num = parseInt(match[1], 10);
+                if (num > max_number) {
+                    max_number = num;
+                }
             }
         });
-        const new_name = (names_counter !== 0) ? `${base_name} (${names_counter})${ext}` : name;
+
+        // Если есть оригинал или копии - берём следующий номер
+        const next_number = has_original || max_number > 0 ? max_number + 1 : 0;
+        const new_name = next_number > 0 ? `${base_name} (${next_number})${ext}` : name;
         const move_to = `${current_dir}/${new_name}`;
+
         const resp = await get_client_api().copy(path, move_to);
         if (resp && resp.result === 1) {
             Services.event_bus.emit("assets:copied", { name, path, new_path: move_to });
@@ -1151,8 +1172,7 @@ function AssetControlCreate() {
         Services.scene.set_name(root, uniqueName);
 
         if (position) root.set_position(position.x, position.y, position.z);
-        // TODO: set_rotation нету в EntityBase
-        // if (rotation) obj.set_rotation(rotation);
+        if (_rotation) root.set_rotation(_rotation);
         if (scale) root.set_scale(scale.x, scale.y);
         let id_parent = -1;
         const selected = Services.selection.selected;

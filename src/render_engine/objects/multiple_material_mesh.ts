@@ -159,9 +159,11 @@ export class MultipleMaterialMesh extends EntityPlane {
                 const old_material = (child.material as MeshBasicMaterial);
                 Services.logger.info('[set_mesh] Source material:', old_material.name, 'has map:', old_material.map != null);
                 if (old_material.map != null) {
-                    Services.resources.add_texture(old_material.name, 'mesh_' + name, old_material.map);
+                    // Для FBX embedded текстур используем blob URL из image.src для превью
+                    const texture_path = (old_material.map.image as HTMLImageElement | undefined)?.src ?? old_material.name;
+                    Services.resources.add_texture(texture_path, 'mesh_' + name, old_material.map);
                     old_maps.push(old_material.map);
-                    Services.logger.info('[set_mesh] Added texture from source material:', old_material.name);
+                    Services.logger.info('[set_mesh] Added texture from source material:', old_material.name, 'path:', texture_path);
                 }
             }
         });
@@ -304,7 +306,7 @@ export class MultipleMaterialMesh extends EntityPlane {
                 if (material.uniforms[uniformName]) {
                     const uniform = material.uniforms[uniformName];
                     if (uniform.value instanceof Texture) {
-                        const texture_name = uniformName === 'u_texture' ? this.get_texture(idx)[0] : get_file_name((uniform.value as Texture & { path?: string }).path || '');
+                        const texture_name = uniformName === 'u_texture' ? this.get_texture(idx)[0] : get_file_name(uniform.value.userData.path as string || '');
                         const atlas = uniformName === 'u_texture' ? this.get_texture(idx)[1] : Services.resources.get_atlas_by_texture_name(texture_name) || '';
                         modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
                     } else {
@@ -419,10 +421,7 @@ export class MultipleMaterialMesh extends EntityPlane {
             ...super.get_inspector_fields(),
             // Масштаб модели
             { group: 'model', property: Property.MODEL_SCALE, type: PropertyType.NUMBER, params: { min: 0.01, step: 0.1 } },
-            // Материал модели (первый слот) - для нескольких слотов нужен отдельный UI
-            ...(this.materials.length > 0 ? [
-                { group: 'model', property: Property.MATERIAL, type: PropertyType.LIST_TEXT, params: {} },
-            ] : []) as InspectorFieldDefinition[],
+            // NOTE: Property.MATERIAL убран - материал выбирается через слоты (Property.SLOT_MATERIAL)
         ];
     }
 } 

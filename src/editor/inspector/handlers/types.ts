@@ -143,3 +143,93 @@ export function has_vector2_differences(meshes: IBaseMeshAndThree[], getter: (m:
 
     return { diff_x, diff_y };
 }
+
+// ============================================================================
+// Texture Asset Handlers (Phase 19)
+// ============================================================================
+
+/** Контекст обновления текстурного ассета */
+export interface TextureUpdateContext {
+    /** ID текстур (индексы в массиве selected_textures) */
+    ids: number[];
+    /** Пути к текстурам */
+    texture_paths: string[];
+    /** Новое значение */
+    value: unknown;
+    /** Является ли последним событием в серии */
+    is_last: boolean;
+}
+
+/** Контекст чтения текстурного ассета */
+export interface TextureReadContext {
+    /** Пути к текстурам */
+    texture_paths: string[];
+}
+
+/** Результат чтения текстурного свойства */
+export interface TextureReadResult<T> {
+    /** Значение (общее для всех текстур или undefined если различаются) */
+    value: T | undefined;
+    /** Значения для каждой текстуры по индексу */
+    values_by_id: Map<number, T>;
+    /** Есть ли различия в значениях */
+    has_differences: boolean;
+}
+
+/** Обработчик свойств текстурных ассетов */
+export interface ITextureAssetHandler {
+    /** Список свойств которые обрабатывает handler */
+    readonly properties: Property[];
+
+    /** Прочитать значение свойства из текстуры */
+    read(property: Property, context: TextureReadContext): TextureReadResult<unknown>;
+
+    /** Применить новое значение свойства к текстуре */
+    update(property: Property, context: TextureUpdateContext): void;
+}
+
+// ============================================================================
+// Material Asset Handlers (Phase 19)
+// ============================================================================
+
+/** Контекст обновления материального ассета */
+export interface MaterialAssetUpdateContext {
+    /** ID материалов (индексы в массиве selected_materials) */
+    ids: number[];
+    /** Пути к материалам */
+    material_paths: string[];
+    /** Новое значение */
+    value: unknown;
+    /** Название uniform свойства (для uniform handlers) */
+    uniform_name?: string;
+    /** Является ли последним событием в серии */
+    is_last: boolean;
+}
+
+/** Контекст чтения материального ассета */
+export interface MaterialAssetReadContext {
+    /** Пути к материалам */
+    material_paths: string[];
+}
+
+/** Результат чтения материального свойства */
+export interface MaterialAssetReadResult<T> {
+    /** Значение (общее для всех материалов или undefined если различаются) */
+    value: T | undefined;
+    /** Значения для каждого материала по индексу */
+    values_by_id: Map<number, T>;
+    /** Есть ли различия в значениях */
+    has_differences: boolean;
+}
+
+/** Обработчик свойств материальных ассетов */
+export interface IMaterialAssetHandler {
+    /** Список свойств которые обрабатывает handler */
+    readonly properties: Property[];
+
+    /** Прочитать значение свойства из материала */
+    read(property: Property, context: MaterialAssetReadContext): MaterialAssetReadResult<unknown>;
+
+    /** Применить новое значение свойства к материалу */
+    update(property: Property, context: MaterialAssetUpdateContext): void;
+}

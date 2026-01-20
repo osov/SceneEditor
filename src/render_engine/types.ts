@@ -1,4 +1,4 @@
-import { Object3D, Vector2, Vector2Tuple, Vector3, Vector3Tuple, Vector4Tuple } from "three";
+import { Object3D, Quaternion, Vector2, Vector2Tuple, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import type { HistoryDataKeys } from "@editor/shared";
 
 export enum IObjectTypes {
@@ -47,6 +47,8 @@ export interface IBaseEntity {
     ignore_history?: HistoryDataKeys[];
     set_position(x: number, y: number, z?: number): void
     get_position(): Vector3
+    set_rotation(rotation: Quaternion): void
+    get_rotation(): Quaternion
     set_scale(x: number, y: number): void
     get_scale(): Vector2
     get_bounds(): number[]
@@ -79,6 +81,8 @@ export interface IBaseMesh {
     mesh_data: { id: number };
     set_position(x: number, y: number, z?: number): void
     get_position(): Vector3
+    set_rotation(rotation: Quaternion): void
+    get_rotation(): Quaternion
     set_size(w: number, h: number): void
     get_size(): Vector2
     set_scale(x: number, y: number): void

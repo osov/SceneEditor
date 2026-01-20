@@ -98,6 +98,7 @@ export enum Property {
     MESH_NAME = 'mesh_name',
     MODEL_SCALE = 'model_scale',
     MODEL_MATERIALS = 'model_materials',
+    SLOT_MATERIAL = 'slot_material',  // Материал конкретного слота
     ANIMATIONS = 'animations',
     CURRENT_ANIMATION = 'current_animation',
 

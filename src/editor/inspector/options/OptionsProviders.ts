@@ -16,7 +16,7 @@ export function OptionsProvidersCreate(): IOptionsProviders {
      * Преобразует TextureInfo в формат для thumbnail-list плагина
      */
     function cast_texture_info(info: TextureInfo): TextureOptionData {
-        const texture_path = (info.data.texture as { path?: string }).path ?? '';
+        const texture_path = (info.data.texture.userData as { path?: string } | undefined)?.path ?? '';
         const data: TextureOptionData = {
             value: info.name,
             src: texture_path,

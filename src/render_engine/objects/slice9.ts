@@ -223,7 +223,7 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
             if (material.uniforms[uniformName]) {
                 const uniform = material.uniforms[uniformName];
                 if (uniform.value instanceof Texture) {
-                    const texture_name = uniformName === 'u_texture' ? parameters.texture : get_file_name((uniform.value as Texture & { path?: string }).path || '');
+                    const texture_name = uniformName === 'u_texture' ? parameters.texture : get_file_name(uniform.value.userData.path as string || '');
                     const atlas = uniformName === 'u_texture' ? parameters.atlas : Services.resources.get_atlas_by_texture_name(texture_name) || '';
                     modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
                 } else {
@@ -331,7 +331,8 @@ export class Slice9Mesh extends EntityPlane {
     }
 
     get_alpha(): number {
-        return this.material.uniforms.alpha.value;
+        const alpha_uniform = this.material.uniforms.alpha;
+        return alpha_uniform !== undefined ? alpha_uniform.value : 1;
     }
 
     set_alpha(value: number) {

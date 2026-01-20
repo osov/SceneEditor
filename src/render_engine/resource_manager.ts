@@ -1,6 +1,5 @@
-// TODO: использовать set_material_uniform_for_original в on_material_file_change
-// TODO: сделать две основных функции merge_with_instance (с проверкой на то что предыдущая не оригинал чтоб не удалить, и на то что текущая не оригинал чтоб не записать измения в оригинал, изменения обновляются у текущей по предыдущей + текущее изменение) и new_copy (для cоздания копии)
-// TODO: перепроверить все использования мап c обработкой ошибок
+// TODO: [низкий приоритет] сделать две высокоуровневые функции merge_with_instance и new_copy для упрощения API копирования материалов
+// TODO: [низкий приоритет] перепроверить все использования мап c обработкой ошибок
 
 /*
 NOTE: API для материалов:
@@ -217,6 +216,9 @@ export function ResourceManagerModule() {
 
     let project_path = '';
     let project_name = '';
+
+    /** Пути файлов которые были только что записаны и file change должен быть проигнорирован */
+    const pending_self_writes = new Set<string>();
 
     /**
      * Обрабатывает #include директивы в шейдерах, заменяя их на код из Three.js ShaderChunk.
@@ -482,6 +484,12 @@ export function ResourceManagerModule() {
 
 
     async function on_material_file_change(path: string) {
+        // Игнорируем file change если файл был записан нами
+        if (pending_self_writes.has(path)) {
+            pending_self_writes.delete(path);
+            return;
+        }
+
         const changed_material_info = await load_material(path);
         if (!changed_material_info) return;
 
@@ -695,8 +703,7 @@ export function ResourceManagerModule() {
         const full_path = get_project_url(path);
         const texture = await texture_loader.loadAsync(full_path);
 
-        // TODO: лучше добавить в Texture.userData
-        (texture as any).path = full_path;
+        texture.userData.path = full_path;
         return texture;
     }
 
@@ -804,7 +811,17 @@ export function ResourceManagerModule() {
                 size: new Vector2(width, height)
             }
         };
-        (texture as any).path = path;
+
+        // Для FBX embedded текстур путь может быть именем материала, а не URL
+        // Пробуем получить blob URL из image.src если path не является URL
+        let texture_path = path;
+        if (!path.includes('/') && !path.includes(':')) {
+            const image_src = (texture.image as HTMLImageElement | undefined)?.src;
+            if (image_src !== undefined && image_src !== '') {
+                texture_path = image_src;
+            }
+        }
+        texture.userData.path = texture_path;
 
         return atlases[atlas][name].data;
     }
@@ -1014,26 +1031,9 @@ export function ResourceManagerModule() {
             }
         });
 
-        // NOTE: без вызова get_material_hash потому что еще пока не создан material_info
-        // TODO: потенциальная проблема, общую логику нужно вынести в отдельную функцию
-        const not_readonly_uniforms: { [uniform: string]: IUniform<any> } = {};
-        Object.entries(material.uniforms).forEach(([key, uniform]) => {
-            if (material_info.uniforms[key].readonly) {
-                return;
-            }
-            not_readonly_uniforms[key] = uniform;
-        });
-
-        material_info.origin = getObjectHash({
-            uniforms: not_readonly_uniforms,
-            defines: material.defines,
-            depthTest: material.depthTest,
-            stencilWrite: material.stencilWrite,
-            stencilRef: material.stencilRef,
-            stencilFunc: material.stencilFunc,
-            stencilZPass: material.stencilZPass,
-            colorWrite: material.colorWrite,
-        });
+        // NOTE: используем create_material_hash_object для единообразного вычисления хеша
+        const hash_object = create_material_hash_object(material, material_info.uniforms);
+        material_info.origin = getObjectHash(hash_object);
 
         material_info.instances[material_info.origin] = material;
         material_info.material_hash_to_meshes_info[material_info.origin] = [];
@@ -1076,25 +1076,23 @@ export function ResourceManagerModule() {
     }
 
     /**
-     * Вычисляет хеш материала на основе его свойств (без readonly юниформов)
+     * Создаёт объект для вычисления хеша материала (без readonly юниформов)
+     * @param material - ShaderMaterial для хеширования
+     * @param readonly_uniforms - словарь с информацией о readonly юниформах
      */
-    function get_material_hash(material: ShaderMaterial): string {
-        const material_info = get_material_info(material.name);
-        if (material_info === null) {
-            Services.logger.error('Material info not found', material.name);
-            return 'error';
-        }
-
+    function create_material_hash_object(
+        material: ShaderMaterial,
+        readonly_uniforms: Record<string, { readonly?: boolean }>
+    ): Record<string, unknown> {
         const not_readonly_uniforms: { [uniform: string]: IUniform<unknown> } = {};
         Object.entries(material.uniforms).forEach(([key, uniform]) => {
-            const uniformInfo = material_info.uniforms[key] as { readonly?: boolean } | undefined;
-            if (uniformInfo?.readonly) {
+            if (readonly_uniforms[key]?.readonly) {
                 return;
             }
             not_readonly_uniforms[key] = uniform;
         });
 
-        const hash = getObjectHash({
+        return {
             blending: material.blending,
             uniforms: not_readonly_uniforms,
             defines: material.defines,
@@ -1104,9 +1102,21 @@ export function ResourceManagerModule() {
             stencilFunc: material.stencilFunc,
             stencilZPass: material.stencilZPass,
             colorWrite: material.colorWrite,
-        });
+        };
+    }
 
-        return hash;
+    /**
+     * Вычисляет хеш материала на основе его свойств (без readonly юниформов)
+     */
+    function get_material_hash(material: ShaderMaterial): string {
+        const material_info = get_material_info(material.name);
+        if (material_info === null) {
+            Services.logger.error('Material info not found', material.name);
+            return 'error';
+        }
+
+        const hash_object = create_material_hash_object(material, material_info.uniforms);
+        return getObjectHash(hash_object);
     }
 
     function is_material_origin_hash(material_name: string, hash: string) {
@@ -1384,7 +1394,7 @@ export function ResourceManagerModule() {
 
             // NOTE: в случае если юниформа это текстура, то составляем строку атлас/текстура
             if (value instanceof Texture) {
-                const texture_name = get_file_name((value as any).path || '');
+                const texture_name = get_file_name(value.userData.path as string || '');
                 const atlas = get_atlas_by_texture_name(texture_name) || '';
                 material_data.data[uniform_name] = `${atlas}/${texture_name}`;
             } else if (material_data.uniforms[uniform_name].type == MaterialUniformType.COLOR) {
@@ -1393,8 +1403,9 @@ export function ResourceManagerModule() {
                 material_data.data[uniform_name] = value;
             }
 
+            // Добавляем путь в pending_self_writes чтобы игнорировать следующий file change
+            pending_self_writes.add(material_info.path);
             await get_asset_control().save_file_data(material_info.path, JSON.stringify(material_data, null, 2));
-            // TODO: нужно сделать так чтобы не обновляли повторно, после того как файл запишеться
         }
     }
 
@@ -1452,6 +1463,8 @@ export function ResourceManagerModule() {
         } else {
             material_data.fragmentShader = shader_path;
         }
+        // Добавляем путь в pending_self_writes чтобы игнорировать следующий file change
+        pending_self_writes.add(material_info.path);
         await get_asset_control().save_file_data(material_info.path, JSON.stringify(material_data, null, 2));
     }
 
@@ -1490,7 +1503,11 @@ export function ResourceManagerModule() {
         }
     }
 
-    // TODO: как вызывать установку материала для меша, и при этом для анимационого меша еще нужен index
+    /**
+     * Внутренняя функция установки uniform для материала.
+     * NOTE: Для обычных мешей (Slice9Mesh) использовать set_material_uniform_for_mesh (index=0)
+     * Для моделей (MultipleMaterialMesh/AnimatedMesh) использовать set_material_uniform_for_multiple_material_mesh с нужным index
+     */
     function set_material_uniform<T>(material_info: MaterialInfo, mesh_id: number, index: number, uniform_name: string, value: T) {
         const uniform = material_info.uniforms[uniform_name];
         if (!uniform) {
@@ -2017,8 +2034,9 @@ export function ResourceManagerModule() {
                 const metadata_atlas = metadata_atlases[atlas_name] as TRecursiveDict;
                 for (const [texture_name, texture] of Object.entries(textures)) {
                     // NOTE: записываем путь до исходника текстуры и фильтры
+                    const texture_path = (texture.data.texture as { path?: string }).path;
                     metadata_atlas[texture_name] = {
-                        path: (texture.data.texture as any).path.replace(project_path, ''),
+                        path: texture_path !== undefined ? texture_path.replace(project_path, '') : '',
                         minFilter: texture.data.texture.minFilter,
                         magFilter: texture.data.texture.magFilter,
                         wrapS: texture.data.texture.wrapS,
