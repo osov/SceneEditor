@@ -53,10 +53,26 @@ export type {
 // MaterialFieldProvider
 export {
     get_material_uniform_fields,
+    get_material_slot_uniform_fields,
+    get_all_material_slots_data,
     get_material_inspector_fields,
 } from './MaterialFieldProvider';
 
 export type {
     UniformFieldInfo,
     UniformPropertyData,
+    MaterialSlotData,
 } from './MaterialFieldProvider';
+
+// FieldDefinitionProvider
+export {
+    get_field_definitions,
+    is_dynamic_field,
+    DYNAMIC_FIELDS,
+} from './FieldDefinitionProvider';
+
+export type {
+    GetPropertyValueFn,
+    GetAnimationListFn,
+    GetFieldDefinitionsOptions,
+} from './FieldDefinitionProvider';

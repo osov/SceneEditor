@@ -8,6 +8,7 @@
  */
 
 export { InspectorOptionsUpdaterCreate, type IInspectorOptionsUpdater } from './InspectorOptionsUpdater';
+export { create_selection_options_updater, type ISelectionOptionsUpdater, type GetPropertyValueCallback } from './SelectionOptionsUpdater';
 
 export {
     ScreenPointPreset,

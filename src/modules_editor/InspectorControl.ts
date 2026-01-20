@@ -53,13 +53,20 @@ Slice9* vec2 | метод get_slice/set_slice, минимум 0
 Размер шрифта** int | шаг 1, минимум 8 делаем как в дефолде, как бы управляем тут числом, но по факту меняем scale пропорционально, а отталкиваться от стартового значения из свойства fontSize, скажем шрифт 32 по умолчанию. и пишем тут что сейчас стоит скажем 32, но если начнем крутить то скейлим уже, но свойство не трогаем
 Выравнивание** string выпадающий из списка - [center, left, right, justify]/[Центр, Слева, Справа, По ширине] | свойство textAlign
  
-TODO: определять поля из списка выделенных обьектов за пределами инспектора
+TODO: [низкий приоритет] определять поля из списка выделенных обьектов за пределами инспектора
     + Меньше связанность, инспектор не будет знать о внешних типах и будет получать только список обьектов ObjectData
+    + Извлечь логику set_selected_list/set_selected_textures/set_selected_materials в отдельный FieldDefinitionProvider
+    + [ЧАСТИЧНО РЕШЕНО Phase 22] Создан FieldDefinitionProvider для динамических параметров полей
+    + [ЧАСТИЧНО РЕШЕНО Phase 14-20] handler-based архитектура
 
-TODO: вынести обновление конкретных полей
-    (которые нужно обновлять вручную / вызывать функции для получения обновленных данных mesh-а) в отдельный callback
+TODO: [низкий приоритет] вынести обновление конкретных полей в отдельный callback
+    + Функции update_*_options вызываются для обновления опций списков
+    + [ЧАСТИЧНО РЕШЕНО Phase 18] InspectorOptionsUpdater
+    + [РЕШЕНО Phase 22-23] FieldDefinitionProvider + SelectionOptionsUpdater
 
-TODO: попробовать упростить через дженерики, как минимум для записи в историю по типу
+TODO: [низкий приоритет] упростить типизацию записи в историю через дженерики
+    + onChange принимает разные типы данных, можно унифицировать через generics
+    + Частично реализовано через handler-based архитектуру (Phase 14)
 
 */
 
@@ -91,13 +98,21 @@ import { get_control_manager } from './ControlManager';
 import {
     is_inspectable,
     type InspectorFieldDefinition,
-    Property
-} from '../core/inspector/IInspectable';
+    Property,
+    get_field_definitions,
+} from '../core/inspector';
 import { get_material_uniform_fields } from '../core/inspector/MaterialFieldProvider';
 import {
     create_handler_registry,
+    create_texture_asset_handler_registry,
+    create_material_asset_handler_registry,
+    create_uniform_handler,
     type IHandlerRegistry,
+    type ITextureAssetHandlerRegistry,
+    type IMaterialAssetHandlerRegistry,
     type UpdateContext,
+    type TextureUpdateContext,
+    type MaterialAssetUpdateContext,
     type ChangeAxisInfo,
 } from '../editor/inspector/handlers';
 import {
@@ -117,6 +132,8 @@ import {
 import {
     InspectorOptionsUpdaterCreate,
     type IInspectorOptionsUpdater,
+    create_selection_options_updater,
+    type ISelectionOptionsUpdater,
     // Preset converters (Phase 18)
     ScreenPointPreset,
     pivot_to_screen_preset,
@@ -260,6 +277,10 @@ export interface PropertyData<T extends PropertyType> {
     data: PropertyValues[T]; // values
     type?: T; // тип поля из InspectorFieldDefinition
     params?: PropertyParams[T]; // параметры из InspectorFieldDefinition
+    /** Дополнительные данные для handler (например slot_index для uniform) */
+    action_data?: unknown;
+    /** Кастомная папка для группировки (вместо группы из _config) */
+    folder?: string;
 }
 
 export interface ObjectData {
@@ -305,11 +326,20 @@ function InspectorControlCreate() {
     /** Реестр обработчиков свойств (Phase 14) */
     let _handler_registry: IHandlerRegistry;
 
+    /** Реестр обработчиков текстурных ассетов (Phase 19) */
+    let _texture_asset_handler_registry: ITextureAssetHandlerRegistry;
+
+    /** Реестр обработчиков материальных ассетов (Phase 19) */
+    let _material_asset_handler_registry: IMaterialAssetHandlerRegistry;
+
     /** Провайдер опций для списков (Phase 15) */
     let _options_providers: IOptionsProviders;
 
     /** Updater для опций списков (извлечено в Phase 18) */
     let _options_updater: IInspectorOptionsUpdater;
+
+    /** Updater для обновления опций при изменении выделения (Phase 23) */
+    let _selection_options_updater: ISelectionOptionsUpdater<IBaseMeshAndThree>;
 
     function init() {
         _inspector = new Pane({
@@ -333,6 +363,18 @@ function InspectorControlCreate() {
             },
         });
 
+        // Регистрация UniformHandler с доступом к _selected_materials (Phase 20)
+        const uniform_handler = create_uniform_handler({
+            get_selected_materials: () => _selected_materials,
+        });
+        _handler_registry.register(uniform_handler);
+
+        // Инициализация реестра texture asset handlers (Phase 19)
+        _texture_asset_handler_registry = create_texture_asset_handler_registry();
+
+        // Инициализация реестра material asset handlers (Phase 19)
+        _material_asset_handler_registry = create_material_asset_handler_registry();
+
         // Инициализация провайдера опций (Phase 15)
         _options_providers = get_options_providers();
 
@@ -342,6 +384,12 @@ function InspectorControlCreate() {
         // Инициализация updater для опций (Phase 18)
         _options_updater = InspectorOptionsUpdaterCreate(
             () => _config,
+            _options_providers
+        );
+
+        // Инициализация updater для выделения (Phase 23)
+        _selection_options_updater = create_selection_options_updater<IBaseMeshAndThree>(
+            _options_updater,
             _options_providers
         );
 
@@ -558,7 +606,11 @@ function InspectorControlCreate() {
 
             result.data.push({ name: Property.VERTEX_PROGRAM, data: material.vertexShader });
             result.data.push({ name: Property.FRAGMENT_PROGRAM, data: material.fragmentShader });
-            result.data.push({ name: Property.TRANSPARENT, data: false }); // TODO: восстановить transparent
+
+            // Получаем transparent из оригинального материала
+            const origin_material = material.instances[material.origin];
+            const transparent_value = origin_material?.transparent ?? false;
+            result.data.push({ name: Property.TRANSPARENT, data: transparent_value });
 
             type UniformEntry = { type: MaterialUniformType; params?: Record<string, unknown>; hide?: boolean };
             Object.entries(material.uniforms as Record<string, UniformEntry>).forEach(([key, value]) => {
@@ -894,56 +946,24 @@ function InspectorControlCreate() {
             return [];
         }
 
-        const field_defs = obj.get_inspector_fields();
-        const fields: PropertyData<PropertyType>[] = [];
+        // Получаем определения полей с заполненными динамическими параметрами
+        const field_defs = get_field_definitions(
+            obj,
+            (property) => get_property_value(obj, property),
+            _options_providers,
+            {
+                // Callback для анимаций - специфично для AnimatedMesh
+                get_animation_list: 'get_animation_list' in obj
+                    ? () => Object.keys((obj as AnimatedMesh).get_animation_list())
+                    : undefined
+            }
+        );
 
-        // Обновляем опции для динамических полей
-        update_atlas_options();
-        update_font_options();
-
-        // Для полей с текстурами обновляем список только для выбранного атласа
-        const atlas_field = field_defs.find(f => f.property === Property.ATLAS);
-        if (atlas_field !== undefined) {
-            const atlas = get_property_value(obj, Property.ATLAS) as string;
-            update_texture_options([Property.TEXTURE], () => {
-                return Services.resources.get_all_textures()
-                    .filter((info) => info.atlas === atlas)
-                    .map((info) => _options_providers.cast_texture_info(info));
-            });
-            update_material_options();
-        }
-
-        // Для аудио полей обновляем списки
-        const sound_field = field_defs.find(f => f.property === Property.SOUND);
-        if (sound_field !== undefined) {
-            update_sound_options();
-            update_sound_function_options();
-            update_zone_type_options();
-        }
-
-        // Для полей с материалами обновляем список материалов (для 3D моделей)
-        const material_field = field_defs.find(f => f.property === Property.MATERIAL);
-        if (material_field !== undefined) {
-            material_field.params = _options_providers.get_material_options();
-            update_material_options();
-        }
-
-        // Для модельных полей обновляем списки мешей (обновляем params в field_defs)
-        const mesh_field = field_defs.find(f => f.property === Property.MESH_NAME);
-        if (mesh_field !== undefined) {
-            mesh_field.params = _options_providers.get_mesh_options();
-            update_mesh_options();
-        }
-
-        // Для анимированных моделей обновляем списки анимаций (обновляем params в field_defs)
-        const animation_field = field_defs.find(f => f.property === Property.CURRENT_ANIMATION);
-        if (animation_field !== undefined && 'get_animation_list' in obj) {
-            const anim_list = Object.keys((obj as AnimatedMesh).get_animation_list());
-            animation_field.params = _options_providers.get_animation_options(anim_list);
-            update_animation_options(anim_list);
-        }
+        // Обновляем опции UI (TweakPane) для синхронизации с конфигом (Phase 23)
+        _selection_options_updater.update_options_from_field_defs(field_defs, obj, get_property_value);
 
         // Преобразуем определения полей в данные
+        const fields: PropertyData<PropertyType>[] = [];
         for (const def of field_defs) {
             const property_data = field_definition_to_property_data(def, obj);
             fields.push(property_data);
@@ -966,28 +986,59 @@ function InspectorControlCreate() {
 
             // NOTE: uniforms кастомного материала через MaterialFieldProvider
             // Поддержка MultipleMaterialMesh (get_materials) и обычных мешей (material)
-            let material: ShaderMaterial | undefined;
             if ('get_materials' in value && typeof (value as MultipleMaterialMesh).get_materials === 'function') {
-                // MultipleMaterialMesh - берём первый материал из массива
+                // MultipleMaterialMesh - создаём папку для каждого слота материала
                 const materials = (value as MultipleMaterialMesh).get_materials();
-                material = materials.length > 0 ? materials[0] : undefined;
-            } else if ('material' in value && value.material !== undefined) {
-                // Обычный меш с одним материалом
-                material = (value as Slice9Mesh).material;
-            }
 
-            if (material !== undefined) {
+                for (let slot_index = 0; slot_index < materials.length; slot_index++) {
+                    const material = materials[slot_index];
+                    const material_name = material.name || '';
+                    const material_uniforms = material.uniforms as Record<string, { value: unknown }> | null;
+
+                    const folder_name = `Слот ${slot_index}`;
+
+                    // Добавляем поле выбора материала для слота
+                    fields.push({
+                        name: Property.SLOT_MATERIAL,
+                        data: material_name,
+                        action_data: { slot_index },
+                        folder: folder_name
+                    });
+
+                    if (material_uniforms !== null && material_name !== '') {
+                        const uniform_fields = get_material_uniform_fields(material_name, material_uniforms);
+
+                        for (const uniform_field of uniform_fields) {
+                            // Обновляем конфиг для полей (заголовки и параметры)
+                            _config.forEach((group) => {
+                                const property = group.property_list.find((p) => p.name === uniform_field.name);
+                                if (property === undefined) return;
+                                property.title = uniform_field.title;
+                                if (uniform_field.params !== undefined) {
+                                    property.params = uniform_field.params;
+                                }
+                            });
+
+                            // Добавляем поле с action_data и folder
+                            fields.push({
+                                name: uniform_field.name,
+                                data: uniform_field.data as PropertyValues[PropertyType],
+                                action_data: { uniform_name: uniform_field.title, slot_index },
+                                folder: folder_name
+                            });
+                        }
+                    }
+                }
+            } else if ('material' in value && value.material !== undefined) {
+                // Обычный меш с одним материалом (Slice9Mesh и др.)
+                const material = (value as Slice9Mesh).material;
                 const material_name = material.name || '';
                 const material_uniforms = material.uniforms as Record<string, { value: unknown }> | null;
 
-                // Проверяем наличие uniforms и имя материала
                 if (material_uniforms !== null && material_name !== '') {
-                    // Получаем поля uniforms через провайдер
                     const uniform_fields = get_material_uniform_fields(material_name, material_uniforms);
 
-                    // Обновляем конфиг для каждого поля (заголовки и параметры)
                     for (const uniform_field of uniform_fields) {
-                        // Обновляем заголовок и параметры в конфиге
                         _config.forEach((group) => {
                             const property = group.property_list.find((p) => p.name === uniform_field.name);
                             if (property === undefined) return;
@@ -997,8 +1048,12 @@ function InspectorControlCreate() {
                             }
                         });
 
-                        // Добавляем поле в список
-                        fields.push({ name: uniform_field.name, data: uniform_field.data as PropertyValues[PropertyType] });
+                        // Для обычных мешей action_data = uniform_name (обратная совместимость)
+                        fields.push({
+                            name: uniform_field.name,
+                            data: uniform_field.data as PropertyValues[PropertyType],
+                            action_data: uniform_field.title
+                        });
                     }
                 }
             }
@@ -1011,13 +1066,15 @@ function InspectorControlCreate() {
     }
 
     // === Функции обновления опций (делегируют в _options_updater, Phase 18) ===
+    // NOTE: Большинство функций перенесены в SelectionOptionsUpdater (Phase 23)
+    // Оставлены только те, что используются напрямую в других местах
 
     function update_atlas_options() {
         _options_updater.update_atlas_options();
     }
 
-    function update_material_options() {
-        _options_updater.update_material_options();
+    function update_texture_options(properties: Property[], method = () => _options_providers.get_texture_options()) {
+        _options_updater.update_texture_options(properties, method);
     }
 
     function update_vertex_program_options() {
@@ -1026,34 +1083,6 @@ function InspectorControlCreate() {
 
     function update_fragment_program_options() {
         _options_updater.update_fragment_program_options();
-    }
-
-    function update_texture_options(properties: Property[], method = () => _options_providers.get_texture_options()) {
-        _options_updater.update_texture_options(properties, method);
-    }
-
-    function update_font_options() {
-        _options_updater.update_font_options();
-    }
-
-    function update_sound_options() {
-        _options_updater.update_sound_options();
-    }
-
-    function update_sound_function_options() {
-        _options_updater.update_sound_function_options();
-    }
-
-    function update_zone_type_options() {
-        _options_updater.update_zone_type_options();
-    }
-
-    function update_mesh_options() {
-        _options_updater.update_mesh_options();
-    }
-
-    function update_animation_options(animations: string[]) {
-        _options_updater.update_animation_options(animations);
     }
 
     function refresh(properties: Property[]) {
@@ -1212,106 +1241,110 @@ function InspectorControlCreate() {
         }
     }
 
-    // TODO: refactoring
-    function tryAddToUniqueField(obj_index: number, obj: ObjectData, field: PropertyData<PropertyType>, property: PropertyItem<PropertyType>): boolean {
-        const index = _unique_fields.findIndex((value) => {
-            return value.property.name == property.name;
-        });
+    /** Типы векторных свойств */
+    const VECTOR_TYPES = [PropertyType.VECTOR_2, PropertyType.POINT_2D, PropertyType.VECTOR_3, PropertyType.VECTOR_4];
 
-        if (index == -1) {
-            if (obj_index != 0) {
-                return false;
-            }
+    /** Типы свойств с пустым значением по умолчанию при различии */
+    const EMPTY_DEFAULT_TYPES = [PropertyType.LIST_TEXT, PropertyType.LIST_TEXTURES, PropertyType.LOG_DATA];
 
-            // добавляем если это первый обьект
-            _unique_fields.push({
-                ids: [obj.id],
-                field,
-                property
-            });
+    /**
+     * Обрабатывает ось вектора: если значения различаются - отключает ось и усредняет значение
+     */
+    function process_vector_axis(
+        axis: 'x' | 'y' | 'z' | 'w',
+        field_data: { x: number; y: number; z?: number; w?: number },
+        unique_field: { field: PropertyData<PropertyType>; property: PropertyItem<PropertyType> }
+    ) {
+        const unique_data = unique_field.field.data as { x: number; y: number; z?: number; w?: number };
+        const field_value = field_data[axis];
+        const unique_value = unique_data[axis];
 
-            return true;
+        if (field_value === undefined || unique_value === undefined) return;
+        if (field_value === unique_value) return;
 
-        } else _unique_fields[index].ids.push(obj.id);
-
-        if (property.type == PropertyType.VECTOR_2 || property.type == PropertyType.POINT_2D || property.type == PropertyType.VECTOR_3 || property.type == PropertyType.VECTOR_4) {
-            type T = PropertyValues[PropertyType.VECTOR_2];
-            const field_data = field.data as T;
-            const unique_field_data = _unique_fields[index].field.data as T;
-
-            if (property.type == PropertyType.VECTOR_2 || property.type == PropertyType.POINT_2D || property.type == PropertyType.VECTOR_3 || property.type == PropertyType.VECTOR_4) {
-                if (field_data.x != unique_field_data.x) {
-                    const params = _unique_fields[index].property.params;
-                    if (params) {
-                        const v2p = (params as PropertyParams[PropertyType.VECTOR_2]);
-                        if (v2p.x) v2p.x.disabled = true;
-                        else v2p.x = { disabled: true };
-                    } else _unique_fields[index].property.params = { x: { disabled: true } };
-                    unique_field_data.x = (unique_field_data.x + field_data.x) / 2;
-                }
-
-                if (field_data.y != unique_field_data.y) {
-                    const params = _unique_fields[index].property.params;
-                    if (params) {
-                        const v2p = (params as PropertyParams[PropertyType.VECTOR_2]);
-                        if (v2p.y) v2p.y.disabled = true;
-                        else v2p.y = { disabled: true };
-                    } else _unique_fields[index].property.params = { y: { disabled: true } };
-                    unique_field_data.y = (unique_field_data.y + field_data.y) / 2;
-                }
-            }
-
-            if (property.type == PropertyType.VECTOR_3 || property.type == PropertyType.VECTOR_4) {
-                type T = PropertyValues[PropertyType.VECTOR_3];
-                const field_data = field.data as T;
-                const unique_field_data = _unique_fields[index].field.data as T;
-
-                if (field_data.z != unique_field_data.z) {
-                    const params = _unique_fields[index].property.params;
-                    if (params) {
-                        const v3p = (params as PropertyParams[PropertyType.VECTOR_3]);
-                        if (v3p.z) v3p.z.disabled = true;
-                        else v3p.z = { disabled: true };
-                    } else _unique_fields[index].property.params = { z: { disabled: true } };
-                    unique_field_data.z = (unique_field_data.z + field_data.z) / 2;
-                }
-            }
-
-            if (property.type == PropertyType.VECTOR_4) {
-                type T = PropertyValues[PropertyType.VECTOR_4];
-                const field_data = field.data as T;
-                const unique_field_data = _unique_fields[index].field.data as T;
-
-                if (field_data.w != unique_field_data.w) {
-                    const params = _unique_fields[index].property.params;
-                    if (params) {
-                        const v4p = (params as PropertyParams[PropertyType.VECTOR_4]);
-                        if (v4p.w) v4p.w.disabled = true;
-                        else v4p.w = { disabled: true };
-                    } else _unique_fields[index].property.params = { w: { disabled: true } };
-                }
-                unique_field_data.w = (unique_field_data.w + field_data.w) / 2;
+        // Отключаем ось в параметрах
+        const params = unique_field.property.params as Record<string, { disabled?: boolean }> | undefined;
+        if (params !== undefined) {
+            if (params[axis] !== undefined) {
+                params[axis].disabled = true;
+            } else {
+                params[axis] = { disabled: true };
             }
         } else {
-            if (field.data != _unique_fields[index].field.data) {
-                if ([PropertyType.LIST_TEXT, PropertyType.LIST_TEXTURES, PropertyType.LOG_DATA].includes(property.type)) {
-                    // для выпадающего списка и текстовых полей если между обьектами разные значения
-                    _unique_fields[index].field.data = "";
-                } else if (property.type == PropertyType.COLOR) {
-                    // для цвета если между обьектами разные значения
-                    _unique_fields[index].field.data = "#000000";
-                } else if (property.type == PropertyType.BOOLEAN) {
-                    // для чекбокса если между обьектами разные значения
-                    _unique_fields[index].field.data = false;
-                    _unique_fields[index].property.params = { disabled: true };
-                } else if (property.type == PropertyType.BUTTON) {
-                    // для кнопок всегда показываем
-                    return true;
-                } else {
-                    // в ином случае просто убираем поле
-                    _unique_fields.splice(index, 1);
-                    return false;
-                }
+            unique_field.property.params = { [axis]: { disabled: true } } as PropertyParams[PropertyType];
+        }
+
+        // Усредняем значение
+        (unique_data as Record<string, number>)[axis] = (unique_value + field_value) / 2;
+    }
+
+    /**
+     * Объединяет векторные данные между объектами
+     */
+    function merge_vector_fields(
+        property_type: PropertyType,
+        field_data: { x: number; y: number; z?: number; w?: number },
+        unique_field: { field: PropertyData<PropertyType>; property: PropertyItem<PropertyType> }
+    ) {
+        // Все векторные типы имеют x и y
+        process_vector_axis('x', field_data, unique_field);
+        process_vector_axis('y', field_data, unique_field);
+
+        // vec3 и vec4 имеют z
+        if (property_type === PropertyType.VECTOR_3 || property_type === PropertyType.VECTOR_4) {
+            process_vector_axis('z', field_data, unique_field);
+        }
+
+        // vec4 имеет w
+        if (property_type === PropertyType.VECTOR_4) {
+            process_vector_axis('w', field_data, unique_field);
+        }
+    }
+
+    /**
+     * Пытается добавить поле в список уникальных полей или объединить с существующим
+     */
+    function tryAddToUniqueField(obj_index: number, obj: ObjectData, field: PropertyData<PropertyType>, property: PropertyItem<PropertyType>): boolean {
+        const index = _unique_fields.findIndex((value) => value.property.name === property.name);
+
+        // Если поле не найдено - добавляем только для первого объекта
+        if (index === -1) {
+            if (obj_index !== 0) {
+                return false;
+            }
+            _unique_fields.push({ ids: [obj.id], field, property });
+            return true;
+        }
+
+        // Добавляем id объекта к существующему полю
+        _unique_fields[index].ids.push(obj.id);
+
+        // Обработка векторных типов
+        if (VECTOR_TYPES.includes(property.type)) {
+            const field_data = field.data as { x: number; y: number; z?: number; w?: number };
+            merge_vector_fields(property.type, field_data, _unique_fields[index]);
+            return true;
+        }
+
+        // Обработка невекторных типов с различающимися значениями
+        if (field.data !== _unique_fields[index].field.data) {
+            if (EMPTY_DEFAULT_TYPES.includes(property.type)) {
+                // Списки и текстовые поля - пустое значение
+                _unique_fields[index].field.data = "";
+            } else if (property.type === PropertyType.COLOR) {
+                // Цвет - черный
+                _unique_fields[index].field.data = "#000000";
+            } else if (property.type === PropertyType.BOOLEAN) {
+                // Чекбокс - отключен
+                _unique_fields[index].field.data = false;
+                _unique_fields[index].property.params = { disabled: true };
+            } else if (property.type === PropertyType.BUTTON) {
+                // Кнопки всегда показываем
+                return true;
+            } else {
+                // Остальные - удаляем поле
+                _unique_fields.splice(index, 1);
+                return false;
             }
         }
 
@@ -1420,17 +1453,33 @@ function InspectorControlCreate() {
     // is_folder и is_button импортируются из '../editor/inspector/ui'
 
     function addToFolder<T extends PropertyType>(field: PropertyData<T>, entity: Entities, entities: Entities[]) {
-        const group = getInspectorGroupByName(field.name);
-        if (group && group.title != '') {
+        // Если задана кастомная папка, используем её
+        if (field.folder !== undefined && field.folder !== '') {
             let folder = entities.find((value) => {
-                return (is_folder(value)) && (value.title == group.title);
+                return (is_folder(value)) && (value.title === field.folder);
             }) as Folder | undefined;
-            if (!folder) {
+            if (folder === undefined) {
+                folder = create_folder(field.folder, []);
+                entities.push(folder);
+            }
+            folder.childrens.push(entity);
+            return;
+        }
+
+        // Иначе используем группу из _config
+        const group = getInspectorGroupByName(field.name);
+        if (group !== undefined && group.title !== '') {
+            let folder = entities.find((value) => {
+                return (is_folder(value)) && (value.title === group.title);
+            }) as Folder | undefined;
+            if (folder === undefined) {
                 folder = create_folder(group.title, []);
                 entities.push(folder);
             }
             folder.childrens.push(entity);
-        } else entities.push(entity);
+        } else {
+            entities.push(entity);
+        }
     }
 
     function getInspectorGroupByName(name: string): InspectorGroup | undefined {
@@ -1566,6 +1615,17 @@ function InspectorControlCreate() {
             case Property.MATERIAL: saveMaterial(info.ids); break;
             case Property.MESH_NAME: saveMeshModelName(info.ids); break;
             case Property.MODEL_MATERIALS: saveModelMaterials(info.ids); break;
+            case Property.SLOT_MATERIAL: saveSlotMaterial(info.ids, info.field); break;
+            // Uniform свойства (Phase 21 - per-slot uniforms)
+            case Property.UNIFORM_SAMPLER2D:
+            case Property.UNIFORM_FLOAT:
+            case Property.UNIFORM_RANGE:
+            case Property.UNIFORM_VEC2:
+            case Property.UNIFORM_VEC3:
+            case Property.UNIFORM_VEC4:
+            case Property.UNIFORM_COLOR:
+                saveUniform(info.ids, info.field);
+                break;
         }
     }
 
@@ -1591,19 +1651,62 @@ function InspectorControlCreate() {
             value: info.data.event.value,
             axis_info,
             is_last: info.data.event.last ?? true,
-            action_data: undefined,
+            // Для uniform handlers: если field.action_data задан (объект с slot_index), используем его
+            // Иначе используем property.title (имя uniform) для обратной совместимости
+            action_data: info.data.field.action_data ?? info.data.property?.title,
+        };
+    }
+
+    /**
+     * Создаёт TextureUpdateContext из ChangeInfo для texture asset handlers (Phase 19)
+     */
+    function create_texture_update_context(info: ChangeInfo): TextureUpdateContext {
+        return {
+            ids: info.ids,
+            texture_paths: _selected_textures,
+            value: info.data.event.value,
+            is_last: info.data.event.last ?? true,
+        };
+    }
+
+    /**
+     * Создаёт MaterialAssetUpdateContext из ChangeInfo для material asset handlers (Phase 19)
+     */
+    function create_material_asset_update_context(info: ChangeInfo): MaterialAssetUpdateContext {
+        return {
+            ids: info.ids,
+            material_paths: _selected_materials,
+            value: info.data.event.value,
+            uniform_name: info.data.property?.title,
+            is_last: info.data.event.last ?? true,
         };
     }
 
     function updatedValue(info: ChangeInfo) {
         // Services.logger.debug("UPDATED: ", info);
 
-        // Phase 14: Пробуем использовать handler из registry
+        // Phase 14: Пробуем использовать handler из registry для mesh свойств
         const property = info.data.field.name as Property;
         const handler = _handler_registry.get_handler(property);
         if (handler !== undefined) {
             const context = create_update_context(info);
             handler.update(property, context);
+            return;
+        }
+
+        // Phase 19: Пробуем использовать texture asset handler
+        const texture_handler = _texture_asset_handler_registry.get_handler(property);
+        if (texture_handler !== undefined) {
+            const context = create_texture_update_context(info);
+            texture_handler.update(property, context);
+            return;
+        }
+
+        // Phase 19: Пробуем использовать material asset handler
+        const material_handler = _material_asset_handler_registry.get_handler(property);
+        if (material_handler !== undefined) {
+            const context = create_material_asset_update_context(info);
+            material_handler.update(property, context);
             return;
         }
 
@@ -1628,21 +1731,12 @@ function InspectorControlCreate() {
             case Property.FONT_SIZE: updateFontSize(info); break;
             case Property.TEXT_ALIGN: updateTextAlign(info); break;
             case Property.ATLAS: updateAtlas(info); break;
-            case Property.ASSET_ATLAS: updateAssetAtlas(info); break;
+            // ASSET_ATLAS, MIN_FILTER, MAG_FILTER - обрабатываются TextureAssetHandler (Phase 19)
             case Property.LINE_HEIGHT: updateLineHeight(info); break;
             case Property.BLEND_MODE: updateBlendMode(info); break;
-            case Property.MIN_FILTER: updateMinFilter(info); break;
-            case Property.MAG_FILTER: updateMagFilter(info); break;
             case Property.MATERIAL: updateMaterial(info); break;
-            case Property.VERTEX_PROGRAM: updateMaterialVertexProgram(info); break;
-            case Property.FRAGMENT_PROGRAM: updateMaterialFragmentProgram(info); break;
-            case Property.UNIFORM_SAMPLER2D: updateUniformSampler2D(info); break;
-            case Property.UNIFORM_FLOAT: updateUniformFloat(info); break;
-            case Property.UNIFORM_RANGE: updateUniformRange(info); break;
-            case Property.UNIFORM_VEC2: updateUniformVec2(info); break;
-            case Property.UNIFORM_VEC3: updateUniformVec3(info); break;
-            case Property.UNIFORM_VEC4: updateUniformVec4(info); break;
-            case Property.UNIFORM_COLOR: updateUniformColor(info); break;
+            // VERTEX_PROGRAM, FRAGMENT_PROGRAM - обрабатываются MaterialAssetHandler (Phase 19)
+            // UNIFORM_* свойства - обрабатываются UniformHandler (Phase 20)
             case Property.FLIP_VERTICAL: updateFlipVertical(info); break;
             case Property.FLIP_HORIZONTAL: updateFlipHorizontal(info); break;
             case Property.FLIP_DIAGONAL: updateFlipDiagonal(info); break;
@@ -1667,6 +1761,7 @@ function InspectorControlCreate() {
             case Property.MESH_NAME: updateMeshName(info); break;
             case Property.MODEL_SCALE: updateModelScale(info); break;
             case Property.MODEL_MATERIALS: updateModelMaterials(info); break;
+            case Property.SLOT_MATERIAL: updateSlotMaterial(info); break;
             case Property.CURRENT_ANIMATION: updateCurrentAnimation(info); break;
         }
     }
@@ -2442,8 +2537,10 @@ function InspectorControlCreate() {
                 return;
             }
 
-            const texture = mesh.get_texture()[0];
-            textures.push({ id_mesh: id, texture });
+            // Сохраняем и текстуру, и атлас в формате atlas/texture
+            const [texture_name, atlas_name] = mesh.get_texture();
+            const texture_path = atlas_name !== '' ? `${atlas_name}/${texture_name}` : texture_name;
+            textures.push({ id_mesh: id, texture: texture_path });
         });
 
         Services.history.push({
@@ -2454,8 +2551,13 @@ function InspectorControlCreate() {
                 for (const item of d.items as TextureEventData[]) {
                     const m = Services.scene.get_by_id(item.id_mesh) as IBaseMeshAndThree | undefined;
                     if (m !== undefined) {
-                        const atlas = m.get_texture()[1];
-                        m.set_texture(item.texture, atlas);
+                        // Разбираем сохранённый путь atlas/texture
+                        const parts = item.texture.split('/');
+                        if (parts.length === 2) {
+                            m.set_texture(parts[1], parts[0]);
+                        } else {
+                            m.set_texture(parts[0], '');
+                        }
                     }
                 }
             },
@@ -2867,39 +2969,7 @@ function InspectorControlCreate() {
         });
     }
 
-    function updateAssetAtlas(info: ChangeInfo) {
-        const atlas = info.data.event.value as string;
-
-        info.ids.forEach((id) => {
-            const texture_path = _selected_textures[id];
-            if (texture_path == null) {
-                Services.logger.error('[updateAtlas] Texture path not found for id:', id);
-                return;
-            }
-
-            const texture_name = get_file_name(get_basename(texture_path));
-            const old_atlas = Services.resources.get_atlas_by_texture_name(texture_name) || '';
-            Services.resources.override_atlas_texture(old_atlas, atlas, texture_name);
-
-            // NOTE: возможно обновление текстур в мешах должно быть в override_atlas_texture
-            Services.scene.get_all().forEach((mesh) => {
-                const mesh_any = mesh as { type?: IObjectTypes };
-                const is_type = mesh_any.type === IObjectTypes.GO_SPRITE_COMPONENT || mesh_any.type === IObjectTypes.GUI_BOX;
-                if (!is_type) return;
-
-                const mesh_typed = mesh as unknown as IBaseMesh;
-                const mesh_texture = mesh_typed.get_texture();
-                const is_atlas = mesh_texture.includes(old_atlas);
-                const is_texture = mesh_texture.includes(texture_name);
-
-                if (is_atlas && is_texture) {
-                    mesh_typed.set_texture(texture_name, atlas);
-                }
-            });
-        });
-
-        Services.resources.write_metadata();
-    }
+    // updateAssetAtlas удалён - заменён на TextureAssetHandler (Phase 19)
 
     function saveBlendMode(ids: number[]) {
         const blendModes: BlendModeEventData[] = [];
@@ -2994,29 +3064,7 @@ function InspectorControlCreate() {
         });
     }
 
-    function updateMinFilter(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const texture_path = _selected_textures[id];
-            if (texture_path == null) {
-                Services.logger.error('[updateMinFilter] Texture path not found for id:', id);
-                return;
-            }
-
-            const texture_name = get_file_name(get_basename(texture_path));
-            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
-            if (atlas == null) {
-                Services.logger.error('[updateMinFilter] Atlas not found for texture:', texture_name);
-                return;
-            }
-
-            const filter_mode = info.data.event.value as FilterMode;
-            const threeFilterMode = convertFilterModeToThreeJS(filter_mode) as MinificationTextureFilter;
-            const texture_data = Services.resources.get_texture(texture_name, atlas);
-            texture_data.texture.minFilter = threeFilterMode;
-        });
-
-        Services.resources.write_metadata();
-    }
+    // updateMinFilter удалён - заменён на TextureAssetHandler (Phase 19)
 
     function saveMagFilter(ids: number[]) {
         const magFilters: MagFilterEventData[] = [];
@@ -3060,40 +3108,8 @@ function InspectorControlCreate() {
         });
     }
 
-    function updateMagFilter(info: ChangeInfo) {
-        info.ids.forEach((id) => {
-            const texture_path = _selected_textures[id];
-            if (texture_path == null) {
-                Services.logger.error('[updateMagFilter] Texture path not found for id:', id);
-                return;
-            }
-
-            const texture_name = get_file_name(get_basename(texture_path));
-            const atlas = Services.resources.get_atlas_by_texture_name(texture_name);
-            if (atlas == null) {
-                Services.logger.error('[updateMagFilter] Atlas not found for texture:', texture_name);
-                return;
-            }
-
-            const filter_mode = info.data.event.value as FilterMode;
-            const threeFilterMode = convertFilterModeToThreeJS(filter_mode) as MagnificationTextureFilter;
-            const texture_data = Services.resources.get_texture(texture_name, atlas);
-            texture_data.texture.magFilter = threeFilterMode;
-        });
-
-        Services.resources.write_metadata();
-    }
-
-    function convertFilterModeToThreeJS(filter_mode: FilterMode): number {
-        switch (filter_mode) {
-            case FilterMode.NEAREST:
-                return NearestFilter;
-            case FilterMode.LINEAR:
-                return LinearFilter;
-            default:
-                return LinearFilter;
-        }
-    }
+    // updateMagFilter удалён - заменён на TextureAssetHandler (Phase 19)
+    // convertFilterModeToThreeJS удалён - перенесён в TextureAssetHandler (Phase 19)
 
     function convertThreeJSFilterToFilterMode(filter: number): FilterMode {
         switch (filter) {
@@ -3243,6 +3259,173 @@ function InspectorControlCreate() {
         });
     }
 
+    /** Данные для отмены изменения материала слота */
+    interface SlotMaterialEventData {
+        id_mesh: number;
+        slot_index: number;
+        material_name: string;
+    }
+
+    /**
+     * Сохраняет текущий материал слота для истории
+     */
+    function saveSlotMaterial(ids: number[], field: PropertyData<PropertyType>) {
+        const action_data = field.action_data as { slot_index?: number } | undefined;
+        const slot_index = action_data?.slot_index;
+
+        if (slot_index === undefined) {
+            Services.logger.warn('[saveSlotMaterial] No slot_index in action_data');
+            return;
+        }
+
+        const slot_data: SlotMaterialEventData[] = [];
+
+        for (const id of ids) {
+            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
+            if (mesh === undefined) {
+                Services.logger.error('[saveSlotMaterial] Mesh not found for id:', id);
+                continue;
+            }
+
+            if ('get_materials' in mesh) {
+                const materials = (mesh as MultipleMaterialMesh).get_materials();
+                if (slot_index >= 0 && slot_index < materials.length) {
+                    slot_data.push({
+                        id_mesh: id,
+                        slot_index,
+                        material_name: materials[slot_index].name
+                    });
+                }
+            }
+        }
+
+        if (slot_data.length === 0) return;
+
+        Services.history.push({
+            type: 'SLOT_MATERIAL',
+            description: `Изменение материала (слот ${slot_index})`,
+            data: { items: slot_data, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as SlotMaterialEventData[]) {
+                    const m = Services.scene.get_by_id(item.id_mesh) as MultipleMaterialMesh | undefined;
+                    if (m !== undefined && 'set_material' in m) {
+                        m.set_material(item.material_name, item.slot_index);
+                    }
+                }
+                // Обновляем инспектор
+                set_selected_list(_selected_list);
+            },
+            redo: () => {},
+        });
+    }
+
+    /** Данные для отмены изменения uniform */
+    interface UniformEventData {
+        id_mesh: number;
+        uniform_name: string;
+        slot_index?: number;
+        value: unknown;
+    }
+
+    /**
+     * Сохраняет текущее значение uniform для истории (Phase 21 - per-slot uniforms)
+     */
+    function saveUniform(ids: number[], field: PropertyData<PropertyType>) {
+        // Парсим action_data для получения uniform_name и slot_index
+        const action_data = field.action_data;
+        let uniform_name: string;
+        let slot_index: number | undefined;
+
+        if (typeof action_data === 'object' && action_data !== null) {
+            const data = action_data as { uniform_name?: string; slot_index?: number };
+            uniform_name = data.uniform_name ?? '';
+            slot_index = data.slot_index;
+        } else if (typeof action_data === 'string') {
+            uniform_name = action_data;
+        } else {
+            Services.logger.warn('[saveUniform] Invalid action_data:', action_data);
+            return;
+        }
+
+        if (uniform_name === '') {
+            Services.logger.warn('[saveUniform] Empty uniform_name');
+            return;
+        }
+
+        const uniform_data: UniformEventData[] = [];
+
+        for (const id of ids) {
+            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
+            if (mesh === undefined) {
+                Services.logger.error('[saveUniform] Mesh not found for id:', id);
+                continue;
+            }
+
+            // Получаем текущее значение uniform
+            let current_value: unknown;
+
+            if (mesh instanceof MultipleMaterialMesh && slot_index !== undefined) {
+                // MultipleMaterialMesh с указанным слотом
+                const materials = mesh.get_materials();
+                if (slot_index >= 0 && slot_index < materials.length) {
+                    const material = materials[slot_index];
+                    const uniforms = material.uniforms as Record<string, { value: unknown }>;
+                    current_value = uniforms[uniform_name]?.value;
+                }
+            } else if ('material' in mesh && !(mesh instanceof MultipleMaterialMesh)) {
+                // Обычный меш с одним материалом (исключаем MultipleMaterialMesh)
+                const material = (mesh as unknown as { material?: { uniforms: Record<string, { value: unknown }> } }).material;
+                if (material !== undefined) {
+                    current_value = material.uniforms[uniform_name]?.value;
+                }
+            }
+
+            // Клонируем значение для сохранения в историю
+            const cloned_value = deepClone(current_value);
+
+            uniform_data.push({
+                id_mesh: id,
+                uniform_name,
+                slot_index,
+                value: cloned_value
+            });
+        }
+
+        if (uniform_data.length === 0) return;
+
+        Services.history.push({
+            type: 'MESH_UNIFORM',
+            description: `Изменение uniform ${uniform_name}${slot_index !== undefined ? ` (слот ${slot_index})` : ''}`,
+            data: { items: uniform_data, owner: HistoryOwner.INSPECTOR_CONTROL },
+            undo: (d) => {
+                for (const item of d.items as UniformEventData[]) {
+                    const scene_obj = Services.scene.get_by_id(item.id_mesh);
+                    if (scene_obj === undefined) continue;
+
+                    if (scene_obj instanceof MultipleMaterialMesh && item.slot_index !== undefined) {
+                        // Восстанавливаем uniform для конкретного слота
+                        Services.resources.set_material_uniform_for_multiple_material_mesh(
+                            scene_obj as unknown as Parameters<typeof Services.resources.set_material_uniform_for_multiple_material_mesh>[0],
+                            item.slot_index,
+                            item.uniform_name,
+                            item.value
+                        );
+                    } else {
+                        // Восстанавливаем uniform для обычного меша
+                        Services.resources.set_material_uniform_for_mesh(
+                            scene_obj as unknown as IBaseMeshAndThree,
+                            item.uniform_name,
+                            item.value
+                        );
+                    }
+                }
+                // Обновляем инспектор для отображения восстановленных значений
+                set_selected_list(_selected_list);
+            },
+            redo: () => {},
+        });
+    }
+
     function updateMaterial(info: ChangeInfo) {
         const new_material_name = info.data.event.value as string;
 
@@ -3271,119 +3454,8 @@ function InspectorControlCreate() {
         set_selected_list(_selected_list);
     }
 
-    function updateMaterialVertexProgram(info: ChangeInfo) {
-        const program = info.data.event.value as string;
-        info.ids.forEach((id) => {
-            const material_name = get_file_name(get_basename(_selected_materials[id]));
-            // Сохраняем шейдер через Services.resources
-            Services.resources.set_material_shader_for_original(material_name, 'vertex', program);
-            Services.event_bus.emit('materials:changed', {
-                material_name: material_name,
-                property: 'vertexShader',
-                value: program
-            });
-        });
-    }
-
-    function updateMaterialFragmentProgram(info: ChangeInfo) {
-        const program = info.data.event.value as string;
-        info.ids.forEach((id) => {
-            const material_name = get_file_name(get_basename(_selected_materials[id]));
-            // Сохраняем шейдер через Services.resources
-            Services.resources.set_material_shader_for_original(material_name, 'fragment', program);
-            Services.event_bus.emit('materials:changed', {
-                material_name: material_name,
-                property: 'fragmentShader',
-                value: program
-            });
-        });
-    }
-
-    // === Uniform update helper (Phase 18 consolidation) ===
-    // Общая логика обновления uniform-ов вынесена в одну функцию
-    function updateUniformInternal(info: ChangeInfo, uniformValue: unknown, eventValue?: unknown) {
-        const emitValue = eventValue ?? uniformValue;
-        info.ids.forEach((id) => {
-            const mesh = _selected_list.find((item) => item.mesh_data.id === id);
-            if (mesh !== undefined) {
-                // Для моделей (MultipleMaterialMesh/AnimatedMesh) используем специальную функцию
-                if (mesh instanceof MultipleMaterialMesh) {
-                    const materials = mesh.get_materials();
-                    // Применяем uniform ко всем материалам модели
-                    for (let i = 0; i < materials.length; i++) {
-                        Services.resources.set_material_uniform_for_multiple_material_mesh(mesh, i, info.data.property.title, uniformValue);
-                    }
-                    if (materials.length > 0) {
-                        Services.event_bus.emit('materials:changed', {
-                            material_name: materials[0].name,
-                            property: info.data.property.title,
-                            value: emitValue
-                        });
-                    }
-                } else {
-                    Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, uniformValue);
-                    const meshMaterial = (mesh as Slice9Mesh).material;
-                    if (meshMaterial !== undefined) {
-                        meshMaterial.needsUpdate = true;
-                        Services.event_bus.emit('materials:changed', {
-                            material_name: meshMaterial.name,
-                            property: info.data.property.title,
-                            value: emitValue
-                        });
-                    }
-                }
-            } else {
-                const material_name = get_file_name(get_basename(_selected_materials[id]));
-                const material = Services.resources.get_material_info(material_name);
-                if (material === undefined) return;
-                const instance = material.instances[material.origin];
-                if (instance?.uniforms !== undefined) {
-                    const uniform = instance.uniforms[info.data.property.title] as { value: unknown };
-                    if (uniform !== undefined) uniform.value = uniformValue;
-                    instance.needsUpdate = true;
-                }
-                Services.resources.set_material_uniform_for_original(material.name, info.data.property.title, uniformValue);
-                Services.event_bus.emit('materials:changed', {
-                    material_name: material.name,
-                    property: info.data.property.title,
-                    value: emitValue
-                });
-            }
-        });
-    }
-
-    function updateUniformSampler2D(info: ChangeInfo) {
-        const textureValue = info.data.event.value as string;
-        const [atlas, texture_name] = textureValue.split('/');
-        const texture = Services.resources.get_texture(texture_name, atlas ?? '').texture;
-        updateUniformInternal(info, texture, info.data.event.value);
-    }
-
-    function updateUniformFloat(info: ChangeInfo) {
-        updateUniformInternal(info, info.data.event.value as number);
-    }
-
-    function updateUniformRange(info: ChangeInfo) {
-        updateUniformInternal(info, info.data.event.value as number);
-    }
-
-    function updateUniformVec2(info: ChangeInfo) {
-        updateUniformInternal(info, info.data.event.value as Vector2);
-    }
-
-    function updateUniformVec3(info: ChangeInfo) {
-        updateUniformInternal(info, info.data.event.value as Vector3);
-    }
-
-    function updateUniformVec4(info: ChangeInfo) {
-        updateUniformInternal(info, info.data.event.value as Vector4);
-    }
-
-    function updateUniformColor(info: ChangeInfo) {
-        const color = new Color(info.data.event.value as string);
-        const value = new Vector3(color.r, color.g, color.b);
-        updateUniformInternal(info, value, info.data.event.value);
-    }
+    // updateMaterialVertexProgram и updateMaterialFragmentProgram удалены - заменены на MaterialAssetHandler (Phase 19)
+    // updateUniform* функции удалены - заменены на UniformHandler (Phase 20)
 
     function updateFlipVertical(info: ChangeInfo) {
         saveUV(info.ids);
@@ -3539,6 +3611,29 @@ function InspectorControlCreate() {
                 }
             }
         });
+    }
+
+    /**
+     * Обновляет материал конкретного слота
+     */
+    function updateSlotMaterial(info: ChangeInfo) {
+        const value = info.data.event.value as string;
+        const action_data = info.data.field.action_data as { slot_index?: number } | undefined;
+        const slot_index = action_data?.slot_index;
+
+        if (slot_index === undefined) {
+            Services.logger.warn('[updateSlotMaterial] No slot_index in action_data');
+            return;
+        }
+
+        _selected_list.forEach((item) => {
+            if ('set_material' in item) {
+                (item as MultipleMaterialMesh).set_material(value, slot_index);
+            }
+        });
+
+        // Обновляем инспектор чтобы показать новые uniforms для нового материала
+        set_selected_list(_selected_list);
     }
 
     init();
