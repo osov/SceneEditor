@@ -1,4 +1,4 @@
-import { Mesh, MeshBasicMaterial, NormalBlending, ShaderMaterial, SkinnedMesh, Texture, Vector2, Vector3 } from "three";
+import { Box3, DataTexture, Mesh, MeshBasicMaterial, NormalBlending, RGBAFormat, ShaderMaterial, SkinnedMesh, Texture, UnsignedByteType, Vector2, Vector3 } from "three";
 import { EntityPlane } from "./entity_plane";
 import { MaterialUniformType } from "../resource_manager";
 import { get_file_name } from "../helpers/utils";
@@ -21,12 +21,16 @@ export class MultipleMaterialMesh extends EntityPlane {
     protected mesh_name = '';
     protected materials: ShaderMaterial[] = [];
     protected textures: string[][] = [];
+    // Коэффициент нормализации масштаба FBX модели (чтобы итоговая высота была ~1 единица)
+    protected normalize_scale = 1;
 
     protected default_material_name = 'model';
 
     constructor(id: number, width = 0, height = 0) {
         super(id);
-        this.layers.disable(DC_LAYERS.GO_LAYER);
+        // NOTE: Оставляем GO_LAYER (0) включённым на родителе, чтобы Three.js
+        // обходил детей при рендеринге. Без этого SkinnedMesh не будет рендериться,
+        // потому что Three.js пропускает детей если родитель не на слое камеры.
         this.layers.enable(DC_LAYERS.RAYCAST_LAYER);
         this.set_size(width, height);
     }
@@ -43,23 +47,30 @@ export class MultipleMaterialMesh extends EntityPlane {
 
     set_scale(x: number, y: number): void {
         if (!this.children[0]) return;
-        this.children[0].scale.setScalar(Math.max(x, y) * WORLD_SCALAR);
+        // Применяем normalize_scale для корректировки внутреннего масштаба FBX
+        this.children[0].scale.setScalar(Math.max(x, y) * WORLD_SCALAR * this.normalize_scale);
         this.transform_changed();
     }
 
     get_scale(): Vector2 {
         if (!this.children[0]) return new Vector2(1 / WORLD_SCALAR, 1 / WORLD_SCALAR);
-        return new Vector2(this.children[0].scale.x / WORLD_SCALAR, this.children[0].scale.y / WORLD_SCALAR);
+        // Возвращаем масштаб без учёта normalize_scale (пользовательский масштаб)
+        return new Vector2(
+            this.children[0].scale.x / (WORLD_SCALAR * this.normalize_scale),
+            this.children[0].scale.y / (WORLD_SCALAR * this.normalize_scale)
+        );
     }
 
     // NOTE: при сериализации и десериализации цвета может не быть материалов
+    // Применяем цвет ко ВСЕМ материалам модели
     set_color(color: string) {
-        if (this.materials.length == 0 || this.materials.length <= 0) return;
-        if (!this.materials[0].uniforms['u_color']) {
-            Services.logger.warn('Material has no u_color uniform', this.materials[0].name);
-            return;
+        if (this.materials.length === 0) return;
+        for (let i = 0; i < this.materials.length; i++) {
+            const mat = this.materials[i];
+            if (mat.uniforms['u_color'] !== undefined) {
+                Services.resources.set_material_uniform_for_multiple_material_mesh(this, i, 'u_color', color);
+            }
         }
-        Services.resources.set_material_uniform_for_multiple_material_mesh(this, 0, 'u_color', color);
     }
 
     get_color() {
@@ -79,14 +90,27 @@ export class MultipleMaterialMesh extends EntityPlane {
         const material = Services.resources.get_material_by_mesh_id(name, this.mesh_data.id, index);
         if (!material) return;
 
+        const u_color_value = material.uniforms['u_color']?.value;
+        Services.logger.info('[MultipleMaterialMesh.set_material] Setting material:', name, 'index:', index, 'u_color:', u_color_value ? `(${u_color_value.x}, ${u_color_value.y}, ${u_color_value.z})` : 'undefined');
+
         this.materials[index] = material;
         let idx = 0;
+        let applied = false;
         this.children[0].traverse((child: any) => {
             if ((child instanceof Mesh || child instanceof SkinnedMesh) && child.material) {
-                if (idx == index) child.material = material;
+                Services.logger.info('[MultipleMaterialMesh.set_material] Found mesh at idx:', idx, 'child.name:', child.name, 'looking for index:', index);
+                if (idx == index) {
+                    child.material = material;
+                    material.needsUpdate = true;
+                    applied = true;
+                    Services.logger.info('[MultipleMaterialMesh.set_material] Applied material to:', child.name);
+                }
                 idx++;
             }
         });
+        if (!applied) {
+            Services.logger.warn('[MultipleMaterialMesh.set_material] Material NOT applied! Total meshes found:', idx);
+        }
     }
 
     get_materials() {
@@ -126,21 +150,50 @@ export class MultipleMaterialMesh extends EntityPlane {
         this.materials = [];
 
         const old_maps: Texture[] = [];
+
+        // Собираем текстуры из ОРИГИНАЛЬНОЙ модели (до клонирования)
+        // NOTE: Не проверяем map.image - изображение загружается асинхронно,
+        // Three.js автоматически обновит рендеринг когда оно загрузится
+        src.traverse((child: any) => {
+            if ((child instanceof Mesh || child instanceof SkinnedMesh) && child.material) {
+                const old_material = (child.material as MeshBasicMaterial);
+                Services.logger.info('[set_mesh] Source material:', old_material.name, 'has map:', old_material.map != null);
+                if (old_material.map != null) {
+                    Services.resources.add_texture(old_material.name, 'mesh_' + name, old_material.map);
+                    old_maps.push(old_material.map);
+                    Services.logger.info('[set_mesh] Added texture from source material:', old_material.name);
+                }
+            }
+        });
+
         const m = skeleton_clone(src);
         m.traverse((child: any) => {
             if ((child instanceof Mesh || child instanceof SkinnedMesh) && child.material) {
-                const old_material = (child.material as MeshBasicMaterial);
-                if (old_material.map && old_material.map.image) {
-                    Services.resources.add_texture(old_material.name, 'mesh_' + name, old_material.map);
-                    old_maps.push(old_material.map);
-                }
-
                 const new_material = Services.resources.get_material_by_mesh_id(this.default_material_name, this.mesh_data.id);
-                if (new_material === null) {
+                if (new_material === null || new_material === undefined) {
                     Services.logger.error('[set_mesh] Material not found:', this.default_material_name, 'Available materials:', Services.resources.get_all_materials());
                     return;
                 }
-                Services.logger.info('[set_mesh] Material applied:', new_material.name, 'uniforms:', Object.keys(new_material.uniforms));
+                Services.logger.info('[set_mesh] Material applied:', new_material.name,
+                    'uniforms:', Object.keys(new_material.uniforms),
+                    'defines:', new_material.defines,
+                    'isSkinnedMesh:', child instanceof SkinnedMesh);
+
+                // Для SkinnedMesh вычисляем boneTexture - необходимо для ShaderMaterial с skinning
+                if (child instanceof SkinnedMesh) {
+                    const skinned = child;
+                    // CRITICAL: ShaderMaterial требует boneTexture для skinning
+                    // Без этого вызова шейдер не получит данные костей
+                    if (skinned.skeleton !== null) {
+                        skinned.skeleton.computeBoneTexture();
+                        skinned.skeleton.update();
+                    }
+                    Services.logger.info('[set_mesh] SkinnedMesh skeleton:',
+                        skinned.skeleton !== null ? 'present' : 'missing',
+                        'bones:', skinned.skeleton?.bones?.length ?? 0,
+                        'boneTexture:', skinned.skeleton?.boneTexture !== null ? 'present' : 'missing');
+                }
+
                 this.materials.push(new_material);
                 child.material = new_material;
             }
@@ -149,10 +202,62 @@ export class MultipleMaterialMesh extends EntityPlane {
         if (this.children.length > 0)
             this.remove(this.children[0]);
         this.add(m);
+
+        // Вычисляем bounding box для нормализации масштаба FBX модели
+        // FBX модели могут иметь огромные внутренние масштабы (например, 4500 единиц высоты)
+        // Нормализуем к ~1 единице высоты для корректного отображения в viewport
+        const bbox = new Box3().setFromObject(m);
+        const size = new Vector3();
+        bbox.getSize(size);
+        const model_height = size.y;
+
+        if (model_height > 0) {
+            // normalize_scale компенсирует размер модели И умножение на WORLD_SCALAR в set_scale
+            // Цель: при user_scale = 1 модель имеет высоту TARGET_HEIGHT в scene space
+            // TARGET_HEIGHT = 32 (как default size спрайта) чтобы модель была сопоставима с другими объектами
+            // Формула set_scale: child.scale = user_scale * WORLD_SCALAR * normalize_scale
+            // Высота в scene = model_height * child.scale
+            // При user_scale = 1, хотим height = TARGET_HEIGHT:
+            // normalize_scale = TARGET_HEIGHT / (model_height * WORLD_SCALAR)
+            const TARGET_HEIGHT = 32; // Как default size спрайта
+            this.normalize_scale = TARGET_HEIGHT / (model_height * WORLD_SCALAR);
+            const final_height = model_height * WORLD_SCALAR * this.normalize_scale;
+            Services.logger.info('[set_mesh] Model bounding box:',
+                'size:', size.x.toFixed(2), size.y.toFixed(2), size.z.toFixed(2),
+                'normalize_scale:', this.normalize_scale.toFixed(6),
+                'final_height_at_scale_1:', final_height.toFixed(2));
+        } else {
+            this.normalize_scale = 1;
+            Services.logger.warn('[set_mesh] Model has zero height, using normalize_scale = 1');
+        }
+
         this.set_scale(1, 1);
 
+        Services.logger.info('[set_mesh] Applying textures from FBX. old_maps count:', old_maps.length, 'materials count:', this.materials.length);
+
+        // NOTE: Если текстур меньше чем материалов, создаем дефолтные белые текстуры
+        // для отсутствующих слотов, чтобы модель была видна с u_color
+        if (old_maps.length < this.materials.length) {
+            Services.logger.info('[set_mesh] Creating default white textures for', this.materials.length - old_maps.length, 'materials without embedded textures');
+            for (let i = old_maps.length; i < this.materials.length; i++) {
+                const white_data = new Uint8Array([255, 255, 255, 255]);
+                const default_texture = new DataTexture(white_data, 1, 1, RGBAFormat, UnsignedByteType);
+                default_texture.needsUpdate = true;
+                old_maps.push(default_texture);
+            }
+        }
+
         old_maps.forEach((map, index) => {
-            Services.resources.set_material_uniform_for_multiple_material_mesh(this, index, 'u_texture', map);
+            Services.logger.info('[set_mesh] Applying texture at index:', index, 'map:', map);
+            // NOTE: напрямую устанавливаем текстуру на материал, минуя систему копирования материалов
+            // Это необходимо потому что текстура из FBX - это объект Texture, а не зарегистрированное имя
+            if (this.materials[index] && this.materials[index].uniforms['u_texture']) {
+                this.materials[index].uniforms['u_texture'].value = map;
+                this.materials[index].needsUpdate = true;
+                Services.logger.info('[set_mesh] Texture set directly on material:', this.materials[index].name);
+            } else {
+                Services.resources.set_material_uniform_for_multiple_material_mesh(this, index, 'u_texture', map);
+            }
         });
 
         this.transform_changed();
@@ -267,7 +372,9 @@ export class MultipleMaterialMesh extends EntityPlane {
             }
         }
 
-        if (data.layers != undefined) {
+        // NOTE: layers: 0 означает что нет слоёв и меш не будет виден
+        // Применяем только если layers > 0, иначе используем дефолтный слой 0 (GO_LAYER)
+        if (data.layers != undefined && data.layers > 0) {
             this.traverse((m) => {
                 if (["Mesh", "SkinnedMesh"].includes(m.type))
                     m.layers.mask = data.layers;

@@ -24,7 +24,11 @@ export function OptionsProvidersCreate(): IOptionsProviders {
         };
 
         if (info.atlas !== '') {
-            const texture_image = info.data.texture.image as { width: number; height: number };
+            const texture_image = info.data.texture.image as { width: number; height: number } | null;
+            // Пропускаем расчёт offset если изображение ещё не загружено (FBX текстуры грузятся асинхронно)
+            if (texture_image === null) {
+                return data;
+            }
             const sizeX = texture_image.width;
             const sizeY = texture_image.height;
 
@@ -70,6 +74,22 @@ export function OptionsProvidersCreate(): IOptionsProviders {
 
     function get_texture_options(): TextureOptionData[] {
         return Services.resources.get_all_textures().map(cast_texture_info);
+    }
+
+    /**
+     * Получить опции текстур для uniform (в формате atlas/texture)
+     * Используется для UNIFORM_SAMPLER2D где значение включает атлас
+     */
+    function get_uniform_texture_options(): TextureOptionData[] {
+        return Services.resources.get_all_textures().map((info) => {
+            const base_data = cast_texture_info(info);
+            // Для uniforms используем формат atlas/texture в value
+            const full_value = info.atlas !== '' ? `${info.atlas}/${info.name}` : info.name;
+            return {
+                ...base_data,
+                value: full_value
+            };
+        });
     }
 
     function get_atlas_options(): ListOptions {
@@ -156,6 +176,7 @@ export function OptionsProvidersCreate(): IOptionsProviders {
 
     return {
         get_texture_options,
+        get_uniform_texture_options,
         get_atlas_options,
         get_material_options,
         get_vertex_program_options,

@@ -73,7 +73,7 @@ import * as TweakpaneItemListPlugin from 'tweakpane4-item-list-plugin';
 import * as TextareaPlugin from '@pangenerator/tweakpane-textarea-plugin';
 import * as ExtendedPointNdInputPlugin from 'tweakpane4-extended-vector-plugin';
 import * as TweakpaneExtendedBooleanPlugin from 'tweakpane4-extended-boolean-plugin';
-import { Vector2, Vector3, NearestFilter, LinearFilter, MinificationTextureFilter, MagnificationTextureFilter, Vector4, Color } from 'three';
+import { Vector2, Vector3, NearestFilter, LinearFilter, MinificationTextureFilter, MagnificationTextureFilter, Vector4, Color, ShaderMaterial } from 'three';
 import { TextMesh } from '../render_engine/objects/text';
 import { Slice9Mesh } from '../render_engine/objects/slice9';
 import { deepClone, degToRad, rgbToHex } from '../modules/utils';
@@ -543,7 +543,9 @@ function InspectorControlCreate() {
         _selected_materials = materials_paths;
 
         // NOTE: обновляем конфиг текстур и программ
-        update_texture_options([Property.TEXTURE, Property.UNIFORM_SAMPLER2D]);
+        update_texture_options([Property.TEXTURE]);
+        // Для UNIFORM_SAMPLER2D используем формат atlas/texture
+        update_texture_options([Property.UNIFORM_SAMPLER2D], () => _options_providers.get_uniform_texture_options());
         update_vertex_program_options();
         update_fragment_program_options();
 
@@ -953,39 +955,51 @@ function InspectorControlCreate() {
     function set_selected_list(list: IBaseMeshAndThree[]) {
         _selected_list = list;
 
+        // NOTE: Обновляем опции текстур для UNIFORM_SAMPLER2D перед построением UI
+        // Это необходимо для отображения текстур из атласов mesh_* (добавленных при set_mesh)
+        update_texture_options([Property.UNIFORM_SAMPLER2D], () => _options_providers.get_uniform_texture_options());
+
         // Используем IInspectable для получения полей
         const data = list.map((value) => {
             // Получаем базовые поля через IInspectable
             const fields = build_inspector_data_from_inspectable(value);
 
             // NOTE: uniforms кастомного материала через MaterialFieldProvider
-            if ('material' in value && value.material !== undefined) {
-                const material = (value as Slice9Mesh).material;
+            // Поддержка MultipleMaterialMesh (get_materials) и обычных мешей (material)
+            let material: ShaderMaterial | undefined;
+            if ('get_materials' in value && typeof (value as MultipleMaterialMesh).get_materials === 'function') {
+                // MultipleMaterialMesh - берём первый материал из массива
+                const materials = (value as MultipleMaterialMesh).get_materials();
+                material = materials.length > 0 ? materials[0] : undefined;
+            } else if ('material' in value && value.material !== undefined) {
+                // Обычный меш с одним материалом
+                material = (value as Slice9Mesh).material;
+            }
+
+            if (material !== undefined) {
                 const material_name = material.name || '';
                 const material_uniforms = material.uniforms as Record<string, { value: unknown }> | null;
 
                 // Проверяем наличие uniforms и имя материала
-                if (material_uniforms === null || material_name === '') {
-                    return { id: value.mesh_data.id, data: fields };
-                }
+                if (material_uniforms !== null && material_name !== '') {
+                    // Получаем поля uniforms через провайдер
+                    const uniform_fields = get_material_uniform_fields(material_name, material_uniforms);
 
-                // Получаем поля uniforms через провайдер
-                const uniform_fields = get_material_uniform_fields(material_name, material_uniforms);
+                    // Обновляем конфиг для каждого поля (заголовки и параметры)
+                    for (const uniform_field of uniform_fields) {
+                        // Обновляем заголовок и параметры в конфиге
+                        _config.forEach((group) => {
+                            const property = group.property_list.find((p) => p.name === uniform_field.name);
+                            if (property === undefined) return;
+                            property.title = uniform_field.title;
+                            if (uniform_field.params !== undefined) {
+                                property.params = uniform_field.params;
+                            }
+                        });
 
-                // Обновляем конфиг для каждого поля (заголовки и параметры)
-                for (const uniform_field of uniform_fields) {
-                    // Обновляем заголовок и параметры в конфиге
-                    _config.forEach((group) => {
-                        const property = group.property_list.find((p) => p.name === uniform_field.name);
-                        if (property === undefined) return;
-                        property.title = uniform_field.title;
-                        if (uniform_field.params !== undefined) {
-                            property.params = uniform_field.params;
-                        }
-                    });
-
-                    // Добавляем поле в список
-                    fields.push({ name: uniform_field.name, data: uniform_field.data as PropertyValues[PropertyType] });
+                        // Добавляем поле в список
+                        fields.push({ name: uniform_field.name, data: uniform_field.data as PropertyValues[PropertyType] });
+                    }
                 }
             }
 
@@ -3292,15 +3306,31 @@ function InspectorControlCreate() {
         info.ids.forEach((id) => {
             const mesh = _selected_list.find((item) => item.mesh_data.id === id);
             if (mesh !== undefined) {
-                Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, uniformValue);
-                const meshMaterial = (mesh as Slice9Mesh).material;
-                if (meshMaterial !== undefined) {
-                    meshMaterial.needsUpdate = true;
-                    Services.event_bus.emit('materials:changed', {
-                        material_name: meshMaterial.name,
-                        property: info.data.property.title,
-                        value: emitValue
-                    });
+                // Для моделей (MultipleMaterialMesh/AnimatedMesh) используем специальную функцию
+                if (mesh instanceof MultipleMaterialMesh) {
+                    const materials = mesh.get_materials();
+                    // Применяем uniform ко всем материалам модели
+                    for (let i = 0; i < materials.length; i++) {
+                        Services.resources.set_material_uniform_for_multiple_material_mesh(mesh, i, info.data.property.title, uniformValue);
+                    }
+                    if (materials.length > 0) {
+                        Services.event_bus.emit('materials:changed', {
+                            material_name: materials[0].name,
+                            property: info.data.property.title,
+                            value: emitValue
+                        });
+                    }
+                } else {
+                    Services.resources.set_material_uniform_for_mesh(mesh, info.data.property.title, uniformValue);
+                    const meshMaterial = (mesh as Slice9Mesh).material;
+                    if (meshMaterial !== undefined) {
+                        meshMaterial.needsUpdate = true;
+                        Services.event_bus.emit('materials:changed', {
+                            material_name: meshMaterial.name,
+                            property: info.data.property.title,
+                            value: emitValue
+                        });
+                    }
                 }
             } else {
                 const material_name = get_file_name(get_basename(_selected_materials[id]));
@@ -3469,6 +3499,11 @@ function InspectorControlCreate() {
                 (item as MultipleMaterialMesh).set_mesh(value);
             }
         });
+        // NOTE: Эта функция теперь вызывается только как fallback
+        // Основная логика в ModelHandler.update_mesh_name
+        // Полностью пересоздать инспектор для обновления списка анимаций и текстур модели
+        clear();
+        requestAnimationFrame(() => set_selected_list(_selected_list));
     }
 
     function updateCurrentAnimation(info: ChangeInfo) {

@@ -1,5 +1,5 @@
 // Slice9 Fragment Shader
-// Uniforms: u_texture (sampler2D), alpha (float)
+// Uniforms: u_texture (sampler2D), alpha (float), u_color (vec3)
 // Defines: USE_TEXTURE, USE_SLICE
 
 export const SLICE9_FRAGMENT_SHADER = `
@@ -24,6 +24,7 @@ float processAxis(float coord, float texBorder, float winBorder) {
 
 #endif
 uniform float alpha;
+uniform vec3 u_color;
 
 void main(void) {
 #ifdef USE_SLICE
@@ -37,8 +38,8 @@ void main(void) {
     newUV = vUvData.xy + newUV * vUvData.zw;
 #ifdef USE_TEXTURE
     vec4 color = texture2D(u_texture, newUV);
-    gl_FragColor = color * vec4(vColor, alpha);
+    gl_FragColor = color * vec4(vColor * u_color, alpha);
 #else
-    gl_FragColor = vec4(vColor, alpha);
+    gl_FragColor = vec4(vColor * u_color, alpha);
 #endif
 }`;

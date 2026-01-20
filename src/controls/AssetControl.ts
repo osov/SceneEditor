@@ -92,6 +92,8 @@ function AssetControlCreate() {
 
         const textures: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         const shaders: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
+        // NOTE: Материалы должны загружаться ДО моделей, иначе модели получат builtin материалы
+        const materials_list: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         const other: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         for (const key of get_keys(data.paths)) {
             const paths = data.paths[key];
@@ -152,6 +154,9 @@ function AssetControlCreate() {
                         case 'textures':
                             textures.push({ func, path });
                             break;
+                        case 'materials':
+                            materials_list.push({ func, path });
+                            break;
                         default:
                             other.push({ func, path });
                             break;
@@ -171,6 +176,14 @@ function AssetControlCreate() {
             texture_loaders.push(info.func(info.path));
         }
         await Promise.all(texture_loaders);
+
+        // NOTE: Материалы загружаются отдельно и ДО моделей
+        // Это необходимо, чтобы модели получили проектные материалы вместо builtin
+        const material_loaders: Promise<any>[] = [];
+        for (const info of materials_list) {
+            material_loaders.push(info.func(info.path));
+        }
+        await Promise.all(material_loaders);
 
         const other_loaders: Promise<any>[] = [];
         for (const info of other) {

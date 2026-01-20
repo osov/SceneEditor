@@ -33,14 +33,52 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 		this.activeAction = null;
 		this.lastAction = null;
 		// NOTE: создаем mixer после загрузки модели когда children[0] доступен
-		if (this.children.length > 0) {
+		if (this.children.length > 0 && name !== '') {
+			Services.logger.info('[AnimatedMesh] set_mesh:', name, 'children[0] type:', this.children[0].type, 'layers.mask:', this.children[0].layers.mask);
+			// Логируем структуру модели и layers
+			this.children[0].traverse((child: any) => {
+				if (child.isSkinnedMesh || child.isMesh) {
+					Services.logger.info('[AnimatedMesh] Mesh:', child.type, 'name:', child.name, 'layers.mask:', child.layers.mask);
+				}
+			});
 			this.mixer = new AnimationMixer(this.children[0]);
+			Services.logger.info('[AnimatedMesh] Created mixer for:', name);
+
+			// Автоматически загружаем доступные анимации для нового меша
+			const available_animations = Services.resources.get_all_model_animations(name);
+			Services.logger.info('[AnimatedMesh] Loading animations for mesh:', name, 'found:', available_animations);
+			for (const anim_name of available_animations) {
+				this.add_animation(anim_name);
+			}
+
+			// После загрузки всех анимаций выбираем idle по умолчанию
+			this.select_default_animation();
 		}
 	}
 
+	/**
+	 * Выбрать анимацию по умолчанию - предпочитаем idle
+	 */
+	private select_default_animation() {
+		const animation_names = Object.keys(this.animations_list);
+		if (animation_names.length === 0) return;
+
+		// Ищем анимацию содержащую "idle" (регистронезависимо)
+		const idle_animation = animation_names.find(name => name.toLowerCase().includes('idle'));
+		const default_animation = idle_animation ?? animation_names[0];
+
+		Services.logger.info('[AnimatedMesh] Selecting default animation:', default_animation, 'from:', animation_names);
+		this.set_animation(default_animation);
+	}
+
+	private updateLogCounter = 0;
 	on_mixer_update(e: { dt: number }) {
 		if (this.mixer !== null) {
 			this.mixer.update(e.dt);
+			// Логируем каждые 60 кадров (примерно раз в секунду)
+			if (this.updateLogCounter++ % 60 === 0) {
+				Services.logger.info('[AnimatedMesh] mixer.update dt:', e.dt, 'time:', this.mixer.time.toFixed(2));
+			}
 		}
 		for (let i = 0; i < this.materials.length; i++) {
 			const material = this.materials[i];
@@ -51,24 +89,27 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 	}
 
 	add_animation(name: string) {
+		Services.logger.info('[AnimatedMesh] add_animation:', name, 'mesh:', this.mesh_name, 'children:', this.children.length);
 		const clip = Services.resources.find_animation(name, this.mesh_name);
-		if (!clip)
-			return Services.logger.error('Animation not found', name);
+		if (!clip) {
+			Services.logger.error('[AnimatedMesh] Animation not found:', name, 'for model:', this.mesh_name);
+			Services.logger.info('[AnimatedMesh] Available animations:', Services.resources.get_all_model_animations(this.mesh_name));
+			return;
+		}
 
 		// NOTE: создаем mixer если его нет (ленивая инициализация)
 		if (this.mixer === null && this.children.length > 0) {
 			this.mixer = new AnimationMixer(this.children[0]);
+			Services.logger.info('[AnimatedMesh] Created mixer for:', this.mesh_name);
 		}
 		if (this.mixer === null) {
-			return Services.logger.error('Cannot add animation - mixer not initialized');
+			return Services.logger.error('[AnimatedMesh] Cannot add animation - mixer not initialized, children:', this.children.length);
 		}
 
 		const animationAction = this.mixer.clipAction(clip.clip);
 		this.animations_list[name] = animationAction;
-		if (Object.keys(this.animations_list).length === 1) {
-			this.activeAction = animationAction;
-			animationAction.play();
-		}
+		Services.logger.info('[AnimatedMesh] Animation added:', name, 'total animations:', Object.keys(this.animations_list).length);
+		// NOTE: НЕ запускаем анимацию автоматически - выбор делается в set_mesh после загрузки всех анимаций
 	}
 
 	remove_animation(name: string) {
@@ -97,6 +138,15 @@ export class AnimatedMesh extends MultipleMaterialMesh {
 	}
 
 	set_animation(alias: string, offset = 0) {
+		// Пустая строка означает "Нет анимации" - останавливаем текущую
+		if (alias === '') {
+			if (this.activeAction !== null) {
+				this.activeAction.fadeOut(0.3);
+				this.activeAction = null;
+			}
+			return;
+		}
+
 		if (this.animations_list[alias] === undefined) {
 			Services.logger.warn(`Animation "${alias}" not found. Available: ${Object.keys(this.animations_list).join(', ') || 'none'}`);
 			return;

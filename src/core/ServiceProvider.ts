@@ -169,6 +169,9 @@ export const Services: IServices = {
     },
 };
 
+// DEBUG: Expose Services globally for debugging
+(globalThis as unknown as { Services: IServices }).Services = Services;
+
 /**
  * Проверить, инициализирован ли контейнер
  */

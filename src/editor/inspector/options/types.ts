@@ -32,6 +32,8 @@ export type ListOptions = { [key: string]: string };
 export interface IOptionsProviders {
     // Текстуры и атласы
     get_texture_options(): TextureOptionData[];
+    /** Опции текстур для uniform (в формате atlas/texture) */
+    get_uniform_texture_options(): TextureOptionData[];
     get_atlas_options(): ListOptions;
 
     // Материалы и шейдеры

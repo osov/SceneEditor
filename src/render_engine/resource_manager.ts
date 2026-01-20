@@ -254,6 +254,7 @@ export function ResourceManagerModule() {
             uniforms: {
                 u_texture: { value: null },
                 alpha: { value: 1.0 },
+                u_color: { value: new Vector3(1, 1, 1) },
             },
         });
         slice9_material.name = 'slice9';
@@ -275,6 +276,12 @@ export function ResourceManagerModule() {
                     params: { min: 0, max: 1, step: 0.01 },
                     readonly: false,
                     hide: false,
+                },
+                u_color: {
+                    type: MaterialUniformType.COLOR,
+                    params: {},
+                    readonly: false,
+                    hide: true,
                 },
             },
             origin: '',
@@ -784,13 +791,17 @@ export function ResourceManagerModule() {
             Services.logger.warn('Texture already exists', name, atlas);
         }
 
+        // NOTE: texture.image может быть null для асинхронно загружаемых FBX текстур
+        const width = texture.image?.width ?? 0;
+        const height = texture.image?.height ?? 0;
+
         atlases[atlas][name] = {
             data: {
                 texture,
                 uvOffset: new Vector2(0, 0),
                 uv12: new Vector4(0, 1, 1, 0),
                 uvScale: new Vector2(1, 1),
-                size: new Vector2(texture.image.width, texture.image.height)
+                size: new Vector2(width, height)
             }
         };
         (texture as any).path = path;
@@ -875,15 +886,18 @@ export function ResourceManagerModule() {
     }
 
     async function preload_vertex_program(path: string) {
+        Services.logger.info('[preload_vertex_program] Loading:', path);
         if (has_vertex_program(path)) {
             IS_LOGGING && Services.logger.warn('vertex program exists', path);
             return;
         }
         const shader_program = await get_asset_control().get_file_data(path);
         if (!shader_program) {
+            Services.logger.error('[preload_vertex_program] Failed to load:', path);
             return;
         }
         vertex_programs[path] = shader_program;
+        Services.logger.info('[preload_vertex_program] Loaded successfully:', path, 'length:', shader_program.length);
         return shader_program;
     }
 
@@ -901,15 +915,18 @@ export function ResourceManagerModule() {
     }
 
     async function preload_fragment_program(path: string) {
+        Services.logger.info('[preload_fragment_program] Loading:', path);
         if (has_fragment_program(path)) {
             IS_LOGGING && Services.logger.warn('fragment program exists', path);
             return;
         }
         const shader_program = await get_asset_control().get_file_data(path);
         if (!shader_program) {
+            Services.logger.error('[preload_fragment_program] Failed to load:', path);
             return;
         }
         fragment_programs[path] = shader_program;
+        Services.logger.info('[preload_fragment_program] Loaded successfully:', path, 'length:', shader_program.length);
         return shader_program;
     }
 
@@ -955,6 +972,14 @@ export function ResourceManagerModule() {
         material.fragmentShader = processedFragmentShader;
 
         material.transparent = data.transparent;
+
+        // NOTE: Добавляем USE_SKINNING define если шейдер использует skinning
+        // Это необходимо для работы анимации SkinnedMesh
+        if (vertexShader !== undefined && vertexShader.includes('#include <skinning')) {
+            material.defines = material.defines || {};
+            material.defines['USE_SKINNING'] = '';
+            Services.logger.info('[load_material]', name, 'USE_SKINNING enabled');
+        }
 
         Object.keys(data.uniforms).forEach((key) => {
             material_info.uniforms[key] = {
@@ -1017,14 +1042,25 @@ export function ResourceManagerModule() {
     }
 
     async function preload_material(path: string) {
-        let name = get_file_name(path);
+        Services.logger.info('[preload_material] Loading:', path);
+        const name = get_file_name(path);
+
+        // Проверяем существует ли материал и является ли он builtin
         if (has_material(name)) {
-            IS_LOGGING && Services.logger.warn('Material already exists', name, path);
-            return materials[name];
+            // Если материал builtin, разрешаем перезапись проектным материалом
+            if (is_builtin_material(name)) {
+                Services.logger.info('[preload_material] Overwriting builtin material:', name, 'with project material:', path);
+            } else {
+                IS_LOGGING && Services.logger.warn('Material already exists', name, path);
+                return materials[name];
+            }
         }
 
         const material = await load_material(path);
-        if (!material) return;
+        if (!material) {
+            Services.logger.error('[preload_material] Failed to load:', path);
+            return;
+        }
 
         materials[name] = material;
         return material;
@@ -1439,8 +1475,9 @@ export function ResourceManagerModule() {
 
     function set_material_uniform_for_multiple_material_mesh<T>(mesh: MultipleMaterialMesh, index: number, uniform_name: string, value: T) {
         const materials = mesh.get_materials();
-        if (materials.length < index) {
-            Services.logger.error('[set_material_uniform_for_multiple_material_mesh] Material index out of range:', index);
+        Services.logger.info('[set_material_uniform_for_multiple_material_mesh] Setting', uniform_name, 'for mesh:', mesh.mesh_data.id, 'index:', index, 'materials count:', materials.length);
+        if (materials.length <= index) {
+            Services.logger.error('[set_material_uniform_for_multiple_material_mesh] Material index out of range:', index, 'materials.length:', materials.length);
             return;
         }
 
@@ -1466,7 +1503,7 @@ export function ResourceManagerModule() {
             return false;
         }
 
-        const mesh_material = get_material_by_mesh_id(material_info.name, mesh_id);
+        const mesh_material = get_material_by_mesh_id(material_info.name, mesh_id, index);
         if (!mesh_material) return false;
 
         const hash = material_info.mesh_info_to_material_hashes[mesh_id][index];
@@ -1761,6 +1798,15 @@ export function ResourceManagerModule() {
 
     function has_material(name: string) {
         return materials[name] != undefined;
+    }
+
+    /**
+     * Проверяет, является ли материал builtin (созданным по умолчанию)
+     */
+    function is_builtin_material(name: string): boolean {
+        const material = materials[name];
+        if (!material) return false;
+        return material.path.startsWith('__builtin__');
     }
 
     function find_animation(name_anim: string, model_name: string) {

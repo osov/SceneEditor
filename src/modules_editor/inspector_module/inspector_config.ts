@@ -240,7 +240,8 @@ export function create_default_inspector_config(options_providers: IOptionsProvi
                     name: Property.UNIFORM_SAMPLER2D,
                     title: 'Sampler2D',
                     type: PropertyType.LIST_TEXTURES,
-                    params: options_providers.get_texture_options()
+                    // Для uniforms используем формат atlas/texture
+                    params: options_providers.get_uniform_texture_options()
                 },
                 {
                     name: Property.UNIFORM_FLOAT,

@@ -27,12 +27,14 @@ interface IModelMesh extends IBaseMeshAndThree {
 }
 
 /** Создать ModelHandler */
-export function create_model_handler(_params?: HandlerParams): IPropertyHandler {
+export function create_model_handler(params?: HandlerParams): IPropertyHandler {
     const properties: Property[] = [
         Property.MESH_NAME,
         Property.MODEL_SCALE,
         Property.MODEL_MATERIALS,
     ];
+
+    const on_refresh_inspector = params?.on_refresh_inspector;
 
     function read(property: Property, context: ReadContext): ReadResult<unknown> {
         switch (property) {
@@ -101,6 +103,13 @@ export function create_model_handler(_params?: HandlerParams): IPropertyHandler 
         for (const mesh of meshes) {
             if (!is_model_mesh(mesh)) continue;
             mesh.set_mesh(name);
+        }
+
+        // NOTE: Полностью обновить инспектор после смены меша
+        // т.к. меняются доступные анимации, текстуры и другие свойства модели
+        if (on_refresh_inspector !== undefined) {
+            // Используем requestAnimationFrame чтобы дать модели время обновиться
+            requestAnimationFrame(() => on_refresh_inspector());
         }
     }
 
