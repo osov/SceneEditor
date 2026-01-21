@@ -1,18 +1,21 @@
 import { Box3, DataTexture, Mesh, MeshBasicMaterial, NormalBlending, RGBAFormat, ShaderMaterial, SkinnedMesh, Texture, UnsignedByteType, Vector2, Vector3 } from "three";
 import { EntityPlane } from "./entity_plane";
-import { MaterialUniformType } from "../resource_manager";
-import { get_file_name } from "../helpers/utils";
 import { FLOAT_PRECISION, WORLD_SCALAR } from "../../config";
 import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils';
-import { hex2rgba, rgb2hex } from "@editor/defold/utils";
+import { rgb2hex } from "@editor/defold/utils";
 import { Services } from '@editor/core';
 import { DC_LAYERS } from '@editor/engine/RenderService';
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
+import {
+    serialize_material_uniforms,
+    deserialize_material_uniforms,
+    serialize_blending_if_changed
+} from "./helpers/SerializationHelper";
 
 export interface MultipleMaterialMeshSerializeData {
     mesh_name: string,
     materials: {
-        [key in number]: { name: string, blending?: number, changed_uniforms?: string[] }
+        [key in number]: { name: string, blending?: number, changed_uniforms?: { [key: string]: unknown } }
     }
     layers: number;
 }
@@ -284,44 +287,33 @@ export class MultipleMaterialMesh extends EntityPlane {
         data.mesh_name = this.mesh_name;
 
         this.materials.forEach((material, idx) => {
-            const info: { name: string, blending?: number, changed_uniforms?: { [key: string]: any } } = {
+            const info: { name: string, blending?: number, changed_uniforms?: { [key: string]: unknown } } = {
                 name: material.name,
             };
 
-            if (material.blending != NormalBlending) {
-                info.blending = material.blending;
+            const blending = serialize_blending_if_changed(material.blending, NormalBlending);
+            if (blending !== undefined) {
+                info.blending = blending;
             }
 
             const material_info = Services.resources.get_material_info(material.name);
-            if (!material_info) return null;
+            if (material_info === undefined) return;
 
             const hash = Services.resources.get_material_hash_by_mesh_id(material.name, this.mesh_data.id, idx);
-            if (!hash) return data;
+            if (hash === undefined) return;
 
-            const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
-            if (!changed_uniforms) return data;
-
-            const modifiedUniforms: { [key: string]: any } = {};
-            for (const uniformName of changed_uniforms) {
-                if (material.uniforms[uniformName]) {
-                    const uniform = material.uniforms[uniformName];
-                    if (uniform.value instanceof Texture) {
-                        const texture_name = uniformName === 'u_texture' ? this.get_texture(idx)[0] : get_file_name(uniform.value.userData.path as string || '');
-                        const atlas = uniformName === 'u_texture' ? this.get_texture(idx)[1] : Services.resources.get_atlas_by_texture_name(texture_name) || '';
-                        modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
-                    } else {
-                        const uniformInfo = material_info.uniforms[uniformName] as { type?: string } | undefined;
-                        if (uniformInfo?.type === MaterialUniformType.COLOR) {
-                            modifiedUniforms[uniformName] = rgb2hex(uniform.value);
-                        } else {
-                            modifiedUniforms[uniformName] = uniform.value;
-                        }
-                    }
-                }
-            }
-
-            if (Object.keys(modifiedUniforms).length > 0) {
-                info.changed_uniforms = modifiedUniforms;
+            // Сериализация изменённых uniforms через хелпер
+            const texture_data = this.get_texture(idx);
+            const uniforms = serialize_material_uniforms(
+                material,
+                material_info,
+                hash,
+                (uniform_key) => uniform_key === 'u_texture' && texture_data !== undefined
+                    ? [texture_data[1] || '', texture_data[0] || '']
+                    : ['', '']
+            );
+            if (uniforms !== undefined) {
+                info.changed_uniforms = uniforms;
             }
 
             data.materials[idx] = info;
@@ -346,31 +338,22 @@ export class MultipleMaterialMesh extends EntityPlane {
         for (const [idx, info] of Object.entries(data.materials)) {
             const index = parseInt(idx);
 
-            if (info.name != 'default') {
+            if (info.name !== 'default') {
                 this.set_material(info.name, index);
             }
 
-            if (info.blending != undefined) {
+            if (info.blending !== undefined) {
                 Services.resources.set_material_property_for_multiple_mesh(this, index, 'blending', info.blending);
             }
 
-            if (info.changed_uniforms) {
-                for (const [key, value] of Object.entries(info.changed_uniforms)) {
-                    const material_info = Services.resources.get_material_info(info.name);
-                    if (!material_info) continue;
-
-                    const uniform_info = material_info.uniforms[key] as { type?: string } | undefined;
-                    if (!uniform_info) continue;
-
-                    if (uniform_info.type === MaterialUniformType.SAMPLER2D && typeof value === 'string') {
-                        const [atlas, texture_name] = value.split('/');
-                        this.set_texture(texture_name, atlas, index, key);
-                    } else if (uniform_info.type === MaterialUniformType.COLOR) {
-                        Services.resources.set_material_uniform_for_multiple_material_mesh(this, index, key, hex2rgba(value));
-                    } else {
-                        Services.resources.set_material_uniform_for_multiple_material_mesh(this, index, key, value);
-                    }
-                }
+            // Десериализация uniforms через хелпер
+            if (info.changed_uniforms !== undefined) {
+                deserialize_material_uniforms(
+                    info.changed_uniforms,
+                    info.name,
+                    (name, atlas, uniform_key) => this.set_texture(name, atlas, index, uniform_key),
+                    (key, value) => Services.resources.set_material_uniform_for_multiple_material_mesh(this, index, key, value)
+                );
             }
         }
 

@@ -1,12 +1,16 @@
-import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute, Texture, NormalBlending, NoColorSpace } from "three";
+import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute, NormalBlending, NoColorSpace } from "three";
 import { IBaseParameters, IObjectTypes } from "../types";
-import { convert_width_height_to_pivot_bb, get_file_name, set_pivot_with_sync_pos } from "../helpers/utils";
+import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
 import { EntityPlane } from "./entity_plane";
-import { MaterialUniformType } from "../resource_manager";
-import { hex2rgba, rgb2hex } from "@editor/defold/utils";
 import { Services } from '@editor/core';
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 import { SLICE9_VERTEX_SHADER, SLICE9_FRAGMENT_SHADER } from "../shaders/builtin";
+import {
+    serialize_material_uniforms,
+    deserialize_material_uniforms,
+    serialize_blending_if_changed,
+    serialize_layers_if_changed
+} from "./helpers/SerializationHelper";
 
 // todo optimize material list
 
@@ -194,57 +198,45 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
     function serialize(): Slice9SerializeData {
         const data: Slice9SerializeData = {};
 
-        if (material.name != 'default') {
+        if (material.name !== 'default') {
             data.material_name = material.name;
         }
 
-        if (parameters.slice_width != 0) {
+        if (parameters.slice_width !== 0) {
             data.slice_width = parameters.slice_width;
         }
-        if (parameters.slice_height != 0) {
+        if (parameters.slice_height !== 0) {
             data.slice_height = parameters.slice_height;
         }
 
         const material_info = Services.resources.get_material_info(material.name);
-        if (!material_info) return data;
+        if (material_info === undefined) return data;
 
         const hash = Services.resources.get_material_hash_by_mesh_id(material.name, mesh.mesh_data.id);
-        if (!hash) return data;
+        if (hash === undefined) return data;
 
-        if (material.blending != NormalBlending) {
-            data.blending = material.blending;
+        const blending = serialize_blending_if_changed(material.blending, NormalBlending);
+        if (blending !== undefined) {
+            data.blending = blending;
         }
 
-        const changed_uniforms = material_info.material_hash_to_changed_uniforms[hash];
-        if (!changed_uniforms) return data;
-
-        const modifiedUniforms: { [key: string]: any } = {};
-        for (const uniformName of changed_uniforms) {
-            if (material.uniforms[uniformName]) {
-                const uniform = material.uniforms[uniformName];
-                if (uniform.value instanceof Texture) {
-                    const texture_name = uniformName === 'u_texture' ? parameters.texture : get_file_name(uniform.value.userData.path as string || '');
-                    const atlas = uniformName === 'u_texture' ? parameters.atlas : Services.resources.get_atlas_by_texture_name(texture_name) || '';
-                    modifiedUniforms[uniformName] = `${atlas}/${texture_name}`;
-                } else {
-                    const uniformInfo = material_info.uniforms[uniformName] as { type?: string } | undefined;
-                    if (uniformInfo?.type === MaterialUniformType.COLOR) {
-                        modifiedUniforms[uniformName] = rgb2hex(uniform.value);
-                    } else {
-                        modifiedUniforms[uniformName] = uniform.value;
-                    }
-                }
-            }
+        // Сериализация изменённых uniforms через хелпер
+        const uniforms = serialize_material_uniforms(
+            material,
+            material_info,
+            hash,
+            (uniform_key) => uniform_key === 'u_texture'
+                ? [parameters.atlas, parameters.texture]
+                : ['', '']
+        );
+        if (uniforms !== undefined) {
+            data.material_uniforms = uniforms;
         }
 
-        if (Object.keys(modifiedUniforms).length > 0) {
-            data.material_uniforms = modifiedUniforms;
+        const layers = serialize_layers_if_changed(mesh.layers.mask);
+        if (layers !== undefined) {
+            data.layers = layers;
         }
-
-        // 0, 31, 32
-        if (mesh.layers.mask != -2147483647)
-            data.layers = mesh.layers.mask;
-
 
         return data;
     }
@@ -255,37 +247,30 @@ export function CreateSlice9(mesh: Slice9Mesh, material: ShaderMaterial, width =
         set_texture('', '');
 
         // NOTE: затем переопределяем значения
-        if (data.slice_width != undefined) {
+        if (data.slice_width !== undefined) {
             parameters.slice_width = data.slice_width;
         }
-        if (data.slice_height != undefined) {
+        if (data.slice_height !== undefined) {
             parameters.slice_height = data.slice_height;
         }
 
-        if (data.blending != undefined) {
+        if (data.blending !== undefined) {
             Services.resources.set_material_property_for_mesh(mesh, 'blending', data.blending);
         }
 
-        // NOTE: применяем измененные uniforms, если они есть
-        if (data.material_uniforms) {
-            for (const [key, value] of Object.entries(data.material_uniforms)) {
-                const material_info = Services.resources.get_material_info(material.name);
-                if (!material_info) continue;
-
-                const uniform_info = material_info.uniforms[key] as { type?: string } | undefined;
-                if (!uniform_info) continue;
-                if (uniform_info.type === MaterialUniformType.SAMPLER2D && typeof value === 'string') {
-                    const [atlas, texture_name] = value.split('/');
-                    set_texture(texture_name, atlas, key);
-                } else if (uniform_info.type === MaterialUniformType.COLOR) {
-                    Services.resources.set_material_uniform_for_mesh(mesh, key, hex2rgba(value));
-                } else {
-                    Services.resources.set_material_uniform_for_mesh(mesh, key, value);
-                }
-            }
+        // NOTE: применяем измененные uniforms через хелпер
+        if (data.material_uniforms !== undefined) {
+            deserialize_material_uniforms(
+                data.material_uniforms,
+                material.name,
+                (name, atlas, uniform_key) => set_texture(name, atlas, uniform_key),
+                (key, value) => Services.resources.set_material_uniform_for_mesh(mesh, key, value)
+            );
         }
-        if (data.layers != undefined)
+
+        if (data.layers !== undefined) {
             mesh.layers.mask = data.layers;
+        }
 
         update_parameters();
     }

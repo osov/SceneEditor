@@ -3,26 +3,26 @@
 //   - При переименовании: изменить ключ в словаре materials + обновить path
 //   - Требует добавления обработки в on_fs_events для .mtr файлов
 
-import { IS_LOGGING, PROJECT_NAME, SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from "../config";
+import { IS_LOGGING, PROJECT_NAME, SERVER_URL, WS_RECONNECT_INTERVAL, WS_SERVER_URL } from '../config';
 import {
-    ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, ASSET_AUDIO, AssetType, DataFormatType, FILE_UPLOAD_CMD,
-    FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT, ServerResponses,
-    TDictionary, texture_ext, URL_PATHS, AUDIO_EXT,
-    FSEvent,
-    ProtocolWrapper,
-    NetMessagesEditor,
-} from "../modules_editor/modules_editor_const";
-import { span_elem, json_parsable, get_keys } from "../modules/utils";
-import { contextMenuItem, get_contextmenu } from "../modules_editor/ContextMenu";
-import { NodeAction } from "@editor/shared";
-import { api, get_client_api } from "../modules_editor/ClientAPI";
-import type { BaseEntityData } from "../core/render/types";
-import { error_popup, get_file_name } from "../render_engine/helpers/utils";
-import { Quaternion, Vector3 } from "three";
-import { WsWrap } from "@editor/modules/ws_wrap";
+    ASSET_MATERIAL, ASSET_SCENE_GRAPH, ASSET_TEXTURE, ASSET_AUDIO, AssetType,
+    FONT_EXT, FSObject, LoadAtlasData, model_ext, ProjectLoadData, SCENE_EXT,
+    TDictionary, texture_ext, URL_PATHS, AUDIO_EXT, FSEvent, ProtocolWrapper, NetMessagesEditor,
+} from '../modules_editor/modules_editor_const';
+import { span_elem, get_keys } from '../modules/utils';
+import { get_client_api } from '../modules_editor/ClientAPI';
+import { get_file_name } from '../render_engine/helpers/utils';
+import { WsWrap } from '@editor/modules/ws_wrap';
 import { Services } from '@editor/core';
-import { get_control_manager } from '../modules_editor/ControlManager';
 import { get_popups } from '../modules_editor/Popups';
+
+// Импорт модулей
+import type { AssetControlState } from './asset_control/types';
+import { create_asset_selection } from './asset_control/asset_selection';
+import { create_file_operations } from './asset_control/file_operations';
+import { create_scene_operations } from './asset_control/scene_operations';
+import { create_drag_drop_handler } from './asset_control/drag_drop_handler';
+import { create_asset_popups } from './asset_control/asset_popups';
 
 /** Тип AssetControl */
 export type AssetControlType = ReturnType<typeof AssetControlCreate>;
@@ -47,28 +47,42 @@ export function register_asset_control() {
     asset_control_instance = AssetControlCreate();
 }
 
-
 function AssetControlCreate() {
+    // Инициализация состояния
     const filemanager = document.querySelector('.filemanager') as HTMLDivElement;
     const breadcrumbs = filemanager.querySelector('.breadcrumbs') as HTMLDivElement;
     const assets_list = filemanager.querySelector('.assets_list') as HTMLDivElement;
-    const drop_zone = document.getElementById("drop_zone") as HTMLDivElement;
-    let active_asset: Element | undefined = undefined;
-    let selected_assets: Element[] = [];
-    let move_assets_data: { assets: Element[], move_type?: "move" | "copy" } = { assets: [] };
-    let current_dir: string | undefined = undefined;
-    let current_project: string | undefined = undefined;
-    let current_scene: { path?: string, name?: string } = {};
-    let drag_for_upload_now = false;
-    let drag_asset_now = false;
-    let history_length_cache: TDictionary<number> = {};
-    let mouse_down_on_asset = false;
+    const drop_zone = document.getElementById('drop_zone') as HTMLDivElement;
+
+    const state: AssetControlState = {
+        filemanager,
+        breadcrumbs,
+        assets_list,
+        drop_zone,
+        active_asset: undefined,
+        selected_assets: [],
+        move_assets_data: { assets: [] },
+        current_dir: undefined,
+        current_project: undefined,
+        current_scene: {},
+        drag_for_upload_now: false,
+        drag_asset_now: false,
+        history_length_cache: {} as TDictionary<number>,
+        mouse_down_on_asset: false,
+    };
+
+    // Инициализация модулей (go_to_dir передаётся позже)
+    const selection = create_asset_selection(state);
+    const file_ops = create_file_operations(state, go_to_dir);
+    const scene_ops = create_scene_operations(state, go_to_dir);
+    const drag_drop = create_drag_drop_handler(state, go_to_dir);
+    const popups = create_asset_popups(state, file_ops, scene_ops, go_to_dir);
 
     function init() {
-        document.querySelector('.filemanager')?.addEventListener('contextmenu', (event: any) => {
+        document.querySelector('.filemanager')?.addEventListener('contextmenu', (event: Event) => {
             event.preventDefault();
         });
-
+        drag_drop.setup_drag_listeners();
         subscribe();
     }
 
@@ -80,232 +94,155 @@ function AssetControlCreate() {
         Services.event_bus.on('input:dblclick', on_dbl_click);
         Services.event_bus.on('input:save', save_current_scene);
         Services.event_bus.on('hierarchy:dropped_in_assets', on_graph_drop);
-
         Services.event_bus.on('server:file_system_events', on_fs_events);
     }
 
     async function load_project(data: ProjectLoadData, folder_content?: FSObject[], to_dir?: string) {
-        current_project = data.name;
-        localStorage.setItem("current_project", current_project);
+        state.current_project = data.name;
+        localStorage.setItem('current_project', state.current_project);
 
-        Services.resources.set_project_name(current_project);
-
-        // DEBUG: логируем пути материалов от сервера
+        Services.resources.set_project_name(state.current_project);
         Services.logger.info('[load_project] Materials from server:', data.paths.materials);
 
         const textures: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         const shaders: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
-        // NOTE: Материалы должны загружаться ДО моделей, иначе модели получат builtin материалы
         const materials_list: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
         const other: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
+
         for (const key of get_keys(data.paths)) {
             const paths = data.paths[key];
             let func: (...args: any[]) => Promise<any>;
-            if (key == "textures") {
-                func = (path: string) => {
-                    return Services.resources.preload_texture("/" + path);
-                }
-            }
-            else if (key == "vertex_programs") {
-                func = (path: string) => {
-                    return Services.resources.preload_vertex_program("/" + path);
-                }
-            }
-            else if (key == "fragment_programs") {
-                func = (path: string) => {
-                    return Services.resources.preload_fragment_program("/" + path);
-                }
-            }
-            else if (key == "materials") {
-                func = (path: string) => {
-                    return Services.resources.preload_material("/" + path);
-                }
-            }
-            else if (key == "fonts") {
-                func = (path: string) => {
-                    return Services.resources.preload_font("/" + path);
-                }
-            }
-            else if (key == "models") {
-                func = (path: string) => {
-                    return Services.resources.preload_model("/" + path);
-                }
-            }
-            else if (key == "atlases") {
-                func = (paths: LoadAtlasData) => {
-                    return Services.resources.preload_atlas("/" + paths.atlas, "/" + paths.texture);
-                }
-            }
-            else if (key == "scenes") {
-                func = (path: string) => {
-                    return Services.resources.preload_scene("/" + path);
-                }
-            }
-            else if (key == "audios") {
-                func = (path: string) => {
-                    return Services.resources.preload_audio("/" + path);
-                }
-            }
-            else func = async () => { };
+            if (key === 'textures') {
+                func = (path: string) => Services.resources.preload_texture('/' + path);
+            } else if (key === 'vertex_programs') {
+                func = (path: string) => Services.resources.preload_vertex_program('/' + path);
+            } else if (key === 'fragment_programs') {
+                func = (path: string) => Services.resources.preload_fragment_program('/' + path);
+            } else if (key === 'materials') {
+                func = (path: string) => Services.resources.preload_material('/' + path);
+            } else if (key === 'fonts') {
+                func = (path: string) => Services.resources.preload_font('/' + path);
+            } else if (key === 'models') {
+                func = (path: string) => Services.resources.preload_model('/' + path);
+            } else if (key === 'atlases') {
+                func = (paths: LoadAtlasData) => Services.resources.preload_atlas('/' + paths.atlas, '/' + paths.texture);
+            } else if (key === 'scenes') {
+                func = (path: string) => Services.resources.preload_scene('/' + path);
+            } else if (key === 'audios') {
+                func = (path: string) => Services.resources.preload_audio('/' + path);
+            } else func = async () => { };
 
-            if (func != undefined) {
+            if (func !== undefined) {
                 for (const path of paths) {
                     switch (key) {
                         case 'vertex_programs': case 'fragment_programs':
-                            shaders.push({ func, path });
-                            break;
+                            shaders.push({ func, path }); break;
                         case 'textures':
-                            textures.push({ func, path });
-                            break;
+                            textures.push({ func, path }); break;
                         case 'materials':
-                            materials_list.push({ func, path });
-                            break;
+                            materials_list.push({ func, path }); break;
                         default:
-                            other.push({ func, path });
-                            break;
+                            other.push({ func, path }); break;
                     }
                 }
             }
         }
 
-        const shader_loaders: Promise<any>[] = [];
-        for (const info of shaders) {
-            shader_loaders.push(info.func(info.path));
-        }
-        await Promise.all(shader_loaders);
-
-        const texture_loaders: Promise<any>[] = [];
-        for (const info of textures) {
-            texture_loaders.push(info.func(info.path));
-        }
-        await Promise.all(texture_loaders);
-
-        // NOTE: Материалы загружаются отдельно и ДО моделей
-        // Это необходимо, чтобы модели получили проектные материалы вместо builtin
-        const material_loaders: Promise<any>[] = [];
-        for (const info of materials_list) {
-            material_loaders.push(info.func(info.path));
-        }
-        await Promise.all(material_loaders);
-
-        const other_loaders: Promise<any>[] = [];
-        for (const info of other) {
-            other_loaders.push(info.func(info.path));
-        }
-        await Promise.all(other_loaders);
+        // Загрузка в правильном порядке: шейдеры → текстуры → материалы → остальное
+        await Promise.all(shaders.map(info => info.func(info.path)));
+        await Promise.all(textures.map(info => info.func(info.path)));
+        await Promise.all(materials_list.map(info => info.func(info.path)));
+        await Promise.all(other.map(info => info.func(info.path)));
 
         await Services.resources.update_from_metadata();
         await Services.resources.write_metadata();
 
-        if (folder_content && to_dir == undefined) {
-            current_dir = "";
+        if (folder_content && to_dir === undefined) {
+            state.current_dir = '';
             await draw_assets(folder_content);
-            generate_breadcrumbs(current_dir);
-        }
-        else if (to_dir != undefined) {
+            generate_breadcrumbs(state.current_dir);
+        } else if (to_dir !== undefined) {
             await go_to_dir(to_dir);
         }
     }
 
     async function go_to_dir(path: string, renew = false) {
-        if (!current_project) return;
-        if (current_dir === path && !renew) return;
+        if (!state.current_project) return;
+        if (state.current_dir === path && !renew) return;
         const resp = await get_client_api().get_folder(path);
-        if (resp.result === 1 && resp.data != undefined) {
-            localStorage.setItem("current_dir", path);
+        if (resp.result === 1 && resp.data !== undefined) {
+            localStorage.setItem('current_dir', path);
             const folder_content = resp.data;
-            current_dir = path;
+            state.current_dir = path;
             await draw_assets(folder_content);
-            generate_breadcrumbs(current_dir);
-            if (renew)
-                Services.logger.debug("refresh current assets dir ok");
-        }
-        else if (path != "") {
-            Services.logger.warn("cannot go to dir:", path, ", returning to root dir");
-            await go_to_dir("", true);
-        }
-        else
+            generate_breadcrumbs(state.current_dir);
+            if (renew) Services.logger.debug('refresh current assets dir ok');
+        } else if (path !== '') {
+            Services.logger.warn('cannot go to dir:', path, ', returning to root dir');
+            await go_to_dir('', true);
+        } else {
             Services.logger.warn('failed to load root dir!');
+        }
     }
 
     async function select_file(file_path: string) {
         if (!file_path) return;
 
-        // Get directory path by removing filename
         const dir_path = file_path.substring(0, file_path.lastIndexOf('/'));
         const file_name = file_path.substring(file_path.lastIndexOf('/') + 1);
 
-        // First navigate to containing directory
         await go_to_dir(dir_path, true);
 
-        // Find and select the file in the assets list
         const assets = Array.from(assets_list.querySelectorAll('.asset'));
         for (const asset of assets) {
-            if (asset.getAttribute('data-name') == file_name) {
-                add_to_selected(asset as HTMLElement);
-                asset.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center"
-                })
+            if (asset.getAttribute('data-name') === file_name) {
+                selection.add_to_selected(asset as HTMLElement);
+                asset.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 break;
             }
         }
     }
 
     async function renew_current_dir() {
-        if (current_project == undefined || current_dir == undefined) return;
-        await go_to_dir(current_dir, true);
+        if (state.current_project === undefined || state.current_dir === undefined) return;
+        await go_to_dir(state.current_dir, true);
     }
 
     async function draw_assets(list: FSObject[]) {
         const scanned_folders: FSObject[] = [];
         const scanned_files: FSObject[] = [];
         list.forEach(function (d) {
-            if (d.type === "folder")
-                scanned_folders.push(d);
-            else if (d.type === "file")
-                scanned_files.push(d);
+            if (d.type === 'folder') scanned_folders.push(d);
+            else if (d.type === 'file') scanned_files.push(d);
         });
 
-        assets_list.innerHTML = "";
+        assets_list.innerHTML = '';
         assets_list.hidden = true;
-
-        // const nothing_found_elem = filemanager.querySelector('.nothingfound') as HTMLDivElement;
-        // if(!scannedFolders.length && !scannedFiles.length)
-        // 	nothing_found_elem.hidden = false;
-        // else
-        //     nothing_found_elem.hidden = true;
 
         if (scanned_folders.length) {
             for (const folder of scanned_folders) {
                 const num_files = folder.num_files as number;
                 const _path = folder.path.replaceAll('\\', '/');
-                const asset_type: AssetType = "folder";
+                const asset_type: AssetType = 'folder';
                 let items_length = '';
-                let name = escapeHTML(folder.name);
-                const icon_elem = span_elem("", ["icon", "folder"]);
-                if (num_files) {
-                    icon_elem.classList.add("full");
-                }
-                if (num_files == 1)
-                    items_length = `${num_files} Файл`;
-                else if (num_files > 1)
-                    items_length = `${num_files} Файлов`;
-                else
-                    items_length = 'Пусто';
-                const details_elem = span_elem(items_length, ["details"]);
-                const name_elem = span_elem(name, ["name"]);
-                const folder_elem = document.createElement("li");
-                folder_elem.classList.add("folder", "asset");
-                folder_elem.setAttribute("data-name", name);
-                folder_elem.setAttribute("data-path", _path);
-                folder_elem.setAttribute("data-type", asset_type);
+                const name = escapeHTML(folder.name);
+                const icon_elem = span_elem('', ['icon', 'folder']);
+                if (num_files) icon_elem.classList.add('full');
+                if (num_files === 1) items_length = `${num_files} Файл`;
+                else if (num_files > 1) items_length = `${num_files} Файлов`;
+                else items_length = 'Пусто';
+                const details_elem = span_elem(items_length, ['details']);
+                const name_elem = span_elem(name, ['name']);
+                const folder_elem = document.createElement('li');
+                folder_elem.classList.add('folder', 'asset');
+                folder_elem.setAttribute('data-name', name);
+                folder_elem.setAttribute('data-path', _path);
+                folder_elem.setAttribute('data-type', asset_type);
                 folder_elem.appendChild(icon_elem);
                 folder_elem.appendChild(name_elem);
                 folder_elem.appendChild(details_elem);
-                folder_elem.addEventListener("drop", async (_e) => {
-                    if (drag_asset_now)
-                        await handle_asset_drop(_path);
+                folder_elem.addEventListener('drop', async () => {
+                    if (state.drag_asset_now) await drag_drop.handle_asset_drop(_path);
                 });
                 assets_list.appendChild(folder_elem);
             }
@@ -316,707 +253,216 @@ function AssetControlCreate() {
                 const file_size = bytesToSize(file.size);
                 const name = escapeHTML(file.name);
                 let file_type = getFileExt(name);
-                const ext = file.ext ? file.ext : "";
+                const ext = file.ext ? file.ext : '';
                 const _path = file.path.replaceAll('\\', '/');
-                let asset_type: AssetType = "other";
+                let asset_type: AssetType = 'other';
                 const src = file.path ? file.path.replaceAll('\\', '/') : '';
-                const src_url = new URL(URL_PATHS.ASSETS + `/${current_project}/${src}`, SERVER_URL);
-                const file_elem = document.createElement("li");
-                let icon_elem = span_elem(`.${ext}`, ["icon", "file"]);
-                const details_elem = span_elem(file_size, ["details"]);
-                icon_elem.classList.add("drag", `f-${ext}`);
-                const name_elem = span_elem(name, ["name"]);
-                if (file_type == "mtr")
-                    asset_type = ASSET_MATERIAL;
-                else if (file_type == SCENE_EXT)
-                    asset_type = ASSET_SCENE_GRAPH;
+                const src_url = new URL(URL_PATHS.ASSETS + `/${state.current_project}/${src}`, SERVER_URL);
+                const file_elem = document.createElement('li');
+                let icon_elem = span_elem(`.${ext}`, ['icon', 'file']);
+                const details_elem = span_elem(file_size, ['details']);
+                icon_elem.classList.add('drag', `f-${ext}`);
+                const name_elem = span_elem(name, ['name']);
+                if (file_type === 'mtr') asset_type = ASSET_MATERIAL;
+                else if (file_type === SCENE_EXT) asset_type = ASSET_SCENE_GRAPH;
                 else if (fileIsImg(_path)) {
                     asset_type = ASSET_TEXTURE;
-                    icon_elem = document.createElement("img");
-                    icon_elem.setAttribute("src", src_url.toString());
-                    icon_elem.setAttribute("draggable", "false");
-                    icon_elem.classList.add("icon", "img", "drag");
-                }
-                else if (AUDIO_EXT.includes(ext)) {
+                    icon_elem = document.createElement('img');
+                    icon_elem.setAttribute('src', src_url.toString());
+                    icon_elem.setAttribute('draggable', 'false');
+                    icon_elem.classList.add('icon', 'img', 'drag');
+                } else if (AUDIO_EXT.includes(ext)) {
                     asset_type = ASSET_AUDIO;
                 }
-                file_elem.setAttribute("data-type", asset_type);
-                file_elem.setAttribute("data-name", name);
-                file_elem.setAttribute("data-path", _path);
-                file_elem.setAttribute("data-ext", ext);
-                file_elem.setAttribute("draggable", "true");
-                file_elem.classList.add("file", "asset");
+                file_elem.setAttribute('data-type', asset_type);
+                file_elem.setAttribute('data-name', name);
+                file_elem.setAttribute('data-path', _path);
+                file_elem.setAttribute('data-ext', ext);
+                file_elem.setAttribute('draggable', 'true');
+                file_elem.classList.add('file', 'asset');
                 file_elem.appendChild(icon_elem);
                 file_elem.appendChild(name_elem);
                 file_elem.appendChild(details_elem);
-                file_elem.addEventListener("dragstart", function (_e) {
-                    drag_asset_now = true;
-                })
+                file_elem.addEventListener('dragstart', function () {
+                    state.drag_asset_now = true;
+                });
                 assets_list.appendChild(file_elem);
             }
         }
+
+        // Настройка dragstart для текстур, материалов и сцен
+        setup_asset_dragstart();
+        assets_list.hidden = false;
+    }
+
+    function setup_asset_dragstart() {
         const texture_files = document.querySelectorAll<HTMLElement>(`[data-type=${ASSET_TEXTURE}]`);
         texture_files.forEach((file) => {
-            file.addEventListener("dragstart", (event: DragEvent) => {
-                if (!event.dataTransfer)
-                    return;
+            file.addEventListener('dragstart', (event: DragEvent) => {
+                if (!event.dataTransfer) return;
                 event.dataTransfer.clearData();
-                const path = file.getAttribute("data-path") || '';
+                const path = file.getAttribute('data-path') || '';
                 const data = Services.resources.get_all_textures().find((info) => {
-                    return (info.data.texture as any).path == `${SERVER_URL}${URL_PATHS.ASSETS}/${PROJECT_NAME}/${path}`;
+                    const texture_path = (info.data.texture.userData as { path?: string }).path;
+                    return texture_path === `${SERVER_URL}${URL_PATHS.ASSETS}/${PROJECT_NAME}/${path}`;
                 });
-                event.dataTransfer.setData("text/plain", `${data?.atlas}/${data?.name}`);
-                event.dataTransfer.setData("textureSize", `${data?.data?.size?.x}x${data?.data?.size?.y}`);
-                event.dataTransfer.setData("asset_type", ASSET_TEXTURE);
-                event.dataTransfer.setData("path", path);
+                if (data === undefined) {
+                    Services.logger.warn(`[AssetControl] Texture not found for drag: ${path}`);
+                    return;
+                }
+                event.dataTransfer.setData('text/plain', `${data.atlas}/${data.name}`);
+                event.dataTransfer.setData('textureSize', `${data.data?.size?.x ?? 0}x${data.data?.size?.y ?? 0}`);
+                event.dataTransfer.setData('asset_type', ASSET_TEXTURE);
+                event.dataTransfer.setData('path', path);
             });
         });
         const material_files = document.querySelectorAll<HTMLElement>(`[data-type=${ASSET_MATERIAL}]`);
         material_files.forEach((file) => {
-            file.addEventListener("dragstart", (event: DragEvent) => {
-                if (!event.dataTransfer)
-                    return;
+            file.addEventListener('dragstart', (event: DragEvent) => {
+                if (!event.dataTransfer) return;
                 event.dataTransfer.clearData();
-                const path = file.getAttribute("data-path") || '';
+                const path = file.getAttribute('data-path') || '';
                 const name = get_file_name(path);
-                event.dataTransfer.setData("text/plain", `${name}`);
-                event.dataTransfer.setData("asset_type", ASSET_MATERIAL);
-                event.dataTransfer.setData("path", path);
+                event.dataTransfer.setData('text/plain', `${name}`);
+                event.dataTransfer.setData('asset_type', ASSET_MATERIAL);
+                event.dataTransfer.setData('path', path);
             });
         });
         const scene_elem_files = document.querySelectorAll<HTMLElement>(`[data-type=${ASSET_SCENE_GRAPH}]`);
         scene_elem_files.forEach((file) => {
-            file.addEventListener("dragstart", (event: DragEvent) => {
-                if (!event.dataTransfer)
-                    return;
+            file.addEventListener('dragstart', (event: DragEvent) => {
+                if (!event.dataTransfer) return;
                 event.dataTransfer.clearData();
-                const path = file.getAttribute("data-path") || '';
+                const path = file.getAttribute('data-path') || '';
                 if (path) {
-                    event.dataTransfer.setData("asset_type", ASSET_SCENE_GRAPH);
-                    event.dataTransfer.setData("path", path);
+                    event.dataTransfer.setData('asset_type', ASSET_SCENE_GRAPH);
+                    event.dataTransfer.setData('path', path);
                 }
             });
         });
-        assets_list.hidden = false;
-    }
-
-    function save_base64_img(path: string, data: string) {
-        return get_client_api().save_data(path, data, "base64");
-    }
-
-    async function get_file_data(path: string) {
-        const resp = await get_client_api().get_data(path);
-        if (!resp || resp.result === 0 || !resp.data) {
-            get_popups().toast.error(`Не удалось получить данные: ${resp.message}`);
-            return null;
-        }
-        return resp.data;
-    }
-
-    function save_file_data(path: string, data: string, format: DataFormatType = "string") {
-        return get_client_api().save_data(path, data, format);
     }
 
     function generate_breadcrumbs(dir: string) {
-        breadcrumbs.innerHTML = "";
-        const asset_type: AssetType = "folder";
-        let path = [""];
-        if (dir !== "") path = ("/" + dir.replaceAll("\\", "/")).split("/");
-        for (let i = 1; i < path.length; i++)
-            path[i] = path[i - 1] + "/" + path[i];
+        breadcrumbs.innerHTML = '';
+        const asset_type: AssetType = 'folder';
+        let path = [''];
+        if (dir !== '') path = ('/' + dir.replaceAll('\\', '/')).split('/');
+        for (let i = 1; i < path.length; i++) path[i] = path[i - 1] + '/' + path[i];
         path.forEach(function (u, i) {
-            const temp = u.split("/");
+            const temp = u.split('/');
             let name = temp[temp.length - 1];
-            name = (name === "") ? "Файлы" : name;
+            name = (name === '') ? 'Файлы' : name;
             if (i === 0 || i !== path.length - 1) {
-                const arrow = span_elem("→", ["arrow"]);
-                const a_elem = document.createElement("a");
-                const s_elem = span_elem(name, ["folderName"]);
-                const _path = u.replace("/", "");
-                s_elem.setAttribute("data-path", _path);
-                s_elem.setAttribute("data-type", asset_type);
-                a_elem.setAttribute("href", "javascript:void(0);");
+                const arrow = span_elem('→', ['arrow']);
+                const a_elem = document.createElement('a');
+                const s_elem = span_elem(name, ['folderName']);
+                const _path = u.replace('/', '');
+                s_elem.setAttribute('data-path', _path);
+                s_elem.setAttribute('data-type', asset_type);
+                a_elem.setAttribute('href', 'javascript:void(0);');
                 a_elem.appendChild(s_elem);
                 breadcrumbs.appendChild(a_elem);
                 breadcrumbs.appendChild(arrow);
-                s_elem.addEventListener("drop", async (_e) => {
-                    if (drag_asset_now)
-                        await handle_asset_drop(_path);
+                s_elem.addEventListener('drop', async () => {
+                    if (state.drag_asset_now) await drag_drop.handle_asset_drop(_path);
                 });
-                s_elem.addEventListener("dragenter", async (_e) => {
-                    if (drag_asset_now)
-                        s_elem.classList.add("marked");
+                s_elem.addEventListener('dragenter', async () => {
+                    if (state.drag_asset_now) s_elem.classList.add('marked');
                 });
-                s_elem.addEventListener("dragleave", async (_e) => {
-                    if (drag_asset_now)
-                        s_elem.classList.remove("marked");
+                s_elem.addEventListener('dragleave', async () => {
+                    if (state.drag_asset_now) s_elem.classList.remove('marked');
                 });
-            }
-            else {
-                const s_elem = span_elem(name, ["folderName"]);
+            } else {
+                const s_elem = span_elem(name, ['folderName']);
                 breadcrumbs.appendChild(s_elem);
             }
         });
     }
 
-    function open_menu(event: unknown) {
-        const assets_menu_list = toggle_menu_options();
-        get_contextmenu().open(assets_menu_list, event, menuContextClick);
-    }
-
-    function toggle_menu_options() {
-        const type = active_asset?.getAttribute('data-type');
-        const assets_menu_list: contextMenuItem[] = [];
-        if (!type) {
-            assets_menu_list.push({ text: 'Обновить', action: NodeAction.refresh });
-            assets_menu_list.push({ text: 'Показать', action: NodeAction.open_in_explorer });
-            if (move_assets_data.assets.length)
-                assets_menu_list.push({ text: 'Вставить', action: NodeAction.CTRL_V });
-            assets_menu_list.push({
-                text: '+ материал', children: [
-                    { text: 'Базовый', action: NodeAction.material_base },
-                ]
-            });
-            assets_menu_list.push({ text: 'Создать папку', action: NodeAction.new_folder });
-            assets_menu_list.push({ text: 'Создать сцену', action: NodeAction.new_scene });
-        }
-        if (selected_assets.length == 1) {
-            assets_menu_list.push({ text: 'Копировать', action: NodeAction.CTRL_C });
-            assets_menu_list.push({ text: 'Вырезать', action: NodeAction.CTRL_X });
-            assets_menu_list.push({ text: 'Дублировать', action: NodeAction.CTRL_D });
-        }
-        else if (selected_assets.length > 1) {
-            assets_menu_list.push({ text: 'Копир. выделенные', action: NodeAction.CTRL_C });
-            assets_menu_list.push({ text: 'Вырез. выделенные', action: NodeAction.CTRL_X });
-            assets_menu_list.push({ text: 'Дублир. выделенные', action: NodeAction.CTRL_D });
-        }
-
-        if (type && type != "folder") {
-            assets_menu_list.push({ text: 'Скачать', action: NodeAction.download });
-        }
-        if (type) {
-            assets_menu_list.push({ text: 'Переименовать', action: NodeAction.rename });
-        }
-        if (selected_assets.length == 1) {
-            assets_menu_list.push({ text: 'Удалить', action: NodeAction.remove });
-        }
-        else if (selected_assets.length > 1) {
-            assets_menu_list.push({ text: 'Удал. выделенные', action: NodeAction.remove });
-        }
-        return assets_menu_list;
-    }
-
-    async function menuContextClick(success: boolean, action?: number | string): Promise<void> {
-        if (!success || action == undefined || action == null || current_dir === undefined) return;
-        if (action == NodeAction.refresh) {
-            await go_to_dir(current_dir, true);
-        }
-        if (action == NodeAction.open_in_explorer) {
-            await get_client_api().open_explorer(current_dir);
-        }
-        if (action == NodeAction.material_base) {
-            // open_material_popup(asset_path);
-        }
-        if (action == NodeAction.new_folder) {
-            new_folder_popup(current_dir);
-        }
-        if (action == NodeAction.new_scene) {
-            new_scene_popup(current_dir);
-        }
-        if (active_asset) {
-            const path = active_asset.getAttribute('data-path') as string;
-            const name = escapeHTML(active_asset.getAttribute('data-name') as string);
-            const type = active_asset.getAttribute('data-type') as AssetType | undefined;
-            if (action == NodeAction.download)
-                download_asset(path, name);
-
-            if (action == NodeAction.rename) {
-                rename_popup(path, name, type);
-            }
-        }
-        if (selected_assets.length > 0) {
-            if (action == NodeAction.remove) {
-                remove_popup();
-            }
-            if (action == NodeAction.CTRL_X) {
-                move_assets_data.assets = selected_assets.slice();
-                move_assets_data.move_type = "move";
-                Services.logger.debug("cut assets, amount = ", move_assets_data.assets.length);
-            }
-            if (action == NodeAction.CTRL_C) {
-                move_assets_data.assets = selected_assets.slice();
-                move_assets_data.move_type = "copy";
-                Services.logger.debug("copy assets, amount = ", move_assets_data.assets.length);
-            }
-            if (action == NodeAction.CTRL_D) {
-                for (const element of selected_assets) {
-                    const path = element.getAttribute('data-path') as string;
-                    const name = escapeHTML(element.getAttribute('data-name') as string);
-                    await duplicate_asset(path, name);
-                };
-                await go_to_dir(current_dir ? current_dir : "", true);
-            }
-        }
-        if (move_assets_data.assets.length > 0) {
-            if (action == NodeAction.CTRL_V) {
-                await paste_assets()
-            }
-        }
-    }
-
-    async function paste_assets() {
-        const move_type = move_assets_data.move_type;
-        for (const element of move_assets_data.assets) {
-            const name = escapeHTML(element.getAttribute('data-name') as string);
-            const path = escapeHTML(element.getAttribute("data-path") as string);
-            await paste_asset(name, path, move_type);
-        }
-        move_assets_data.assets.splice(0);
-        move_assets_data.move_type = undefined;
-        await go_to_dir(current_dir ? current_dir : "", true);
-    }
-
-    function new_folder_popup(current_path: string) {
-        get_popups().open({
-            type: "Rename",
-            params: { title: "Новая папка:", button: "Ok", auto_close: true },
-            callback: async (success, name) => {
-                if (success && name) {
-                    const r = await get_client_api().new_folder(current_path, name);
-                    if (r.result === 0)
-                        error_popup(`Не удалось создать папку, ответ сервера: ${r.message}`);
-                    if (r.result && r.data) {
-                        await go_to_dir(current_path, true);
-                    }
-                }
-            }
-        });
-    }
-
-    async function new_scene(path: string, name: string) {
-        const scene_path = `${path}/${name}.${SCENE_EXT}`
-        const r = await get_client_api().save_data(scene_path, JSON.stringify({ scene_data: [] }));
-        if (r.result === 0) {
-            error_popup(`Не удалось создать сцену, ответ сервера: ${r.message}`);
-            return;
-        }
-        if (r.result && r.data) {
-            await go_to_dir(path, true);
-        }
-        return scene_path;
-    }
-
-    function new_scene_popup(current_path: string, set_scene_current = false, save_scene = false) {
-        get_popups().open({
-            type: "Rename",
-            params: { title: "Новая сцена:", button: "Ok", auto_close: true },
-            callback: async (success, name) => {
-                if (success && name) {
-                    const scene_path = await new_scene(current_path, name);
-                    if (set_scene_current) {
-                        if (scene_path == undefined) {
-                            get_popups().toast.error('Не удалось создать сцену, путь undefined');
-                            return;
-                        }
-                        const scene_is_set = await set_current_scene(scene_path);
-                        if (scene_is_set && save_scene)
-                            save_current_scene();
-                    }
-                }
-            }
-        });
-    }
-
-    function save_graph_popup(current_path: string, data: any) {
-        const currentName = data.name;
-        get_popups().open({
-            type: "Rename",
-            params: { title: "Сохранить элемент сцены:", button: "Ok", currentName, auto_close: true },
-            callback: async (success, name) => {
-                if (success && name) {
-                    const path = `${current_path}/${name}.${SCENE_EXT}`;
-                    Services.resources.cache_scene(path, data);
-                    // NOTE: для чего сохраянем как IBaseEntityData[] ?
-                    const r = await get_client_api().save_data(path, JSON.stringify({ scene_data: [data] }))
-                    if (r && r.result)
-                        return get_popups().toast.success(`Объект ${name} сохранён, путь: ${path}`);
-                    else
-                        return get_popups().toast.error(`Не удалось сохранить объект ${name}`);
-                }
-                return get_popups().toast.error(`Не удалось сохранить объект ${name}`);
-            }
-        });
-    }
-
-    function rename_popup(asset_path: string, name: string, type?: AssetType) {
-        let type_name = "файл";
-        if (type == "folder") type_name = "папку";
-        get_popups().open({
-            type: "Rename",
-            params: { title: `Переименовать ${type_name} ${name}`, button: "Ok", currentName: name, auto_close: true },
-            callback: async (success, name) => {
-                if (success && name) {
-                    const new_path = (current_dir) ? `${current_dir}/${name}` : name;
-                    const r = await get_client_api().rename(asset_path, new_path);
-                    if (r.result === 0)
-                        error_popup(`Не удалось переименовать ${type_name}, ответ сервера: ${r.message}`);
-                    if (r.result) {
-                        const ext = getFileExt(name);
-                        if (texture_ext.includes(ext)) {
-                            Services.resources.preload_texture("/" + new_path);
-                        }
-                        if (model_ext.includes(ext)) {
-                            Services.resources.preload_model("/" + new_path);
-                        }
-                        if (ext == FONT_EXT) {
-                            Services.resources.preload_font("/" + new_path);
-                        }
-                        if (current_dir)
-                            await go_to_dir(current_dir, true);
-                    }
-                }
-            }
-        });
-    }
-
-    function remove_popup() {
-        let title = "";
-        let text = "";
-        const name = active_asset?.getAttribute('data-name');
-        const type = active_asset?.getAttribute('data-type');
-        let remove_type: "selected" | "active" | undefined = undefined;
-        if (selected_assets.length > 1) {
-            title = "Удаление файлов";
-            text = "Удалить выбранные файлы?";
-            remove_type = "selected";
-        }
-        else if (active_asset) {
-            title = "Удаление файла";
-            let type_name = "файл";
-            if (type == "folder") type_name = "папку";
-            text = `Удалить ${type_name} ${name}?`;
-            remove_type = "active";
-        }
-        if (remove_type) {
-            get_popups().open({
-                type: "Confirm",
-                params: { title, text, button: "Да", buttonNo: "Нет", auto_close: true },
-                callback: async (success) => {
-                    if (success) {
-                        await remove_assets(remove_type);
-                    }
-                }
-            });
-        }
-    }
-
-    async function download_asset(path: string, name: string) {
-        const resp = await api.GET(`${URL_PATHS.ASSETS}/${path}`);
-        if (!resp) return;
-        const blob = await resp.blob();
-        let fileURL = URL.createObjectURL(blob);
-        let fileLink = document.createElement('a');
-        fileLink.href = fileURL;
-        fileLink.download = name;
-        fileLink.click();
-        URL.revokeObjectURL(fileURL);
-    }
-
-    async function remove_assets(remove_type: "selected" | "active" | undefined) {
-        const to_remove: string[] = [];
-        if (remove_type == "selected") {
-            selected_assets.forEach((elem) => {
-                const path = elem.getAttribute('data-path');
-                if (path)
-                    to_remove.push(path);
-            })
-        }
-        else if (remove_type == "active") {
-            const path = active_asset?.getAttribute('data-path');
-            to_remove.push(path as string);
-        }
-        let result = true;
-        for (const path of to_remove) {
-            const r = await get_client_api().remove(path);
-            result = result && (r.result === 1);
-        }
-        if (!result)
-            error_popup(`Некоторые файлы не удалось удалить`);
-        await go_to_dir(current_dir ? current_dir : "", true);
-    }
-
-    async function paste_asset(name: string, path: string, move_type?: string) {
-        const move_to = (current_dir) ? `${current_dir as string}/${name}` : name;
-        if (move_type == "move") {
-            const resp = await get_client_api().move(path, move_to);
-            if (resp && resp.result === 1) {
-                Services.event_bus.emit("assets:moved", { name, path, new_path: move_to });
-            }
-            else if (resp.result === 0) {
-                error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${resp.message}`);
-            }
-        }
-        if (move_type == "copy") {
-            const resp = await get_client_api().copy(path, move_to);
-            if (resp && resp.result === 1) {
-                Services.event_bus.emit("assets:copied", { name, path, new_path: move_to });
-            }
-            else if (resp.result === 0) {
-                error_popup(`Не удалось скопировать файл ${name}, ответ сервера: ${resp.message}`);
-            }
-        }
-    }
-
-    async function duplicate_asset(path: string, name: string) {
-        const ext = "." + getFileExt(name);
-        const base_name = name.replace(ext, "");
-        const get_folder_resp = await get_client_api().get_folder(current_dir as string);
-        if (!get_folder_resp || get_folder_resp.result === 0) return;
-        const folder_content = get_folder_resp.data as FSObject[];
-
-        // Ищем максимальный номер среди существующих копий
-        // Паттерн: "base_name (N).ext" или "base_name.ext"
-        const copy_regex = new RegExp(String.raw`^${escapeRegex(base_name)}\s*\((\d+)\)$`);
-        let max_number = 0;
-        let has_original = false;
-
-        folder_content.forEach(elem => {
-            const elem_ext = "." + getFileExt(elem.name);
-            if (elem_ext !== ext) return;
-
-            const elem_base_name = elem.name.replace(elem_ext, "");
-
-            // Проверяем оригинальное имя
-            if (elem_base_name === base_name) {
-                has_original = true;
-                return;
-            }
-
-            // Проверяем копии с номерами
-            const match = elem_base_name.match(copy_regex);
-            if (match !== null) {
-                const num = parseInt(match[1], 10);
-                if (num > max_number) {
-                    max_number = num;
-                }
-            }
-        });
-
-        // Если есть оригинал или копии - берём следующий номер
-        const next_number = has_original || max_number > 0 ? max_number + 1 : 0;
-        const new_name = next_number > 0 ? `${base_name} (${next_number})${ext}` : name;
-        const move_to = `${current_dir}/${new_name}`;
-
-        const resp = await get_client_api().copy(path, move_to);
-        if (resp && resp.result === 1) {
-            Services.event_bus.emit("assets:copied", { name, path, new_path: move_to });
-        }
-    }
-
-    async function on_file_upload(resp: Response) {
-        const resp_text = await resp.text();
-        if (!json_parsable(resp_text))
-            return;
-        const resp_json = JSON.parse(resp_text) as ServerResponses[typeof FILE_UPLOAD_CMD];
-        if (resp_json.result === 1 && resp_json.data) {
-            const data = resp_json.data;
-            Services.event_bus.emit("assets:file_uploaded", data)
-        }
-    }
-
     function on_fs_events(message: { events: FSEvent[] }) {
         const events = message.events;
         let renew_required = false;
-        if (events && events.length != 0) {
+        if (events && events.length !== 0) {
             events.forEach(async (event: FSEvent) => {
-                if (event.project === current_project) {
-                    if (event.folder_path === current_dir) {
+                if (event.project === state.current_project) {
+                    if (event.folder_path === state.current_dir) {
                         renew_required = true;
                     }
                     if (event.ext) {
-                        if (event.event_type == "change" || event.event_type == "rename") {
-                            if (texture_ext.includes(event.ext))
-                                await Services.resources.preload_texture("/" + event.path);
-                            if (model_ext.includes(event.ext))
-                                await Services.resources.preload_model("/" + event.path);
-                            if (event.ext == FONT_EXT)
-                                await Services.resources.preload_font("/" + event.path);
-                        }
-                        else if (event.event_type == "remove") {
+                        if (event.event_type === 'change' || event.event_type === 'rename') {
+                            if (texture_ext.includes(event.ext)) await Services.resources.preload_texture('/' + event.path);
+                            if (model_ext.includes(event.ext)) await Services.resources.preload_model('/' + event.path);
+                            if (event.ext === FONT_EXT) await Services.resources.preload_font('/' + event.path);
+                        } else if (event.event_type === 'remove') {
                             if (texture_ext.includes(event.ext)) {
                                 const name = get_file_name(event.path);
                                 Services.resources.free_texture(name, '');
                             }
-                            // if (model_ext.includes(event.ext)) {
-                            //     const name = get_file_name(event.path);
-                            //     Services.resources.free_model(name);
-                            // }
                         }
                     }
                 }
             });
         }
-        if (renew_required)
-            renew_current_dir();
+        if (renew_required) renew_current_dir();
     }
 
     async function draw_empty_project() {
-        // draw_assets();
-        generate_breadcrumbs('')
+        generate_breadcrumbs('');
     }
 
-    async function handle_asset_drop(dir_to: string) {
-        drag_asset_now = false;
-        if (selected_assets.length != 0) {
-            selected_assets.forEach(async element => {
-                const asset_path = element.getAttribute('data-path') as string;
-                const name = element.getAttribute('data-name') as string;
-                const move_to = `${dir_to}/${name}`;
-                const r = await get_client_api().move(asset_path, move_to);
-                if (r && r.result === 1)
-                    // обновляем текущую папку, чтобы отобразить изменившееся число файлов в той папке, куда переместили файл
-                    await go_to_dir(current_dir as string, true);
-                else {
-                    error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${r.message}`);
-                }
-            });
-        }
-    }
-
-    function clear_selected() {
-        if (selected_assets.length == 0) return;
-
-        selected_assets.forEach(element => {
-            element.classList.remove("selected");
-        });
-        selected_assets.splice(0);
-
-        Services.event_bus.emit("assets:selection_cleared");
-    }
-
-    function add_to_selected(elem: HTMLSpanElement) {
-        if (selected_assets.includes(elem)) return;
-        selected_assets.push(elem);
-        elem.classList.add("selected");
-
-        if (elem.getAttribute('data-type') == ASSET_TEXTURE) {
-            const textures_paths = get_selected_textures();
-            Services.event_bus.emit("assets:textures_selected", { paths: textures_paths });
-        }
-
-        if (elem.getAttribute('data-type') == ASSET_MATERIAL) {
-            const materials_paths = get_selected_materials();
-            Services.event_bus.emit("assets:materials_selected", { paths: materials_paths });
-        }
-
-        if (elem.getAttribute('data-type') == ASSET_AUDIO) {
-            const audios_paths = get_selected_audios();
-            Services.event_bus.emit("assets:audios_selected", { paths: audios_paths });
-        }
-    }
-
-    function get_selected_textures() {
-        const textures = selected_assets.filter(asset => asset.getAttribute('data-type') === ASSET_TEXTURE);
-        const textures_paths = textures.map(asset => asset.getAttribute('data-path') || '');
-        return textures_paths;
-    }
-
-    function get_selected_materials() {
-        const materials = selected_assets.filter(asset => asset.getAttribute('data-type') === ASSET_MATERIAL);
-        const materials_paths = materials.map(asset => asset.getAttribute('data-path') || '');
-        return materials_paths;
-    }
-
-    function get_selected_audios() {
-        const audios = selected_assets.filter(asset => asset.getAttribute('data-type') === ASSET_AUDIO);
-        const audios_paths = audios.map(asset => asset.getAttribute('data-path') || '');
-        return audios_paths;
-    }
-
-    function set_active(elem: HTMLSpanElement) {
-        active_asset = elem;
-        active_asset.classList.add("active");
-    }
-
-    function clear_active() {
-        active_asset?.classList.remove("active");
-        active_asset = undefined;
-    }
-
-    function remove_from_selected(elem: HTMLSpanElement) {
-        selected_assets.splice(selected_assets.indexOf(elem), 1);
-        elem.classList.remove("selected");
-
-        const textures_paths = get_selected_textures();
-        Services.event_bus.emit("assets:textures_selected", { paths: textures_paths });
-
-        const materials_paths = get_selected_materials();
-        Services.event_bus.emit("assets:materials_selected", { paths: materials_paths });
-
-        const audios_paths = get_selected_audios();
-        Services.event_bus.emit("assets:audios_selected", { paths: audios_paths });
-    }
-
-    function on_mouse_move(_event: unknown) {
-        // Пустой обработчик для совместимости
-    }
+    // Обработчики событий мыши и клавиатуры
+    function on_mouse_move(_event: unknown) { }
 
     function on_mouse_down(event: any) {
         const popup_elem = event.target.closest('.bgpopup');
         const menu_elem = event.target.closest('.wr_menu__context');
         const menu_popup_elem = event.target.closest('.wr_popup');
         const inspector_elem = event.target.closest('.inspector__body');
-        if (!current_project || menu_elem || popup_elem || menu_popup_elem || inspector_elem) return;
+        if (!state.current_project || menu_elem || popup_elem || menu_popup_elem || inspector_elem) return;
         const folder_elem = event.target.closest('.folder.asset');
         const file_elem = event.target.closest('.file.asset');
         const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
         if (event.button === 0 || (asset_elem && event.button === 2)) {
             if (asset_elem) {
-                mouse_down_on_asset = true;
+                state.mouse_down_on_asset = true;
             }
             if (!Services.input.is_control()) {
-                // При нажатии ЛКМ / ПКМ вне всех ассетов либо на ассет не из списка выбранных, и ctrl отпущена, делаем сброс всех выбранных ассетов
-                if (!asset_elem || (asset_elem && !selected_assets.includes(asset_elem))) {
-                    clear_selected();
+                if (!asset_elem || (asset_elem && !state.selected_assets.includes(asset_elem))) {
+                    selection.clear_selected();
                 }
             }
         }
     }
 
     async function on_mouse_up(event: any) {
-        drag_asset_now = false;
+        state.drag_asset_now = false;
         const popup_elem = event.target.closest('.bgpopup');
         const menu_elem = event.target.closest('.wr_menu__context');
         const menu_popup_elem = event.target.closest('.wr_popup');
         const inspector_elem = event.target.closest('.inspector__body');
-        if (!current_project || menu_elem || popup_elem || menu_popup_elem || inspector_elem) return;
+        if (!state.current_project || menu_elem || popup_elem || menu_popup_elem || inspector_elem) return;
         const folder_elem = event.target.closest('.folder.asset');
         const file_elem = event.target.closest('.file.asset');
         const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
-        clear_active();
+        selection.clear_active();
         if (event.button === 0 || event.button === 2) {
-            if (mouse_down_on_asset) {
-                mouse_down_on_asset = false;
-                if (asset_elem)
-                    set_active(asset_elem);
+            if (state.mouse_down_on_asset) {
+                state.mouse_down_on_asset = false;
+                if (asset_elem) selection.set_active(asset_elem);
                 if (!Services.input.is_control()) {
-                    clear_selected();
+                    selection.clear_selected();
+                    if (asset_elem) selection.add_to_selected(asset_elem);
+                } else if (Services.input.is_control()) {
                     if (asset_elem)
-                        add_to_selected(asset_elem);
-                }
-                else if (Services.input.is_control()) {
-                    if (asset_elem)
-                        if (selected_assets.includes(asset_elem))
-                            remove_from_selected(asset_elem);
-                        else
-                            add_to_selected(asset_elem);
+                        if (state.selected_assets.includes(asset_elem)) selection.remove_from_selected(asset_elem);
+                        else selection.add_to_selected(asset_elem);
                 }
                 if (file_elem) {
                     const path = file_elem.getAttribute('data-path');
                     const name = file_elem.getAttribute('data-name');
                     const ext = file_elem.getAttribute('data-ext');
-                    Services.logger.debug(`Клик на ассет файл ${name}, путь ${path}, проект ${current_project}`);
-                    Services.event_bus.emit("assets:clicked", { name, path, ext, button: event.button });
+                    Services.logger.debug(`Клик на ассет файл ${name}, путь ${path}, проект ${state.current_project}`);
+                    Services.event_bus.emit('assets:clicked', { name, path, ext, button: event.button });
                 }
             }
             const breadcrumbs_elem = event.target.closest('a .folderName');
@@ -1030,47 +476,35 @@ function AssetControlCreate() {
                 const path = folder_elem.getAttribute('data-path');
                 return await go_to_dir(path);
             }
-        }
-        else if (event.button === 2 && event.target.closest('.filemanager')) {
-            open_menu(event);
+        } else if (event.button === 2 && event.target.closest('.filemanager')) {
+            popups.open_menu(event);
             return;
         }
     }
 
     async function on_key_up(event: any) {
-        if (event.key == 'F2' && active_asset && !get_popups().is_visible()) {
-            const path = active_asset.getAttribute('data-path') as string;
-            const name = active_asset.getAttribute('data-name') as string;
-            rename_popup(path, name);
+        if (event.key === 'F2' && state.active_asset && !get_popups().is_visible()) {
+            const path = state.active_asset.getAttribute('data-path') as string;
+            const name = state.active_asset.getAttribute('data-name') as string;
+            popups.rename_popup(path, name);
         }
-        if (event.key == 'Delete' && !get_popups().is_visible()) {
-            remove_popup();
+        if (event.key === 'Delete' && !get_popups().is_visible()) {
+            popups.remove_popup();
         }
         if (Services.input.is_control()) {
-            if ((event.key == 'c' || event.key == 'с') && selected_assets.length) {
-                move_assets_data.assets = selected_assets.slice();
-                move_assets_data.move_type = "copy";
-                Services.logger.debug("cut assets, amount = ", move_assets_data.assets.length);
+            if ((event.key === 'c' || event.key === 'с') && state.selected_assets.length) {
+                state.move_assets_data.assets = state.selected_assets.slice();
+                state.move_assets_data.move_type = 'copy';
+                Services.logger.debug('copy assets, amount = ', state.move_assets_data.assets.length);
             }
-            if ((event.key == 'x' || event.key == 'ч') && selected_assets.length) {
-                move_assets_data.assets = selected_assets.slice();
-                move_assets_data.move_type = "move";
-                Services.logger.debug("copy assets, amount = ", move_assets_data.assets.length);
+            if ((event.key === 'x' || event.key === 'ч') && state.selected_assets.length) {
+                state.move_assets_data.assets = state.selected_assets.slice();
+                state.move_assets_data.move_type = 'move';
+                Services.logger.debug('cut assets, amount = ', state.move_assets_data.assets.length);
             }
-            if ((event.key == 'v' || event.key == 'м') && move_assets_data.assets.length) {
-                await paste_assets()
+            if ((event.key === 'v' || event.key === 'м') && state.move_assets_data.assets.length) {
+                await file_ops.paste_assets();
             }
-        }
-    }
-
-    async function open_scene(path: string) {
-        if (path == undefined) {
-            Services.logger.warn('[open_scene] Попытка открыть сцену, но путь undefined');
-            return;
-        }
-        const result = await set_current_scene(path);
-        if (result) {
-            await load_scene(path);
         }
     }
 
@@ -1079,268 +513,89 @@ function AssetControlCreate() {
         if (file_elem) {
             const ext = file_elem.getAttribute('data-ext');
             const new_path = file_elem.getAttribute('data-path');
-            const current_path = current_scene.path;
-            if (ext === SCENE_EXT && new_path != current_path) {
-                if (current_path != undefined && history_length_cache[current_path] != Services.history.get_undo_stack().length)
-                    open_scene_exit_popup(current_path, new_path)
-                else if (new_path != undefined)
-                    await open_scene(new_path)
+            const current_path = state.current_scene.path;
+            if (ext === SCENE_EXT && new_path !== current_path) {
+                if (current_path !== undefined && state.history_length_cache[current_path] !== Services.history.get_undo_stack().length)
+                    scene_ops.open_scene_exit_popup(current_path, new_path);
+                else if (new_path !== undefined)
+                    await scene_ops.open_scene(new_path);
             }
         }
-    }
-
-    function open_scene_exit_popup(current_path: string, new_path: string) {
-        get_popups().open({
-            type: "Confirm",
-            params: { title: "", text: `У сцены "${current_path}" есть несохранённые изменения, закрыть без сохранения?`, button: "Да", buttonNo: "Нет", auto_close: true },
-            callback: async (success) => {
-                if (success && new_path != undefined) {
-                    Services.history.clear();
-                    await open_scene(new_path);
-                }
-            }
-        });
-    }
-
-    async function set_current_scene(path: string) {
-        if (path == undefined) {
-            Services.logger.warn('[set_current_scene] Попытка установить сцену, но путь undefined');
-            return false;
-        }
-        const resp = await get_client_api().set_current_scene(path);
-        if (!resp || resp.result === 0) {
-            get_popups().toast.error(`Серверу не удалось установить сцену текущей: ${resp.message}`);
-            return false;
-        }
-        current_scene.name = resp.data?.name as string;
-        current_scene.path = resp.data?.path as string;
-        localStorage.setItem("current_scene_name", current_scene.name);
-        localStorage.setItem("current_scene_path", current_scene.path);
-        history_length_cache[path] = Services.history.get_undo_stack().length;
-        return true;
-    }
-
-    async function load_scene(path: string): Promise<void> {
-        const resp = await get_client_api().get_data(path);
-        if (!resp || resp.result === 0 || !resp.data) {
-            get_popups().toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
-            return;
-        }
-        const parsed = JSON.parse(resp.data) as BaseEntityData[] | { scene_data: BaseEntityData[] };
-
-        // Поддержка обоих форматов: массив [...] или объект {scene_data: [...]}
-        const scene_data = Array.isArray(parsed) ? parsed : parsed.scene_data;
-
-        if (scene_data === undefined) {
-            get_popups().toast.error('Неверный формат файла сцены');
-            return;
-        }
-
-        Services.scene.load_scene(scene_data);
-        get_control_manager().update_graph(true, current_scene.name, true);
-    }
-
-    function loadPartOfSceneInPos(
-        pathToScene: string,
-        position?: Vector3,
-        _rotation?: Quaternion,
-        scale?: Vector3,
-        with_check = false
-    ) {
-        if (pathToScene.substring(0, 1) != "/")
-            pathToScene = `/${pathToScene}`;
-        const info = Services.resources.get_scene_info(pathToScene);
-        if (!info) {
-            return Services.logger.error(`Не удалось получить данные сцены: ${pathToScene}`);
-        }
-
-        if (with_check && !info.is_component) {
-            return Services.logger.error(`${pathToScene} не может быть создан, так как он содержит вложенные GO`);
-        }
-
-        const obj_data = info.data;
-        const root = Services.scene.deserialize_object(obj_data, false) as any;
-
-        // NOTE: ищем уникальное имя для root и всех его детей
-        const baseName = obj_data.name;
-        let counter = 1;
-        let uniqueName = baseName;
-        while (Services.scene.get_id_by_url(':/' + uniqueName) !== undefined) {
-            uniqueName = `${baseName}_${counter}`;
-            counter++;
-        }
-        Services.scene.set_name(root, uniqueName);
-
-        if (position) root.set_position(position.x, position.y, position.z);
-        if (_rotation) root.set_rotation(_rotation);
-        if (scale) root.set_scale(scale.x, scale.y);
-        let id_parent = -1;
-        const selected = Services.selection.selected;
-        if (selected.length == 1)
-            id_parent = selected[0].mesh_data.id;
-
-        Services.scene.add(root, id_parent);
-
-        const mesh_id = root.mesh_data.id;
-        const mesh_data = Services.scene.serialize_object(root);
-        const next_id = Services.scene.find_next_sibling_id(root);
-
-        Services.history.push({
-            type: 'import_model',
-            description: 'Импорт модели',
-            data: { mesh_id, mesh_data, next_id, id_parent },
-            undo: (data) => {
-                Services.scene.remove_by_id(data.mesh_id);
-                Services.transform.detach();
-                Services.selection.clear();
-                Services.ui.update_hierarchy();
-            },
-            redo: (data) => {
-                const parent = data.id_parent === -1
-                    ? Services.render.scene
-                    : Services.scene.get_by_id(data.id_parent);
-                if (parent) {
-                    const m = Services.scene.deserialize_object(data.mesh_data, true);
-                    parent.add(m);
-                    Services.scene.move(m, data.id_parent, data.next_id);
-                    Services.selection.set_selected([m as any]);
-                    Services.ui.update_hierarchy();
-                }
-            }
-        });
-        root.position.z = 0;
-
-        Services.selection.set_selected([root]);
-
-        return root;
-    }
-
-    async function save_current_scene() {
-        if (!current_scene.name && current_dir != undefined) {
-            // Если у AssetControl нет данных о текущем открытом файле сцены, создаём новый файл сцены, указаем его 
-            // как текущую сцену и сохраняем туда данные из SceneManager
-            new_scene_popup(current_dir, true, true);
-            return;
-        };
-        const path = current_scene.path as string;
-        const name = current_scene.name as string;
-        const data = Services.scene.save_scene();
-        const r = await get_client_api().save_data(path, JSON.stringify({ scene_data: data }));
-        if (r && r.result) {
-            history_length_cache[path] = Services.history.get_undo_stack().length;
-            return get_popups().toast.success(`Сцена ${name} сохранена, путь: ${path}`);
-        }
-        else return get_popups().toast.error(`Не удалось сохранить сцену ${name}, путь: ${path}: ${r.message}`);
-    }
-
-    function get_current_scene() {
-        return current_scene;
     }
 
     async function on_graph_drop(id: number) {
-
         const scene_object = Services.scene.get_by_id(id);
         if (scene_object) {
             const data = Services.scene.serialize_object(scene_object);
-            save_graph_popup(current_dir as string, data);
+            popups.save_graph_popup(state.current_dir as string, data);
         }
     }
 
-    drop_zone.addEventListener("dragenter", function (e) {
-        e.preventDefault();
-        drag_for_upload_now = true;
-    });
-
-    filemanager.addEventListener("dragover", function (e) {
-        e.preventDefault();
-        if (e.dataTransfer)
-            e.dataTransfer.dropEffect = 'copy';
-    });
-
-    drop_zone.addEventListener("dragleave", function (e) {
-        e.preventDefault();
-    });
-
-    drop_zone.addEventListener("drop", async function (e) {
-        e.preventDefault();
-        if (drag_for_upload_now)
-            await on_drop_upload(e);
-    });
-
-    async function on_drop_upload(event: DragEvent) {
-        drag_for_upload_now = false;
-        if (current_project == undefined || current_dir == undefined) {
-            Services.logger.warn('Попытка загрузить файл на сервер, но никакой проект не загружен');
-            return;
-        }
-        if (event.dataTransfer != null) {
-            const files = Array.from(event.dataTransfer.files);
-            if (files.length > 0) {
-                upload_files(files);
-            }
-        }
-    }
-
-    async function upload_files(files: File[],) {
-        for (const file of files) {
-            const data = new FormData();
-            Services.logger.debug(`trying upload a file: ${file.name} in dir ${current_dir}`);
-            data.append('file', file, file.name);
-            data.append('path', current_dir as string);
-            const resp = await api.POST(URL_PATHS.UPLOAD, [], data);
-            if (resp)
-                await on_file_upload(resp);
-        }
+    function save_current_scene() {
+        scene_ops.save_current_scene(popups.new_scene_popup);
     }
 
     async function reload_current_project() {
-        if (current_project) {
-            const load_project_resp = await get_client_api().load_project(current_project);
+        if (state.current_project) {
+            const load_project_resp = await get_client_api().load_project(state.current_project);
             if (load_project_resp.result !== 1) {
-                Services.logger.warn(`Failed to reload current project (${current_project})`);
+                Services.logger.warn(`Failed to reload current project (${state.current_project})`);
                 return;
             }
             const data = load_project_resp.data as ProjectLoadData;
-            let to_dir = (current_dir) ? current_dir : "";
-
+            const to_dir = state.current_dir ? state.current_dir : '';
             await load_project(data, undefined, to_dir);
-            if (current_scene.path == undefined) {
+            if (state.current_scene.path === undefined) {
                 Services.logger.warn('[reload_current_project] Не удалось установить сцену, путь undefined');
                 return;
             }
-            await set_current_scene(current_scene.path);
+            await scene_ops.set_current_scene(state.current_scene.path);
         }
     }
 
     init();
+
     return {
-        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene, select_file, loadPartOfSceneInPos, go_to_dir, reload_current_project
+        load_project,
+        new_scene: scene_ops.new_scene,
+        new_scene_popup: popups.new_scene_popup,
+        save_current_scene,
+        open_scene: scene_ops.open_scene,
+        set_current_scene: scene_ops.set_current_scene,
+        draw_assets,
+        get_file_data: file_ops.get_file_data,
+        save_file_data: file_ops.save_file_data,
+        save_base64_img: file_ops.save_base64_img,
+        draw_empty_project,
+        get_current_scene: scene_ops.get_current_scene,
+        select_file,
+        loadPartOfSceneInPos: scene_ops.loadPartOfSceneInPos,
+        go_to_dir,
+        reload_current_project,
     };
 }
 
-function escapeHTML(text: string) {
+// Утилиты
+
+function escapeHTML(text: string): string {
     return text.replace(/\&/g, '&amp;').replace(/\</g, '&lt;').replace(/\>/g, '&gt;');
 }
 
-function escapeRegex(text: string) {
-    return text.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
-}
-
-function bytesToSize(bytes: number) {
-    var sizes = ['б', 'Кб', 'Мб'];
-    if (bytes == 0) return '0 байт';
-    var i = Math.floor(Math.log(bytes) / Math.log(1024));
+function bytesToSize(bytes: number): string {
+    const sizes = ['б', 'Кб', 'Мб'];
+    if (bytes === 0) return '0 байт';
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round(bytes / Math.pow(1024, i)) + ' ' + sizes[i];
 }
 
-function getFileExt(path: string) {
-    var ar = path.split(".");
+function getFileExt(path: string): string {
+    const ar = path.split('.');
     return ar[ar.length - 1];
 }
 
-function fileIsImg(path: string) {
-    var ext = getFileExt(path);
-    return (texture_ext.includes(ext));
+function fileIsImg(path: string): boolean {
+    const ext = getFileExt(path);
+    return texture_ext.includes(ext);
 }
 
 export async function run_debug_filemanager(project_to_load: string) {
@@ -1359,7 +614,6 @@ export async function run_debug_filemanager(project_to_load: string) {
         return;
     }
     if (server_ok) {
-        // Создаём Promise для ожидания подключения WebSocket
         let ws_client: ReturnType<typeof WsWrap> | undefined;
         const ws_connected = new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => {
@@ -1396,24 +650,20 @@ export async function run_debug_filemanager(project_to_load: string) {
         }
 
         const projects = await get_client_api().get_projects();
-        // Нормализуем имя проекта - убираем ../ префикс если есть
         const normalized_project_name = project_to_load.replace(/^\.\.\//, '');
-        // Достаём данные о последнем открытом проекте
-        const current_project = localStorage.getItem("current_project");
-        const current_dir = localStorage.getItem("current_dir");
-        // Если проект normalized_project_name существует, пробуем загрузить
+        const current_project = localStorage.getItem('current_project');
+        const current_dir = localStorage.getItem('current_dir');
         if (projects.includes(normalized_project_name)) {
             const r = await get_client_api().load_project(normalized_project_name);
             if (r.result === 1) {
                 const data = r.data as ProjectLoadData;
                 let assets: FSObject[] | undefined = data.assets;
-                let go_to_dir: string | undefined = undefined;
-                // Если project_to_load это последний открытый проект, будем переходить в последнюю открытую папку
+                let go_to_dir_path: string | undefined = undefined;
                 if (normalized_project_name === current_project && current_dir) {
                     assets = undefined;
-                    go_to_dir = current_dir;
+                    go_to_dir_path = current_dir;
                 }
-                await asset_control.load_project(data, assets, go_to_dir);
+                await asset_control.load_project(data, assets, go_to_dir_path);
                 IS_LOGGING && Services.logger.debug('Загружен проект', data.name);
                 return;
             } else {
@@ -1421,10 +671,8 @@ export async function run_debug_filemanager(project_to_load: string) {
             }
         }
         Services.logger.warn(`Не удалось загрузить проект ${normalized_project_name}`);
-    }
-    else {
+    } else {
         Services.logger.warn('Сервер не отвечает, невозможно запустить отладчик файлового менеджера');
         await asset_control.draw_empty_project();
     }
 }
-

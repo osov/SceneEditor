@@ -1,9 +1,7 @@
 /**
- * TransformService - сервис трансформации объектов
+ * TransformService - координатор трансформации объектов
  *
- * Управляет Three.js TransformControls gizmo,
- * режимами трансформации (translate/rotate/scale),
- * пространством (local/world) и историей изменений.
+ * Phase 32: Разделён на модули в transform/
  */
 
 import { TransformControls, TransformControlsMode } from 'three/examples/jsm/controls/TransformControls.js';
@@ -17,14 +15,21 @@ import type {
 } from './types';
 import { IS_CAMERA_ORTHOGRAPHIC } from '@editor/config';
 import { euler_to_quat } from '@editor/modules/utils';
-import { HistoryOwner } from '../modules_editor/modules_editor_const';
 
-// Тип для mesh с _position
-interface TransformableObject extends ISceneObject {
-    _position?: Vector3;
-    set_position?(x: number, y: number, z: number): void;
-    transform_changed?(): void;
-}
+// Импорт из модулей трансформации
+import {
+    type TransformableObject,
+    apply_translate as apply_translate_fn,
+    apply_rotate as apply_rotate_fn,
+    apply_scale as apply_scale_fn,
+    save_positions,
+    save_rotations,
+    save_scales,
+    write_positions_to_history,
+    write_rotations_to_history,
+    write_scales_to_history,
+    set_proxy_in_average_point as set_proxy_avg_point,
+} from './transform';
 
 /** Создать TransformService */
 export function create_transform_service(params: TransformServiceParams): ITransformService {
@@ -36,13 +41,8 @@ export function create_transform_service(params: TransformServiceParams): ITrans
     let is_enabled = true;
 
     // Three.js объекты
-    const tmp_vec3 = new Vector3();
     const _start_position = new Vector3();
-    const _delta_position = new Vector3();
-    const _rotation = new Quaternion();
     const _scale = new Vector3();
-    const _sum = new Vector3();
-    const _averagePoint = new Vector3();
     let _oldPositions: Vector3[] = [];
     let _oldScales: Vector3[] = [];
     let _oldRotations: Quaternion[] = [];
@@ -61,6 +61,13 @@ export function create_transform_service(params: TransformServiceParams): ITrans
     control.size = 0.5;
     scene.add(gizmo);
 
+    // Зависимости для истории
+    const history_deps = {
+        history_service,
+        event_bus,
+        scene,
+    };
+
     // Обработчик начала/окончания drag
     control.addEventListener('dragging-changed', (e) => {
         const is_begin = (e.value as boolean);
@@ -68,16 +75,16 @@ export function create_transform_service(params: TransformServiceParams): ITrans
 
         switch (control.getMode()) {
             case 'translate':
-                if (is_begin) save_previous_positions();
-                else write_positions_to_history();
+                if (is_begin) _oldPositions = save_positions(selectedObjects);
+                else write_positions_to_history(selectedObjects, _oldPositions, history_deps);
                 break;
             case 'rotate':
-                if (is_begin) save_previous_rotations();
-                else write_rotations_to_history();
+                if (is_begin) _oldRotations = save_rotations(selectedObjects);
+                else write_rotations_to_history(selectedObjects, _oldRotations, history_deps);
                 break;
             case 'scale':
-                if (is_begin) save_previous_scales();
-                else write_scales_to_history();
+                if (is_begin) _oldScales = save_scales(selectedObjects);
+                else write_scales_to_history(selectedObjects, _oldScales, history_deps);
                 break;
         }
     });
@@ -103,164 +110,19 @@ export function create_transform_service(params: TransformServiceParams): ITrans
     // Инициализация режима
     apply_mode_settings('translate');
 
-    // === Функции трансформации ===
+    // === Функции трансформации (обёртки) ===
 
     function apply_translate(objects = selectedObjects): void {
-        _delta_position.copy(proxy.position.clone().sub(_start_position));
-        for (let i = 0; i < objects.length; i++) {
-            const element = objects[i];
-            const ws = new Vector3(1, 1, 1);
-            if (element.parent !== null) {
-                element.parent.getWorldScale(ws);
-            }
-            const tmp = _delta_position.clone();
-            tmp.divide(ws);
-            if (element._position !== undefined && element.set_position !== undefined) {
-                element.set_position(
-                    element._position.x + tmp.x,
-                    element._position.y + tmp.y,
-                    element._position.z + tmp.z
-                );
-            }
-        }
+        apply_translate_fn(proxy, _start_position, objects);
     }
 
     function apply_rotate(objects = selectedObjects): void {
-        _rotation.copy(proxy.quaternion);
-        for (let i = 0; i < objects.length; i++) {
-            const element = objects[i];
-            element.quaternion.copy(_rotation);
-            if (element.transform_changed !== undefined) {
-                element.transform_changed();
-            }
-        }
+        apply_rotate_fn(proxy, objects);
     }
 
     function apply_scale(objects = selectedObjects): void {
-        const dt_scale = proxy.scale.clone().sub(_scale);
-        _scale.copy(proxy.scale);
-        for (let i = 0; i < objects.length; i++) {
-            const element = objects[i];
-            element.scale.add(dt_scale);
-            if (element.transform_changed !== undefined) {
-                element.transform_changed();
-            }
-        }
-    }
-
-    // === Сохранение состояния для истории ===
-
-    function save_previous_positions(): void {
-        _oldPositions = [];
-        selectedObjects.forEach((object) => {
-            _oldPositions.push(object.position.clone());
-        });
-    }
-
-    function save_previous_rotations(): void {
-        _oldRotations = [];
-        selectedObjects.forEach((object) => {
-            _oldRotations.push(object.quaternion.clone());
-        });
-    }
-
-    function save_previous_scales(): void {
-        _oldScales = [];
-        selectedObjects.forEach((object) => {
-            _oldScales.push(object.scale.clone());
-        });
-    }
-
-    // === Запись в историю ===
-
-    function write_positions_to_history(): void {
-        const pos_data: Array<{ mesh_id: number; value: Vector3 }> = [];
-        for (let i = 0; i < selectedObjects.length; i++) {
-            const object = selectedObjects[i];
-            pos_data.push({ mesh_id: object.mesh_data.id, value: _oldPositions[i].clone() });
-        }
-
-        history_service.push({
-            type: 'MESH_TRANSLATE',
-            description: 'Перемещение объектов',
-            data: { items: pos_data, owner: HistoryOwner.TRANSFORM_CONTROL },
-            undo: (d) => {
-                for (const item of d.items) {
-                    const mesh = render_service.scene.getObjectByProperty('mesh_data', { id: item.mesh_id }) as TransformableObject | undefined;
-                    if (mesh !== undefined) {
-                        mesh.position.copy(item.value);
-                        if (mesh.transform_changed !== undefined) {
-                            mesh.transform_changed();
-                        }
-                    }
-                }
-                event_bus.emit('transform:undone', { type: 'translate' });
-            },
-            redo: () => {
-                // Redo не поддерживается пока
-            },
-        });
-
-        // Также эмитим событие для InspectorControl
-        event_bus.emit('history:undone', {
-            type: 'MESH_TRANSLATE',
-            data: pos_data,
-            owner: HistoryOwner.TRANSFORM_CONTROL,
-        });
-    }
-
-    function write_rotations_to_history(): void {
-        const rot_data: Array<{ mesh_id: number; value: Quaternion }> = [];
-        for (let i = 0; i < selectedObjects.length; i++) {
-            const object = selectedObjects[i];
-            rot_data.push({ mesh_id: object.mesh_data.id, value: _oldRotations[i].clone() });
-        }
-
-        history_service.push({
-            type: 'MESH_ROTATE',
-            description: 'Вращение объектов',
-            data: { items: rot_data, owner: HistoryOwner.TRANSFORM_CONTROL },
-            undo: (d) => {
-                for (const item of d.items) {
-                    const mesh = render_service.scene.getObjectByProperty('mesh_data', { id: item.mesh_id }) as TransformableObject | undefined;
-                    if (mesh !== undefined) {
-                        mesh.quaternion.copy(item.value);
-                        if (mesh.transform_changed !== undefined) {
-                            mesh.transform_changed();
-                        }
-                    }
-                }
-                event_bus.emit('transform:undone', { type: 'rotate' });
-            },
-            redo: () => {},
-        });
-    }
-
-    function write_scales_to_history(): void {
-        const scale_data: Array<{ mesh_id: number; value: Vector3 }> = [];
-        for (let i = 0; i < selectedObjects.length; i++) {
-            const object = selectedObjects[i];
-            scale_data.push({ mesh_id: object.mesh_data.id, value: _oldScales[i].clone() });
-        }
-
-        history_service.push({
-            type: 'MESH_SCALE',
-            description: 'Масштабирование объектов',
-            data: { items: scale_data, owner: HistoryOwner.TRANSFORM_CONTROL },
-            undo: (d) => {
-                for (const item of d.items) {
-                    const mesh = render_service.scene.getObjectByProperty('mesh_data', { id: item.mesh_id }) as TransformableObject | undefined;
-                    if (mesh !== undefined) {
-                        mesh.scale.copy(item.value);
-                        if (mesh.transform_changed !== undefined) {
-                            mesh.transform_changed();
-                        }
-                    }
-                }
-                event_bus.emit('transform:undone', { type: 'scale' });
-            },
-            redo: () => {},
-        });
+        const new_scale = apply_scale_fn(proxy, _scale, objects);
+        _scale.copy(new_scale);
     }
 
     // === Публичные методы ===
@@ -367,7 +229,6 @@ export function create_transform_service(params: TransformServiceParams): ITrans
             proxy.rotation.copy(mesh.rotation);
             proxy.scale.copy(mesh.scale);
             _scale.copy(mesh.scale);
-            _start_position.copy(_averagePoint);
         }
 
         mesh._position = mesh.position.clone();
@@ -378,42 +239,22 @@ export function create_transform_service(params: TransformServiceParams): ITrans
     function attach_to_control(): void {
         if (selectedObjects.length === 0) return;
         control.detach();
-        set_proxy_in_average_point_internal();
+        set_proxy_avg_point(proxy, _start_position, selectedObjects);
         control.attach(proxy);
     }
 
     function detach_from_control(): void {
         control.detach();
         if (selectedObjects.length === 0) return;
-        set_proxy_in_average_point_internal();
+        set_proxy_avg_point(proxy, _start_position, selectedObjects);
         control.attach(proxy);
-    }
-
-    function set_proxy_in_average_point_internal(objects = selectedObjects): void {
-        if (objects.length === 0) return;
-
-        _sum.set(0, 0, 0);
-
-        for (let i = 0; i < objects.length; i++) {
-            objects[i].getWorldPosition(tmp_vec3);
-            _sum.add(tmp_vec3);
-        }
-        _averagePoint.copy(_sum.divideScalar(objects.length));
-
-        for (let i = 0; i < objects.length; i++) {
-            const object = objects[i];
-            object._position = object.position.clone();
-        }
-
-        proxy.position.copy(_averagePoint);
-        _start_position.copy(_averagePoint);
     }
 
     function set_proxy_in_average_point(objects?: ISceneObject[]): void {
         const objs = objects !== undefined
             ? objects as TransformableObject[]
             : selectedObjects;
-        set_proxy_in_average_point_internal(objs);
+        set_proxy_avg_point(proxy, _start_position, objs);
     }
 
     function set_proxy_position(x: number, y: number, z: number, objects?: ISceneObject[]): void {
@@ -475,3 +316,6 @@ export function create_transform_service(params: TransformServiceParams): ITrans
         dispose,
     };
 }
+
+// Реэкспорт для обратной совместимости
+export * from './transform';

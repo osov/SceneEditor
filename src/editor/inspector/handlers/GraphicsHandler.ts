@@ -5,6 +5,7 @@
  */
 
 import { Vector2, type Blending } from 'three';
+import { Services } from '@editor/core';
 import type { IBaseMeshAndThree } from '../../../render_engine/types';
 import { Property } from '../../../core/inspector/IInspectable';
 import {
@@ -243,16 +244,18 @@ export function create_graphics_handler(params?: HandlerParams): IPropertyHandle
 
     function update_texture(context: UpdateContext): void {
         const { meshes, value } = context;
-        const texture = value as string;
+        const texture_name = value as string;
 
         for (const mesh of meshes) {
             const mesh_with_texture = mesh as IMeshWithTexture;
             if (typeof mesh_with_texture.set_texture !== 'function') continue;
 
-            if (texture !== undefined && texture !== '') {
-                // Сохраняем текущий атлас
-                const [, atlas] = mesh_with_texture.get_texture();
-                mesh_with_texture.set_texture(texture, atlas);
+            if (texture_name !== undefined && texture_name !== '') {
+                // Ищем текстуру во всех атласах, т.к. dropdown передаёт только имя
+                const all_textures = Services.resources.get_all_textures();
+                const found = all_textures.find(t => t.name === texture_name);
+                const atlas = found?.atlas ?? '';
+                mesh_with_texture.set_texture(texture_name, atlas);
             } else {
                 mesh_with_texture.set_texture('');
             }

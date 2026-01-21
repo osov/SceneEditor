@@ -13,7 +13,15 @@ import { PROJECT_NAME } from './config';
 
 // === Glob импорт проектов (Vite анализирует при сборке) ===
 // Модули могут либо экспортировать main(), либо выполнять код при импорте
-const project_modules = import.meta.glob<{ main?: () => void }>('../../*/src/main.ts');
+// Включаем только проекты SceneEditor_* и test-project, исключаем серверные и проблемные
+const project_modules = import.meta.glob<{ main?: () => void }>([
+    '../../SceneEditor_*/src/main.ts',
+    '../../test-project/src/main.ts',
+    '../../TestProject_Claude/src/main.ts',
+    '!../../SceneEditor_ExampleProject/**',
+    '!../../SceneEditor_Stereo/**',
+    '!../../SceneEditor_Kopateli_physic/**',
+]);
 
 // === DI система ===
 import { bootstrap, shutdown } from './core/bootstrap';

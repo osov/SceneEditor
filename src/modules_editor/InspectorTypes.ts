@@ -1,5 +1,9 @@
 import { Blending, Euler, MagnificationTextureFilter, MinificationTextureFilter, Vector2, Vector3 } from "three";
 
+// ============================================================================
+// Event Data типы для истории изменений
+// ============================================================================
+
 export type PositionEventData = {
     id_mesh: number;
     position: Vector3;
