@@ -31,7 +31,7 @@ export function create_tree_context_menu_handler(params: TreeContextMenuHandlerP
     /**
      * Открывает контекстное меню
      */
-    function open_menu_context(event: { target: EventTarget | null }): void {
+    function open_menu_context(event: { target: EventTarget | null; offset_x: number; offset_y: number }): void {
         const item_drag = state.get_item_drag();
         const div_tree = state.get_div_tree();
         const target = event.target as HTMLElement;

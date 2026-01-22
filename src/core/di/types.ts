@@ -178,3 +178,12 @@ export interface InjectableOptions {
 export const INJECTION_METADATA_KEY = Symbol('injection:metadata');
 export const INJECTABLE_METADATA_KEY = Symbol('injectable:metadata');
 export const INJECT_METADATA_KEY = Symbol('inject:metadata');
+
+/**
+ * Интерфейс провайдера данных ассетов
+ * Используется для загрузки файлов без прямой зависимости от AssetControl
+ */
+export interface IAssetProvider {
+    /** Получить содержимое файла по пути */
+    get_file_data(path: string): Promise<string | null>;
+}

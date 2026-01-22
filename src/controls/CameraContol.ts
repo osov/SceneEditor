@@ -166,7 +166,7 @@ function CameraControlCreate() {
         }
     }
 
-    function get_bounds_from_list(list: any) {
+    function get_bounds_from_list(list: IBaseMeshAndThree[]) {
         if (list.length == 0)
             return [0, 0, 0, 0];
         const bb = list[0].get_bounds();

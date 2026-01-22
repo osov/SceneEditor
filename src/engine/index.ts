@@ -22,6 +22,11 @@ export type {
     CameraServiceParams,
 } from './types';
 
+// Object Registry
+export type { IObjectFactory, IObjectRegistry } from './object_registry';
+export { create_object_registry } from './object_registry';
+export { register_default_factories } from './object_factories';
+
 // Сервисы
 export { create_render_service, DC_LAYERS } from './RenderService';
 export { create_scene_service } from './SceneService';

@@ -3,7 +3,7 @@
 
 import { preloadFont } from 'troika-three-text';
 import { MinificationTextureFilter, MagnificationTextureFilter, Wrapping } from 'three';
-import { FSEvent, TDictionary, TRecursiveDict, URL_PATHS } from '../modules_editor/modules_editor_const';
+import { FSEvent, TDictionary, TRecursiveDict, URL_PATHS, DataFormatType } from '../modules_editor/modules_editor_const';
 import { IBaseEntityData } from './types';
 import { get_client_api, api } from '../modules_editor/ClientAPI';
 import { Services } from '@editor/core';
@@ -17,21 +17,23 @@ import { deepClone } from '../modules/utils';
 import {
     create_texture_manager,
     create_shader_manager,
-    create_material_manager,
     create_model_manager,
     create_audio_resource_manager,
     type ITextureManager,
     type IShaderManager,
-    type IMaterialManager,
     type IModelManager,
     type IAudioResourceManager,
-    MaterialUniformType,
-    type MaterialInfo,
     type TextureData,
     type TextureInfo,
-    type MaterialUniform,
-    type MaterialUniformParams
 } from './managers';
+import {
+    create_material_service,
+    type IMaterialService,
+    MaterialUniformType,
+    type MaterialInfo,
+    type MaterialUniform,
+    type MaterialUniformParams,
+} from '@editor/engine/materials';
 
 // Re-export типов для обратной совместимости
 export {
@@ -112,7 +114,7 @@ export function ResourceManagerModule() {
     // Инициализация менеджеров
     let texture_manager: ITextureManager;
     let shader_manager: IShaderManager;
-    let material_manager: IMaterialManager;
+    let material_manager: IMaterialService;
     let model_manager: IModelManager;
     let audio_manager: IAudioResourceManager;
 
@@ -146,12 +148,24 @@ export function ResourceManagerModule() {
             }
         });
 
-        material_manager = create_material_manager({
+        material_manager = create_material_service({
             get_texture: texture_manager.get_texture,
             get_atlas_by_texture_name: texture_manager.get_atlas_by_texture_name,
             get_vertex_program: shader_manager.get_vertex_program,
             get_fragment_program: shader_manager.get_fragment_program,
-            process_shader_includes: shader_manager.process_shader_includes
+            process_shader_includes: shader_manager.process_shader_includes,
+            get_file_data: async (path: string) => {
+                // Загрузка данных файла через ClientAPI (без зависимости от AssetControl)
+                const resp = await get_client_api().get_data(path);
+                if (resp === undefined || resp.result === 0 || resp.data === undefined) {
+                    return null;
+                }
+                return resp.data;
+            },
+            save_file_data: (path: string, data: string, format: DataFormatType = 'string') => {
+                // Сохранение данных файла через ClientAPI (без зависимости от AssetControl)
+                return get_client_api().save_data(path, data, format);
+            },
         });
 
         model_manager = create_model_manager(manager_config);

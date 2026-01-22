@@ -140,7 +140,7 @@ export function ObstraclePolygonsManagerCreate(hash_cell_size = 40, obst_padding
         return polygon_sum;
     }
 
-    function add_obstacle_object(obj: ObstacleTileData, mul_scalar: number, data?: any) {
+    function add_obstacle_object(obj: ObstacleTileData, mul_scalar: number, data?: unknown) {
         const elements: Polygon[] = [];
         const cx = obj.x * mul_scalar;
         const cy = obj.y * mul_scalar;

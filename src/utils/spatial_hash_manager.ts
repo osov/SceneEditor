@@ -10,18 +10,18 @@ export type SpatialHashManagerUtils<T> = {
     get_distance: (p: IPoint, elem: T) => number;
 }
 
-export type HashObject = { id: string | number, elements_ids: string | number[], enabled: boolean, data?: any };
+export type HashObject<D = unknown> = { id: string | number, elements_ids: string | number[], enabled: boolean, data?: D };
 
 
-export function SpatialHashManagerCreate<T>(utils: SpatialHashManagerUtils<T>, hash_cell_size: number = 20) {
+export function SpatialHashManagerCreate<T, D = unknown>(utils: SpatialHashManagerUtils<T>, hash_cell_size: number = 20) {
     const all_elements: T[] = [];
-    const objects: { [key: string | number]: HashObject } = {};
+    const objects: { [key: string | number]: HashObject<D> } = {};
     const sp = createSpatialHash(hash_cell_size);
     let id_object = 0;
     let id_element = 0;
-    const _data: { [key: string | number]: Aabb & { element: T, object_id?: string | number } } = {};
+    const _data: { [key: string | number]: Aabb & { element: T, object_id?: string | number, data?: D } } = {};
 
-    function add_object(_elements: T[], _id?: string | number, data?: any) {
+    function add_object(_elements: T[], _id?: string | number, data?: D) {
         let id: string | number;
         if (_id)
             id = _id;
@@ -34,7 +34,7 @@ export function SpatialHashManagerCreate<T>(utils: SpatialHashManagerUtils<T>, h
             const elem_id = add_element(elem, id);
             elements_ids.push(elem_id);
         }
-        const obj: HashObject = { id, elements_ids, enabled: true, data };
+        const obj: HashObject<D> = { id, elements_ids, enabled: true, data };
         objects[id] = obj;
     }
 
@@ -48,7 +48,7 @@ export function SpatialHashManagerCreate<T>(utils: SpatialHashManagerUtils<T>, h
         }
     }
 
-    function add_element(element: T, object_id?: string | number, data?: any) {
+    function add_element(element: T, object_id?: string | number, data?: D) {
         all_elements.push(element);
         // const pc = shape_center(obstacle);
         // const width = Math.abs(obstacle.end.x - obstacle.start.x);

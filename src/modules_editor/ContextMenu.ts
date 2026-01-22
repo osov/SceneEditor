@@ -2,6 +2,7 @@
 import { NodeAction } from "@editor/shared";
 import { get_asset_control } from "@editor/controls/AssetControl";
 import { Services } from '@editor/core';
+import type { PointerEventData } from '@editor/core/services/InputService';
 
 /** Тип ContextMenu */
 export type ContextMenuType = ReturnType<typeof ContextMenuCreate>;
@@ -54,11 +55,17 @@ ContextMenu.open(treeContextMenu, event, menuContextClick);
 */
 
 interface MenuItem {
-    text: string,                 //  text: 'line'   - когда нужно разделить линией 
+    text: string,                 //  text: 'line'   - когда нужно разделить линией
     action?: number | string,     //  action: NodeAction.rename
     not_active?: boolean,         //  true - НЕ кликабельные элементы
     children?: MenuItem [],
-};
+}
+
+/** Координаты для открытия контекстного меню */
+interface MenuPosition {
+    offset_x: number;
+    offset_y: number;
+}
 
 export type contextMenuItem = MenuItem;
 
@@ -66,14 +73,14 @@ function ContextMenuCreate() {
 
     const menuContext = document.querySelector('.wr_menu__context') as HTMLElement;
 
-    if (menuContext) menuContext?.addEventListener('contextmenu', (event: any) => {
+    if (menuContext) menuContext?.addEventListener('contextmenu', (event: Event) => {
         event.preventDefault();
     });
 
     let mContextVisible: boolean = false;
     let myCb: (success: boolean, action?: number | string) => void;
 
-    function open(list: any, event: any, callback: (success: boolean, action?: number | string) => void): void {
+    function open(list: MenuItem[], event: MenuPosition, callback: (success: boolean, action?: number | string) => void): void {
         if (!list || list.length == 0) return;
 
         if (!menuContext) return;
@@ -88,11 +95,11 @@ function ContextMenuCreate() {
 
     }
 
-    function getMenuHtml(list: any, sub?: boolean) {
-        if (!list || list.length == 0) return '';
-            
+    function getMenuHtml(list: MenuItem[], sub?: boolean) {
+        if (!list || list.length === 0) return '';
+
         let result = `<ul class="${sub ? 'menu__context_sub' : 'menu__context'}">`;
-        list.forEach((item: any) => {
+        list.forEach((item: MenuItem) => {
             if (item?.text == 'line') result += getLiLine();
             else if (item?.children?.length) result += getLiChildren(item);
             else result += getLiDefault(item);
@@ -101,13 +108,13 @@ function ContextMenuCreate() {
         return result;
     }
 
-    function getLiChildren(item: any): string {
+    function getLiChildren(item: MenuItem): string {
         return `<li>
                     <a href="javascript:void(0)" draggable="false">
                         <span>${item.text}</span>
                         <span class="menu__context_arrow"><svg class="svg_icon"><use href="./img/sprite.svg#chevron_right"></use></svg></span>
                     </a>
-                    ${getMenuHtml(item?.children, true)}
+                    ${getMenuHtml(item.children ?? [], true)}
                 </li>`;
     }
 
@@ -115,7 +122,7 @@ function ContextMenuCreate() {
         return `<li class="menu__context_separator"><a href="javascript:void(0)" draggable="false"><span></span></a></li>`
     }
 
-    function getLiDefault(item: any): string {
+    function getLiDefault(item: MenuItem): string {
         return `<li><a href="javascript:void(0)" data-action="${item.action}" draggable="false" ${item?.not_active == true ? 'class="not_active"' : ''}><span>${item.text}</span></a></li>`;
     }
     
@@ -126,7 +133,7 @@ function ContextMenuCreate() {
         mContextVisible = false;
     }
 
-    function showContextMenu(event: any): void {
+    function showContextMenu(event: MenuPosition): void {
 
         menuContext.classList.remove('bottom');
         menuContext.classList.add("active");
@@ -155,25 +162,28 @@ function ContextMenuCreate() {
        
     }
 
-    function onMouseDown(e: any) {
-        if (mContextVisible && !e.target.closest('.wr_menu__context .menu__context a')) {
+    function onMouseDown(e: PointerEventData) {
+        const target = e.target instanceof Element ? e.target : null;
+        if (mContextVisible && target !== null && !target.closest('.wr_menu__context .menu__context a')) {
             myCb(false);
             hideContextMenu();
         }
     }
 
-    function onMouseUp(e: any) {
-        if (mContextVisible && e.target.closest('.wr_menu__context .menu__context a') && e.button === 0) {
+    function onMouseUp(e: PointerEventData) {
+        const target = e.target instanceof Element ? e.target : null;
+        if (mContextVisible && target !== null && target.closest('.wr_menu__context .menu__context a') && e.button === 0) {
             menuContextClick(e);
         }
 
         // call the scene context menu
-        const menu_scene_btn = e.target.closest(".menu_scene_btn");
+        const menu_scene_btn = target !== null ? target.closest(".menu_scene_btn") : null;
         if (menu_scene_btn) open(getContextMenuSceneItems(), e, menuContextSceneClick);
     }
 
-    function menuContextClick(e: any): void {
-        const itemContext = e.target.closest(".wr_menu__context .menu__context a");
+    function menuContextClick(e: PointerEventData): void {
+        const target = e.target instanceof Element ? e.target : null;
+        const itemContext = target !== null ? target.closest(".wr_menu__context .menu__context a") : null;
         if (!itemContext) { 
             myCb(false);
             hideContextMenu()

@@ -72,6 +72,7 @@ export interface IBaseEntityData {
     rotation: Vector4Tuple;
     scale: Vector2Tuple;
     children?: IBaseEntityData[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- данные сериализации имеют динамическую структуру
     other_data: any;
 }
 

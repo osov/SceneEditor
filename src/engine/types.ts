@@ -24,6 +24,7 @@ import type {
 import type { ILogger, IEventBus } from '@editor/core/di/types';
 import type { TextureInfo, MaterialInfo, ObjectTypes, BaseEntityData } from '@editor/core/render/types';
 import type { InspectorFieldDefinition } from '@editor/core/inspector/IInspectable';
+import type { IObjectRegistry } from './object_registry';
 
 // Типы для ResourceService из legacy resource_manager
 export interface TextureData {
@@ -272,6 +273,8 @@ export interface SceneServiceParams {
     logger: ILogger;
     event_bus: IEventBus;
     render_service: IRenderService;
+    /** Реестр фабрик объектов (опционально, если не указан - используются встроенные фабрики) */
+    object_registry?: IObjectRegistry;
 }
 
 // ============================================================================

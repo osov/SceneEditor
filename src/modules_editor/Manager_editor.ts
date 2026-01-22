@@ -1,7 +1,6 @@
 import { register_client_api } from "./ClientAPI";
 import { register_contextmenu } from "./ContextMenu";
 import { register_popups } from "./Popups";
-import { register_inspector } from "./Inspector";
 import { register_tree_control } from "./TreeControl";
 import { register_control_manager } from "./ControlManager";
 import { register_inspector_control } from "./InspectorControl";
@@ -16,7 +15,6 @@ export function register_editor_modules() {
     register_client_api();
     register_popups();
     register_contextmenu();
-    register_inspector();
     register_tree_control();
     register_control_manager();
     register_inspector_control();

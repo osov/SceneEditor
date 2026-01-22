@@ -698,8 +698,8 @@ function SizeControlCreate() {
         const mesh = selected_list[0];
         const wp = new Vector3();
         mesh.getWorldPosition(wp);
-        // bounds родителя - для ограничения при перемещении якоря
-        const bb_limit = get_parent_bb(mesh);
+        // bounds родителя - для ограничения при перемещении якоря (пока не используется)
+        const _bb_limit = get_parent_bb(mesh);
         // bounds самого объекта - для отображения якоря
         const mesh_bb = mesh.get_bounds();
         if (is_set_pos) {

@@ -10,6 +10,8 @@ import { get_popups } from '../../modules_editor/Popups';
 import type { AssetControlState, RemoveType } from './types';
 import type { FileOperations } from './file_operations';
 import type { SceneOperations } from './scene_operations';
+import type { IBaseEntityData } from '../../render_engine/types';
+import type { PointerEventData } from '@editor/core/services/InputService';
 
 /** Утилита для экранирования HTML */
 function escapeHTML(text: string): string {
@@ -29,7 +31,7 @@ export function create_asset_popups(
     scene_ops: SceneOperations,
     go_to_dir: (path: string, renew?: boolean) => Promise<void>
 ) {
-    function open_menu(event: unknown) {
+    function open_menu(event: PointerEventData) {
         const assets_menu_list = toggle_menu_options();
         get_contextmenu().open(assets_menu_list, event, menuContextClick);
     }
@@ -169,7 +171,7 @@ export function create_asset_popups(
         });
     }
 
-    function save_graph_popup(current_path: string, data: any) {
+    function save_graph_popup(current_path: string, data: IBaseEntityData) {
         const currentName = data.name;
         get_popups().open({
             type: 'Rename',

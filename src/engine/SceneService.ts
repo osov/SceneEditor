@@ -18,20 +18,30 @@ import { filter_list_base_mesh, is_base_mesh, is_label, is_sprite, is_text } fro
 import { FLOAT_PRECISION } from '@editor/config';
 import { deepClone } from '@editor/modules/utils';
 
-// Импорты классов объектов
-import { Slice9Mesh } from '@editor/render_engine/objects/slice9';
-import { TextMesh } from '@editor/render_engine/objects/text';
-import { GoContainer, GoSprite, GoText, GuiBox, GuiContainer, GuiText } from '@editor/render_engine/objects/sub_types';
-import { AnimatedMesh } from '@editor/render_engine/objects/animated_mesh';
+// Registry Pattern для создания объектов
+import { create_object_registry, type IObjectRegistry } from './object_registry';
+import { register_default_factories } from './object_factories';
+
+// Импорты классов для специфичной логики (move, load_scene и т.д.)
+import { GuiBox, GuiContainer, GuiText } from '@editor/render_engine/objects/sub_types';
 import { EntityBase } from '@editor/render_engine/objects/entity_base';
-import { Component } from '@editor/render_engine/components/container_component';
-import { Model } from '@editor/render_engine/objects/model';
 import { AudioMesh } from '@editor/render_engine/objects/audio_mesh';
 import { MultipleMaterialMesh } from '@editor/render_engine/objects/multiple_material_mesh';
 
 /** Создать SceneService */
 export function create_scene_service(params: SceneServiceParams): ISceneService {
     const { logger, event_bus, render_service } = params;
+
+    // Инициализация реестра фабрик объектов
+    const object_registry: IObjectRegistry = params.object_registry !== undefined
+        ? params.object_registry
+        : create_default_registry();
+
+    function create_default_registry(): IObjectRegistry {
+        const registry = create_object_registry();
+        register_default_factories(registry);
+        return registry;
+    }
 
     // Внутреннее состояние
     let id_counter = 0;
@@ -61,97 +71,19 @@ export function create_scene_service(params: SceneServiceParams): ISceneService 
     }
 
     function create<T extends ObjectTypes>(type: T, params_obj?: Record<string, unknown>, id = -1): ISceneObject {
-        let mesh: ISceneObject;
         const p = params_obj || {};
-        const default_size = 10;
+        const actual_id = check_id_is_available_or_generate_new(id);
 
-        // base
-        if (type === ObjectTypes.ENTITY || type === ObjectTypes.EMPTY) {
-            mesh = new EntityBase(check_id_is_available_or_generate_new(id)) as unknown as ISceneObject;
-        }
-        else if (type === ObjectTypes.SLICE9_PLANE) {
-            mesh = new Slice9Mesh(
-                check_id_is_available_or_generate_new(id),
-                (p.width as number) || default_size,
-                (p.height as number) || default_size,
-                (p.slice_width as number) || 0,
-                (p.slice_height as number) || 0
-            ) as unknown as ISceneObject;
-        }
-        else if (type === ObjectTypes.TEXT) {
-            mesh = new TextMesh(
-                check_id_is_available_or_generate_new(id),
-                (p.text as string) || '',
-                (p.width as number) || default_size,
-                (p.height as number) || default_size
-            ) as unknown as ISceneObject;
-        }
-        // gui
-        else if (type === ObjectTypes.GUI_CONTAINER) {
-            mesh = new GuiContainer(check_id_is_available_or_generate_new(id)) as unknown as ISceneObject;
-        }
-        else if (type === ObjectTypes.GUI_BOX) {
-            mesh = new GuiBox(
-                check_id_is_available_or_generate_new(id),
-                (p.width as number) || default_size,
-                (p.height as number) || default_size,
-                (p.slice_width as number) || 0,
-                (p.slice_height as number) || 0
-            ) as unknown as ISceneObject;
-        }
-        else if (type === ObjectTypes.GUI_TEXT) {
-            mesh = new GuiText(
-                check_id_is_available_or_generate_new(id),
-                (p.text as string) || '',
-                (p.width as number) || default_size,
-                (p.height as number) || default_size
-            ) as unknown as ISceneObject;
-        }
-        // go
-        else if (type === ObjectTypes.GO_CONTAINER) {
-            mesh = new GoContainer(check_id_is_available_or_generate_new(id)) as unknown as ISceneObject;
-        }
-        // go components
-        else if (type === ObjectTypes.GO_SPRITE_COMPONENT) {
-            mesh = new GoSprite(
-                check_id_is_available_or_generate_new(id),
-                (p.width as number) || default_size,
-                (p.height as number) || default_size,
-                (p.slice_width as number) || 0,
-                (p.slice_height as number) || 0
-            ) as unknown as ISceneObject;
-        }
-        else if (type === ObjectTypes.GO_LABEL_COMPONENT) {
-            mesh = new GoText(
-                check_id_is_available_or_generate_new(id),
-                (p.text as string) || '',
-                (p.width as number) || default_size,
-                (p.height as number) || default_size
-            ) as unknown as ISceneObject;
-        }
-        else if (type === ObjectTypes.GO_MODEL_COMPONENT) {
-            mesh = new Model(
-                check_id_is_available_or_generate_new(id),
-                (p.width as number) || default_size,
-                (p.height as number) || default_size
-            ) as unknown as ISceneObject;
-        }
-        else if (type === ObjectTypes.GO_ANIMATED_MODEL_COMPONENT) {
-            mesh = new AnimatedMesh(
-                check_id_is_available_or_generate_new(id),
-                (p.width as number) || default_size,
-                (p.height as number) || default_size
-            ) as unknown as ISceneObject;
-        }
-        else if (type === ObjectTypes.GO_AUDIO_COMPONENT) {
-            mesh = new AudioMesh(check_id_is_available_or_generate_new(id)) as unknown as ISceneObject;
-        }
-        else if (type === ObjectTypes.COMPONENT) {
-            mesh = new Component(check_id_is_available_or_generate_new(id), (p.type as number) || 0) as unknown as ISceneObject;
-        }
-        else {
+        // Используем registry для создания объекта
+        let mesh = object_registry.create(type, actual_id, p);
+
+        if (mesh === undefined) {
+            // Fallback для неизвестных типов
             logger.error('Unknown mesh type', type);
-            mesh = new Slice9Mesh(check_id_is_available_or_generate_new(id), 32, 32) as unknown as ISceneObject;
+            mesh = object_registry.create(ObjectTypes.SLICE9_PLANE, actual_id, { width: 32, height: 32 });
+            if (mesh === undefined) {
+                throw new Error(`Failed to create fallback mesh for type ${type}`);
+            }
         }
 
         set_name(mesh, type + mesh.mesh_data.id);

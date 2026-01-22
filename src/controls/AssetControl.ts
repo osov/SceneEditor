@@ -15,6 +15,8 @@ import { get_file_name } from '../render_engine/helpers/utils';
 import { WsWrap } from '@editor/modules/ws_wrap';
 import { Services } from '@editor/core';
 import { get_popups } from '../modules_editor/Popups';
+import type { PointerEventData, KeyEventData } from '@editor/core/services/InputService';
+import type { IBaseEntityData } from '@editor/render_engine/types';
 
 // Импорт модулей
 import type { AssetControlState } from './asset_control/types';
@@ -104,46 +106,52 @@ function AssetControlCreate() {
         Services.resources.set_project_name(state.current_project);
         Services.logger.info('[load_project] Materials from server:', data.paths.materials);
 
-        const textures: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
-        const shaders: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
-        const materials_list: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
-        const other: { func: (...args: any[]) => Promise<any>, path: string | LoadAtlasData }[] = [];
+        // Типы для загрузки ресурсов (path может быть string или LoadAtlasData)
+        type StringResourceLoadItem = { func: (path: string) => Promise<unknown>, path: string };
+        type AtlasResourceLoadItem = { func: (paths: LoadAtlasData) => Promise<unknown>, path: LoadAtlasData };
+        type ResourceLoadItem = StringResourceLoadItem | AtlasResourceLoadItem;
+
+        const textures: StringResourceLoadItem[] = [];
+        const shaders: StringResourceLoadItem[] = [];
+        const materials_list: StringResourceLoadItem[] = [];
+        const other: ResourceLoadItem[] = [];
 
         for (const key of get_keys(data.paths)) {
             const paths = data.paths[key];
-            let func: (...args: any[]) => Promise<any>;
             if (key === 'textures') {
-                func = (path: string) => Services.resources.preload_texture('/' + path);
-            } else if (key === 'vertex_programs') {
-                func = (path: string) => Services.resources.preload_vertex_program('/' + path);
-            } else if (key === 'fragment_programs') {
-                func = (path: string) => Services.resources.preload_fragment_program('/' + path);
-            } else if (key === 'materials') {
-                func = (path: string) => Services.resources.preload_material('/' + path);
-            } else if (key === 'fonts') {
-                func = (path: string) => Services.resources.preload_font('/' + path);
-            } else if (key === 'models') {
-                func = (path: string) => Services.resources.preload_model('/' + path);
-            } else if (key === 'atlases') {
-                func = (paths: LoadAtlasData) => Services.resources.preload_atlas('/' + paths.atlas, '/' + paths.texture);
-            } else if (key === 'scenes') {
-                func = (path: string) => Services.resources.preload_scene('/' + path);
-            } else if (key === 'audios') {
-                func = (path: string) => Services.resources.preload_audio('/' + path);
-            } else func = async () => { };
-
-            if (func !== undefined) {
                 for (const path of paths) {
-                    switch (key) {
-                        case 'vertex_programs': case 'fragment_programs':
-                            shaders.push({ func, path }); break;
-                        case 'textures':
-                            textures.push({ func, path }); break;
-                        case 'materials':
-                            materials_list.push({ func, path }); break;
-                        default:
-                            other.push({ func, path }); break;
-                    }
+                    textures.push({ func: (p: string) => Services.resources.preload_texture('/' + p), path: path as string });
+                }
+            } else if (key === 'vertex_programs' || key === 'fragment_programs') {
+                const func = key === 'vertex_programs'
+                    ? (p: string) => Services.resources.preload_vertex_program('/' + p)
+                    : (p: string) => Services.resources.preload_fragment_program('/' + p);
+                for (const path of paths) {
+                    shaders.push({ func, path: path as string });
+                }
+            } else if (key === 'materials') {
+                for (const path of paths) {
+                    materials_list.push({ func: (p: string) => Services.resources.preload_material('/' + p), path: path as string });
+                }
+            } else if (key === 'fonts') {
+                for (const path of paths) {
+                    other.push({ func: (p: string) => Services.resources.preload_font('/' + p), path: path as string });
+                }
+            } else if (key === 'models') {
+                for (const path of paths) {
+                    other.push({ func: (p: string) => Services.resources.preload_model('/' + p), path: path as string });
+                }
+            } else if (key === 'atlases') {
+                for (const path of paths) {
+                    other.push({ func: (p: LoadAtlasData) => Services.resources.preload_atlas('/' + p.atlas, '/' + p.texture), path: path as LoadAtlasData });
+                }
+            } else if (key === 'scenes') {
+                for (const path of paths) {
+                    other.push({ func: (p: string) => Services.resources.preload_scene('/' + p), path: path as string });
+                }
+            } else if (key === 'audios') {
+                for (const path of paths) {
+                    other.push({ func: (p: string) => Services.resources.preload_audio('/' + p), path: path as string });
                 }
             }
         }
@@ -152,7 +160,12 @@ function AssetControlCreate() {
         await Promise.all(shaders.map(info => info.func(info.path)));
         await Promise.all(textures.map(info => info.func(info.path)));
         await Promise.all(materials_list.map(info => info.func(info.path)));
-        await Promise.all(other.map(info => info.func(info.path)));
+        await Promise.all(other.map(info => {
+            if (typeof info.path === 'object' && 'atlas' in info.path) {
+                return (info as AtlasResourceLoadItem).func(info.path);
+            }
+            return (info as StringResourceLoadItem).func(info.path as string);
+        }));
 
         await Services.resources.update_from_metadata();
         await Services.resources.write_metadata();
@@ -411,53 +424,67 @@ function AssetControlCreate() {
     }
 
     // Обработчики событий мыши и клавиатуры
-    function on_mouse_move(_event: unknown) { }
+    function on_mouse_move(_event: PointerEventData) { }
 
-    function on_mouse_down(event: any) {
-        const popup_elem = event.target.closest('.bgpopup');
-        const menu_elem = event.target.closest('.wr_menu__context');
-        const menu_popup_elem = event.target.closest('.wr_popup');
-        const inspector_elem = event.target.closest('.inspector__body');
-        if (!state.current_project || menu_elem || popup_elem || menu_popup_elem || inspector_elem) return;
-        const folder_elem = event.target.closest('.folder.asset');
-        const file_elem = event.target.closest('.file.asset');
-        const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
-        if (event.button === 0 || (asset_elem && event.button === 2)) {
-            if (asset_elem) {
+    /** Получить Element из EventTarget если это Element */
+    function get_element_from_target(target: EventTarget | null): Element | null {
+        if (target !== null && target instanceof Element) {
+            return target;
+        }
+        return null;
+    }
+
+    function on_mouse_down(event: PointerEventData) {
+        const target = get_element_from_target(event.target);
+        if (target === null) return;
+
+        const popup_elem = target.closest('.bgpopup');
+        const menu_elem = target.closest('.wr_menu__context');
+        const menu_popup_elem = target.closest('.wr_popup');
+        const inspector_elem = target.closest('.inspector__body');
+        if (!state.current_project || menu_elem !== null || popup_elem !== null || menu_popup_elem !== null || inspector_elem !== null) return;
+        const folder_elem = target.closest('.folder.asset');
+        const file_elem = target.closest('.file.asset');
+        const asset_elem = folder_elem !== null ? folder_elem : file_elem !== null ? file_elem : null;
+        if (event.button === 0 || (asset_elem !== null && event.button === 2)) {
+            if (asset_elem !== null) {
                 state.mouse_down_on_asset = true;
             }
             if (!Services.input.is_control()) {
-                if (!asset_elem || (asset_elem && !state.selected_assets.includes(asset_elem))) {
+                if (asset_elem === null || (asset_elem !== null && !state.selected_assets.includes(asset_elem as HTMLElement))) {
                     selection.clear_selected();
                 }
             }
         }
     }
 
-    async function on_mouse_up(event: any) {
+    async function on_mouse_up(event: PointerEventData) {
         state.drag_asset_now = false;
-        const popup_elem = event.target.closest('.bgpopup');
-        const menu_elem = event.target.closest('.wr_menu__context');
-        const menu_popup_elem = event.target.closest('.wr_popup');
-        const inspector_elem = event.target.closest('.inspector__body');
-        if (!state.current_project || menu_elem || popup_elem || menu_popup_elem || inspector_elem) return;
-        const folder_elem = event.target.closest('.folder.asset');
-        const file_elem = event.target.closest('.file.asset');
-        const asset_elem = folder_elem ? folder_elem : file_elem ? file_elem : undefined;
+        const target = get_element_from_target(event.target);
+        if (target === null) return;
+
+        const popup_elem = target.closest('.bgpopup');
+        const menu_elem = target.closest('.wr_menu__context');
+        const menu_popup_elem = target.closest('.wr_popup');
+        const inspector_elem = target.closest('.inspector__body');
+        if (!state.current_project || menu_elem !== null || popup_elem !== null || menu_popup_elem !== null || inspector_elem !== null) return;
+        const folder_elem = target.closest('.folder.asset') as HTMLElement | null;
+        const file_elem = target.closest('.file.asset') as HTMLElement | null;
+        const asset_elem = folder_elem !== null ? folder_elem : file_elem !== null ? file_elem : null;
         selection.clear_active();
         if (event.button === 0 || event.button === 2) {
             if (state.mouse_down_on_asset) {
                 state.mouse_down_on_asset = false;
-                if (asset_elem) selection.set_active(asset_elem);
+                if (asset_elem !== null) selection.set_active(asset_elem);
                 if (!Services.input.is_control()) {
                     selection.clear_selected();
-                    if (asset_elem) selection.add_to_selected(asset_elem);
+                    if (asset_elem !== null) selection.add_to_selected(asset_elem);
                 } else if (Services.input.is_control()) {
-                    if (asset_elem)
+                    if (asset_elem !== null)
                         if (state.selected_assets.includes(asset_elem)) selection.remove_from_selected(asset_elem);
                         else selection.add_to_selected(asset_elem);
                 }
-                if (file_elem) {
+                if (file_elem !== null) {
                     const path = file_elem.getAttribute('data-path');
                     const name = file_elem.getAttribute('data-name');
                     const ext = file_elem.getAttribute('data-ext');
@@ -465,25 +492,25 @@ function AssetControlCreate() {
                     Services.event_bus.emit('assets:clicked', { name, path, ext, button: event.button });
                 }
             }
-            const breadcrumbs_elem = event.target.closest('a .folderName');
+            const breadcrumbs_elem = target.closest('a .folderName');
             if (breadcrumbs_elem !== null && event.button === 0) {
                 const path = breadcrumbs_elem.getAttribute('data-path');
-                return await go_to_dir(path);
+                if (path !== null) return await go_to_dir(path);
             }
         }
         if (event.button === 0) {
-            if (folder_elem) {
+            if (folder_elem !== null) {
                 const path = folder_elem.getAttribute('data-path');
-                return await go_to_dir(path);
+                if (path !== null) return await go_to_dir(path);
             }
-        } else if (event.button === 2 && event.target.closest('.filemanager')) {
+        } else if (event.button === 2 && target.closest('.filemanager') !== null) {
             popups.open_menu(event);
             return;
         }
     }
 
-    async function on_key_up(event: any) {
-        if (event.key === 'F2' && state.active_asset && !get_popups().is_visible()) {
+    async function on_key_up(event: KeyEventData) {
+        if (event.key === 'F2' && state.active_asset !== undefined && !get_popups().is_visible()) {
             const path = state.active_asset.getAttribute('data-path') as string;
             const name = state.active_asset.getAttribute('data-name') as string;
             popups.rename_popup(path, name);
@@ -492,32 +519,35 @@ function AssetControlCreate() {
             popups.remove_popup();
         }
         if (Services.input.is_control()) {
-            if ((event.key === 'c' || event.key === 'с') && state.selected_assets.length) {
+            if ((event.key === 'c' || event.key === 'с') && state.selected_assets.length !== 0) {
                 state.move_assets_data.assets = state.selected_assets.slice();
                 state.move_assets_data.move_type = 'copy';
                 Services.logger.debug('copy assets, amount = ', state.move_assets_data.assets.length);
             }
-            if ((event.key === 'x' || event.key === 'ч') && state.selected_assets.length) {
+            if ((event.key === 'x' || event.key === 'ч') && state.selected_assets.length !== 0) {
                 state.move_assets_data.assets = state.selected_assets.slice();
                 state.move_assets_data.move_type = 'move';
                 Services.logger.debug('cut assets, amount = ', state.move_assets_data.assets.length);
             }
-            if ((event.key === 'v' || event.key === 'м') && state.move_assets_data.assets.length) {
+            if ((event.key === 'v' || event.key === 'м') && state.move_assets_data.assets.length !== 0) {
                 await file_ops.paste_assets();
             }
         }
     }
 
-    async function on_dbl_click(event: any) {
-        const file_elem = event.target.closest('.file.asset');
-        if (file_elem) {
+    async function on_dbl_click(event: PointerEventData) {
+        const target = get_element_from_target(event.target);
+        if (target === null) return;
+
+        const file_elem = target.closest('.file.asset');
+        if (file_elem !== null) {
             const ext = file_elem.getAttribute('data-ext');
             const new_path = file_elem.getAttribute('data-path');
             const current_path = state.current_scene.path;
-            if (ext === SCENE_EXT && new_path !== current_path) {
+            if (ext === SCENE_EXT && new_path !== null && new_path !== current_path) {
                 if (current_path !== undefined && state.history_length_cache[current_path] !== Services.history.get_undo_stack().length)
                     scene_ops.open_scene_exit_popup(current_path, new_path);
-                else if (new_path !== undefined)
+                else
                     await scene_ops.open_scene(new_path);
             }
         }
@@ -525,9 +555,9 @@ function AssetControlCreate() {
 
     async function on_graph_drop(id: number) {
         const scene_object = Services.scene.get_by_id(id);
-        if (scene_object) {
+        if (scene_object !== undefined && state.current_dir !== undefined) {
             const data = Services.scene.serialize_object(scene_object);
-            popups.save_graph_popup(state.current_dir as string, data);
+            popups.save_graph_popup(state.current_dir, data as IBaseEntityData);
         }
     }
 

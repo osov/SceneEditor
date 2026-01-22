@@ -194,7 +194,7 @@ function PopupsCreate() {
         const closeBtn = popup.querySelector('.popup__close') as HTMLElement | null;
 
         const closeListBtns = data?.type == 'Confirm' ? [closeBg, closeBtn, noBtn] : [closeBg, closeBtn];
-        closeListBtns.forEach((elem: any) => {
+        closeListBtns.forEach((elem: HTMLElement | null) => {
             if (elem) elem.addEventListener('click', closePopup);
         });
 
@@ -284,8 +284,9 @@ function PopupsCreate() {
             }
         }
 
-        function layerListClick(e: any) {
-            const btnRemove = e.target.closest('.LayersList__item_remove');
+        function layerListClick(e: MouseEvent) {
+            const target = e.target instanceof Element ? e.target : null;
+            const btnRemove = target?.closest('.LayersList__item_remove');
             const btnId = btnRemove?.getAttribute('data-id');
             if (btnId) removeItemLayer(btnId);
         }
@@ -330,13 +331,13 @@ function PopupsCreate() {
         return result;
     }
 
-    function showPopup(popup: any): void {
+    function showPopup(popup: HTMLElement): void {
         visible = true;
         popup.querySelector('.bgpopup')?.classList.add('active');
         popup.querySelector('.popup')?.classList.add('active');
     }
 
-    function hidePopup(popup: any): void {
+    function hidePopup(popup: HTMLElement): void {
         visible = false;
         popup.querySelector('.bgpopup')?.classList.remove('active');
         popup.querySelector('.popup')?.classList.remove('active');
