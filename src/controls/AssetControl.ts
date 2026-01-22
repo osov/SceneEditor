@@ -8,6 +8,7 @@ import {
     FSEvent,
     HistoryOwner,
     THistoryUndo,
+    PUBLIC,
     ProtocolWrapper,
     NetMessagesEditor,
 } from "../modules_editor/modules_editor_const";
@@ -274,7 +275,7 @@ function AssetControlCreate() {
                 folder_elem.appendChild(icon_elem);
                 folder_elem.appendChild(name_elem);
                 folder_elem.appendChild(details_elem);
-                folder_elem.addEventListener("drop", async () => {
+                folder_elem.addEventListener("drop", async (e) => {
                     if (drag_asset_now)
                         await handle_asset_drop(_path);
                 });
@@ -320,7 +321,7 @@ function AssetControlCreate() {
                 file_elem.appendChild(icon_elem);
                 file_elem.appendChild(name_elem);
                 file_elem.appendChild(details_elem);
-                file_elem.addEventListener("dragstart", function () {
+                file_elem.addEventListener("dragstart", function (e) {
                     drag_asset_now = true;
                 })
                 assets_list.appendChild(file_elem);
@@ -410,15 +411,15 @@ function AssetControlCreate() {
                 a_elem.appendChild(s_elem);
                 breadcrumbs.appendChild(a_elem);
                 breadcrumbs.appendChild(arrow);
-                s_elem.addEventListener("drop", async () => {
+                s_elem.addEventListener("drop", async (e) => {
                     if (drag_asset_now)
                         await handle_asset_drop(_path);
                 });
-                s_elem.addEventListener("dragenter", async () => {
+                s_elem.addEventListener("dragenter", async (e) => {
                     if (drag_asset_now)
                         s_elem.classList.add("marked");
                 });
-                s_elem.addEventListener("dragleave", async () => {
+                s_elem.addEventListener("dragleave", async (e) => {
                     if (drag_asset_now)
                         s_elem.classList.remove("marked");
                 });
@@ -429,6 +430,67 @@ function AssetControlCreate() {
             }
         });
     }
+
+    async function getFileAsync(dataTranfer: DataTransfer) {
+        const files = [];
+        for (var i = 0; i < dataTranfer.items.length; i++) {
+            const item = dataTranfer.items[i];
+            if (item.kind === 'file') {
+                if (typeof item.webkitGetAsEntry === 'function') {
+                    const entry = item.webkitGetAsEntry();
+                    if (entry != null) {
+                        const entryContent = await readEntryContentAsync(entry);
+                        files.push(...entryContent);
+                        continue;
+                    }
+                }
+
+                const file = item.getAsFile();
+                if (file) { files.push(file); }
+            }
+        }
+        return files;
+    };
+
+    function readEntryContentAsync(entry: FileSystemEntry): Promise<File[]> {
+        return new Promise((resolve, reject) => {
+            let reading = 0;
+            const contents: File[] = [];
+
+            readEntry(entry);
+
+            function readEntry(entry: FileSystemEntry) {
+                if (entry.isFile) {
+                    const file_entry = entry as FileSystemFileEntry;
+                    reading++;
+                    file_entry.file(file => {
+                        reading--;
+                        contents.push(file);
+
+                        if (reading === 0) {
+                            resolve(contents);
+                        }
+                    });
+                } else if (entry.isDirectory) {
+                    const dir_entry = entry as FileSystemDirectoryEntry;
+                    readReaderContent(dir_entry.createReader());
+                }
+            };
+
+            function readReaderContent(reader: FileSystemDirectoryReader) {
+                reading++;
+                reader.readEntries(function (entries) {
+                    reading--;
+                    for (const entry of entries) {
+                        readEntry(entry);
+                    }
+                    if (reading === 0) {
+                        resolve(contents);
+                    }
+                });
+            };
+        });
+    };
 
     function open_menu(event: any) {
         const assets_menu_list = toggle_menu_options();
@@ -910,7 +972,7 @@ function AssetControlCreate() {
         EventBus.trigger("SYS_ASSETS_SELECTED_AUDIOS", { paths: audios_paths });
     }
 
-    function on_mouse_move() {
+    function on_mouse_move(event: any) {
 
     }
 
@@ -1073,12 +1135,10 @@ function AssetControlCreate() {
         return true;
     }
 
-    async function load_scene(path: string): Promise<void> {
+    async function load_scene(path: string) {
         const resp = await ClientAPI.get_data(path);
-        if (!resp || resp.result === 0 || !resp.data) {
-            Popups.toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
-            return;
-        }
+        if (!resp || resp.result === 0 || !resp.data)
+            return Popups.toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
         const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
         SceneManager.load_scene(data.scene_data);
         ControlManager.update_graph(true, current_scene.name, true);
@@ -1087,7 +1147,7 @@ function AssetControlCreate() {
     function loadPartOfSceneInPos(
         pathToScene: string,
         position?: Vector3,
-        _rotation?: Quaternion,
+        rotation?: Quaternion,
         scale?: Vector3,
         with_check = false
     ) {

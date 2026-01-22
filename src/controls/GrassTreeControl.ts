@@ -2,7 +2,8 @@ import { Vector2 } from "three";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { filter_intersect_list } from "../render_engine/helpers/utils";
 import { createGrassManager } from "../utils/grass_manager";
-import { get_hash_by_mesh, get_selected_one_slice9 } from "../inspectors/ui_utils";
+import { get_selected_one_mesh, get_hash_by_mesh, get_selected_one_slice9 } from "../inspectors/ui_utils";
+import { IObjectTypes } from "@editor/render_engine/types";
 
 declare global {
     const GrassTreeControl: ReturnType<typeof GrassTreeControlCreate>;
@@ -32,7 +33,7 @@ function GrassTreeControlCreate() {
             }
         });
 
-        EventBus.on('SYS_SELECTED_MESH_LIST', () => {
+        EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
             if (Input.is_shift())
                 return;
             selected_mesh = get_selected_one_slice9();

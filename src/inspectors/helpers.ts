@@ -64,16 +64,15 @@ export function generateTextureOptions(with_atlas = false) {
 }
 
 export function castTextureInfo(info: TextureInfo, with_atlas = false) {
-    const image = info.data.texture.image as HTMLImageElement;
     const data = {
         value: with_atlas ? info.atlas + '/' + info.name : info.name,
         path: (info.data.texture as any).path ?? '',
-        src: image.src ?? ''
+        src: info.data.texture.image.src ?? ''
     } as any;
 
     if (info.atlas != '') {
-        const sizeX = image.width;
-        const sizeY = image.height;
+        const sizeX = info.data.texture.image.width;
+        const sizeY = info.data.texture.image.height;
 
         data.offset = {
             posX: -(sizeX * info.data.uvOffset.x),

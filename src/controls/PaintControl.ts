@@ -60,7 +60,7 @@ function PaintControlCreate() {
     }
 
     function subscribe() {
-        EventBus.on('SYS_SELECTED_MESH_LIST', () => {
+        EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
             if (Input.is_shift())
                 return;
             selected_mesh = get_selected_one_mesh(ALLOWED_TYPES) as AllowedMeshType;
@@ -302,7 +302,7 @@ function PaintControlCreate() {
                 case PAINT_MODE.COLOR: uniform_name = 'u_mask'; break;
                 case PAINT_MODE.NORMAL: uniform_name = 'u_flowMap'; break;
             }
-            if (uniform_name != '' && data) {
+            if (uniform_name != '') {
                 if (mesh instanceof Slice9Mesh) {
                     ResourceManager.set_material_uniform_for_mesh(mesh, uniform_name, data.texture);
                 } else if (mesh instanceof MultipleMaterialMesh) {

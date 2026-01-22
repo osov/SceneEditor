@@ -2,9 +2,11 @@ import { PerspectiveCamera, Vector2, Vector3, Object3D, Euler } from "three";
 
 
 export function createCameraPerspectiveControl(camera: PerspectiveCamera, domElement?: HTMLElement) {
+    let _is_changed = false;
     const _panStart = new Vector2();
     const _panEnd = new Vector2();
     const _eye = new Vector3();
+    const _movePrev = new Vector2();
     const _moveCurr = new Vector2();
     const pitchObject = new Object3D();
     const yawObject = new Object3D();
@@ -204,9 +206,8 @@ export function createCameraPerspectiveControl(camera: PerspectiveCamera, domEle
             screen.width = window.innerWidth;
             screen.height = window.innerHeight;
         } else {
-            const htmlElement = element as HTMLElement;
-            const box = htmlElement.getBoundingClientRect();
-            const d = htmlElement.ownerDocument!.documentElement;
+            const box = element.getBoundingClientRect();
+            const d = element.ownerDocument.documentElement;
             screen.left = box.left + window.pageXOffset - d.clientLeft;
             screen.top = box.top + window.pageYOffset - d.clientTop;
             screen.width = box.width;
@@ -215,20 +216,20 @@ export function createCameraPerspectiveControl(camera: PerspectiveCamera, domEle
     }
 
     function dispose() {
-        element.removeEventListener('mousedown', mousedown as EventListener);
-        element.removeEventListener('mouseup', mouseup as EventListener);
-        element.removeEventListener('mousemove', mousemove as EventListener);
-        element.removeEventListener('keydown', keydown as EventListener);
-        element.removeEventListener('keyup', keyup as EventListener);
-        element.removeEventListener('wheel', mousewheel as EventListener);
+        element.removeEventListener('mousedown', mousedown);
+        element.removeEventListener('mouseup', mouseup);
+        element.removeEventListener('mousemove', mousemove);
+        element.removeEventListener('keydown', keydown);
+        element.removeEventListener('keyup', keyup);
+        element.removeEventListener('wheel', mousewheel);
     }
 
     function init() {
-        element.addEventListener('mouseup', mouseup as EventListener);
-        element.addEventListener('mousedown', mousedown as EventListener);
-        element.addEventListener('keydown', keydown as EventListener);
-        element.addEventListener('keyup', keyup as EventListener);
-        element.addEventListener('wheel', mousewheel as EventListener);
+        element.addEventListener('mouseup', mouseup);
+        element.addEventListener('mousedown', mousedown);
+        element.addEventListener('keydown', keydown);
+        element.addEventListener('keyup', keyup);
+        element.addEventListener('wheel', mousewheel);
     }
 
     let enabled = true;

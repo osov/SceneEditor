@@ -29,7 +29,7 @@ export function factory_module() {
         url: string,
         position?: vmath.vector3,
         rotation?: vmath.quaternion,
-        _properties?: unknown,
+        properties?: any,
         scale?: number | vmath.vector3
     ) {
         if (url.includes('#')) {

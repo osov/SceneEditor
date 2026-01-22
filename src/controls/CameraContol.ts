@@ -1,6 +1,6 @@
 // https://github.com/yomotsu/camera-control_orthographics
 import CameraControls from 'camera-controls';
-import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster, PerspectiveCamera } from 'three';
+import { Vector2, Vector3, Vector4, Quaternion, Matrix4, Spherical, Box3, Sphere, Raycaster, PerspectiveCamera, GridHelper } from 'three';
 import { CAMERA_Z, IS_CAMERA_ORTHOGRAPHIC } from '../config';
 import { createCameraPerspectiveControl } from './CameraPerspectiveControl';
 

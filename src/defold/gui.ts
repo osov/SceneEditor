@@ -156,7 +156,7 @@ export function gui_module() {
         return { id: gui_text.mesh_data.id } as node;
     }
 
-    function set(node: node, property: string, value: any, _options?: unknown) {
+    function set(node: node, property: string, value: any, options?: any) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
             Log.error('[set] Mesh not found for id:', (node as any).id);
@@ -255,7 +255,7 @@ export function gui_module() {
         mesh.lineHeight = leading;
     }
 
-    function set_parent(node: node, parent: node, _keep_scene_transform?: boolean) {
+    function set_parent(node: node, parent: node, keep_scene_transform?: boolean) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
             Log.error('[set_parent] Mesh not found for id:', (node as any).id);
@@ -335,7 +335,7 @@ export function gui_module() {
         mesh.set_texture(texture_name, atlas);
     }
 
-    function get(node: node, property: string, _options?: unknown) {
+    function get(node: node, property: string, options?: any) {
         const mesh = SceneManager.get_mesh_by_id((node as any).id);
         if (!mesh) {
             Log.error('[get] Mesh not found for id:', (node as any).id);

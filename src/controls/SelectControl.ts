@@ -110,9 +110,9 @@ function SelectControlCreate() {
     }
 
 
-    function check_transparent(uv: Vector2, texture: Texture, _name: string) {
+    function check_transparent(uv: Vector2, texture: Texture, name: string) {
         return true;
-        const image = texture.image as HTMLImageElement;
+        const image = texture.image;
         const x = Math.floor(uv.x * image.width);
         const y = Math.floor((1 - uv.y) * image.height);
         // Один раз при загрузке текстуры:
@@ -123,6 +123,7 @@ function SelectControlCreate() {
         ctx.drawImage(image, 0, 0);
         const pixel = ctx.getImageData(x, y, 1, 1).data;
         const alpha = pixel[3];
+        //log(name, alpha)
         return alpha > 255 / 2;
     }
 

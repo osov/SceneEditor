@@ -195,9 +195,6 @@ export function ResourceManagerModule() {
     }
 
     async function on_file_change(event: FSEvent) {
-        // Guard against race condition: AssetControl might not be initialized yet
-        if (typeof AssetControl === 'undefined') return;
-
         switch (event.ext) {
             case 'vp': await on_vertex_shader_change(event.path); break;
             case 'fp': await on_fragment_shader_change(event.path); break;
@@ -275,9 +272,6 @@ export function ResourceManagerModule() {
 
 
     async function on_material_file_change(path: string) {
-        // Guard against race condition: SceneManager might not be initialized yet
-        if (typeof SceneManager === 'undefined') return;
-
         const changed_material_info = await load_material(path);
         if (!changed_material_info) return;
 

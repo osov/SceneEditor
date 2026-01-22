@@ -1,5 +1,5 @@
 import { get_hash_by_mesh, get_mesh_by_hash } from "../inspectors/ui_utils";
-import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
+import { IBaseEntityAndThree, IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 
 declare global {
     const ComponentsControl: ReturnType<typeof ComponentsControlCreate>;

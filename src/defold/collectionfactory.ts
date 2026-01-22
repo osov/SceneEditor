@@ -12,7 +12,7 @@ export function collectionfactory_module() {
         url: string,
         position?: vmath.vector3,
         rotation?: vmath.quaternion,
-        _properties?: unknown,
+        properties?: any,
         scale?: vmath.vector3
     ) {
         const part = AssetControl.loadPartOfSceneInPos(
