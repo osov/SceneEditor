@@ -2,7 +2,7 @@
 
 import { IObjectTypes } from "../../types";
 import { TextMesh, TextSerializeData } from "../text";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 import { is_alpha_inheritable, type IAlphaInheritable } from "./alpha_types";
 import { GuiBox } from "./gui_box";

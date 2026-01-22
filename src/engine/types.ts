@@ -11,6 +11,7 @@ import type {
     OrthographicCamera,
     PerspectiveCamera,
     WebGLRenderer,
+    Quaternion,
     Vector2,
     Vector3,
     Vector4,
@@ -25,6 +26,12 @@ import type { ILogger, IEventBus } from '@editor/core/di/types';
 import type { TextureInfo, MaterialInfo, ObjectTypes, BaseEntityData } from '@editor/core/render/types';
 import type { InspectorFieldDefinition } from '@editor/core/inspector/IInspectable';
 import type { IObjectRegistry } from './object_registry';
+
+/** Минимальный интерфейс для мешей с материалами (используется в функциях материалов) */
+export interface IMeshWithMaterial {
+    mesh_data: { id: number };
+    material: ShaderMaterial;
+}
 
 // Типы для ResourceService из legacy resource_manager
 export interface TextureData {
@@ -153,6 +160,8 @@ export interface ISceneObject extends Object3D {
     // === Базовые методы (обязательные для всех объектов) ===
     get_position(): Vector3;
     set_position(x: number, y: number, z?: number): void;
+    get_rotation(): Quaternion;
+    set_rotation(rotation: Quaternion): void;
     get_scale(): Vector2;
     set_scale(x: number, y: number): void;
     get_active(): boolean;
@@ -175,8 +184,10 @@ export interface ISceneObject extends Object3D {
     transform_changed?(): void;
 
     // === Сериализация ===
-    serialize?(): Record<string, unknown>;
-    deserialize?(data: Record<string, unknown>): void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- конкретные классы возвращают специфические типы
+    serialize?(): object;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- конкретные классы принимают специфические типы
+    deserialize?(data: object): void;
 
     // === Инспектор (IInspectable) ===
     /** Получить определения полей для инспектора */
@@ -342,19 +353,19 @@ export interface IResourceService {
     get_material_hash_by_mesh_id(name: string, mesh_id: number, index?: number): string | undefined;
     is_material_origin_hash(name: string, hash: string): boolean;
     has_material_by_mesh_id(name: string, mesh_id: number, index?: number): boolean;
-    set_material_property_for_mesh(mesh: ISceneObject, prop: string, value: unknown): void;
-    set_material_property_for_multiple_mesh(mesh: ISceneObject, index: number, prop: string, value: unknown): void;
+    set_material_property_for_mesh(mesh: IMeshWithMaterial, prop: string, value: unknown): void;
+    set_material_property_for_multiple_mesh(mesh: IMeshWithMaterial, index: number, prop: string, value: unknown): void;
     set_material_uniform_for_original(name: string, uniform_name: string, value: unknown): void;
     set_material_shader_for_original(name: string, shader_type: 'vertex' | 'fragment', shader_path: string): void;
-    set_material_uniform_for_mesh(mesh: ISceneObject, uniform_name: string, value: unknown): void;
-    set_material_uniform_for_multiple_material_mesh(mesh: ISceneObject, index: number, uniform_name: string, value: unknown): void;
-    set_material_define_for_mesh(mesh: ISceneObject, define: string, value?: string): void;
-    set_material_define_for_multiple_material_mesh(mesh: ISceneObject, index: number, define: string, value?: string): void;
+    set_material_uniform_for_mesh(mesh: IMeshWithMaterial, uniform_name: string, value: unknown): void;
+    set_material_uniform_for_multiple_material_mesh(mesh: IMeshWithMaterial, index: number, uniform_name: string, value: unknown): void;
+    set_material_define_for_mesh(mesh: IMeshWithMaterial, define: string, value?: string): void;
+    set_material_define_for_multiple_material_mesh(mesh: IMeshWithMaterial, index: number, define: string, value?: string): void;
     unlink_material_for_mesh(name: string, mesh_id: number): void;
     unlink_material_for_multiple_material_mesh(name: string, mesh_id: number, index: number): void;
     get_info_about_unique_materials(name: string): unknown[];
-    get_changed_uniforms_for_mesh(mesh: ISceneObject): Record<string, unknown> | undefined;
-    get_changed_uniforms_for_multiple_material_mesh(mesh: ISceneObject, index: number): Record<string, unknown> | undefined;
+    get_changed_uniforms_for_mesh(mesh: IMeshWithMaterial): Record<string, unknown> | undefined;
+    get_changed_uniforms_for_multiple_material_mesh(mesh: IMeshWithMaterial, index: number): Record<string, unknown> | undefined;
 
     // === Шейдеры ===
     get_all_vertex_programs(): string[];

@@ -1,6 +1,6 @@
 import { Vector2 } from "three";
 import { IBaseMesh } from "../types";
-import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
+import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/geometry";
 import { EntityBase } from "./entity_base";
 import { FLOAT_PRECISION, WORLD_SCALAR } from "../../config";
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";

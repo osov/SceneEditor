@@ -2,7 +2,7 @@ import { Vector2, Vector3 } from "three";
 import { get_file_name, rotate_point } from "../helpers/utils";
 import { IBaseEntityAndThree } from "../types";
 import { FlipMode, GoSprite } from "../objects/sub_types";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 
 // Флаги Tiled для отражения и вращения
 export const FLIP_HORIZONTALLY_FLAG = 0x80000000;

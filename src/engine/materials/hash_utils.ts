@@ -4,7 +4,7 @@ import type { IUniform, ShaderMaterial } from 'three';
 import { getObjectHash } from '../../modules/utils';
 import type { MaterialInfo, MaterialUniform } from './types';
 import type { MaterialState } from './state';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 
 /**
  * Создаёт объект для вычисления хеша материала (без readonly юниформов)

@@ -6,8 +6,8 @@
 import { ShaderMaterial, Texture } from 'three';
 import { MaterialUniformType } from '../../resource_manager';
 import { hex2rgba, rgb2hex } from '@editor/defold/utils';
-import { get_file_name } from '../../helpers/utils';
-import { Services } from '@editor/core';
+import { get_file_name } from '../../helpers/file';
+import { Services } from '@editor/core/ServiceProvider';
 
 /**
  * Минимальный интерфейс MaterialInfo для сериализации

@@ -3,7 +3,7 @@
 
 import type { ShaderMaterial } from 'three';
 import { deepClone } from '../../modules/utils';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import type { MaterialInfo } from './types';
 import type { MaterialState } from './state';
 

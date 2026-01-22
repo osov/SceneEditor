@@ -19,7 +19,7 @@ import {
 import { get_sound } from "../../modules/Sound";
 import { get_audio_manager } from "../AudioManager";
 import { uh_to_id } from "@editor/defold/utils";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { DC_LAYERS } from '@editor/engine/RenderService';
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 import {

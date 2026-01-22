@@ -6,12 +6,12 @@
  */
 
 import type { Vector2, Vector3, Vector4 } from 'three';
-import { MaterialUniformType, type MaterialUniformParams } from '../../render_engine/resource_manager';
+import { MaterialUniformType, type MaterialUniformParams } from '@editor/engine/materials/types';
 import { Property, type InspectorFieldDefinition, type InspectorFieldGroup } from './IInspectable';
 import { PropertyType } from './types';
-import { get_file_name } from '../../render_engine/helpers/utils';
+import { get_file_name } from '../../render_engine/helpers/file';
 import { rgbToHex } from '../../modules/utils';
-import { Services } from '../index';
+import { Services } from '../ServiceProvider';
 
 /** Информация о uniform для инспектора */
 export interface UniformFieldInfo {

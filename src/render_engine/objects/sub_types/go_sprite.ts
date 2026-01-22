@@ -2,7 +2,7 @@
 
 import { IObjectTypes } from "../../types";
 import { Slice9Mesh } from "../slice9";
-import { flip_geometry_x, flip_geometry_y, flip_geometry_xy } from "../../helpers/utils";
+import { flip_geometry_x, flip_geometry_y, flip_geometry_xy } from "../../helpers/geometry";
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 export enum FlipMode {

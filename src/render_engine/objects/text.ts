@@ -1,9 +1,9 @@
 // https://protectwise.github.io/troika/troika-three-text/
-import { Vector2, Vector3 } from "three";
+import { Quaternion, Vector2, Vector3 } from "three";
 import { Text } from 'troika-three-text';
 import { IBaseMesh, IObjectTypes } from "../types";
-import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
-import { Services } from '@editor/core';
+import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/geometry";
+import { Services } from '@editor/core/ServiceProvider';
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 
@@ -71,6 +71,15 @@ export class TextMesh extends Text implements IBaseMesh {
 
     get_scale(): Vector2 {
         return new Vector2(this.scale.x, this.scale.y);
+    }
+
+    set_rotation(rotation: Quaternion): void {
+        this.quaternion.copy(rotation);
+        this.transform_changed();
+    }
+
+    get_rotation(): Quaternion {
+        return this.quaternion.clone();
     }
 
     set_size(w: number, h: number, is_sync = true) {

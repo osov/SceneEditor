@@ -2,7 +2,7 @@ import { Vector2 } from "three";
 import { EntityBase } from "../objects/entity_base";
 import { IBaseEntityAndThree } from "../types";
 import { lerp } from "../helpers/utils";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 
 export function CmpMover(cmp_mesh: EntityBase) {
     cmp_mesh.userData = { p1: new Vector2(), p2: new Vector2(), s: 1 };

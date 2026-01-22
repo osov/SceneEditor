@@ -7,7 +7,7 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { api } from '../../modules_editor/ClientAPI';
 import { URL_PATHS } from '../../modules_editor/modules_editor_const';
 import { get_file_name } from '../../render_engine/helpers/file';
@@ -121,7 +121,7 @@ export function ModelServiceCreate(
                 });
             });
         } else if (path.toLowerCase().endsWith('.dae')) {
-            return new Promise<Scene>((resolve) => {
+            return new Promise<Group>((resolve) => {
                 const loader = new ColladaLoader(manager);
                 loader.load(get_project_url(path), (collada: Collada) => {
                     const has_mesh = has_skinned_mesh(collada.scene);

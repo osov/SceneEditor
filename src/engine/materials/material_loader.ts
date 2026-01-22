@@ -4,7 +4,7 @@ import { type IUniform, ShaderMaterial, type Texture, Vector2, Vector3, Vector4 
 import { getObjectHash, hexToRGB } from '../../modules/utils';
 import { get_file_name } from '../../render_engine/helpers/file';
 import { slice9_shader } from '../../render_engine/shaders/builtin';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { IS_LOGGING } from '@editor/config';
 import type { MaterialInfo, MaterialServiceDeps, MaterialFileData } from './types';
 import { MaterialUniformType } from './types';

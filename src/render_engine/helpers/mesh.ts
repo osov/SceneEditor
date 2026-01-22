@@ -1,45 +1,16 @@
 // Утилиты для работы с мешами и объектами сцены
+// Базовые функции (is_base_mesh, filter_list_base_mesh, format_list_without_children)
+// вынесены в mesh_base.ts для избежания циклических зависимостей
 
 import { Intersection, Object3D, Object3DEventMap } from "three";
-import { IBaseMeshAndThree, IBaseEntityAndThree } from "../types";
+import type { IBaseMeshAndThree } from "../types";
 import { TextMesh } from "../objects/text";
 import { GoText, GoSprite, GuiBox, GuiText } from "../objects/sub_types";
 import type { RenderTileData, RenderTileObject } from "../parsers/tile_parser";
+import { filter_list_base_mesh } from "./mesh_base";
 
-export function is_base_mesh(mesh: Object3D) {
-    return (mesh as IBaseMeshAndThree).mesh_data !== undefined;
-}
-
-// Исключить из списка дочерние элементы, тк при удалении проще будет восстановить
-export function format_list_without_children(list: IBaseEntityAndThree[]) {
-    const ids: number[] = [];
-    for (let i = 0; i < list.length; i++) {
-        ids.push(list[i].mesh_data.id);
-    }
-    const res: IBaseEntityAndThree[] = [];
-    for (let i = 0; i < list.length; i++) {
-        if (is_base_mesh(list[i].parent!)) {
-            const p = list[i].parent! as IBaseEntityAndThree;
-            if (ids.indexOf(p.mesh_data.id) === -1) {
-                res.push(list[i]);
-            }
-        }
-        else
-            res.push(list[i]);
-    }
-    return res;
-}
-
-export function filter_list_base_mesh(tmp: Object3D[]) {
-    const list: IBaseMeshAndThree[] = [];
-    for (let i = 0; i < tmp.length; i++) {
-        const it = tmp[i];
-        if (is_base_mesh(it)) {
-            list.push(it as IBaseMeshAndThree);
-        }
-    }
-    return list;
-}
+// Реэкспорт базовых функций для обратной совместимости
+export { is_base_mesh, filter_list_base_mesh, format_list_without_children } from "./mesh_base";
 
 export function filter_intersect_list(tmp: Intersection<Object3D<Object3DEventMap>>[]) {
     const tmp_list: Object3D[] = [];

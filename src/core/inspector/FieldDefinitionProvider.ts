@@ -5,7 +5,7 @@
  * из InspectorControl.ts в отдельный модуль.
  */
 
-import { Services } from '@editor/core';
+import { Services } from '../ServiceProvider';
 import type { IOptionsProviders, ListOptions, TextureOptionData } from '../../editor/inspector/options/types';
 import type { InspectorFieldDefinition, IInspectable } from './IInspectable';
 import { Property } from './IInspectable';

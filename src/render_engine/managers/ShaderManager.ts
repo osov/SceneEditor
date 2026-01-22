@@ -1,7 +1,7 @@
 // Менеджер шейдеров
 
 import { ShaderChunk } from 'three';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { IS_LOGGING } from '@editor/config';
 import { get_asset_control } from '@editor/controls/AssetControl';
 

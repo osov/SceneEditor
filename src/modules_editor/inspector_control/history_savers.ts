@@ -9,7 +9,7 @@ import type { MinificationTextureFilter, MagnificationTextureFilter } from 'thre
 import { Services } from '@editor/core';
 import { deepClone } from '../../modules/utils';
 import { get_basename, get_file_name } from '../../render_engine/helpers/utils';
-import { IObjectTypes, type IBaseMeshAndThree } from '../../render_engine/types';
+import { IObjectTypes } from '../../render_engine/types';
 import type { GoSprite } from '../../render_engine/objects/sub_types';
 import { MultipleMaterialMesh } from '../../render_engine/objects/multiple_material_mesh';
 import { HistoryOwner } from '../modules_editor_const';
@@ -299,7 +299,7 @@ export function save_uniform(
                 } else {
                     // Восстанавливаем uniform для обычного меша
                     Services.resources.set_material_uniform_for_mesh(
-                        scene_obj as unknown as IBaseMeshAndThree,
+                        scene_obj as unknown as Parameters<typeof Services.resources.set_material_uniform_for_mesh>[0],
                         item.uniform_name,
                         item.value
                     );

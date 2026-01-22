@@ -49,10 +49,8 @@ export function PhysicSystemCreate(obstacles: Line<any>[], _debug = true) {
     const entities: DynamicEntity[] = [];
     
     let count = 0;
-    let obst_count = 0;
 
     for (const obst of obstacles) {
-        obst_count++;
         physic_world.insert(obst);
     }
 

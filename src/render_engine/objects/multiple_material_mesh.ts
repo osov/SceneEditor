@@ -3,7 +3,7 @@ import { EntityPlane } from "./entity_plane";
 import { FLOAT_PRECISION, WORLD_SCALAR } from "../../config";
 import { clone as skeleton_clone } from 'three/examples/jsm/utils/SkeletonUtils';
 import { rgb2hex } from "@editor/defold/utils";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { DC_LAYERS } from '@editor/engine/RenderService';
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 import {

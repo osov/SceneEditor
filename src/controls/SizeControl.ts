@@ -677,6 +677,8 @@ function SizeControlCreate() {
             set_bb_visible(false);
     }
 
+    // @ts-expect-error -- функция будет использоваться для ограничения перемещения якоря
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     function get_parent_bb(mesh: IBaseMeshAndThree) {
         if (mesh.parent == null) return [0, 0, 0, 0];
         if (mesh.parent instanceof Scene) {
@@ -698,8 +700,7 @@ function SizeControlCreate() {
         const mesh = selected_list[0];
         const wp = new Vector3();
         mesh.getWorldPosition(wp);
-        // bounds родителя - для ограничения при перемещении якоря (пока не используется)
-        const _bb_limit = get_parent_bb(mesh);
+        // NOTE: bounds родителя доступны через get_parent_bb(mesh) для ограничения при перемещении якоря
         // bounds самого объекта - для отображения якоря
         const mesh_bb = mesh.get_bounds();
         if (is_set_pos) {

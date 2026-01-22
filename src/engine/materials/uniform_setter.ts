@@ -4,7 +4,7 @@ import { Texture, type Vector3 } from 'three';
 import { copy_material } from '../../render_engine/helpers/material';
 import { get_file_name } from '../../render_engine/helpers/file';
 import { deepClone, rgbToHex } from '../../modules/utils';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import type { MaterialInfo, MaterialServiceDeps } from './types';
 import { MaterialUniformType } from './types';
 import type { MaterialState } from './state';

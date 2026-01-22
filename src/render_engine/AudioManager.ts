@@ -1,6 +1,6 @@
 import { AudioListener, Audio } from "three";
 import { TDictionary } from "../modules_editor/modules_editor_const";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { get_sound } from '../modules/Sound';
 import '../defold/vmath';
 

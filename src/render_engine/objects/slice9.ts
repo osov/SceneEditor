@@ -1,8 +1,8 @@
 import { ShaderMaterial, Vector2, PlaneGeometry, Color, Vector3, BufferAttribute, NormalBlending, NoColorSpace } from "three";
 import { IBaseParameters, IObjectTypes } from "../types";
-import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/utils";
+import { convert_width_height_to_pivot_bb, set_pivot_with_sync_pos } from "../helpers/geometry";
 import { EntityPlane } from "./entity_plane";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 import { SLICE9_VERTEX_SHADER, SLICE9_FRAGMENT_SHADER } from "../shaders/builtin";
 import {

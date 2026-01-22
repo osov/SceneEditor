@@ -1,6 +1,6 @@
 import { Tween, Group } from "@tweenjs/tween.js";
 import { TDictionary } from "../modules_editor/modules_editor_const";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 
 /** Тип TweenManager */
 export type TweenManagerType = ReturnType<typeof TweenManagerModule>;

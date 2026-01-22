@@ -182,7 +182,11 @@ export function create_uniform_handler(params?: UniformHandlerParams): IProperty
             }
         } else {
             // Для обычных mesh (Slice9Mesh, etc.)
-            Services.resources.set_material_uniform_for_mesh(mesh, uniform_name, uniform_value);
+            Services.resources.set_material_uniform_for_mesh(
+                mesh as unknown as Parameters<typeof Services.resources.set_material_uniform_for_mesh>[0],
+                uniform_name,
+                uniform_value
+            );
             const mesh_material = (mesh as Slice9Mesh).material;
             if (mesh_material !== undefined) {
                 mesh_material.needsUpdate = true;

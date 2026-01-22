@@ -6,11 +6,11 @@ import { MinificationTextureFilter, MagnificationTextureFilter, Wrapping } from 
 import { FSEvent, TDictionary, TRecursiveDict, URL_PATHS, DataFormatType } from '../modules_editor/modules_editor_const';
 import { IBaseEntityData } from './types';
 import { get_client_api, api } from '../modules_editor/ClientAPI';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { get_container } from '../core/di/Container';
 import { TOKENS } from '../core/di/tokens';
 import { get_file_name } from './helpers/file';
-import { Slice9Mesh } from './objects/slice9';
+import type { Slice9Mesh } from './objects/slice9';
 import { deepClone } from '../modules/utils';
 
 // Импорт менеджеров

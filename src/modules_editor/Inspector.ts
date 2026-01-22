@@ -247,7 +247,7 @@ function InspectorModule() {
                     const selectedOption = list?.querySelector('.tp-thumbv_opt[aria-selected="true"]') as Element;
                     if (selectedOption) {
                         selectedOption.scrollIntoView({
-                            behavior: 'instant',
+                            behavior: 'instant' as ScrollBehavior,
                             block: 'start'
                         });
                     }

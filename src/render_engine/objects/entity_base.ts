@@ -1,6 +1,7 @@
 import { BufferGeometry, Mesh, Object3DEventMap, PlaneGeometry, Quaternion, ShaderMaterial, Vector2, Vector3 } from "three";
 import { IBaseEntity, IBaseParameters, IObjectTypes, OnTransformChanged } from "../types";
-import { convert_width_height_to_pivot_bb, is_base_mesh } from "../helpers/utils";
+import { convert_width_height_to_pivot_bb } from "../helpers/geometry";
+import { is_base_mesh } from "../helpers/mesh_base";
 import { WORLD_SCALAR } from "../../config";
 import type { HistoryDataKeys } from "@editor/shared";
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";

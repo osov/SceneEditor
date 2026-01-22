@@ -47,7 +47,7 @@ export function WsWrap(on_open: () => void, on_close: () => void, on_error: () =
         return client != undefined && _is_connected;
     }
 
-    function send_raw(data: string | Uint8Array<ArrayBufferLike>) {
+    function send_raw(data: string | Uint8Array) {
         if (is_connected())
             client.send(data);
         else

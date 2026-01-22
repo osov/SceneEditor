@@ -147,13 +147,13 @@ export function gui_module() {
         const gui_box = Services.scene.create(ObjectTypes.GUI_BOX, {
             width: size.x,
             height: size.y,
-        }) as GuiBox;
+        }) as unknown as GuiBox;
         gui_box.set_position(pos.x, pos.y);
         return { id: gui_box.mesh_data.id } as node;
     }
 
     function new_text_node(pos: vmath.vector3, text: string) {
-        const gui_text = Services.scene.create(ObjectTypes.GUI_TEXT, { text }) as GuiText;
+        const gui_text = Services.scene.create(ObjectTypes.GUI_TEXT, { text }) as unknown as GuiText;
         gui_text.set_position(pos.x, pos.y);
         return { id: gui_text.mesh_data.id } as node;
     }

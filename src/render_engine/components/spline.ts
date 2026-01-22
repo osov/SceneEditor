@@ -5,7 +5,7 @@ import { is_base_mesh } from "../helpers/utils";
 import { deepClone } from "../../modules/utils";
 import { HistoryOwner } from "../../modules_editor/modules_editor_const";
 import { MeshPropertyInfo } from "@editor/core/render/types";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 
 
 export function CmpSpline(cmp_mesh: EntityBase) {

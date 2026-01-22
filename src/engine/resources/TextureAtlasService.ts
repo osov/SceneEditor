@@ -1,7 +1,7 @@
 // Объединённый сервис управления текстурами и атласами
 
 import { CanvasTexture, RepeatWrapping, Texture, TextureLoader, Vector2, Vector4 } from 'three';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { IS_LOGGING } from '@editor/config';
 import { parse_tp_data_to_uv } from '../../render_engine/parsers/atlas_parser';
 import { get_file_name } from '../../render_engine/helpers/file';

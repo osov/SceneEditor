@@ -1,12 +1,12 @@
 // Менеджер 3D моделей
 
-import { AnimationClip, Group, LoadingManager, Object3D, Scene, SkinnedMesh } from 'three';
+import { AnimationClip, Group, LoadingManager, Object3D, SkinnedMesh } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 import { ColladaLoader, type Collada } from 'three/examples/jsm/loaders/ColladaLoader';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { get_file_name } from '../helpers/file';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { api } from '../../modules_editor/ClientAPI';
 import { URL_PATHS } from '../../modules_editor/modules_editor_const';
 import type { AnimationInfo } from './types';
@@ -147,7 +147,7 @@ export function create_model_manager(config: ModelManagerConfig) {
             });
         }
         else if (path.toLowerCase().endsWith('.dae')) {
-            return new Promise<Scene>((resolve, reject) => {
+            return new Promise<Group>((resolve, reject) => {
                 const loader = new ColladaLoader(manager);
                 loader.load(
                     load_url,

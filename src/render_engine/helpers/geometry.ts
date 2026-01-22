@@ -2,7 +2,7 @@
 
 import { BufferGeometry, Line, LineDashedMaterial, Vector2, Vector3 } from "three";
 import { IBaseMeshAndThree } from "../types";
-import { is_base_mesh } from "./mesh";
+import { is_base_mesh } from "./mesh_base";
 
 export function flip_geometry_x(geometry: BufferGeometry) {
     const uv = geometry.attributes.uv;

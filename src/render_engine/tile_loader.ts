@@ -4,7 +4,7 @@ import { rotate_point } from "./helpers/utils";
 import { parse_tiled, TILE_FLIP_MASK, get_tile_texture, get_depth, apply_tile_transform, MapData, RenderTileData, RenderTileObject, LoadedTileInfo, preload_tiled_textures, TileInfo, set_world_bounds, set_tileset, RenderMapData } from "./parsers/tile_parser";
 import { IObjectTypes } from "./types";
 import { GoContainer, GoSprite } from "./objects/sub_types";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 
 
 export interface ParsedObject {
@@ -64,10 +64,8 @@ export function TileLoader(world: GoContainer, tileSize = 256, SUB_SCALAR = 1) {
             }
         }
         // OBJECTS
-        for (let object_layer of render_data.objects_layers) {
-            let id_object = -1;
-            for (let tile of object_layer.objects) {
-                id_object++;
+        for (const object_layer of render_data.objects_layers) {
+            for (const tile of object_layer.objects) {
                 const tile_id = tile.tile_id & TILE_FLIP_MASK;
                 if (tile.tile_id != -1) {
                     const tile_info = get_tile_texture(tile_id);

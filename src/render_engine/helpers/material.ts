@@ -2,7 +2,7 @@
 
 import { CanvasTexture, ShaderMaterial, Texture, Vector2, Vector3, Vector4, IUniform } from "three";
 import { deepClone } from "../../modules/utils";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { MaterialUniformType } from "../resource_manager";
 
 export function copy_material(material: ShaderMaterial) {

@@ -70,7 +70,7 @@ function ControlManagerCreate() {
         hierarchy_graph_service = create_hierarchy_graph_service({
             logger: Services.logger,
             event_bus: Services.event_bus,
-            scene_service: Services.scene,
+            scene_service: Services.scene as unknown as Parameters<typeof create_hierarchy_graph_service>[0]['scene_service'],
             selection_service: Services.selection,
             camera_service: Services.camera,
             tree_control: get_tree_control(),

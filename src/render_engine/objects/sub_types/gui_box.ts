@@ -3,7 +3,7 @@
 import { IObjectTypes } from "../../types";
 import { Slice9Mesh, Slice9SerializeData } from "../slice9";
 import * as THREE from 'three';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 import { is_alpha_inheritable, type IAlphaInheritable } from "./alpha_types";
 

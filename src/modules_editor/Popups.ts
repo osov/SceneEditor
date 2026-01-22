@@ -158,7 +158,7 @@ function PopupsCreate() {
     let visible = false;
 
     function open(data: Notify | Confirm | Rename | Layers | Select) {
-        const popup = document.querySelector(`#popup${data?.type}`) as HTMLInputElement | null;
+        const popup = document.querySelector(`#popup${data?.type}`) as HTMLElement | null;
         if (!popup) return;
 
         const okBtn = popup.querySelector('.popup__okBtn') as HTMLInputElement | null;
@@ -200,7 +200,7 @@ function PopupsCreate() {
 
         function closePopup() {
             data?.callback(false);
-            hidePopup(popup);
+            if (popup !== null) hidePopup(popup);
             clearClickBtn()
         }
 

@@ -12,7 +12,7 @@ import type {
     ResourceServiceParams,
     TextureData,
     SceneInfo,
-    ISceneObject,
+    IMeshWithMaterial,
 } from './types';
 import { get_resource_manager } from '../render_engine/resource_manager';
 
@@ -226,11 +226,11 @@ export function create_resource_service(params: ResourceServiceParams): IResourc
         return require_resource_manager().has_material_by_mesh_id(name, mesh_id, index);
     }
 
-    function set_material_property_for_mesh(mesh: ISceneObject, prop: string, value: unknown): void {
+    function set_material_property_for_mesh(mesh: IMeshWithMaterial, prop: string, value: unknown): void {
         return require_resource_manager().set_material_property_for_mesh(mesh, prop, value);
     }
 
-    function set_material_property_for_multiple_mesh(mesh: ISceneObject, index: number, prop: string, value: unknown): void {
+    function set_material_property_for_multiple_mesh(mesh: IMeshWithMaterial, index: number, prop: string, value: unknown): void {
         return require_resource_manager().set_material_property_for_multiple_mesh(mesh, index, prop, value);
     }
 
@@ -242,19 +242,19 @@ export function create_resource_service(params: ResourceServiceParams): IResourc
         return require_resource_manager().set_material_shader_for_original(name, shader_type, shader_path);
     }
 
-    function set_material_uniform_for_mesh(mesh: ISceneObject, uniform_name: string, value: unknown): void {
+    function set_material_uniform_for_mesh(mesh: IMeshWithMaterial, uniform_name: string, value: unknown): void {
         return require_resource_manager().set_material_uniform_for_mesh(mesh, uniform_name, value);
     }
 
-    function set_material_uniform_for_multiple_material_mesh(mesh: ISceneObject, index: number, uniform_name: string, value: unknown): void {
+    function set_material_uniform_for_multiple_material_mesh(mesh: IMeshWithMaterial, index: number, uniform_name: string, value: unknown): void {
         return require_resource_manager().set_material_uniform_for_multiple_material_mesh(mesh, index, uniform_name, value);
     }
 
-    function set_material_define_for_mesh(mesh: ISceneObject, define: string, value?: string): void {
+    function set_material_define_for_mesh(mesh: IMeshWithMaterial, define: string, value?: string): void {
         return require_resource_manager().set_material_define_for_mesh(mesh, define, value);
     }
 
-    function set_material_define_for_multiple_material_mesh(mesh: ISceneObject, index: number, define: string, value?: string): void {
+    function set_material_define_for_multiple_material_mesh(mesh: IMeshWithMaterial, index: number, define: string, value?: string): void {
         return require_resource_manager().set_material_define_for_multiple_material_mesh(mesh, index, define, value);
     }
 
@@ -270,11 +270,11 @@ export function create_resource_service(params: ResourceServiceParams): IResourc
         return require_resource_manager().get_info_about_unique_materials(name);
     }
 
-    function get_changed_uniforms_for_mesh(mesh: ISceneObject): Record<string, unknown> | undefined {
+    function get_changed_uniforms_for_mesh(mesh: IMeshWithMaterial): Record<string, unknown> | undefined {
         return require_resource_manager().get_changed_uniforms_for_mesh(mesh);
     }
 
-    function get_changed_uniforms_for_multiple_material_mesh(mesh: ISceneObject, index: number): Record<string, unknown> | undefined {
+    function get_changed_uniforms_for_multiple_material_mesh(mesh: IMeshWithMaterial, index: number): Record<string, unknown> | undefined {
         return require_resource_manager().get_changed_uniforms_for_multiple_material_mesh(mesh, index);
     }
 

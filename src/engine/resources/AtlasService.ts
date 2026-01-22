@@ -1,7 +1,7 @@
 // Сервис управления атласами
 
 import { Texture, Vector2, Vector4 } from 'three';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { parse_tp_data_to_uv } from '../../render_engine/parsers/atlas_parser';
 import { get_file_name } from '../../render_engine/helpers/file';
 import type { AtlasesStorage, IAtlasService } from './types';

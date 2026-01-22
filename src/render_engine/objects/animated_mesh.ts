@@ -1,7 +1,7 @@
 import { AnimationAction, AnimationMixer } from "three";
 import { IObjectTypes } from "../types";
 import { MultipleMaterialMesh, MultipleMaterialMeshSerializeData } from "./multiple_material_mesh";
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { Property, PropertyType, type InspectorFieldDefinition } from "@editor/core/inspector";
 
 export interface AnimatedMeshSerializeData extends MultipleMaterialMeshSerializeData {

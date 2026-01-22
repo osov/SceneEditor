@@ -3,7 +3,7 @@
 import { CanvasTexture, RepeatWrapping, Texture, TextureLoader, Vector2, Vector4 } from 'three';
 import { get_file_name } from '../helpers/file';
 import { parse_tp_data_to_uv } from '../parsers/atlas_parser';
-import { Services } from '@editor/core';
+import { Services } from '@editor/core/ServiceProvider';
 import { IS_LOGGING } from '@editor/config';
 import type { AssetData, TextureData, TextureInfo } from './types';
 
