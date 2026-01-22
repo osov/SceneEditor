@@ -76,7 +76,7 @@ function MoverInspectorCreate() {
 
 
     function subscribe() {
-        EventBus.on('SYS_SELECTED_MESH_LIST', (e) => {
+        EventBus.on('SYS_SELECTED_MESH_LIST', () => {
             selected_cmp = undefined;
             const cmp = get_selected_one_component();
             if (cmp) {

@@ -13,8 +13,8 @@ export function sprite_module() {
     function play_flipbook(
         url: string | hash,
         animation_id: string,
-        complete_function?: (self: IBaseEntityAndThree, message_id: string, message: any) => void,
-        options?: {
+        _complete_function?: (self: IBaseEntityAndThree, message_id: string, message: unknown) => void,
+        _options?: {
             offset?: number,
             playback_rate?: number
         }

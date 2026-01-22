@@ -234,7 +234,7 @@ export function go_module() {
         return vmath.vector3(...worldScale.toArray());
     }
 
-    function _delete(id: string | hash, recursive?: boolean) {
+    function _delete(id: string | hash, _recursive?: boolean) {
         const mesh = SceneManager.get_mesh_by_id(uh_to_id(id));
         if (!mesh) {
             Log.error(`Mesh with url ${id} not found`);
@@ -247,7 +247,7 @@ export function go_module() {
         SceneManager.remove(uh_to_id(id));
     }
 
-    function get(url: string | hash, property: string, options?: any) {
+    function get(url: string | hash, property: string, _options?: unknown) {
         const mesh = SceneManager.get_mesh_by_id(uh_to_id(url));
         if (!mesh) {
             Log.error(`Mesh with url ${url} not found`);
@@ -268,7 +268,7 @@ export function go_module() {
         return get_nested_property(mesh, property);
     }
 
-    function set(url: string | hash, property: string, value: any, options?: any) {
+    function set(url: string | hash, property: string, value: any, _options?: unknown) {
         const mesh = SceneManager.get_mesh_by_id(uh_to_id(url));
         if (!mesh) {
             Log.error(`Mesh with url ${url} not found`);

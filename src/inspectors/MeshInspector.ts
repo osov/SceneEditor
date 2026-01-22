@@ -2,7 +2,7 @@ import { Quaternion, ShaderMaterial, Vector2, Vector3, Vector4 } from "three";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { GoSprite, FlipMode, GuiBox, GuiText } from "../render_engine/objects/sub_types";
 import { TextMesh } from "../render_engine/objects/text";
-import { IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
+import { IBaseEntityAndThree, IBaseMeshAndThree, IObjectTypes } from "../render_engine/types";
 import { ChangeInfo, PropertyType, BeforeChangeInfo, PropertyData } from "../modules_editor/Inspector";
 import { deepClone, euler_to_quat, hexToRGB, quat_to_euler, swap } from "../modules/utils";
 import { MeshMaterialPropertyInfo, MeshMaterialUniformInfo, MeshPropertyInfo } from "../controls/types";
@@ -1997,7 +1997,7 @@ function MeshInspectorCreate() {
             const z = isDraggedZ ? mesh.get_position().z + (pos.z - averagePoint.z) : isChangedZ ? pos.z : mesh.get_position().z;
 
             return { mesh_id: id, value: new Vector3(x, y, z) };
-        }).filter((item) => item != undefined);
+        }).filter((item): item is MeshPropertyInfo<Vector3> => item != undefined);
 
         updatePosition(data, info.data.event.last);
     }
@@ -2012,7 +2012,7 @@ function MeshInspectorCreate() {
             mesh.set_position(item.value.x, item.value.y, item.value.z);
         }
 
-        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
+        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != null) as IBaseEntityAndThree[];
         TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
     }
@@ -2071,7 +2071,7 @@ function MeshInspectorCreate() {
             const newQuat = new Quaternion().fromArray(euler_to_quat(finalRot.x, finalRot.y, finalRot.z));
 
             return { mesh_id: id, value: newQuat };
-        }).filter((item) => item != undefined);
+        }).filter((item): item is MeshPropertyInfo<Quaternion> => item != undefined);
 
         updateRotation(data, info.data.event.last);
     }
@@ -2087,7 +2087,7 @@ function MeshInspectorCreate() {
             mesh.transform_changed();
         }
 
-        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
+        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != null) as IBaseEntityAndThree[];
         TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
     }
@@ -2118,7 +2118,7 @@ function MeshInspectorCreate() {
             const x = isChangedX ? scale.x : mesh.get_scale().x;
             const y = isChangedY ? scale.y : mesh.get_scale().y;
             return { mesh_id: id, value: new Vector3(x, y, 1) };
-        }).filter((item) => item != undefined);
+        }).filter((item): item is MeshPropertyInfo<Vector3> => item != undefined);
 
         updateScale(data, info.data.event.last);
     }
@@ -2145,7 +2145,7 @@ function MeshInspectorCreate() {
             }
         }
 
-        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
+        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != null) as IBaseEntityAndThree[];
         TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
         Inspector.refresh(['font_size']);
@@ -2211,7 +2211,7 @@ function MeshInspectorCreate() {
             const x = isChangedX ? size.x : mesh.get_size().x;
             const y = isChangedY ? size.y : mesh.get_size().y;
             return { mesh_id: id, value: new Vector2(x, y) };
-        }).filter((item) => item != undefined);
+        }).filter((item): item is MeshPropertyInfo<Vector2> => item != undefined);
 
         updateSize(data, info.data.event.last);
     }
@@ -2226,7 +2226,7 @@ function MeshInspectorCreate() {
             mesh.set_size(item.value.x, item.value.y);
         }
 
-        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
+        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != null) as IBaseEntityAndThree[];
         TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
     }
@@ -2290,7 +2290,7 @@ function MeshInspectorCreate() {
             const x = isChangedX ? anchor.x : mesh.get_anchor().x;
             const y = isChangedY ? anchor.y : mesh.get_anchor().y;
             return { mesh_id: id, value: new Vector2(x, y) };
-        }).filter((item) => item != undefined);
+        }).filter((item): item is MeshPropertyInfo<Vector2> => item != undefined);
 
         updateAnchor(data, info.data.event.last);
     }
@@ -2462,7 +2462,7 @@ function MeshInspectorCreate() {
             const y = isChangedY ? slice.y : mesh.get_slice().y;
 
             return { mesh_id: id, value: new Vector2(x, y) };
-        }).filter((item) => item != undefined);
+        }).filter((item): item is MeshPropertyInfo<Vector2> => item != undefined);
 
         updateSlice(data, info.data.event.last);
     }
@@ -2571,7 +2571,7 @@ function MeshInspectorCreate() {
             mesh.transform_changed();
         }
 
-        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != undefined);
+        const meshes = data.map(item => SceneManager.get_mesh_by_id(item.mesh_id)).filter(mesh => mesh != null) as IBaseEntityAndThree[];
         TransformControl.set_proxy_in_average_point(meshes);
         SizeControl.draw();
         Inspector.refresh(['scale']);

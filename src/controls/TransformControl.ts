@@ -1,5 +1,5 @@
 import { TransformControls, TransformControlsMode } from 'three/examples/jsm/controls/TransformControls.js';
-import { Euler, Object3D, Quaternion, Vector3 } from 'three';
+import { Object3D, Quaternion, Vector3 } from 'three';
 import { MeshPropertyInfo } from './types';
 import { IBaseEntityAndThree } from '../render_engine/types';
 import { MeshProperty } from '../inspectors/MeshInspector';
