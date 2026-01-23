@@ -7,7 +7,7 @@ import { get_client_api } from '../../modules_editor/ClientAPI';
 import { error_popup } from '../../render_engine/helpers/utils';
 import { Services } from '@editor/core';
 import { get_popups } from '../../modules_editor/Popups';
-import type { AssetControlState, RemoveType } from './types';
+import { MoveType, RemoveType, type AssetControlState } from './types';
 import type { FileOperations } from './file_operations';
 import type { SceneOperations } from './scene_operations';
 import type { IBaseEntityData } from '../../render_engine/types';
@@ -109,12 +109,12 @@ export function create_asset_popups(
             }
             if (action === NodeAction.CTRL_X) {
                 state.move_assets_data.assets = state.selected_assets.slice();
-                state.move_assets_data.move_type = 'move';
+                state.move_assets_data.move_type = MoveType.MOVE;
                 Services.logger.debug('cut assets, amount = ', state.move_assets_data.assets.length);
             }
             if (action === NodeAction.CTRL_C) {
                 state.move_assets_data.assets = state.selected_assets.slice();
-                state.move_assets_data.move_type = 'copy';
+                state.move_assets_data.move_type = MoveType.COPY;
                 Services.logger.debug('copy assets, amount = ', state.move_assets_data.assets.length);
             }
             if (action === NodeAction.CTRL_D) {
@@ -227,17 +227,17 @@ export function create_asset_popups(
         let text = '';
         const name = state.active_asset?.getAttribute('data-name');
         const type = state.active_asset?.getAttribute('data-type');
-        let remove_type: RemoveType = undefined;
+        let remove_type: RemoveType | undefined = undefined;
         if (state.selected_assets.length > 1) {
             title = 'Удаление файлов';
             text = 'Удалить выбранные файлы?';
-            remove_type = 'selected';
+            remove_type = RemoveType.SELECTED;
         } else if (state.active_asset) {
             title = 'Удаление файла';
             let type_name = 'файл';
             if (type === 'folder') type_name = 'папку';
             text = `Удалить ${type_name} ${name}?`;
-            remove_type = 'active';
+            remove_type = RemoveType.ACTIVE;
         }
         if (remove_type) {
             get_popups().open({

@@ -2,6 +2,18 @@
 
 import type { TDictionary } from '../../modules_editor/modules_editor_const';
 
+/** Тип операции перемещения/копирования */
+export enum MoveType {
+    MOVE = 'move',
+    COPY = 'copy',
+}
+
+/** Тип удаления ассетов */
+export enum RemoveType {
+    SELECTED = 'selected',
+    ACTIVE = 'active',
+}
+
 /** Состояние AssetControl, передаваемое между модулями */
 export interface AssetControlState {
     readonly filemanager: HTMLDivElement;
@@ -22,13 +34,10 @@ export interface AssetControlState {
 
 export interface MoveAssetsData {
     assets: Element[];
-    move_type?: 'move' | 'copy';
+    move_type?: MoveType;
 }
 
 export interface CurrentScene {
     path?: string;
     name?: string;
 }
-
-/** Результат типа удаления */
-export type RemoveType = 'selected' | 'active' | undefined;

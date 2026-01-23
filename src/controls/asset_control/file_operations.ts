@@ -5,7 +5,7 @@ import { api, get_client_api } from '../../modules_editor/ClientAPI';
 import { error_popup } from '../../render_engine/helpers/utils';
 import { Services } from '@editor/core';
 import { get_popups } from '../../modules_editor/Popups';
-import type { AssetControlState, RemoveType } from './types';
+import { MoveType, RemoveType, type AssetControlState } from './types';
 
 /** Утилита для экранирования HTML */
 function escapeHTML(text: string): string {
@@ -42,12 +42,12 @@ export function create_file_operations(
 
     async function remove_assets(remove_type: RemoveType) {
         const to_remove: string[] = [];
-        if (remove_type === 'selected') {
+        if (remove_type === RemoveType.SELECTED) {
             state.selected_assets.forEach((elem) => {
                 const path = elem.getAttribute('data-path');
                 if (path) to_remove.push(path);
             });
-        } else if (remove_type === 'active') {
+        } else if (remove_type === RemoveType.ACTIVE) {
             const path = state.active_asset?.getAttribute('data-path');
             to_remove.push(path as string);
         }
@@ -60,9 +60,9 @@ export function create_file_operations(
         await go_to_dir(state.current_dir ? state.current_dir : '', true);
     }
 
-    async function paste_asset(name: string, path: string, move_type?: string) {
+    async function paste_asset(name: string, path: string, move_type?: MoveType) {
         const move_to = state.current_dir ? `${state.current_dir as string}/${name}` : name;
-        if (move_type === 'move') {
+        if (move_type === MoveType.MOVE) {
             const resp = await get_client_api().move(path, move_to);
             if (resp && resp.result === 1) {
                 Services.event_bus.emit('assets:moved', { name, path, new_path: move_to });
@@ -70,7 +70,7 @@ export function create_file_operations(
                 error_popup(`Не удалось переместить файл ${name}, ответ сервера: ${resp.message}`);
             }
         }
-        if (move_type === 'copy') {
+        if (move_type === MoveType.COPY) {
             const resp = await get_client_api().copy(path, move_to);
             if (resp && resp.result === 1) {
                 Services.event_bus.emit('assets:copied', { name, path, new_path: move_to });

@@ -1,5 +1,6 @@
 import { Object3D, Quaternion, Vector2, Vector2Tuple, Vector3, Vector3Tuple, Vector4Tuple } from "three";
 import type { HistoryDataKeys } from "@editor/shared";
+import type { SerializedOtherData } from "./serialization_types";
 
 export enum IObjectTypes {
     EMPTY = '',
@@ -58,8 +59,8 @@ export interface IBaseEntity {
     set_active(active: boolean): void
     get_visible(): boolean
     set_visible(visible: boolean): void
-    serialize(): any;
-    deserialize(data: any): void
+    serialize(): SerializedOtherData;
+    deserialize(data: SerializedOtherData): void
 }
 
 export interface IBaseEntityData {
@@ -72,8 +73,7 @@ export interface IBaseEntityData {
     rotation: Vector4Tuple;
     scale: Vector2Tuple;
     children?: IBaseEntityData[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- данные сериализации имеют динамическую структуру
-    other_data: any;
+    other_data: SerializedOtherData;
 }
 
 export interface IBaseMesh {
@@ -103,8 +103,8 @@ export interface IBaseMesh {
     set_visible(visible: boolean): void
     transform_changed(): void
     on_transform_changed?: OnTransformChanged;
-    serialize(): any;
-    deserialize(data: any): void
+    serialize(): SerializedOtherData;
+    deserialize(data: SerializedOtherData): void
 }
 
 
