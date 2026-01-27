@@ -3,7 +3,7 @@
  */
 
 import type { ReadContext, ReadResult } from '../types';
-import { type IAudioMesh, is_audio_mesh, SoundFunctionType, SoundZoneType } from './types';
+import { is_audio_mesh, SoundFunctionType, SoundZoneType } from './types';
 
 /** Чтение звука */
 export function read_sound(context: ReadContext): ReadResult<string> {

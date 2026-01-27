@@ -25,6 +25,8 @@ export interface TextSerializeData {
     text_align?: 'left' | 'right' | 'center' | 'justify'
     alpha?: number
     color?: string
+    // Index signature для совместимости с SerializedOtherData
+    [key: string]: unknown
 }
 
 

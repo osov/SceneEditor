@@ -25,6 +25,7 @@ import type {
 import type { ILogger, IEventBus } from '@editor/core/di/types';
 import type { TextureInfo, MaterialInfo, ObjectTypes, BaseEntityData } from '@editor/core/render/types';
 import type { InspectorFieldDefinition } from '@editor/core/inspector/IInspectable';
+import type { HistoryDataKeys } from '@editor/shared';
 import type { IObjectRegistry } from './object_registry';
 
 /** Минимальный интерфейс для мешей с материалами (используется в функциях материалов) */
@@ -195,7 +196,7 @@ export interface ISceneObject extends Object3D {
 
     // === Опциональные флаги для совместимости с legacy ===
     /** Ключи которые не записываются в историю */
-    ignore_history?: unknown;
+    ignore_history?: HistoryDataKeys[];
     /** Объект не сохраняется в файл сцены */
     no_saving?: boolean;
     /** Объект нельзя удалять */
@@ -357,6 +358,7 @@ export interface IResourceService {
     set_material_property_for_multiple_mesh(mesh: IMeshWithMaterial, index: number, prop: string, value: unknown): void;
     set_material_uniform_for_original(name: string, uniform_name: string, value: unknown): void;
     set_material_shader_for_original(name: string, shader_type: 'vertex' | 'fragment', shader_path: string): void;
+    set_material_transparent_for_original(name: string, transparent: boolean): void;
     set_material_uniform_for_mesh(mesh: IMeshWithMaterial, uniform_name: string, value: unknown): void;
     set_material_uniform_for_multiple_material_mesh(mesh: IMeshWithMaterial, index: number, uniform_name: string, value: unknown): void;
     set_material_define_for_mesh(mesh: IMeshWithMaterial, define: string, value?: string): void;

@@ -1,7 +1,7 @@
 // Основной модуль операций с геометрическими формами
 
 import { NULL_VALUE, ShapeNames, TAU } from "../const";
-import { LINE_A, p1, p2, p3, p4, VEC_A, VEC_B, VOID_BOX } from "../helpers";
+import { p1, p2, p3, p4, VEC_A, VEC_B, VOID_BOX } from "../helpers";
 import { Point, Arc, Vector, Box, Segment, Circle, Line } from "../shapes";
 import type { AnyShape, I_NULL_VALUE, IArc, IBox, ICircle, ILine, IPoint, ISegment, IVector, PointLike } from "../types";
 import { arc_sweep, normalize, EQ_0, EQ, vector_slope, LE, shape_length, LT, GT, multiply, GE } from "../utils";

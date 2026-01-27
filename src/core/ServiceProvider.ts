@@ -37,6 +37,7 @@ import type { ITimeService } from './services/TimeService';
 import type { IUIService } from '../editor/UIService';
 import type { IInspectorService } from '../editor/InspectorService';
 import type { IAssetService } from '../editor/AssetService';
+import type { ISizeControl, ICameraControl } from './controls/types';
 
 /** Типы сервисов для типобезопасности */
 export interface IServices {
@@ -76,6 +77,11 @@ export interface IServices {
     readonly size: ISizeService;
     /** Сервис уведомлений */
     readonly notifications: INotificationService;
+    // === Контролы редактора (legacy Three.js контролы) ===
+    /** Контрол размера объектов */
+    readonly size_control: ISizeControl;
+    /** Контрол камеры */
+    readonly camera_control: ICameraControl;
 }
 
 /**
@@ -167,6 +173,16 @@ export const Services: IServices = {
     get notifications(): INotificationService {
         return require_container().resolve<INotificationService>(TOKENS.Notifications);
     },
+
+    // === Контролы редактора (legacy Three.js контролы) ===
+
+    get size_control(): ISizeControl {
+        return require_container().resolve<ISizeControl>(TOKENS.SizeControl);
+    },
+
+    get camera_control(): ICameraControl {
+        return require_container().resolve<ICameraControl>(TOKENS.CameraControl);
+    },
 };
 
 // DEBUG: Expose Services globally for debugging
@@ -207,6 +223,9 @@ export function try_get_service<K extends keyof IServices>(key: K): IServices[K]
         assets: TOKENS.Assets,
         size: TOKENS.Size,
         notifications: TOKENS.Notifications,
+        // Контролы редактора
+        size_control: TOKENS.SizeControl,
+        camera_control: TOKENS.CameraControl,
     };
 
     return container.try_resolve(token_map[key]) as IServices[K] | undefined;

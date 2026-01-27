@@ -239,13 +239,14 @@ export function create_asset_popups(
             text = `Удалить ${type_name} ${name}?`;
             remove_type = RemoveType.ACTIVE;
         }
-        if (remove_type) {
+        if (remove_type !== undefined) {
+            const type_to_remove = remove_type;
             get_popups().open({
                 type: 'Confirm',
                 params: { title, text, button: 'Да', buttonNo: 'Нет', auto_close: true },
                 callback: async (success) => {
                     if (success) {
-                        await file_ops.remove_assets(remove_type);
+                        await file_ops.remove_assets(type_to_remove);
                     }
                 }
             });

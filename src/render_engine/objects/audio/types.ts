@@ -30,6 +30,8 @@ export interface AudioSerializeData {
     rectangleHeight?: number;
     rectangleMaxVolumeWidth?: number;
     rectangleMaxVolumeHeight?: number;
+    // Index signature для совместимости с SerializedOtherData
+    [key: string]: unknown;
 }
 
 /**

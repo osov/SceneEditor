@@ -250,6 +250,49 @@ export function create_uniform_setter(
     }
 
     /**
+     * Устанавливает transparent для оригинального материала (изменяет файл)
+     */
+    async function set_material_transparent_for_original(
+        material_name: string,
+        transparent: boolean
+    ): Promise<void> {
+        const material_info = state.get_material(material_name);
+        if (material_info === null) {
+            return;
+        }
+
+        // Обновляем transparent в оригинальном материале
+        const origin = material_info.instances[material_info.origin];
+        if (origin !== undefined) {
+            origin.transparent = transparent;
+            origin.needsUpdate = true;
+        }
+
+        // Обновляем transparent во всех копиях
+        const copy_hashes = Object.keys(material_info.instances).filter((hash) => hash !== material_info.origin);
+        for (const hash of copy_hashes) {
+            const copy = hash_utils.get_material_by_hash(material_info.name, hash);
+            if (copy === null) {
+                continue;
+            }
+            copy.transparent = transparent;
+            copy.needsUpdate = true;
+        }
+
+        // Сохраняем в файл
+        const response = await get_file_data(material_info.path);
+        if (response === null) {
+            return;
+        }
+
+        const material_data = JSON.parse(response);
+        material_data.transparent = transparent;
+
+        state.add_pending_write(material_info.path);
+        await save_file_data(material_info.path, JSON.stringify(material_data, null, 2));
+    }
+
+    /**
      * Устанавливает шейдер для оригинального материала
      */
     async function set_material_shader_for_original(
@@ -538,6 +581,7 @@ export function create_uniform_setter(
         set_material_uniform_for_mesh,
         set_material_uniform_for_multiple_material_mesh,
         set_material_uniform_for_original,
+        set_material_transparent_for_original,
         set_material_shader_for_original,
         set_material_property,
         set_material_property_for_mesh,

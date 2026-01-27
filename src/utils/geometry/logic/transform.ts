@@ -1,8 +1,8 @@
 // Модуль трансформаций геометрических фигур
 
 import { ShapeNames } from "../const";
-import { Point, Vector } from "../shapes";
-import type { AnyShape, IArc, IBox, ICircle, ILine, IPoint, ISegment, IVector, PointLike } from "../types";
+import { Point } from "../shapes";
+import type { AnyShape, ICircle, ILine, IPoint, ISegment, IVector, PointLike } from "../types";
 
 export function rotate_simple(p: IPoint | IVector, angle: number, center: PointLike) {
     const c = Math.cos(angle), s = Math.sin(angle);

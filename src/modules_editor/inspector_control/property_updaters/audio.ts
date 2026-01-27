@@ -17,7 +17,7 @@ function update_audio_internal<T>(
 ) {
     for (const item of ctx.selected_list) {
         if (item.type === IObjectTypes.GO_AUDIO_COMPONENT) {
-            setter(item as AudioMesh, value);
+            setter(item as unknown as AudioMesh, value);
         }
     }
 }

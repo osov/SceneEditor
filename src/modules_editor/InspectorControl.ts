@@ -387,8 +387,8 @@ function InspectorControlCreate() {
     }
 
     function add_material_uniform_fields(value: IBaseMeshAndThree, fields: PropertyData<PropertyType>[]) {
-        if ('get_materials' in value && typeof (value as MultipleMaterialMesh).get_materials === 'function') {
-            const materials = (value as MultipleMaterialMesh).get_materials();
+        if ('get_materials' in value && typeof (value as unknown as MultipleMaterialMesh).get_materials === 'function') {
+            const materials = (value as unknown as MultipleMaterialMesh).get_materials();
             for (let slot_index = 0; slot_index < materials.length; slot_index++) {
                 const material = materials[slot_index];
                 const material_name = material.name || '';

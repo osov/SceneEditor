@@ -71,6 +71,7 @@ export function create_material_service(deps: MaterialServiceDeps) {
         set_material_uniform_for_mesh: uniform_setter.set_material_uniform_for_mesh,
         set_material_uniform_for_multiple_material_mesh: uniform_setter.set_material_uniform_for_multiple_material_mesh,
         set_material_uniform_for_original: uniform_setter.set_material_uniform_for_original,
+        set_material_transparent_for_original: uniform_setter.set_material_transparent_for_original,
         set_material_shader_for_original: uniform_setter.set_material_shader_for_original,
         set_material_property_for_mesh: uniform_setter.set_material_property_for_mesh,
         set_material_property_for_multiple_mesh: uniform_setter.set_material_property_for_multiple_mesh,

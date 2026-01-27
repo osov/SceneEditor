@@ -1,6 +1,19 @@
 import { IBaseEntityAndThree, IBaseMeshAndThree, IObjectTypes } from "@editor/render_engine/types";
 import { Quaternion, Vector3 } from "three";
-import { animate_logic, cancel_animations_logic, get_nested_property, PLAYBACK_LOOP_BACKWARD, PLAYBACK_LOOP_FORWARD, PLAYBACK_ONCE_BACKWARD, PLAYBACK_ONCE_FORWARD, PLAYBACK_ONCE_PINGPONG, PLAYBACK_LOOP_PINGPONG, set_nested_property, uh_to_id, EASING_LINEAR, EASING_INQUART, EASING_INQUAD, EASING_OUTQUART, EASING_OUTQUAD, EASING_OUTQUINT, EASING_INOUTQUAD, EASING_INQUINT, EASING_INOUTQUART, EASING_INOUTQUINT, EASING_OUTCUBIC, EASING_INOUTCUBIC, EASING_OUTSINE, EASING_INSINE, EASING_INCUBIC, EASING_INOUTSINE, EASING_OUTCIRC, EASING_INOUTCIRC, EASING_INOUTEXPO, EASING_INCIRC, EASING_OUTBACK, EASING_INBACK, EASING_INOUTELASTIC, EASING_INOUTBACK, EASING_INEXPO, EASING_OUTEXPO, EASING_INELASTIC, EASING_OUTELASTIC, EASING_INBOUNCE, EASING_OUTBOUNCE, EASING_INOUTBOUNCE } from "./utils";
+import {
+    animate_logic, cancel_animations_logic, uh_to_id,
+    get_nested_property, set_nested_property,
+    PLAYBACK_LOOP_BACKWARD, PLAYBACK_LOOP_FORWARD, PLAYBACK_ONCE_BACKWARD,
+    PLAYBACK_ONCE_FORWARD, PLAYBACK_ONCE_PINGPONG, PLAYBACK_LOOP_PINGPONG,
+    EASING_LINEAR, EASING_INQUART, EASING_INQUAD, EASING_OUTQUART, EASING_OUTQUAD,
+    EASING_OUTQUINT, EASING_INOUTQUAD, EASING_INQUINT, EASING_INOUTQUART,
+    EASING_INOUTQUINT, EASING_OUTCUBIC, EASING_INOUTCUBIC, EASING_OUTSINE,
+    EASING_INSINE, EASING_INCUBIC, EASING_INOUTSINE, EASING_OUTCIRC, EASING_INOUTCIRC,
+    EASING_INOUTEXPO, EASING_INCIRC, EASING_OUTBACK, EASING_INBACK, EASING_INOUTELASTIC,
+    EASING_INOUTBACK, EASING_INEXPO, EASING_OUTEXPO, EASING_INELASTIC, EASING_OUTELASTIC,
+    EASING_INBOUNCE, EASING_OUTBOUNCE, EASING_INOUTBOUNCE,
+    type PlaybackMode, type EasingType
+} from "./utils";
 import { Services } from '@editor/core';
 import { get_audio_manager } from "@editor/render_engine/AudioManager";
 
@@ -17,50 +30,50 @@ declare global {
         export function get_world_position(id: string | hash): vmath.vector3
         export function get_world_rotation(id: string | hash): vmath.quaternion
         export function get_world_scale(id: string | hash): vmath.vector3
-        export function get(url: string | hash, property: string, options?: any): any
-        export function set(url: string | hash, property: string, value: any, options?: any): void
+        export function get(url: string | hash, property: string, options?: unknown): unknown
+        export function set(url: string | hash, property: string, value: unknown, options?: unknown): void
         function _delete(id: string | hash, recursive?: boolean): void; export { _delete as delete }
-        export function animate(url: string | hash, property: string, playback: any, to: number | vmath.vector3 | vmath.quaternion, easing: any, duration: number, delay?: number, complete_function?: (self: IBaseEntityAndThree, url: string | hash, property: string) => void): void
+        export function animate(url: string | hash, property: string, playback: PlaybackMode, to: number | vmath.vector3 | vmath.quaternion, easing: EasingType, duration: number, delay?: number, complete_function?: (self: IBaseEntityAndThree, url: string | hash, property: string) => void): void
         export function cancel_animations(url: string | hash, property?: string): void
 
-        export const PLAYBACK_ONCE_FORWARD: any;
-        export const PLAYBACK_ONCE_BACKWARD: any;
-        export const PLAYBACK_ONCE_PINGPONG: any;
-        export const PLAYBACK_LOOP_FORWARD: any;
-        export const PLAYBACK_LOOP_BACKWARD: any;
-        export const PLAYBACK_LOOP_PINGPONG: any;
+        export const PLAYBACK_ONCE_FORWARD: PlaybackMode;
+        export const PLAYBACK_ONCE_BACKWARD: PlaybackMode;
+        export const PLAYBACK_ONCE_PINGPONG: PlaybackMode;
+        export const PLAYBACK_LOOP_FORWARD: PlaybackMode;
+        export const PLAYBACK_LOOP_BACKWARD: PlaybackMode;
+        export const PLAYBACK_LOOP_PINGPONG: PlaybackMode;
 
-        export const EASING_LINEAR: any;
-        export const EASING_INQUAD: any;
-        export const EASING_OUTQUAD: any;
-        export const EASING_INOUTQUAD: any;
-        export const EASING_INCUBIC: any;
-        export const EASING_OUTCUBIC: any;
-        export const EASING_INOUTCUBIC: any;
-        export const EASING_INQUART: any;
-        export const EASING_OUTQUART: any;
-        export const EASING_INOUTQUART: any;
-        export const EASING_INQUINT: any;
-        export const EASING_OUTQUINT: any;
-        export const EASING_INOUTQUINT: any;
-        export const EASING_INSINE: any;
-        export const EASING_OUTSINE: any;
-        export const EASING_INOUTSINE: any;
-        export const EASING_INEXPO: any;
-        export const EASING_OUTEXPO: any;
-        export const EASING_INOUTEXPO: any;
-        export const EASING_INCIRC: any;
-        export const EASING_OUTCIRC: any;
-        export const EASING_INOUTCIRC: any;
-        export const EASING_INELASTIC: any;
-        export const EASING_OUTELASTIC: any;
-        export const EASING_INOUTELASTIC: any;
-        export const EASING_INBACK: any;
-        export const EASING_OUTBACK: any;
-        export const EASING_INOUTBACK: any;
-        export const EASING_INBOUNCE: any;
-        export const EASING_OUTBOUNCE: any;
-        export const EASING_INOUTBOUNCE: any;
+        export const EASING_LINEAR: EasingType;
+        export const EASING_INQUAD: EasingType;
+        export const EASING_OUTQUAD: EasingType;
+        export const EASING_INOUTQUAD: EasingType;
+        export const EASING_INCUBIC: EasingType;
+        export const EASING_OUTCUBIC: EasingType;
+        export const EASING_INOUTCUBIC: EasingType;
+        export const EASING_INQUART: EasingType;
+        export const EASING_OUTQUART: EasingType;
+        export const EASING_INOUTQUART: EasingType;
+        export const EASING_INQUINT: EasingType;
+        export const EASING_OUTQUINT: EasingType;
+        export const EASING_INOUTQUINT: EasingType;
+        export const EASING_INSINE: EasingType;
+        export const EASING_OUTSINE: EasingType;
+        export const EASING_INOUTSINE: EasingType;
+        export const EASING_INEXPO: EasingType;
+        export const EASING_OUTEXPO: EasingType;
+        export const EASING_INOUTEXPO: EasingType;
+        export const EASING_INCIRC: EasingType;
+        export const EASING_OUTCIRC: EasingType;
+        export const EASING_INOUTCIRC: EasingType;
+        export const EASING_INELASTIC: EasingType;
+        export const EASING_OUTELASTIC: EasingType;
+        export const EASING_INOUTELASTIC: EasingType;
+        export const EASING_INBACK: EasingType;
+        export const EASING_OUTBACK: EasingType;
+        export const EASING_INOUTBACK: EasingType;
+        export const EASING_INBOUNCE: EasingType;
+        export const EASING_OUTBOUNCE: EasingType;
+        export const EASING_INOUTBOUNCE: EasingType;
     }
 }
 
@@ -267,7 +280,7 @@ export function go_module() {
             const id = uh_to_id(url);
             return get_audio_manager().get_speed(id);
         }
-        return get_nested_property(mesh, property);
+        return get_nested_property(mesh as IBaseEntityAndThree, property);
     }
 
     function set(url: string | hash, property: string, value: unknown, _options?: unknown) {
@@ -285,15 +298,15 @@ export function go_module() {
             get_audio_manager().set_speed(id, value as number);
             return;
         }
-        set_nested_property(mesh, property, value);
+        set_nested_property(mesh as IBaseEntityAndThree, property, value);
     }
 
     function animate(
         url: string | hash,
         property: string,
-        playback: any,
+        playback: PlaybackMode,
         to: number | vmath.vector3 | vmath.quaternion,
-        easing: any,
+        easing: EasingType,
         duration: number,
         delay: number = 0,
         complete_function?: (self: IBaseEntityAndThree, url: string | hash, property: string) => void

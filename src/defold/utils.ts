@@ -33,104 +33,165 @@ export function rgb2hex(vec: vmath.vector3): string {
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-export function get_nested_property(obj: any, path: string): any {
+export function get_nested_property(obj: IBaseEntityAndThree, path: string): unknown {
     const parts = path.split('.');
-    let current = obj;
-    if (path == 'size') {
-        return obj.get_size();
+    // Приводим к типу с методами mesh
+    const mesh = obj as IBaseEntityAndThree & {
+        get_size?: () => { x: number; y: number };
+        get_color?: () => string;
+        get_alpha?: () => number;
+    };
+    if (path == 'size' && mesh.get_size !== undefined) {
+        return mesh.get_size();
     }
     if (path == 'euler.z') {
         return obj.rotation.z;
     }
-    if (path == 'tint') {
-        const clr = new Color().setStyle(obj.get_color(), NoColorSpace);
-        const v = vmath.vector4(clr.r, clr.g, clr.b, obj.get_alpha());
+    if (path == 'tint' && mesh.get_color !== undefined && mesh.get_alpha !== undefined) {
+        const clr = new Color().setStyle(mesh.get_color(), NoColorSpace);
+        const v = vmath.vector4(clr.r, clr.g, clr.b, mesh.get_alpha());
         return v;
     }
-    if (path == 'tint.w' || path == 'alpha') {
-        return obj.get_alpha();
+    if ((path == 'tint.w' || path == 'alpha') && mesh.get_alpha !== undefined) {
+        return mesh.get_alpha();
     }
+    // Для доступа к вложенным свойствам используем Record
+    let current: Record<string, unknown> = obj as unknown as Record<string, unknown>;
     for (const part of parts) {
         if (current === undefined || current === null) {
             Services.logger.error(`get_nested_property: ${path} not found`, obj);
             return undefined;
         }
-        current = current[part];
+        current = current[part] as Record<string, unknown>;
     }
     if (current == undefined)
         Services.logger.error(`get_nested_property: ${path} not found`, obj);
     return current;
 }
 
-export function set_nested_property(obj: any, path: string, value: any): void {
-    if (path == 'size') {
-        obj.set_size(value.x, value.y);
+export function set_nested_property(obj: IBaseEntityAndThree, path: string, value: unknown): void {
+    // Приводим к типу с методами mesh
+    const mesh = obj as IBaseEntityAndThree & {
+        set_size?: (w: number, h: number) => void;
+        set_color?: (hex: string) => void;
+        set_alpha?: (v: number) => void;
+    };
+    if (path == 'size' && mesh.set_size !== undefined) {
+        const v = value as { x: number; y: number };
+        mesh.set_size(v.x, v.y);
         return;
     }
-    if (path == 'tint') {
-        obj.set_color(rgb2hex(value));
-        if (value.w != undefined)
-            obj.set_alpha(value.w);
+    if (path == 'tint' && mesh.set_color !== undefined) {
+        const v = value as vmath.vector4;
+        mesh.set_color(rgb2hex(v));
+        if (v.w !== undefined && mesh.set_alpha !== undefined)
+            mesh.set_alpha(v.w);
         return;
     }
-    if (path == 'tint.w' || path == 'alpha') {
-        obj.set_alpha(value);
+    if ((path == 'tint.w' || path == 'alpha') && mesh.set_alpha !== undefined) {
+        mesh.set_alpha(value as number);
         return;
     }
     if (path == 'euler.z') {
-        obj.rotation.z = value;
+        obj.rotation.z = value as number;
         return;
     }
+    // Для доступа к вложенным свойствам используем Record
     const parts = path.split('.');
-    let current = obj;
+    let current: Record<string, unknown> = obj as unknown as Record<string, unknown>;
     for (let i = 0; i < parts.length - 1; i++) {
         const part = parts[i];
         if (current[part] === undefined || current[part] === null) {
             current[part] = {};
         }
-        current = current[part];
+        current = current[part] as Record<string, unknown>;
     }
     current[parts[parts.length - 1]] = value;
 }
 
-export const PLAYBACK_ONCE_FORWARD = 0;
-export const PLAYBACK_ONCE_BACKWARD = 1;
-export const PLAYBACK_ONCE_PINGPONG = 2;
-export const PLAYBACK_LOOP_FORWARD = 3;
-export const PLAYBACK_LOOP_BACKWARD = 4;
-export const PLAYBACK_LOOP_PINGPONG = 5;
+// === Константы режимов воспроизведения ===
+export const PLAYBACK_ONCE_FORWARD = 0 as const;
+export const PLAYBACK_ONCE_BACKWARD = 1 as const;
+export const PLAYBACK_ONCE_PINGPONG = 2 as const;
+export const PLAYBACK_LOOP_FORWARD = 3 as const;
+export const PLAYBACK_LOOP_BACKWARD = 4 as const;
+export const PLAYBACK_LOOP_PINGPONG = 5 as const;
 
-export const EASING_LINEAR = 0;
-export const EASING_INQUAD = 1;
-export const EASING_OUTQUAD = 2;
-export const EASING_INOUTQUAD = 3;
-export const EASING_INCUBIC = 4;
-export const EASING_OUTCUBIC = 5;
-export const EASING_INOUTCUBIC = 6;
-export const EASING_INQUART = 7;
-export const EASING_OUTQUART = 8;
-export const EASING_INOUTQUART = 9;
-export const EASING_INQUINT = 10;
-export const EASING_OUTQUINT = 11;
-export const EASING_INOUTQUINT = 12;
-export const EASING_INSINE = 13;
-export const EASING_OUTSINE = 14;
-export const EASING_INOUTSINE = 15;
-export const EASING_INEXPO = 16;
-export const EASING_OUTEXPO = 17;
-export const EASING_INOUTEXPO = 18;
-export const EASING_INCIRC = 19;
-export const EASING_OUTCIRC = 20;
-export const EASING_INOUTCIRC = 21;
-export const EASING_INELASTIC = 22;
-export const EASING_OUTELASTIC = 23;
-export const EASING_INOUTELASTIC = 24;
-export const EASING_INBACK = 25;
-export const EASING_OUTBACK = 26;
-export const EASING_INOUTBACK = 27;
-export const EASING_INBOUNCE = 28;
-export const EASING_OUTBOUNCE = 29;
-export const EASING_INOUTBOUNCE = 30;
+/** Тип режима воспроизведения анимации */
+export type PlaybackMode =
+    | typeof PLAYBACK_ONCE_FORWARD
+    | typeof PLAYBACK_ONCE_BACKWARD
+    | typeof PLAYBACK_ONCE_PINGPONG
+    | typeof PLAYBACK_LOOP_FORWARD
+    | typeof PLAYBACK_LOOP_BACKWARD
+    | typeof PLAYBACK_LOOP_PINGPONG;
+
+// === Константы функций плавности ===
+export const EASING_LINEAR = 0 as const;
+export const EASING_INQUAD = 1 as const;
+export const EASING_OUTQUAD = 2 as const;
+export const EASING_INOUTQUAD = 3 as const;
+export const EASING_INCUBIC = 4 as const;
+export const EASING_OUTCUBIC = 5 as const;
+export const EASING_INOUTCUBIC = 6 as const;
+export const EASING_INQUART = 7 as const;
+export const EASING_OUTQUART = 8 as const;
+export const EASING_INOUTQUART = 9 as const;
+export const EASING_INQUINT = 10 as const;
+export const EASING_OUTQUINT = 11 as const;
+export const EASING_INOUTQUINT = 12 as const;
+export const EASING_INSINE = 13 as const;
+export const EASING_OUTSINE = 14 as const;
+export const EASING_INOUTSINE = 15 as const;
+export const EASING_INEXPO = 16 as const;
+export const EASING_OUTEXPO = 17 as const;
+export const EASING_INOUTEXPO = 18 as const;
+export const EASING_INCIRC = 19 as const;
+export const EASING_OUTCIRC = 20 as const;
+export const EASING_INOUTCIRC = 21 as const;
+export const EASING_INELASTIC = 22 as const;
+export const EASING_OUTELASTIC = 23 as const;
+export const EASING_INOUTELASTIC = 24 as const;
+export const EASING_INBACK = 25 as const;
+export const EASING_OUTBACK = 26 as const;
+export const EASING_INOUTBACK = 27 as const;
+export const EASING_INBOUNCE = 28 as const;
+export const EASING_OUTBOUNCE = 29 as const;
+export const EASING_INOUTBOUNCE = 30 as const;
+
+/** Тип функции плавности анимации */
+export type EasingType =
+    | typeof EASING_LINEAR
+    | typeof EASING_INQUAD
+    | typeof EASING_OUTQUAD
+    | typeof EASING_INOUTQUAD
+    | typeof EASING_INCUBIC
+    | typeof EASING_OUTCUBIC
+    | typeof EASING_INOUTCUBIC
+    | typeof EASING_INQUART
+    | typeof EASING_OUTQUART
+    | typeof EASING_INOUTQUART
+    | typeof EASING_INQUINT
+    | typeof EASING_OUTQUINT
+    | typeof EASING_INOUTQUINT
+    | typeof EASING_INSINE
+    | typeof EASING_OUTSINE
+    | typeof EASING_INOUTSINE
+    | typeof EASING_INEXPO
+    | typeof EASING_OUTEXPO
+    | typeof EASING_INOUTEXPO
+    | typeof EASING_INCIRC
+    | typeof EASING_OUTCIRC
+    | typeof EASING_INOUTCIRC
+    | typeof EASING_INELASTIC
+    | typeof EASING_OUTELASTIC
+    | typeof EASING_INOUTELASTIC
+    | typeof EASING_INBACK
+    | typeof EASING_OUTBACK
+    | typeof EASING_INOUTBACK
+    | typeof EASING_INBOUNCE
+    | typeof EASING_OUTBOUNCE
+    | typeof EASING_INOUTBOUNCE;
 
 const EASING_MAP: Record<string, (k: number) => number> = {
     [EASING_LINEAR]: TWEEN.Easing.Linear.None,
@@ -166,7 +227,7 @@ const EASING_MAP: Record<string, (k: number) => number> = {
     [EASING_INOUTBOUNCE]: TWEEN.Easing.Bounce.InOut,
 };
 
-function applyPlayback(tween: TWEEN.Tween, playback: any) {
+function applyPlayback(tween: TWEEN.Tween, playback: PlaybackMode) {
     switch (playback) {
         case PLAYBACK_ONCE_PINGPONG:
             tween.yoyo(true).repeat(1);
@@ -190,9 +251,9 @@ function applyPlayback(tween: TWEEN.Tween, playback: any) {
 export function animate_logic(
     mesh: IBaseEntityAndThree,
     property: string,
-    playback: any,
+    playback: PlaybackMode,
     to: number | vmath.vector3 | vmath.quaternion,
-    easing: any,
+    easing: EasingType,
     duration: number,
     delay: number = 0,
     complete_function?: () => void
@@ -206,8 +267,8 @@ export function animate_logic(
     let currentValue = get_nested_property(mesh, property);
     if (currentValue == undefined) {
         is_material_property = true;
-        const material = (mesh as any).material;
-        if (material) currentValue = material.uniforms[property]?.value;
+        const material = (mesh as unknown as { material?: { uniforms?: Record<string, { value: unknown }> } }).material;
+        if (material !== undefined && material.uniforms !== undefined) currentValue = material.uniforms[property]?.value;
         if (currentValue == undefined) {
             Services.logger.error(`Property ${property} not found on mesh`);
             return;
@@ -278,7 +339,7 @@ export function animate_logic(
         })
         .delay(delay * 1000)
         .easing(EASING_MAP[easing] ?? TWEEN.Easing.Linear.None)
-        .onComplete((_: { [key: string]: any }) => {
+        .onComplete(() => {
             get_tween_manager().remove_mesh_property_tween(mesh.mesh_data.id, property);
             if (complete_function) complete_function();
         });
@@ -295,13 +356,13 @@ export function cancel_animations_logic(mesh: IBaseEntityAndThree, property?: st
 }
 
 export function uh_to_id(uh: string | hash): number {
-    if (typeof uh !== 'string' && (uh as any).id != undefined) {
-        return (uh as any).id;
+    if (typeof uh !== 'string' && (uh as { id?: number }).id !== undefined) {
+        return (uh as { id: number }).id;
     }
     return Services.scene.get_id_by_url(uh as string) ?? -1;
 }
 
-export function convert_defold_blend_mode_to_threejs(blend_mode: any) {
+export function convert_defold_blend_mode_to_threejs(blend_mode: number) {
     switch (blend_mode) {
         case gui.BLEND_ALPHA:
             return NormalBlending;
@@ -318,7 +379,7 @@ export function convert_defold_blend_mode_to_threejs(blend_mode: any) {
     }
 }
 
-export function convert_threejs_blend_mode_to_defold(blend_mode: any) {
+export function convert_threejs_blend_mode_to_defold(blend_mode: number) {
     switch (blend_mode) {
         case NormalBlending:
             return gui.BLEND_ALPHA;
@@ -333,7 +394,7 @@ export function convert_threejs_blend_mode_to_defold(blend_mode: any) {
     }
 }
 
-export function convert_defold_pivot_to_threejs(pivot: any) {
+export function convert_defold_pivot_to_threejs(pivot: number) {
     let pivot_x = 0.5;
     let pivot_y = 0.5;
 
@@ -379,7 +440,7 @@ export function convert_defold_pivot_to_threejs(pivot: any) {
     return [pivot_x, pivot_y];
 }
 
-export function convert_threejs_pivot_to_defold(x: number, y: number): any {
+export function convert_threejs_pivot_to_defold(x: number, y: number): number {
     // Use small epsilon for float comparison
     const EPSILON = 0.001;
 
@@ -425,9 +486,15 @@ export function generate_unique_name(baseName: string): string {
     return uniqueName;
 }
 
-export function make_names_unique(data: any) {
+/** Данные с именем и дочерними элементами */
+interface NamedData {
+    name: string;
+    children?: NamedData[];
+}
+
+export function make_names_unique(data: NamedData): NamedData {
     data.name = generate_unique_name(data.name);
-    if (data.children && Array.isArray(data.children)) {
+    if (data.children !== undefined && Array.isArray(data.children)) {
         for (const child of data.children) {
             make_names_unique(child);
         }

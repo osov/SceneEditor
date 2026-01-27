@@ -1,13 +1,12 @@
 // Модуль функций расстояний между геометрическими фигурами
 
 import { ShapeNames } from "../const";
-import { Point, Circle, Line, Vector, Segment } from "../shapes";
-import type { AnyShape, IArc, ICircle, ILine, IPoint, ISegment, IVector } from "../types";
-import { EQ_0, EQ, shape_length, normalize, multiply, LT, GE } from "../utils";
+import { Circle, Line, Vector, Segment } from "../shapes";
+import type { AnyShape, IArc, ICircle, ILine, IPoint, ISegment } from "../types";
+import { EQ_0, shape_length, normalize, multiply, LT, GE } from "../utils";
 import { VEC_A, VEC_B, VEC_C, LINE_A } from "../helpers";
-import { translate, invert_vec, rotate_vec_90CW } from "./transform";
+import { translate } from "./transform";
 import {
-    shape_box,
     shape_equal_to,
     clone,
     point_on,

@@ -27,8 +27,12 @@ export interface SizeHistoryData {
 
 /** Интерфейс SizeControl */
 export interface ISizeControl {
+    /** Установить список выделенных мешей */
     set_selected_list(list: unknown[]): void;
+    /** Открепить от текущих мешей */
     detach(): void;
+    /** Установить активность контрола */
     set_active(val: boolean): void;
+    /** Отрисовать контрол */
     draw(): void;
 }

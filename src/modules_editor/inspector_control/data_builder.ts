@@ -90,8 +90,8 @@ export function get_property_value(obj: IBaseMeshAndThree, property: Property): 
         }
         case Property.MATERIAL: {
             // MultipleMaterialMesh имеет массив материалов
-            if ('get_materials' in obj && typeof (obj as MultipleMaterialMesh).get_materials === 'function') {
-                const materials = (obj as MultipleMaterialMesh).get_materials();
+            if ('get_materials' in obj && typeof (obj as unknown as MultipleMaterialMesh).get_materials === 'function') {
+                const materials = (obj as unknown as MultipleMaterialMesh).get_materials();
                 return materials.length > 0 ? (materials[0].name || '') : '';
             }
             return (obj as Slice9Mesh).material.name || '';
@@ -123,37 +123,37 @@ export function get_property_value(obj: IBaseMeshAndThree, property: Property): 
             return (obj as GoSprite).get_flip() === FlipMode.DIAGONAL;
         // Аудио свойства
         case Property.SOUND:
-            return (obj as AudioMesh).get_sound();
+            return (obj as unknown as AudioMesh).get_sound();
         case Property.VOLUME:
-            return (obj as AudioMesh).get_volume();
+            return (obj as unknown as AudioMesh).get_volume();
         case Property.LOOP:
-            return (obj as AudioMesh).get_loop();
+            return (obj as unknown as AudioMesh).get_loop();
         case Property.PAN:
-            return (obj as AudioMesh).get_pan();
+            return (obj as unknown as AudioMesh).get_pan();
         case Property.SPEED:
-            return (obj as AudioMesh).get_speed();
+            return (obj as unknown as AudioMesh).get_speed();
         case Property.SOUND_RADIUS:
-            return (obj as AudioMesh).get_sound_radius();
+            return (obj as unknown as AudioMesh).get_sound_radius();
         case Property.MAX_VOLUME_RADIUS:
-            return (obj as AudioMesh).get_max_volume_radius();
+            return (obj as unknown as AudioMesh).get_max_volume_radius();
         case Property.SOUND_FUNCTION:
-            return (obj as AudioMesh).get_sound_function();
+            return (obj as unknown as AudioMesh).get_sound_function();
         case Property.ZONE_TYPE:
-            return (obj as AudioMesh).get_zone_type();
+            return (obj as unknown as AudioMesh).get_zone_type();
         case Property.PAN_NORMALIZATION:
-            return (obj as AudioMesh).get_pan_normalization_distance();
+            return (obj as unknown as AudioMesh).get_pan_normalization_distance();
         case Property.RECTANGLE_WIDTH:
-            return (obj as AudioMesh).get_rectangle_width();
+            return (obj as unknown as AudioMesh).get_rectangle_width();
         case Property.RECTANGLE_HEIGHT:
-            return (obj as AudioMesh).get_rectangle_height();
+            return (obj as unknown as AudioMesh).get_rectangle_height();
         case Property.RECTANGLE_MAX_WIDTH:
-            return (obj as AudioMesh).get_rectangle_max_volume_width();
+            return (obj as unknown as AudioMesh).get_rectangle_max_volume_width();
         case Property.RECTANGLE_MAX_HEIGHT:
-            return (obj as AudioMesh).get_rectangle_max_volume_height();
+            return (obj as unknown as AudioMesh).get_rectangle_max_volume_height();
         case Property.FADE_IN_TIME:
-            return (obj as AudioMesh).get_fade_in_time();
+            return (obj as unknown as AudioMesh).get_fade_in_time();
         case Property.FADE_OUT_TIME:
-            return (obj as AudioMesh).get_fade_out_time();
+            return (obj as unknown as AudioMesh).get_fade_out_time();
         case Property.AUDIO_PLAY_PAUSE:
             // Кнопка воспроизведения/паузы - возвращаем callback
             return () => {
@@ -169,19 +169,19 @@ export function get_property_value(obj: IBaseMeshAndThree, property: Property): 
         case Property.AUDIO_STOP:
             // Кнопка стоп - возвращаем callback
             return () => {
-                (obj as AudioMesh).stop();
+                (obj as unknown as AudioMesh).stop();
             };
         // 3D модели
         case Property.MESH_NAME:
-            return (obj as MultipleMaterialMesh).get_mesh_name();
+            return (obj as unknown as MultipleMaterialMesh).get_mesh_name();
         case Property.MODEL_SCALE:
-            return (obj as MultipleMaterialMesh).get_scale().x;
+            return (obj as unknown as MultipleMaterialMesh).get_scale().x;
         case Property.MODEL_MATERIALS:
-            return (obj as MultipleMaterialMesh).get_materials().map(m => m.name);
+            return (obj as unknown as MultipleMaterialMesh).get_materials().map(m => m.name);
         case Property.ANIMATIONS:
-            return Object.keys((obj as AnimatedMesh).get_animation_list());
+            return Object.keys((obj as unknown as AnimatedMesh).get_animation_list());
         case Property.CURRENT_ANIMATION:
-            return (obj as AnimatedMesh).get_animation();
+            return (obj as unknown as AnimatedMesh).get_animation();
         default:
             Services.logger.warn(`[get_property_value] Неизвестное свойство: ${property}`);
             return undefined;
@@ -226,7 +226,7 @@ export function build_inspector_data_from_inspectable(
         {
             // Callback для анимаций - специфично для AnimatedMesh
             get_animation_list: 'get_animation_list' in obj
-                ? () => Object.keys((obj as AnimatedMesh).get_animation_list())
+                ? () => Object.keys((obj as unknown as AnimatedMesh).get_animation_list())
                 : undefined
         }
     );

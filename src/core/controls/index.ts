@@ -14,4 +14,6 @@ export type {
     ITransformControl,
     ControlButton,
     IControlManager,
+    ISizeControl,
+    ICameraControl,
 } from './types';

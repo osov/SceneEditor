@@ -631,6 +631,7 @@ export function ResourceManagerModule() {
         set_material_property_for_mesh: (...args: Parameters<typeof material_manager.set_material_property_for_mesh>) => material_manager.set_material_property_for_mesh(...args),
         set_material_property_for_multiple_mesh: (...args: Parameters<typeof material_manager.set_material_property_for_multiple_mesh>) => material_manager.set_material_property_for_multiple_mesh(...args),
         set_material_uniform_for_original: (...args: Parameters<typeof material_manager.set_material_uniform_for_original>) => material_manager.set_material_uniform_for_original(...args),
+        set_material_transparent_for_original: (...args: Parameters<typeof material_manager.set_material_transparent_for_original>) => material_manager.set_material_transparent_for_original(...args),
         set_material_shader_for_original: (...args: Parameters<typeof material_manager.set_material_shader_for_original>) => material_manager.set_material_shader_for_original(...args),
         set_material_uniform_for_mesh: (...args: Parameters<typeof material_manager.set_material_uniform_for_mesh>) => material_manager.set_material_uniform_for_mesh(...args),
         set_material_uniform_for_multiple_material_mesh: (...args: Parameters<typeof material_manager.set_material_uniform_for_multiple_material_mesh>) => material_manager.set_material_uniform_for_multiple_material_mesh(...args),

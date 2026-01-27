@@ -19,7 +19,7 @@ import type { PointerEventData, KeyEventData } from '@editor/core/services/Input
 import type { IBaseEntityData } from '@editor/render_engine/types';
 
 // Импорт модулей
-import type { AssetControlState } from './asset_control/types';
+import { MoveType, type AssetControlState } from './asset_control/types';
 import { create_asset_selection } from './asset_control/asset_selection';
 import { create_file_operations } from './asset_control/file_operations';
 import { create_scene_operations } from './asset_control/scene_operations';
@@ -521,12 +521,12 @@ function AssetControlCreate() {
         if (Services.input.is_control()) {
             if ((event.key === 'c' || event.key === 'с') && state.selected_assets.length !== 0) {
                 state.move_assets_data.assets = state.selected_assets.slice();
-                state.move_assets_data.move_type = 'copy';
+                state.move_assets_data.move_type = MoveType.COPY;
                 Services.logger.debug('copy assets, amount = ', state.move_assets_data.assets.length);
             }
             if ((event.key === 'x' || event.key === 'ч') && state.selected_assets.length !== 0) {
                 state.move_assets_data.assets = state.selected_assets.slice();
-                state.move_assets_data.move_type = 'move';
+                state.move_assets_data.move_type = MoveType.MOVE;
                 Services.logger.debug('cut assets, amount = ', state.move_assets_data.assets.length);
             }
             if ((event.key === 'v' || event.key === 'м') && state.move_assets_data.assets.length !== 0) {

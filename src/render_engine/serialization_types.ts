@@ -12,6 +12,8 @@ export interface ISerializedEntityBase {
     material_name?: string;
     blending?: number;
     layers?: number;
+    // Index signature для совместимости с Record<string, unknown>
+    [key: string]: unknown;
 }
 
 /**

@@ -44,9 +44,9 @@ import {
 // Legacy регистрации для обратной совместимости
 import { register_resource_manager } from '../render_engine/resource_manager';
 import { register_editor_modules } from '../modules_editor/Manager_editor';
-import { register_size_control } from '../controls/SizeControl';
+import { register_size_control, get_size_control } from '../controls/SizeControl';
 import { register_transform_control } from '../controls/TransformControl';
-import { register_camera_control } from '../controls/CameraContol';
+import { register_camera_control, get_camera_control } from '../controls/CameraContol';
 // ActionsControl удалён - используем Services.actions
 import { register_asset_control } from '../controls/AssetControl';
 import { register_sound } from '../modules/Sound';
@@ -459,7 +459,18 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         register_transform_control();
         register_camera_control();
 
-        // 6. UI модули редактора
+        // 8. Регистрация контролов в DI контейнере
+        container.register_singleton(TOKENS.SizeControl, () => get_size_control(), {
+            init_order: INIT_ORDER.CONTROLS,
+            name: 'SizeControl',
+        });
+
+        container.register_singleton(TOKENS.CameraControl, () => get_camera_control(), {
+            init_order: INIT_ORDER.CONTROLS,
+            name: 'CameraControl',
+        });
+
+        // 9. UI модули редактора
         register_editor_modules();
 
         logger.info('Модули редактора зарегистрированы');

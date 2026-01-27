@@ -205,8 +205,7 @@ export function create_material_asset_handler(_params?: HandlerParams): IMateria
             }
 
             const material_name = get_file_name(get_basename(material_path));
-            // TODO: реализовать сохранение transparent в материале
-            Services.logger.warn(`[MaterialAssetHandler.update_transparent] Setting transparent=${transparent} for ${material_name} not implemented yet`);
+            Services.resources.set_material_transparent_for_original(material_name, transparent);
 
             Services.event_bus.emit('materials:changed', {
                 material_name: material_name,

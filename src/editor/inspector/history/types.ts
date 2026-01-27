@@ -4,6 +4,7 @@
 
 import { Vector2 } from 'three';
 import type { IBaseMeshAndThree } from '../../../render_engine/types';
+import type { Property } from '@editor/core/inspector/IInspectable';
 
 /** Интерфейс для mesh с alpha */
 export interface IMeshWithAlpha {
@@ -124,5 +125,5 @@ export interface IPropertyHistoryService {
     /** Сохранить font size (через scale) для undo */
     save_font_size(ids: number[]): void;
     /** Сохранить свойство по ключу Property */
-    save_by_property(property: number, ids: number[], extra_data?: unknown): void;
+    save_by_property(property: Property, ids: number[], extra_data?: unknown): void;
 }

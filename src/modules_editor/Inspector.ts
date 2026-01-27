@@ -78,7 +78,7 @@ export type PropertyValues = {
     [PropertyType.LIST_TEXT]: string;
     [PropertyType.LIST_TEXTURES]: string;
     [PropertyType.ITEM_LIST]: string[];
-    [PropertyType.BUTTON]: (...args: any[]) => void;
+    [PropertyType.BUTTON]: () => void;
     [PropertyType.POINT_2D]: { x: number, y: number };
     [PropertyType.LOG_DATA]: string;
     [PropertyType.FOLDER]: PropertyData<PropertyType>[]
@@ -98,7 +98,7 @@ export interface PropertyData<T extends PropertyType> {
     onRefresh?: OnRefreshCallback<T>;
 
     // NOTE: для дополнительных специфических данных
-    data?: any;
+    data?: unknown;
 }
 
 export interface ObjectData {
@@ -134,14 +134,14 @@ interface Folder {
 interface Button {
     title: string;
     params: ButtonParams;
-    onClick: (...args: any[]) => void;
+    onClick: () => void;
 }
 
 interface Property {
-    obj: any;
+    obj: PropertyData<PropertyType>;
     key: string;
     params?: BindingParams;
-    onBeforeChange?: (event: any) => void;
+    onBeforeChange?: () => void;
     onChange?: (event: ChangeEvent) => void;
 }
 
@@ -615,15 +615,16 @@ function InspectorModule() {
         }
     }
 
-    function createEntity<T extends PropertyType>(ids: number[], field: PropertyData<T>, params?: any): Property {
+    function createEntity<T extends PropertyType>(ids: number[], field: PropertyData<T>, params?: BindingParams): Property {
+        const baseParams = {
+            label: field.title ?? field.key,
+            ...(field.readonly === true ? { readonly: true as const } : {}),
+            ...params
+        };
         const entity: Property = {
             obj: field,
             key: 'value',
-            params: {
-                label: field.title ?? field.key,
-                readonly: field.readonly,
-                ...params
-            }
+            params: baseParams as BindingParams
         };
 
         if (!field.readonly) {
@@ -706,7 +707,7 @@ function InspectorModule() {
             }
 
             // обычное поле
-            const binding = place.addBinding(entity.obj, entity.key, entity.params);
+            const binding = place.addBinding(entity.obj, entity.key as keyof PropertyData<PropertyType>, entity.params);
             if (entity.onBeforeChange) binding.controller.value.emitter.on('beforechange', entity.onBeforeChange);
             if (entity.onChange) binding.on('change', entity.onChange);
             _field_name_to_pane[entity.obj.key] = binding as Refreshable;

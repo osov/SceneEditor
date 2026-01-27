@@ -93,3 +93,37 @@ export interface IControlManager {
     get_current_scene_name(): string;
 }
 
+// ============================================================================
+// SizeControl
+// ============================================================================
+
+/** Интерфейс SizeControl */
+export interface ISizeControl {
+    /** Установить список выделенных мешей */
+    set_selected_list(list: IBaseMesh[]): void;
+    /** Открепить от текущих мешей */
+    detach(): void;
+    /** Установить активность контрола */
+    set_active(val: boolean): void;
+    /** Отрисовать контрол */
+    draw(): void;
+}
+
+// ============================================================================
+// CameraControl
+// ============================================================================
+
+/** Интерфейс CameraControl */
+export interface ICameraControl {
+    /** Установить позицию камеры */
+    set_position(x: number, y: number, is_transition?: boolean): void;
+    /** Установить zoom камеры */
+    set_zoom(zoom: number, is_transition?: boolean): void;
+    /** Получить текущий zoom */
+    get_zoom(): number;
+    /** Загрузить состояние камеры для сцены */
+    load_state(name: string): void;
+    /** Фокус на выделенных объектах */
+    focus(): void;
+}
+

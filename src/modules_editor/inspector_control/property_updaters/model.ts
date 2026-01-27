@@ -15,7 +15,7 @@ export function update_mesh_name(info: ChangeInfo, ctx: UpdaterContext) {
 
     for (const item of ctx.selected_list) {
         if ('set_mesh' in item) {
-            (item as MultipleMaterialMesh).set_mesh(value);
+            (item as unknown as MultipleMaterialMesh).set_mesh(value);
         }
     }
 
@@ -31,7 +31,7 @@ export function update_current_animation(info: ChangeInfo, ctx: UpdaterContext) 
 
     for (const item of ctx.selected_list) {
         if ('set_animation' in item) {
-            (item as AnimatedMesh).set_animation(value);
+            (item as unknown as AnimatedMesh).set_animation(value);
         }
     }
 }
@@ -44,7 +44,7 @@ export function update_model_scale(info: ChangeInfo, ctx: UpdaterContext) {
 
     for (const item of ctx.selected_list) {
         if ('set_scale' in item) {
-            (item as MultipleMaterialMesh).set_scale(value, value);
+            (item as unknown as MultipleMaterialMesh).set_scale(value, value);
         }
     }
 }
@@ -61,11 +61,11 @@ export function update_model_materials(info: ChangeInfo, ctx: UpdaterContext) {
             if (Array.isArray(value)) {
                 for (let index = 0; index < (value as string[]).length; index++) {
                     const name = (value as string[])[index];
-                    (item as MultipleMaterialMesh).set_material(name, index);
+                    (item as unknown as MultipleMaterialMesh).set_material(name, index);
                 }
             } else if (typeof value === 'string') {
                 // Если value - строка (из search-list), применяем как первый материал
-                (item as MultipleMaterialMesh).set_material(value, 0);
+                (item as unknown as MultipleMaterialMesh).set_material(value, 0);
             }
         }
     }
@@ -86,7 +86,7 @@ export function update_slot_material(info: ChangeInfo, ctx: UpdaterContext) {
 
     for (const item of ctx.selected_list) {
         if ('set_material' in item) {
-            (item as MultipleMaterialMesh).set_material(value, slot_index);
+            (item as unknown as MultipleMaterialMesh).set_material(value, slot_index);
         }
     }
 

@@ -1,9 +1,9 @@
 // Модуль функций пересечений геометрических фигур
 
 import { ShapeNames } from "../const";
-import { Point, Circle, Line, Vector, Arc } from "../shapes";
+import { Point, Circle, Line, Vector } from "../shapes";
 import type { AnyShape, IArc, IBox, ICircle, ILine, IPoint, ISegment } from "../types";
-import { EQ_0, EQ, shape_length, normalize, LT, GT, multiply, LE } from "../utils";
+import { EQ_0, EQ, shape_length, normalize, LT, GT, multiply } from "../utils";
 import { LINE_A } from "../helpers";
 import { rotate_vec_90CW, invert_vec, translate } from "./transform";
 import {
@@ -18,7 +18,6 @@ import {
     point_projection,
     ptInIntPoints,
     isPointInSegmentBox,
-    parallel_to,
     incident_To,
     arc_start,
     arc_end,
@@ -549,7 +548,7 @@ export function intersectArc2Arc(arc1: IArc, arc2: IArc): IPoint[] {
 // Вспомогательные функции, используемые только в intersect
 
 import { VEC_A } from "../helpers";
-import { dot, cross } from "./shape_ops";
+import { dot } from "./shape_ops";
 
 function line_standard(l: ILine) {
     const A = l.norm.x;

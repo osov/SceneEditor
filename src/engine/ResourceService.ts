@@ -242,6 +242,10 @@ export function create_resource_service(params: ResourceServiceParams): IResourc
         return require_resource_manager().set_material_shader_for_original(name, shader_type, shader_path);
     }
 
+    function set_material_transparent_for_original(name: string, transparent: boolean): void {
+        return require_resource_manager().set_material_transparent_for_original(name, transparent);
+    }
+
     function set_material_uniform_for_mesh(mesh: IMeshWithMaterial, uniform_name: string, value: unknown): void {
         return require_resource_manager().set_material_uniform_for_mesh(mesh, uniform_name, value);
     }
@@ -437,6 +441,7 @@ export function create_resource_service(params: ResourceServiceParams): IResourc
         set_material_property_for_multiple_mesh,
         set_material_uniform_for_original,
         set_material_shader_for_original,
+        set_material_transparent_for_original,
         set_material_uniform_for_mesh,
         set_material_uniform_for_multiple_material_mesh,
         set_material_define_for_mesh,
