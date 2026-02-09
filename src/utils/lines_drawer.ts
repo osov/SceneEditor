@@ -1,8 +1,8 @@
-import { LineBasicMaterial, Vector2, Line as GeomLine, BufferGeometry, Vector2Like } from 'three';
+import { LineBasicMaterial, Vector2, Line as GeomLine, BufferGeometry, Vector2Like, Vector3 } from 'three';
 
 import { CAMERA_Z } from "../config";
 import { GoContainer } from "../render_engine/objects/sub_types";
-import { IArc, PointLike } from './geometry/types';
+import { IArc, IPoint, PointLike } from './geometry/types';
 import { Segment, Point, Arc } from './geometry/shapes';
 import { split_at_length, arc_start, arc_end } from './geometry/logic';
 import { shape_length } from './geometry/utils';
@@ -14,7 +14,7 @@ export type TLinesDrawer = ReturnType<typeof LinesDrawer>;
 
 export function LinesDrawer() {
     const DRAWN_ARC_EDGES_AMOUNT = 40;
-    const POINT_R = 0.1;
+    const POINT_R = 0.3;
     const POINTS_COLOR = COLORS.PURPLE;
 
     function draw_multiline(points: PolyPoints, container: GoContainer, color = 0x22ff77, draw_points = false, points_radius = POINT_R) {
@@ -70,10 +70,41 @@ export function LinesDrawer() {
         }
         return list;
     }
+
+    function draw_point(p: IPoint, container: GoContainer, color = 0x22ff77, points_radius = POINT_R) {
+        return draw_arc(Arc(Point(p.x, p.y), points_radius, 0, Math.PI * 2), container, color);
+    }
     
-    function move_lines(lines: GeomLine[], points: Vector2[]) {
-        for (const line of lines)
-            line.geometry.setFromPoints(points);
+    function move_line(line: GeomLine, p1: PointLike, p2: PointLike) {
+        const v1 = new Vector2(p1.x,  p1.y);
+        const v2 = new Vector2(p2.x,  p2.y);
+        line.geometry.dispose();
+        line.geometry = new BufferGeometry().setFromPoints([v1, v2]);
+    }
+
+    function move_arc(arc_visual: ReturnType<typeof draw_arc>, arc_data: IArc) {
+        const step = 2 * Math.PI * arc_data.r / arc_visual.length;
+        let lenght_remains = shape_length(arc_data);
+        let _allowed_way = arc_data;
+        let i = 0
+        while (lenght_remains > 0 && !('null' in _allowed_way) && i < arc_visual.length) {
+            const move = (step < shape_length(_allowed_way)) ? step : shape_length(_allowed_way);
+            lenght_remains -= move;
+            const sub_arcs = split_at_length(_allowed_way, move);
+            const move_arc = sub_arcs[0] as IArc;
+            _allowed_way = sub_arcs[1] as IArc;
+            const p1 = arc_start(move_arc);
+            const p2 = arc_end(move_arc);
+            const line = arc_visual[i].line;
+            move_line(line, p1, p2);
+            arc_visual[i].p1 = p1;
+            arc_visual[i].p2 = p2;
+            i++;
+        }
+    }
+    
+    function set_color(line: GeomLine, color = 0x22ff77) {
+        line.material = new LineBasicMaterial({ color });
     }
 
     function translate_lines(lines: {
@@ -110,5 +141,5 @@ export function LinesDrawer() {
         container.clear()
     }
 
-    return { draw_polygon, draw_multiline, draw_line, draw_arc, clear_container, move_lines, clear_lines, translate_lines }
+    return { draw_polygon, draw_multiline, draw_line, draw_arc, clear_container, move_line, clear_lines, draw_point, translate_lines, set_color, move_arc }
 }

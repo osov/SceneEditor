@@ -3,11 +3,18 @@ import { DynamicEntity } from "./physic/physic_system";
 import { interpolate_with_wrapping } from "./math_utils";
 
 
-export function AnimatedMeshManager(entities: DynamicEntity[], sort_layer: number) {
+export function AnimatedMeshManager(sort_layer: number) {
+
+    const entities: DynamicEntity[] = [];
+
     function update(dt: number) {
         for (const entity of entities) {
             update_model(entity);
         }
+    }
+
+    function add_entity(e: DynamicEntity) {
+        entities.push(e);
     }
 
     function update_model(entity: DynamicEntity) {
@@ -36,6 +43,6 @@ export function AnimatedMeshManager(entities: DynamicEntity[], sort_layer: numbe
         entity.anim_moving = true;
     }
     
-    return {update}
+    return {update, add_entity}
 }
 

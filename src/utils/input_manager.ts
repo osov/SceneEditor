@@ -2,7 +2,7 @@ import { degToRad } from "@editor/modules/utils";
 import { DynamicEntity } from "./physic/physic_system";
 
 
-export function InputManager(player: DynamicEntity) {
+export function GameInputManager(player: DynamicEntity) {
     function update(dt: number) {
         const angle = get_angle();
         if (angle == -1) {

@@ -92,6 +92,12 @@ export function SpawnZonesManager(tiles: SpriteTileInfoDict, forbidden_tiles: Re
         return cells;
     }
 
-    return { get_cells }
+    function is_in_cell(pos: PointLike) {
+        const cells = cells_manager.get_elements(pos.x, pos.y, 0, 0);
+        const allowed_cells = cells.filter((v) => v.allowed);
+        return Boolean(allowed_cells.length);
+    }
+
+    return { get_cells, is_in_cell }
 }
 

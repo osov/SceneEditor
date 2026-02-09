@@ -817,7 +817,7 @@ export const det = (a: number, b: number, c: number, d: number) => a * d - b * c
 export const point = (x: number, y: number) => Point(x, y);
 export const circle = (pc: IPoint, r?: number) => Circle(pc, r);
 export const vector = (x: number, y: number) => Vector(x, y);
-export const vector_from_points = (a: IPoint, b: IPoint) => {
+export const vector_from_points = (a: PointLike, b: PointLike) => {
     const x = b.x - a.x;
     const y = b.y - a.y;
     return Vector(x, y);

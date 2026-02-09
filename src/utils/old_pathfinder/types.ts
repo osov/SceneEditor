@@ -188,6 +188,7 @@ export const COLORS = {
     YELLOW: 0xffff00,
     ORANGE: 0xff6600,
     GREEN: 0x00ff00,
+    LIGHT_GRAY: 0x888888,
     GRAY: 0x333333,
     WHITE: 0xffffff,
 };

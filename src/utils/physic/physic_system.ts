@@ -1,10 +1,11 @@
 import { BodyOptions, Circle, Line, System } from "detect-collisions";
 import { MapData, parse_tiled } from "@editor/render_engine/parsers/tile_parser";
-import { ISegment, PointLike } from "../geometry/types";
+import { ICircle, ISegment, PointLike } from "../geometry/types";
 import { polygon_to_segments, polyline_to_segments } from "./utils";
 import { point } from "../geometry/logic";
 import { AnimatedMesh } from "@editor/render_engine/objects/animated_mesh";
 import { AnimationNames, ObstacleTileData } from "../old_pathfinder/types";
+import { ShapeNames } from "../geometry/const";
 
 
 export type MovementSettings = {
@@ -16,7 +17,7 @@ export type MovementSettings = {
 
 export type DynamicEntity = {
     id: number,
-    shape: Body,
+    shape: PhysicBody,
     model: AnimatedMesh,
     is_moving: boolean,
     anim_moving: boolean,
@@ -25,13 +26,13 @@ export type DynamicEntity = {
     
     weight: number,
     speed: number,
-    main_target_pos?: PointLike,  // Позиция, в которую бот хочет прийти в конечном итоге
-    cur_target_pos?: PointLike,   // Позиция, в которую бот перемещается в данный момент
-    path_points?: PointLike[],
-    main_target?: LogicMainTarget
+    // main_target_pos?: PointLike,  // Позиция, в которую бот хочет прийти в конечном итоге
+    // cur_target_pos?: PointLike,   // Позиция, в которую бот перемещается в данный момент
+    // path_points?: PointLike[],
+    // main_target?: LogicMainTarget
 }
 
-export type Body = Circle<DynamicEntity>;
+export type PhysicBody = Circle<DynamicEntity>;
 
 const obstacle_options: BodyOptions = {
     isStatic: true,
@@ -43,7 +44,7 @@ export enum LogicMainTarget {
 }
 
 
-export function PhysicSystemCreate(obstacles: Line<any>[], debug = true) {
+export function PhysicSystemCreate(obstacles: Line<any>[]) {
     const physic_world = new System();
     
     const entities: DynamicEntity[] = [];
@@ -57,7 +58,7 @@ export function PhysicSystemCreate(obstacles: Line<any>[], debug = true) {
     }
 
     function add_entity(model: AnimatedMesh, collision_radius: number, weight: number, speed: number) {
-        const shape: Body = new Circle(model.position, collision_radius);
+        const shape: PhysicBody = new Circle(model.position, collision_radius);
         shape.setAngle(0)
         const entity: DynamicEntity = {
             id: count++,
@@ -73,6 +74,53 @@ export function PhysicSystemCreate(obstacles: Line<any>[], debug = true) {
         physic_world.insert(entity.shape);
         entities.push(entity);
         return entity;
+    }
+
+    function raycast(start: PointLike, end: PointLike, source_body: PhysicBody) {
+        return physic_world.raycast(start, end, (body) => body != source_body);
+    }
+
+    function make_line(s: ISegment) {
+        return new Line(s.start, s.end);
+    }
+    
+    function make_circle(c: ICircle) {
+        return new Circle(c.pc, c.r);
+    }
+    
+    function get_all_collided(geometry: ISegment | ICircle, exclude: PhysicBody[] = [], dinamic_only = true) {
+        const collision_body = (geometry.name == ShapeNames.Segment) ? make_line(geometry as ISegment) : make_circle(geometry as ICircle);
+        const result: PhysicBody[] = [];
+        physic_world.insert(collision_body);
+        physic_world.checkOne(collision_body, (r) => {
+            const { a, b } = r;
+            let collided: PhysicBody;
+            if (a === collision_body) 
+                collided = b;
+            else if (b === collision_body)
+                collided = a;
+            else
+                return;
+            if (dinamic_only && collided.isStatic)
+                return;
+            if (exclude.includes(collided))
+                return;
+            result.push(collided);
+        });
+        physic_world.remove(collision_body);
+        return result;
+    }
+
+    function filter_collided(list: PhysicBody[], geometry: ISegment | ICircle) {
+        const collision_body = (geometry.name == ShapeNames.Segment) ? make_line(geometry as ISegment) : make_circle(geometry as ICircle);
+        physic_world.insert(collision_body);
+        const result: PhysicBody[] = [];
+        for (const body of list) {
+            if (physic_world.checkCollision(collision_body, body))
+                result.push(body);
+        }
+        physic_world.remove(collision_body);
+        return result;
     }
 
     function update(dt: number) {
@@ -91,7 +139,7 @@ export function PhysicSystemCreate(obstacles: Line<any>[], debug = true) {
         }
     }
 
-    function update_obstacles_physic(body: Body, dt: number) {
+    function update_obstacles_physic(body: PhysicBody, dt: number) {
         physic_world.checkOne(body, (r) => {
             const { a, b, overlapV } = r;
             if (!a.isStatic && !b.isStatic) return;
@@ -103,7 +151,7 @@ export function PhysicSystemCreate(obstacles: Line<any>[], debug = true) {
     }
     
 
-    function update_soft_physic(body: Body, dt: number) {
+    function update_soft_physic(body: PhysicBody, dt: number) {
         physic_world.checkOne(body, (r) => {
             const { a, b, overlapV } = r;
             if (a.isStatic || b.isStatic) return;
@@ -150,7 +198,7 @@ export function PhysicSystemCreate(obstacles: Line<any>[], debug = true) {
         return {x: test_body.x, y: test_body.y}
     }
 
-    return {add_entity, update, find_clear_space};
+    return {add_entity, update, find_clear_space, raycast, get_all_collided, filter_collided, world: physic_world};
 }
 
 

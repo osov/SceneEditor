@@ -75,6 +75,10 @@ export function degToRad(degrees: number) {
     return degrees * (Math.PI / 180);
 }
 
+export function radToDeg(radians: number) {
+    return radians * (180 / Math.PI);
+}
+
 export function eulerToQuaternion(euler: Vector3) {
     const roll = degToRad(euler.x);
     const pitch = degToRad(euler.y);
