@@ -1,8 +1,8 @@
 /**
  * ResourceService - сервис управления ресурсами
  *
- * Делегирует к ResourceManager для обратной совместимости.
- * Все методы проксируются к модульному ResourceManager через get_resource_manager().
+ * Делегирует к ResourceManager.
+ * Все методы проксируются к модульному ResourceManager.
  */
 
 import type { Object3D, Texture, AnimationClip, ShaderMaterial } from 'three';
@@ -14,12 +14,12 @@ import type {
     SceneInfo,
     IMeshWithMaterial,
 } from './types';
-import { get_resource_manager } from '../render_engine/resource_manager';
+import { Services } from '@editor/core/ServiceProvider';
 
 /** Проверить доступность ResourceManager */
 function require_resource_manager(): IResourceService {
-    // Используем импорт вместо globalThis
-    return get_resource_manager() as unknown as IResourceService;
+    // Получаем из DI контейнера через Services
+    return Services.resource_manager as unknown as IResourceService;
 }
 
 /** Создать ResourceService */

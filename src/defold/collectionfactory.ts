@@ -1,6 +1,6 @@
 import { IBaseEntityAndThree, IObjectTypes } from "@editor/render_engine/types";
 import { Vector3, Quaternion } from "three";
-import { get_asset_control } from '@editor/controls/AssetControl';
+import { Services } from '@editor/core';
 
 declare global {
     namespace collectionfactory {
@@ -16,7 +16,7 @@ export function collectionfactory_module() {
         _properties?: unknown,
         scale?: vmath.vector3
     ) {
-        const part = get_asset_control().loadPartOfSceneInPos(
+        const part = Services.asset_control.loadPartOfSceneInPos(
             url,
             position ? new Vector3().copy(position) : undefined,
             rotation ? new Quaternion().copy(rotation) : undefined,

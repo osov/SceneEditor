@@ -21,8 +21,6 @@ export const CORE_TOKENS = {
 export const INPUT_TOKENS = {
     /** Сервис ввода (DI) */
     Input: Symbol('Input'),
-    /** Менеджер ввода (клавиатура, мышь) - legacy */
-    InputManager: Symbol('InputManager'),
     /** Данные и конфигурация камеры */
     Camera: Symbol('Camera'),
 } as const;
@@ -35,11 +33,7 @@ export const NETWORK_TOKENS = {
 
 /** Сервисы рендеринга - связанные с Three.js */
 export const RENDER_TOKENS = {
-    /** Основной рендер движок (Three.js) - legacy */
-    RenderEngine: Symbol('RenderEngine'),
-    /** Менеджер сцены - управление объектами - legacy */
-    SceneManager: Symbol('SceneManager'),
-    /** Менеджер ресурсов - текстуры, материалы, модели - legacy */
+    /** Менеджер ресурсов - текстуры, материалы, модели */
     ResourceManager: Symbol('ResourceManager'),
     /** Менеджер анимаций (tween) */
     TweenManager: Symbol('TweenManager'),
@@ -91,7 +85,7 @@ export const EDITOR_TOKENS = {
     Notifications: Symbol('Notifications'),
 } as const;
 
-/** Сервисы контролов редактора (legacy Three.js контролы) */
+/** Сервисы контролов редактора */
 export const CONTROL_TOKENS = {
     /** Менеджер контролов - координирует все контролы */
     ControlManager: Symbol('ControlManager'),
@@ -105,6 +99,8 @@ export const CONTROL_TOKENS = {
     AssetControl: Symbol('AssetControl'),
     /** Контрол дерева (иерархия сцены) */
     TreeControl: Symbol('TreeControl'),
+    /** Контрол инспектора */
+    InspectorControl: Symbol('InspectorControl'),
 } as const;
 
 /** UI сервисы */
@@ -193,12 +189,6 @@ export const INIT_ORDER = {
     ENGINE_SCENE: 120,
     /** Сервис камеры */
     ENGINE_CAMERA: 130,
-    /** Legacy рендер */
-    RENDER: 100,
-    /** Legacy сцена */
-    SCENE: 120,
-    /** Legacy ресурсы */
-    RESOURCES: 110,
     /** Граф сцены (иерархия) */
     SCENE_GRAPH: 125,
 
@@ -213,8 +203,6 @@ export const INIT_ORDER = {
     EDITOR_ACTIONS: 230,
     /** Сервис иерархии */
     EDITOR_HIERARCHY: 240,
-    /** Legacy контролы */
-    CONTROLS: 200,
     /** UI сервисы */
     UI: 250,
 

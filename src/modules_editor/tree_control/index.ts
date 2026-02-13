@@ -7,7 +7,6 @@
 
 import { deepClone } from '../../modules/utils';
 import { Services } from '@editor/core';
-import { get_popups } from '../Popups';
 import {
     has_update as diff_has_update,
     get_changes as diff_get_changes,
@@ -32,33 +31,17 @@ import { get_tree_html, get_id_ico } from './tree_dom_builder';
 import { build_tree, items_to_scene_objects, item_to_scene_object } from './tree_data_utils';
 import { scroll_to_last_selected, open_tree_with_selected } from './tree_scroll_utils';
 
-// Реэкспорт типов для обратной совместимости
+// Реэкспорт типов
 export type { TreeItem } from '../../editor/hierarchy';
 export type { TreeMeshObject, TreeContexts, MovedListResult, TreeState } from './types';
 
 /** Тип TreeControl */
 export type TreeControlType = ReturnType<typeof TreeControlCreate>;
 
-/** Модульный instance для использования через импорт */
-let tree_control_instance: TreeControlType | undefined;
-
-/** Получить instance TreeControl */
-export function get_tree_control(): TreeControlType {
-    if (tree_control_instance === undefined) {
-        throw new Error('TreeControl не инициализирован. Вызовите register_tree_control() сначала.');
-    }
-    return tree_control_instance;
-}
-
-/** Регистрирует TreeControl */
-export function register_tree_control(): void {
-    tree_control_instance = TreeControlCreate();
-}
-
 /**
  * Создаёт TreeControl
  */
-function TreeControlCreate() {
+export function TreeControlCreate() {
     // === Инициализация состояния и модулей ===
 
     const state = create_tree_state();
@@ -269,7 +252,7 @@ function TreeControlCreate() {
             const can_move = Services.actions.is_same_world(items_to_scene_objects(list_selected));
 
             if (!can_move && count_move === 2) {
-                get_popups().toast.open({
+                Services.popups.toast.open({
                     type: 'info',
                     message: 'Нельзя одновременно перемещать элементы из GUI и GO!'
                 });

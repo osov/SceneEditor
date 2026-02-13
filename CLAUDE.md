@@ -341,7 +341,7 @@ const adapter: IRenderEngine = {
 
 ```bash
 # Запуск с проектом
-bun run dev --project=../SceneEditor_ExampleProject
+bun run dev --project=../TestProject_Claude
 
 # Аргументы CLI:
 # --project, -p  Путь к проекту

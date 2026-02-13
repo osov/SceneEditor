@@ -1,12 +1,9 @@
 /**
- * Типы и интерфейсы для контролов редактора (legacy)
+ * Типы и интерфейсы для контролов редактора
  *
  * Определяет контракты для основных контролов:
  * - ControlManager - координация всех контролов
  * - TransformControl - трансформации объектов
- *
- * ПРИМЕЧАНИЕ: SelectControl и HistoryControl удалены.
- * Используйте Services.selection и Services.history.
  */
 
 import type { Object3D } from 'three';

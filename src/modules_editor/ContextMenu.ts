@@ -1,26 +1,10 @@
 // import { deepClone } from "../modules/utils";
 import { NodeAction } from "@editor/shared";
-import { get_asset_control } from "@editor/controls/AssetControl";
 import { Services } from '@editor/core';
 import type { PointerEventData } from '@editor/core/services/InputService';
 
 /** Тип ContextMenu */
 export type ContextMenuType = ReturnType<typeof ContextMenuCreate>;
-
-/** Модульный instance для использования через импорт */
-let contextmenu_instance: ContextMenuType | undefined;
-
-/** Получить instance ContextMenu */
-export function get_contextmenu(): ContextMenuType {
-    if (contextmenu_instance === undefined) {
-        throw new Error('ContextMenu не инициализирован. Вызовите register_contextmenu() сначала.');
-    }
-    return contextmenu_instance;
-}
-
-export function register_contextmenu() {
-    contextmenu_instance = ContextMenuCreate();
-}
 
 //  ****** ContextMenu example: ******
 /* 
@@ -69,7 +53,7 @@ interface MenuPosition {
 
 export type contextMenuItem = MenuItem;
 
-function ContextMenuCreate() {
+export function ContextMenuCreate() {
 
     const menuContext = document.querySelector('.wr_menu__context') as HTMLElement;
 
@@ -222,15 +206,15 @@ function ContextMenuCreate() {
         const current_dir = localStorage.getItem("current_dir") || '';
 
         if (action == NodeAction.new_scene) {
-            get_asset_control().new_scene_popup(current_dir);
+            Services.asset_control.new_scene_popup(current_dir);
         }
 
         if (action == NodeAction.scene_save) {
-            get_asset_control().save_current_scene();
+            Services.asset_control.save_current_scene();
         }
 
         if (action == NodeAction.scene_save_as) {
-            get_asset_control().new_scene_popup(current_dir, true, true);
+            Services.asset_control.new_scene_popup(current_dir, true, true);
         }
     }
 

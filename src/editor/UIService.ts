@@ -6,14 +6,15 @@
  * - Иерархия - дерево объектов сцены
  * - Toolbar - кнопки режимов трансформации
  *
- * Слушает события от DI сервисов и обновляет UI через legacy модули.
+ * Слушает события от DI сервисов и обновляет UI через модули редактора.
  */
 
 import type { IDisposable, ILogger, IEventBus } from '../core/di/types';
 import type { ISelectionService, IHierarchyService } from './types';
 import type { ISceneObject } from '../engine/types';
-import { get_control_manager, type ControlManagerType } from '../modules_editor/ControlManager';
-import { get_inspector_control as get_inspector_control_import, type InspectorControlType } from '../modules_editor/InspectorControl';
+import { try_get_service } from '@editor/core';
+import type { ControlManagerType } from '../modules_editor/ControlManager';
+import type { InspectorControlType } from '../modules_editor/InspectorControl';
 
 /** Параметры сервиса */
 export interface UIServiceParams {
@@ -39,20 +40,12 @@ export interface IUIService extends IDisposable {
 
 /** Получить InspectorControl безопасно */
 function try_get_inspector_control(): InspectorControlType | undefined {
-    try {
-        return get_inspector_control_import();
-    } catch {
-        return undefined;
-    }
+    return try_get_service('inspector_control');
 }
 
 /** Получить ControlManager безопасно */
 function try_get_control_manager(): ControlManagerType | undefined {
-    try {
-        return get_control_manager();
-    } catch {
-        return undefined;
-    }
+    return try_get_service('control_manager');
 }
 
 /** Создать UIService */

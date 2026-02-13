@@ -202,7 +202,7 @@ export function create_model_manager(config: ModelManagerConfig) {
         get_all_model_animations,
         find_animation,
         get_animations_by_model,
-        // Для обратной совместимости экспортируем внутренние объекты
+        // Прямой доступ к данным моделей
         models,
         animations
     };

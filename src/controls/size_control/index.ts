@@ -38,7 +38,5 @@ export {
 // Основной контрол
 export {
     type SizeControlType,
-    get_size_control,
-    try_get_size_control,
-    register_size_control,
+    SizeControlCreate,
 } from './SizeControl';

@@ -5,7 +5,7 @@ export type ServerCommands = AssetsCommands;
 export type ServerResponses = AssetsResponses;
 export type CommandId = keyof ServerCommands;
 
-/** Типы событий редактора - legacy тип для совместимости */
+/** Типы событий редактора */
 export type _SystemMessagesEditor = {
     /** Файл загружен */
     FILE_UPLOADED: FileUploadedData,
@@ -206,3 +206,7 @@ export enum HistoryOwner {
     COMPONENT,
     INSPECTOR_CONTROL
 };
+
+declare global {
+    type SystemMessagesEditor = _SystemMessagesEditor & NetMessagesEditor;
+}

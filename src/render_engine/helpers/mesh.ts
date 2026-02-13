@@ -9,7 +9,7 @@ import { GoText, GoSprite, GuiBox, GuiText } from "../objects/sub_types";
 import type { RenderTileData, RenderTileObject } from "../parsers/tile_parser";
 import { filter_list_base_mesh } from "./mesh_base";
 
-// Реэкспорт базовых функций для обратной совместимости
+// Реэкспорт базовых функций из mesh_base
 export { is_base_mesh, filter_list_base_mesh, format_list_without_children } from "./mesh_base";
 
 export function filter_intersect_list(tmp: Intersection<Object3D<Object3DEventMap>>[]) {

@@ -1,33 +1,17 @@
 import { AudioListener, Audio } from "three";
 import { TDictionary } from "../modules_editor/modules_editor_const";
 import { Services } from '@editor/core/ServiceProvider';
-import { get_sound } from '../modules/Sound';
 import '../defold/vmath';
 
 /** Тип AudioManager */
 export type AudioManagerType = ReturnType<typeof AudioManagerModule>;
-
-/** Модульный instance для использования через импорт */
-let audio_manager_instance: AudioManagerType | undefined;
-
-/** Получить instance AudioManager */
-export function get_audio_manager(): AudioManagerType {
-    if (audio_manager_instance === undefined) {
-        throw new Error('AudioManager не инициализирован. Вызовите register_audio_manager() сначала.');
-    }
-    return audio_manager_instance;
-}
-
-export function register_audio_manager() {
-    audio_manager_instance = AudioManagerModule();
-}
 
 export enum SoundEndCallbackType {
     SOUND_DONE = 'sound_done',
     SOUND_STOP = 'sound_stop'
 }
 
-function AudioManagerModule() {
+export function AudioManagerModule() {
     const listener = new AudioListener();
     const sounds: TDictionary<Audio> = {};
     const panners: TDictionary<StereoPannerNode> = {};
@@ -38,7 +22,7 @@ function AudioManagerModule() {
         Services.render.camera.add(listener);
         Services.event_bus.on('engine:update', () => {
             const camera = Services.render.camera;
-            get_sound().set_listener_position(vmath.vector3(camera.position.x, camera.position.y, camera.position.z));
+            Services.sound.set_listener_position(vmath.vector3(camera.position.x, camera.position.y, camera.position.z));
         });
     }
 

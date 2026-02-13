@@ -317,5 +317,5 @@ export function create_transform_service(params: TransformServiceParams): ITrans
     };
 }
 
-// Реэкспорт для обратной совместимости
+// Реэкспорт типов трансформации
 export * from './transform';

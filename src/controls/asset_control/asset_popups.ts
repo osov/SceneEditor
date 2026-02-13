@@ -1,12 +1,10 @@
 // Модуль попапов и контекстного меню
 
 import { AssetType, SCENE_EXT, FONT_EXT, model_ext, texture_ext } from '../../modules_editor/modules_editor_const';
-import { contextMenuItem, get_contextmenu } from '../../modules_editor/ContextMenu';
+import { contextMenuItem } from '../../modules_editor/ContextMenu';
 import { NodeAction } from '@editor/shared';
-import { get_client_api } from '../../modules_editor/ClientAPI';
 import { error_popup } from '../../render_engine/helpers/utils';
 import { Services } from '@editor/core';
-import { get_popups } from '../../modules_editor/Popups';
 import { MoveType, RemoveType, type AssetControlState } from './types';
 import type { FileOperations } from './file_operations';
 import type { SceneOperations } from './scene_operations';
@@ -33,7 +31,7 @@ export function create_asset_popups(
 ) {
     function open_menu(event: PointerEventData) {
         const assets_menu_list = toggle_menu_options();
-        get_contextmenu().open(assets_menu_list, event, menuContextClick);
+        Services.context_menu.open(assets_menu_list, event, menuContextClick);
     }
 
     function toggle_menu_options(): contextMenuItem[] {
@@ -82,7 +80,7 @@ export function create_asset_popups(
             await go_to_dir(state.current_dir, true);
         }
         if (action === NodeAction.open_in_explorer) {
-            await get_client_api().open_explorer(state.current_dir);
+            await Services.client_api.open_explorer(state.current_dir);
         }
         if (action === NodeAction.material_base) {
             // open_material_popup(asset_path);
@@ -134,12 +132,12 @@ export function create_asset_popups(
     }
 
     function new_folder_popup(current_path: string) {
-        get_popups().open({
+        Services.popups.open({
             type: 'Rename',
             params: { title: 'Новая папка:', button: 'Ok', auto_close: true },
             callback: async (success, name) => {
                 if (success && name) {
-                    const r = await get_client_api().new_folder(current_path, name);
+                    const r = await Services.client_api.new_folder(current_path, name);
                     if (r.result === 0)
                         error_popup(`Не удалось создать папку, ответ сервера: ${r.message}`);
                     if (r.result && r.data) {
@@ -151,7 +149,7 @@ export function create_asset_popups(
     }
 
     function new_scene_popup(current_path: string, set_scene_current = false, save_scene = false) {
-        get_popups().open({
+        Services.popups.open({
             type: 'Rename',
             params: { title: 'Новая сцена:', button: 'Ok', auto_close: true },
             callback: async (success, name) => {
@@ -159,7 +157,7 @@ export function create_asset_popups(
                     const scene_path = await scene_ops.new_scene(current_path, name);
                     if (set_scene_current) {
                         if (scene_path === undefined) {
-                            get_popups().toast.error('Не удалось создать сцену, путь undefined');
+                            Services.popups.toast.error('Не удалось создать сцену, путь undefined');
                             return;
                         }
                         const scene_is_set = await scene_ops.set_current_scene(scene_path);
@@ -173,7 +171,7 @@ export function create_asset_popups(
 
     function save_graph_popup(current_path: string, data: IBaseEntityData) {
         const currentName = data.name;
-        get_popups().open({
+        Services.popups.open({
             type: 'Rename',
             params: { title: 'Сохранить элемент сцены:', button: 'Ok', currentName, auto_close: true },
             callback: async (success, name) => {
@@ -181,13 +179,13 @@ export function create_asset_popups(
                     const path = `${current_path}/${name}.${SCENE_EXT}`;
                     Services.resources.cache_scene(path, data);
                     // NOTE: для чего сохраняем как IBaseEntityData[] ?
-                    const r = await get_client_api().save_data(path, JSON.stringify({ scene_data: [data] }));
+                    const r = await Services.client_api.save_data(path, JSON.stringify({ scene_data: [data] }));
                     if (r && r.result)
-                        return get_popups().toast.success(`Объект ${name} сохранён, путь: ${path}`);
+                        return Services.popups.toast.success(`Объект ${name} сохранён, путь: ${path}`);
                     else
-                        return get_popups().toast.error(`Не удалось сохранить объект ${name}`);
+                        return Services.popups.toast.error(`Не удалось сохранить объект ${name}`);
                 }
-                return get_popups().toast.error(`Не удалось сохранить объект ${name}`);
+                return Services.popups.toast.error(`Не удалось сохранить объект ${name}`);
             }
         });
     }
@@ -195,13 +193,13 @@ export function create_asset_popups(
     function rename_popup(asset_path: string, name: string, type?: AssetType) {
         let type_name = 'файл';
         if (type === 'folder') type_name = 'папку';
-        get_popups().open({
+        Services.popups.open({
             type: 'Rename',
             params: { title: `Переименовать ${type_name} ${name}`, button: 'Ok', currentName: name, auto_close: true },
             callback: async (success, name) => {
                 if (success && name) {
                     const new_path = state.current_dir ? `${state.current_dir}/${name}` : name;
-                    const r = await get_client_api().rename(asset_path, new_path);
+                    const r = await Services.client_api.rename(asset_path, new_path);
                     if (r.result === 0)
                         error_popup(`Не удалось переименовать ${type_name}, ответ сервера: ${r.message}`);
                     if (r.result) {
@@ -241,7 +239,7 @@ export function create_asset_popups(
         }
         if (remove_type !== undefined) {
             const type_to_remove = remove_type;
-            get_popups().open({
+            Services.popups.open({
                 type: 'Confirm',
                 params: { title, text, button: 'Да', buttonNo: 'Нет', auto_close: true },
                 callback: async (success) => {

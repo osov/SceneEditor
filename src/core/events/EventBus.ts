@@ -2,7 +2,6 @@
  * Сервис шины событий
  *
  * Типобезопасная шина событий для pub/sub сообщений.
- * Совместима с существующим API EventBus.
  */
 
 import type { IEventBus, IDisposable, ILogger } from '../di/types';
@@ -147,33 +146,7 @@ export function create_event_bus(params: EventBusParams = {}): IEventBus {
         return [..._listeners.keys()];
     }
 
-    // Методы обратной совместимости
-
-    function trigger<T>(event: string, data?: T, show_warning = true, is_copy_data = false): void {
-        const listeners = _listeners.get(event);
-        if (listeners === undefined || listeners.length === 0) {
-            if (show_warning) {
-                logger?.warn(`Нет слушателей для события: ${event}`);
-            }
-            return;
-        }
-
-        // Копируем данные если требуется
-        const event_data = is_copy_data && data !== undefined
-            ? JSON.parse(JSON.stringify(data))
-            : data;
-
-        emit(event, event_data);
-    }
-
-    function send<T>(event: string, data?: T): void {
-        emit(event, data);
-    }
-
-    const bus: IEventBus & {
-        trigger: typeof trigger;
-        send: typeof send;
-    } = {
+    return {
         on,
         once,
         off,
@@ -182,12 +155,7 @@ export function create_event_bus(params: EventBusParams = {}): IEventBus {
         listener_count,
         remove_all_listeners,
         event_names,
-        // Обратная совместимость
-        trigger,
-        send,
     };
-
-    return bus;
 }
 
 /** Фабричная функция для DI контейнера */

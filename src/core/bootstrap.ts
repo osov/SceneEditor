@@ -41,17 +41,27 @@ import {
     create_notification_service,
 } from '../editor';
 
-// Legacy регистрации для обратной совместимости
-import { register_resource_manager } from '../render_engine/resource_manager';
-import { register_editor_modules } from '../modules_editor/Manager_editor';
-import { register_size_control, get_size_control } from '../controls/SizeControl';
-import { register_transform_control } from '../controls/TransformControl';
-import { register_camera_control, get_camera_control } from '../controls/CameraContol';
-// ActionsControl удалён - используем Services.actions
-import { register_asset_control } from '../controls/AssetControl';
-import { register_sound } from '../modules/Sound';
-import { register_audio_manager } from '../render_engine/AudioManager';
-import { register_lua_core } from '../defold/core';
+// UI модули (DI)
+import { ClientAPIModule } from '../modules_editor/ClientAPI';
+import { PopupsCreate } from '../modules_editor/Popups';
+import { ContextMenuCreate } from '../modules_editor/ContextMenu';
+
+// Контролы (DI)
+import { AssetControlCreate } from '../controls/AssetControl';
+import { SizeControlCreate } from '../controls/size_control/SizeControl';
+import { TransformControlCreate } from '../controls/TransformControl';
+import { CameraControlCreate } from '../controls/CameraContol';
+
+// Ресурсные модули (DI)
+import { ResourceManagerModule } from '../render_engine/resource_manager';
+import { SoundModule } from '../modules/Sound';
+import { AudioManagerModule } from '../render_engine/AudioManager';
+
+// Модули редактора (DI)
+import { TreeControlCreate } from '../modules_editor/tree_control';
+import { ControlManagerCreate } from '../modules_editor/ControlManager';
+import { InspectorControlCreate } from '../modules_editor/InspectorControl';
+import { init_lua_core } from '../defold/core';
 
 // Статические импорты встроенных плагинов
 import { create_plugin as create_core_inspector_plugin } from '../plugins/core-inspector';
@@ -361,7 +371,7 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
             name: 'AssetService',
         });
 
-        // UIService - создаётся сейчас, но инициализируется после legacy модулей
+        // UIService - создаётся сейчас, но инициализируется после UI модулей
         const ui_service = create_ui_service({
             logger: logger.create_child('UIService'),
             event_bus,
@@ -409,42 +419,28 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
             name: 'NotificationService',
         });
 
-        // === Модули с DI сервисами ===
-        // Все модули используют DI сервисы через Services.*.
-        // Глобальные window.* объекты УДАЛЕНЫ, используем импорты.
-        //
-        // Контролы (доступ через импорт get_*):
-        // - TransformControl - обёртка над Services.transform (Three.js gizmo)
-        // - SizeControl - использует Services.size (Three.js bounds)
-        // - CameraControl - использует Services.camera (camera-controls)
-        // - AssetControl - использует Services.assets (файловые операции)
-        //
-        // Модули редактора (доступ через импорт get_*):
-        // - ControlManager - координатор UI контролов
-        // - TreeControl - дерево иерархии сцены
-        // - InspectorControl - инспектор свойств
-        // - Popups - модальные окна
-        // - ContextMenu - контекстное меню
-        // - ClientAPI - API для работы с сервером
-        // - Inspector - tweakpane UI для инспектора
-        //
-        // Сервисы (доступ через Services.*):
-        // - ResourceManager - менеджер ресурсов
-        // - TweenManager - менеджер анимаций
-        // - AudioManager - менеджер аудио
-        // - Sound - пространственный звук
+        // === Модули (доступ через Services.*) ===
 
         // 1. Resource manager
-        register_resource_manager();
+        const resource_manager = ResourceManagerModule();
+        container.register_singleton(TOKENS.ResourceManager, () => resource_manager, {
+            name: 'ResourceManager',
+        });
 
         // 2. Defold Lua core (глобальные модули: vmath, go, sound, etc.)
-        register_lua_core();
+        init_lua_core();
 
         // 3. Sound system
-        register_sound();
+        const sound_module = SoundModule();
+        container.register_singleton(TOKENS.Sound, () => sound_module, {
+            init_order: INIT_ORDER.CORE + 35, name: 'Sound'
+        });
 
         // 4. AudioManager
-        register_audio_manager();
+        const audio_manager = AudioManagerModule();
+        container.register_singleton(TOKENS.AudioManager, () => audio_manager, {
+            init_order: INIT_ORDER.CORE + 40, name: 'AudioManager'
+        });
 
         // 5. Привязка событий ввода
         const input_service = container.resolve<IInputService>(TOKENS.Input);
@@ -453,25 +449,58 @@ export async function bootstrap(options: BootstrapOptions = {}): Promise<Bootstr
         // 6. Инициализация SelectionService
         selection_service.init();
 
-        // 7. Контролы редактора
-        register_asset_control();
-        register_size_control();
-        register_transform_control();
-        register_camera_control();
-
-        // 8. Регистрация контролов в DI контейнере
-        container.register_singleton(TOKENS.SizeControl, () => get_size_control(), {
-            init_order: INIT_ORDER.CONTROLS,
-            name: 'SizeControl',
+        // 7. Контролы редактора (DI)
+        const asset_control = AssetControlCreate();
+        container.register_singleton(TOKENS.AssetControl, () => asset_control, {
+            init_order: INIT_ORDER.EDITOR_SELECTION, name: 'AssetControl'
         });
 
-        container.register_singleton(TOKENS.CameraControl, () => get_camera_control(), {
-            init_order: INIT_ORDER.CONTROLS,
-            name: 'CameraControl',
+        const size_control = SizeControlCreate();
+        container.register_singleton(TOKENS.SizeControl, () => size_control, {
+            init_order: INIT_ORDER.EDITOR_SELECTION, name: 'SizeControl'
         });
 
-        // 9. UI модули редактора
-        register_editor_modules();
+        const transform_control = TransformControlCreate();
+        container.register_singleton(TOKENS.TransformControl, () => transform_control, {
+            init_order: INIT_ORDER.EDITOR_SELECTION, name: 'TransformControl'
+        });
+
+        const camera_control = CameraControlCreate();
+        container.register_singleton(TOKENS.CameraControl, () => camera_control, {
+            init_order: INIT_ORDER.EDITOR_SELECTION, name: 'CameraControl'
+        });
+
+        // 9. UI модули (DI)
+        const client_api = ClientAPIModule();
+        container.register_singleton(TOKENS.ClientAPI, () => client_api, {
+            init_order: INIT_ORDER.NETWORK, name: 'ClientAPI'
+        });
+
+        const popups = PopupsCreate();
+        container.register_singleton(TOKENS.Popups, () => popups, {
+            init_order: INIT_ORDER.UI, name: 'Popups'
+        });
+
+        const contextmenu = ContextMenuCreate();
+        container.register_singleton(TOKENS.ContextMenu, () => contextmenu, {
+            init_order: INIT_ORDER.UI, name: 'ContextMenu'
+        });
+
+        // 10. Модули редактора (DI)
+        const tree_control = TreeControlCreate();
+        container.register_singleton(TOKENS.TreeControl, () => tree_control, {
+            init_order: INIT_ORDER.UI, name: 'TreeControl'
+        });
+
+        const control_manager = ControlManagerCreate();
+        container.register_singleton(TOKENS.ControlManager, () => control_manager, {
+            init_order: INIT_ORDER.UI + 5, name: 'ControlManager'
+        });
+
+        const inspector_control = InspectorControlCreate();
+        container.register_singleton(TOKENS.InspectorControl, () => inspector_control, {
+            init_order: INIT_ORDER.UI + 10, name: 'InspectorControl'
+        });
 
         logger.info('Модули редактора зарегистрированы');
 

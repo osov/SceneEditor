@@ -1,8 +1,7 @@
 /**
- * Модуль контролов (legacy)
+ * Модуль контролов
  *
  * Экспортирует типы и интерфейсы для контролов редактора.
- * SelectControl и HistoryControl удалены - используйте Services.selection и Services.history.
  */
 
 // Типы и интерфейсы

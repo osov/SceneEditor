@@ -91,7 +91,7 @@ export function create_file_watcher(state: MaterialState, hash_utils: HashUtils)
     }
 
     /**
-     * Получает внутренний объект materials для обратной совместимости
+     * Получает внутренний объект materials
      */
     function get_materials_data(): Record<string, MaterialInfo> {
         return state.get_all_materials();

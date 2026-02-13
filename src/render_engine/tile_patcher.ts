@@ -7,9 +7,6 @@ import { Slice9Mesh } from "./objects/slice9";
 import { MaterialUniformType } from "./resource_manager";
 import { BlendMode, convert_blend_mode_to_threejs, convert_threejs_to_blend_mode } from "@editor/core/render/blend";
 import { Services } from '@editor/core/ServiceProvider';
-import { get_client_api } from '@editor/modules_editor/ClientAPI';
-import { get_popups } from '@editor/modules_editor/Popups';
-import { get_asset_control } from '@editor/controls/AssetControl';
 
 export type TilesInfo =
     TDictionary<{ texture?: string, layers_mask?: number, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any>, z?: number }>;
@@ -122,12 +119,12 @@ export function TilePatcher(tilemap_path: string) {
             }
         });
 
-        const r = await get_client_api().save_data(path, JSON.stringify(tiles_data));
+        const r = await Services.client_api.save_data(path, JSON.stringify(tiles_data));
         if (r && r.result) {
-            await get_asset_control().go_to_dir(dir, true);
-            return get_popups().toast.success(`Тайлы сохранены, путь: ${path}`);
+            await Services.asset_control.go_to_dir(dir, true);
+            return Services.popups.toast.success(`Тайлы сохранены, путь: ${path}`);
         }
-        else return get_popups().toast.error(`Не удалось сохранить тайлы, путь: ${path}: ${r.message}`);
+        else return Services.popups.toast.error(`Не удалось сохранить тайлы, путь: ${path}: ${r.message}`);
     }
 
     async function patch(tiles: SpriteTileInfoDict) {

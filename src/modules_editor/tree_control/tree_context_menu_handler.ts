@@ -6,7 +6,7 @@ import { deepClone } from '../../modules/utils';
 import { Services } from '@editor/core';
 import { NodeAction } from '../../shared/types';
 import { ComponentType } from '../../render_engine/components/container_component';
-import { contextMenuItem, get_contextmenu } from '../ContextMenu';
+import { contextMenuItem } from '../ContextMenu';
 import type { TreeContextMenuServiceType } from '../../editor/hierarchy';
 import type { TreeState } from './types';
 import type { TreeRenameFactory } from './tree_rename';
@@ -45,7 +45,7 @@ export function create_tree_context_menu_handler(params: TreeContextMenuHandlerP
         }
 
         const menu_items = context_menu_service.get_menu_items(item_drag);
-        get_contextmenu().open(menu_items as contextMenuItem[], event, menu_context_click);
+        Services.context_menu.open(menu_items as contextMenuItem[], event, menu_context_click);
     }
 
     /**

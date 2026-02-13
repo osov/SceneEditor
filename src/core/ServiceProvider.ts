@@ -38,6 +38,16 @@ import type { IUIService } from '../editor/UIService';
 import type { IInspectorService } from '../editor/InspectorService';
 import type { IAssetService } from '../editor/AssetService';
 import type { ISizeControl, ICameraControl } from './controls/types';
+import type { ClientAPIType } from '../modules_editor/ClientAPI';
+import type { PopupsType } from '../modules_editor/Popups';
+import type { ContextMenuType } from '../modules_editor/ContextMenu';
+import type { AssetControlType } from '../controls/AssetControl';
+import type { SoundType } from '../modules/Sound';
+import type { AudioManagerType } from '../render_engine/AudioManager';
+import type { ILegacyResourceManager } from '../render_engine/resource_manager';
+import type { TreeControlType } from '../modules_editor/tree_control/index';
+import type { ControlManagerType } from '../modules_editor/ControlManager';
+import type { InspectorControlType } from '../modules_editor/InspectorControl';
 
 /** Типы сервисов для типобезопасности */
 export interface IServices {
@@ -77,7 +87,26 @@ export interface IServices {
     readonly size: ISizeService;
     /** Сервис уведомлений */
     readonly notifications: INotificationService;
-    // === Контролы редактора (legacy Three.js контролы) ===
+    /** REST API клиент */
+    readonly client_api: ClientAPIType;
+    /** Менеджер всплывающих окон */
+    readonly popups: PopupsType;
+    /** Контекстное меню */
+    readonly context_menu: ContextMenuType;
+    /** Контрол ассетов */
+    readonly asset_control: AssetControlType;
+    /** Модуль пространственного звука */
+    readonly sound: SoundType;
+    /** Менеджер аудио */
+    readonly audio_manager: AudioManagerType;
+    /** Менеджер ресурсов */
+    readonly resource_manager: ILegacyResourceManager;
+    /** Контрол дерева (иерархия сцены) */
+    readonly tree_control: TreeControlType;
+    /** Менеджер контролов */
+    readonly control_manager: ControlManagerType;
+    /** Контрол инспектора */
+    readonly inspector_control: InspectorControlType;
     /** Контрол размера объектов */
     readonly size_control: ISizeControl;
     /** Контрол камеры */
@@ -174,7 +203,45 @@ export const Services: IServices = {
         return require_container().resolve<INotificationService>(TOKENS.Notifications);
     },
 
-    // === Контролы редактора (legacy Three.js контролы) ===
+    get client_api(): ClientAPIType {
+        return require_container().resolve<ClientAPIType>(TOKENS.ClientAPI);
+    },
+
+    get popups(): PopupsType {
+        return require_container().resolve<PopupsType>(TOKENS.Popups);
+    },
+
+    get context_menu(): ContextMenuType {
+        return require_container().resolve<ContextMenuType>(TOKENS.ContextMenu);
+    },
+
+    get asset_control(): AssetControlType {
+        return require_container().resolve<AssetControlType>(TOKENS.AssetControl);
+    },
+
+    get sound(): SoundType {
+        return require_container().resolve<SoundType>(TOKENS.Sound);
+    },
+
+    get audio_manager(): AudioManagerType {
+        return require_container().resolve<AudioManagerType>(TOKENS.AudioManager);
+    },
+
+    get resource_manager(): ILegacyResourceManager {
+        return require_container().resolve<ILegacyResourceManager>(TOKENS.ResourceManager);
+    },
+
+    get tree_control(): TreeControlType {
+        return require_container().resolve<TreeControlType>(TOKENS.TreeControl);
+    },
+
+    get control_manager(): ControlManagerType {
+        return require_container().resolve<ControlManagerType>(TOKENS.ControlManager);
+    },
+
+    get inspector_control(): InspectorControlType {
+        return require_container().resolve<InspectorControlType>(TOKENS.InspectorControl);
+    },
 
     get size_control(): ISizeControl {
         return require_container().resolve<ISizeControl>(TOKENS.SizeControl);
@@ -184,9 +251,6 @@ export const Services: IServices = {
         return require_container().resolve<ICameraControl>(TOKENS.CameraControl);
     },
 };
-
-// DEBUG: Expose Services globally for debugging
-(globalThis as unknown as { Services: IServices }).Services = Services;
 
 /**
  * Проверить, инициализирован ли контейнер
@@ -223,6 +287,16 @@ export function try_get_service<K extends keyof IServices>(key: K): IServices[K]
         assets: TOKENS.Assets,
         size: TOKENS.Size,
         notifications: TOKENS.Notifications,
+        client_api: TOKENS.ClientAPI,
+        popups: TOKENS.Popups,
+        context_menu: TOKENS.ContextMenu,
+        asset_control: TOKENS.AssetControl,
+        sound: TOKENS.Sound,
+        audio_manager: TOKENS.AudioManager,
+        resource_manager: TOKENS.ResourceManager,
+        tree_control: TOKENS.TreeControl,
+        control_manager: TOKENS.ControlManager,
+        inspector_control: TOKENS.InspectorControl,
         // Контролы редактора
         size_control: TOKENS.SizeControl,
         camera_control: TOKENS.CameraControl,

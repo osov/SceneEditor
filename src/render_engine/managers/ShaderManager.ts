@@ -3,7 +3,6 @@
 import { ShaderChunk } from 'three';
 import { Services } from '@editor/core/ServiceProvider';
 import { IS_LOGGING } from '@editor/config';
-import { get_asset_control } from '@editor/controls/AssetControl';
 
 export interface ShaderManagerConfig {
     /** Колбэк при изменении vertex шейдера */
@@ -59,7 +58,7 @@ export function create_shader_manager(config: ShaderManagerConfig = {}) {
             IS_LOGGING && Services.logger.warn('vertex program exists', path);
             return;
         }
-        const shader_program = await get_asset_control().get_file_data(path);
+        const shader_program = await Services.asset_control.get_file_data(path);
         if (!shader_program) {
             Services.logger.error('[preload_vertex_program] Failed to load:', path);
             return;
@@ -91,7 +90,7 @@ export function create_shader_manager(config: ShaderManagerConfig = {}) {
             IS_LOGGING && Services.logger.warn('fragment program exists', path);
             return;
         }
-        const shader_program = await get_asset_control().get_file_data(path);
+        const shader_program = await Services.asset_control.get_file_data(path);
         if (!shader_program) {
             Services.logger.error('[preload_fragment_program] Failed to load:', path);
             return;
@@ -103,7 +102,7 @@ export function create_shader_manager(config: ShaderManagerConfig = {}) {
 
     /** Обработчик изменения vertex шейдера */
     async function on_vertex_shader_change(path: string) {
-        const vertexShader = await get_asset_control().get_file_data(path);
+        const vertexShader = await Services.asset_control.get_file_data(path);
         if (!vertexShader) return;
 
         vertex_programs[path] = vertexShader;
@@ -115,7 +114,7 @@ export function create_shader_manager(config: ShaderManagerConfig = {}) {
 
     /** Обработчик изменения fragment шейдера */
     async function on_fragment_shader_change(path: string) {
-        const fragmentShader = await get_asset_control().get_file_data(path);
+        const fragmentShader = await Services.asset_control.get_file_data(path);
         if (!fragmentShader) return;
 
         fragment_programs[path] = fragmentShader;

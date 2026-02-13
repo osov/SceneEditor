@@ -8,7 +8,6 @@ import { worldGui, ParamsTexture } from '../../shared/types';
 import { IObjectTypes } from '../../render_engine/types';
 import { ASSET_SCENE_GRAPH } from '../modules_editor_const';
 import { DEFOLD_LIMITS } from '../../config';
-import { get_popups } from '../Popups';
 import type { TreeState, TreeMeshObject } from './types';
 
 /**
@@ -133,13 +132,13 @@ export function create_tree_texture_drop(params: TreeTextureDropParams) {
         }
 
         if (data.length === 0 || data.includes('undefined/undefined')) {
-            get_popups().toast.open({ type: 'info', message: 'Нет текстуры!' });
+            Services.popups.toast.open({ type: 'info', message: 'Нет текстуры!' });
             return;
         }
 
         const list = Services.selection.selected as TreeMeshObject[];
         if (list.length > 1 && is_pos) {
-            get_popups().toast.open({ type: 'info', message: 'Для этого действия нужно выбрать только 1 объект!' });
+            Services.popups.toast.open({ type: 'info', message: 'Для этого действия нужно выбрать только 1 объект!' });
             return;
         }
 
@@ -164,7 +163,7 @@ export function create_tree_texture_drop(params: TreeTextureDropParams) {
         const tree_list = state.get_tree_list();
         const no_drop = tree_list.find((i) => i.id === pt.pid && i.no_drop);
         if (no_drop !== undefined) {
-            get_popups().toast.open({ type: 'info', message: 'В текущий объект запрещено добавлять дочерние!' });
+            Services.popups.toast.open({ type: 'info', message: 'В текущий объект запрещено добавлять дочерние!' });
             return;
         }
 
@@ -183,7 +182,7 @@ export function create_tree_texture_drop(params: TreeTextureDropParams) {
             return;
         }
 
-        get_popups().toast.open({ type: 'info', message: 'Этому объекту нельзя добавлять текстуру!' });
+        Services.popups.toast.open({ type: 'info', message: 'Этому объекту нельзя добавлять текстуру!' });
     }
 
     /**

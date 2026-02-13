@@ -1,13 +1,12 @@
 /**
  * TreeControl - UI контрол для отображения иерархии сцены
  *
- * Реэкспорт из tree_control/ для обратной совместимости.
- * Вся логика теперь в src/modules_editor/tree_control/
+ * Реэкспорт из tree_control/.
+ * Вся логика в src/modules_editor/tree_control/
  */
 
 export {
-    get_tree_control,
-    register_tree_control,
+    TreeControlCreate,
     type TreeControlType,
     type TreeItem,
     type TreeMeshObject,

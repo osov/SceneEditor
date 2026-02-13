@@ -1,20 +1,20 @@
 /**
  * SizeService - сервис управления визуальными границами объектов
  *
- * Обёртка над legacy SizeControl для доступа через DI.
+ * Обёртка над SizeControl для доступа через DI.
  * Управляет отображением bounding box, pivot points, anchor points, slice9.
  */
 
 import type { ISceneObject } from '@editor/engine/types';
 import type { ISizeService, SizeServiceParams } from './types';
-import { try_get_size_control } from '../controls/SizeControl';
+import { try_get_service } from '@editor/core';
 
 /** Создать SizeService */
 export function create_size_service(params: SizeServiceParams): ISizeService {
     const { logger } = params;
 
     function set_selected_list(list: ISceneObject[]): void {
-        const legacy = try_get_size_control();
+        const legacy = try_get_service('size_control');
         if (legacy !== undefined) {
             legacy.set_selected_list(list as unknown as import('../render_engine/types').IBaseMeshAndThree[]);
         } else {
@@ -23,21 +23,21 @@ export function create_size_service(params: SizeServiceParams): ISizeService {
     }
 
     function detach(): void {
-        const legacy = try_get_size_control();
+        const legacy = try_get_service('size_control');
         if (legacy !== undefined) {
             legacy.detach();
         }
     }
 
     function set_active(active: boolean): void {
-        const legacy = try_get_size_control();
+        const legacy = try_get_service('size_control');
         if (legacy !== undefined) {
             legacy.set_active(active);
         }
     }
 
     function draw(): void {
-        const legacy = try_get_size_control();
+        const legacy = try_get_service('size_control');
         if (legacy !== undefined) {
             legacy.draw();
         }

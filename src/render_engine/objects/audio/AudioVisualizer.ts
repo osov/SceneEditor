@@ -11,7 +11,7 @@ import {
     Object3D
 } from "three";
 import { SoundZoneType, type AudioVisualizerParams } from "./types";
-import { get_sound } from "../../../modules/Sound";
+import { Services } from '@editor/core/ServiceProvider';
 
 /**
  * Интерфейс визуализатора аудио зон
@@ -152,7 +152,7 @@ export function AudioVisualizerCreate(parent: Object3D): IAudioVisualizer {
 
     function updateListenerVisual(): void {
         if (listenerVisual === null) return;
-        const listenerPosition = get_sound().get_listener_position();
+        const listenerPosition = Services.sound.get_listener_position();
         listenerVisual.position.copy(listenerPosition);
         listenerVisual.parent?.worldToLocal(listenerVisual.position);
         listenerVisual.visible = params.isActive;

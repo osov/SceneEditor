@@ -5,26 +5,6 @@ import { deepClone } from "../modules/utils";
 /** Тип Popups */
 export type PopupsType = ReturnType<typeof PopupsCreate>;
 
-/** Модульный instance для использования через импорт */
-let popups_instance: PopupsType | undefined;
-
-/** Получить instance Popups */
-export function get_popups(): PopupsType {
-    if (popups_instance === undefined) {
-        throw new Error('Popups не инициализирован. Вызовите register_popups() сначала.');
-    }
-    return popups_instance;
-}
-
-/** Попробовать получить instance Popups (без ошибки если не инициализирован) */
-export function try_get_popups(): PopupsType | undefined {
-    return popups_instance;
-}
-
-export function register_popups() {
-    popups_instance = PopupsCreate();
-}
-
 //  ****** Popups examples:  ******
 /* 
 
@@ -154,7 +134,7 @@ export interface cbDataItem {
     item: LayerItem
 }
 
-function PopupsCreate() {
+export function PopupsCreate() {
     let visible = false;
 
     function open(data: Notify | Confirm | Rename | Layers | Select) {

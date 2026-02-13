@@ -240,15 +240,9 @@ export function create_logger(params: LoggerParams = {}): ILogger {
         };
     }
 
-    /** Обратная совместимость: get_with_prefix */
-    function get_with_prefix(new_prefix: string): ILogger {
-        return create_child(new_prefix);
-    }
-
     const logger: ILogger & LoggerInternal & {
         configure: (config: Partial<LoggerConfig>) => void;
         add_handler: (handler: LogHandler) => () => void;
-        get_with_prefix: (prefix: string) => ILogger;
     } = {
         debug,
         info,
@@ -256,10 +250,8 @@ export function create_logger(params: LoggerParams = {}): ILogger {
         error,
         log,
         create_child,
-        // Расширенные методы
         configure,
         add_handler,
-        get_with_prefix,
         // Внутренние методы
         get_min_level,
         get_full_prefix,

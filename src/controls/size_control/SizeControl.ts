@@ -41,29 +41,8 @@ import {
 /** Тип SizeControl */
 export type SizeControlType = ReturnType<typeof SizeControlCreate>;
 
-/** Модульный instance для использования через импорт */
-let size_control_instance: SizeControlType | undefined;
-
-/** Получить instance SizeControl */
-export function get_size_control(): SizeControlType {
-    if (size_control_instance === undefined) {
-        throw new Error('SizeControl не инициализирован. Вызовите register_size_control() сначала.');
-    }
-    return size_control_instance;
-}
-
-/** Попробовать получить instance SizeControl (без ошибки если не инициализирован) */
-export function try_get_size_control(): SizeControlType | undefined {
-    return size_control_instance;
-}
-
-/** Регистрация SizeControl */
-export function register_size_control() {
-    size_control_instance = SizeControlCreate();
-}
-
 /** Создание SizeControl */
-function SizeControlCreate() {
+export function SizeControlCreate() {
     const scene = Services.render.scene;
     const editor_z = 0;
     const layer_control = Services.render.DC_LAYERS.CONTROLS_LAYER;

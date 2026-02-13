@@ -1,13 +1,9 @@
 import { IS_LOGGING, SERVER_URL } from "../config";
 import { CommandId, URL_PATHS, AssetsResponses, ServerCommands, ServerResponses, NEW_PROJECT_CMD, GET_PROJECTS_CMD, LOAD_PROJECT_CMD, NEW_FOLDER_CMD, GET_FOLDER_CMD, COPY_CMD, DELETE_CMD, RENAME_CMD, SAVE_INFO_CMD, GET_INFO_CMD, SAVE_DATA_CMD, GET_DATA_CMD, NetMessagesEditor, TRecursiveDict, DEL_INFO_CMD, MOVE_CMD, SET_CURRENT_SCENE_CMD, OPEN_EXPLORER_CMD, DataFormatType } from "./modules_editor_const";
 import { Services } from '@editor/core';
-import { get_popups } from './Popups';
 
 /** Тип ClientAPI */
 export type ClientAPIType = ReturnType<typeof ClientAPIModule>;
-
-/** Модульный instance для использования через импорт */
-let client_api_instance: ClientAPIType | undefined;
 
 /** Текущий sessionId (вместо window.currentSessionId) */
 let current_session_id: string | undefined;
@@ -22,24 +18,7 @@ export function set_session_id(id: string): void {
     current_session_id = id;
 }
 
-/** Получить instance ClientAPI */
-export function get_client_api(): ClientAPIType {
-    if (client_api_instance === undefined) {
-        throw new Error('ClientAPI не инициализирован. Вызовите register_client_api() сначала.');
-    }
-    return client_api_instance;
-}
-
-/** Попробовать получить instance ClientAPI (без ошибки если не инициализирован) */
-export function try_get_client_api(): ClientAPIType | undefined {
-    return client_api_instance;
-}
-
-export function register_client_api() {
-    client_api_instance = ClientAPIModule();
-}
-
-function ClientAPIModule() {
+export function ClientAPIModule() {
     function waitForSessionId(): Promise<{ success: boolean; sessionId?: string; error?: string }> {
         return new Promise<{ success: boolean; sessionId?: string; error?: string }>((resolve) => {
             if (current_session_id !== undefined) {
@@ -59,7 +38,7 @@ function ClientAPIModule() {
 
             setTimeout(() => {
                 if (current_session_id === undefined) {
-                    get_popups().toast.error('Не удалось подключиться к серверу. Проверьте соединение.');
+                    Services.popups.toast.error('Не удалось подключиться к серверу. Проверьте соединение.');
                     resolve({ success: false, error: 'Не удалось подключиться к серверу. Проверьте соединение.' });
                 }
             }, 10000);

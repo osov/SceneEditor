@@ -42,7 +42,7 @@ import { create_keybindings_service } from './editor';
 import type { IKeybindingsService } from './editor';
 
 // === UI модули редактора ===
-import { get_control_manager } from './modules_editor/ControlManager';
+import { Services } from '@editor/core';
 
 /** Загрузка сцены проекта */
 async function load_project_scene(logger: { error: (msg: string, ...args: unknown[]) => void; info: (msg: string, ...args: unknown[]) => void }): Promise<void> {
@@ -102,7 +102,7 @@ function register_default_keybindings(keybindings: IKeybindingsService, containe
     const camera = container.resolve<ICameraService>(TOKENS.Camera);
 
     // UI модули
-    const control_manager = get_control_manager();
+    const control_manager = Services.control_manager;
 
     // === Режимы трансформации ===
     // ControlManager активирует контрол и устанавливает режим напрямую

@@ -215,7 +215,6 @@ export function save_uniform(
     ids: number[],
     field: PropertyData<PropertyType>,
     ctx: HistorySaverContext,
-    on_rebuild_inspector: () => void
 ) {
     // Парсим action_data для получения uniform_name и slot_index
     const action_data = field.action_data;
@@ -305,8 +304,7 @@ export function save_uniform(
                     );
                 }
             }
-            // Обновляем инспектор для отображения восстановленных значений
-            on_rebuild_inspector();
+            // Инспектор обновится через обработчик события history:undo в InspectorControl
         },
         redo: () => { },
     });

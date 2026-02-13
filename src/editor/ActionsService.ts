@@ -337,5 +337,5 @@ export function create_actions_service(params: ActionsServiceParams): IActionsSe
     };
 }
 
-// Реэкспорт для обратной совместимости
+// Реэкспорт типов действий
 export * from './actions';

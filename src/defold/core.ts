@@ -21,7 +21,7 @@ declare global {
 }
 
 
-export function register_lua_core() {
+export function init_lua_core() {
     (window as any).tonumber = Number;
     (window as any).pprint = function (obj: any) {
         console.log(obj);

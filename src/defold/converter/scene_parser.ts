@@ -133,5 +133,5 @@ export function parseFont(data: IFont): DefoldData {
     };
 }
 
-// Реэкспорт для обратной совместимости
+// Реэкспорт парсеров
 export * from './parsers';

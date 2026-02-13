@@ -159,7 +159,7 @@ import {
 } from './inspector_control';
 
 // ============================================================================
-// Re-exports для обратной совместимости
+// Re-exports типов инспектора
 // ============================================================================
 
 export { Property } from '../core/inspector/IInspectable';
@@ -185,24 +185,11 @@ export {
 
 export type InspectorControlType = ReturnType<typeof InspectorControlCreate>;
 
-let inspector_control_instance: InspectorControlType | undefined;
-
-export function get_inspector_control(): InspectorControlType {
-    if (inspector_control_instance === undefined) {
-        throw new Error('InspectorControl не инициализирован. Вызовите register_inspector_control() сначала.');
-    }
-    return inspector_control_instance;
-}
-
-export function register_inspector_control() {
-    inspector_control_instance = InspectorControlCreate();
-}
-
 // ============================================================================
 // InspectorControl Factory
 // ============================================================================
 
-function InspectorControlCreate() {
+export function InspectorControlCreate() {
     // State
     let _config: InspectorGroup[];
     let _inspector: Pane;
@@ -573,7 +560,7 @@ function InspectorControlCreate() {
             case Property.UNIFORM_VEC3:
             case Property.UNIFORM_VEC4:
             case Property.UNIFORM_COLOR:
-                save_uniform(info.ids, info.field, ctx, () => set_selected_list(_selected_list));
+                save_uniform(info.ids, info.field, ctx);
                 break;
         }
     }
@@ -799,7 +786,13 @@ function InspectorControlCreate() {
     }
 
     function clear() {
-        _inspector.children.forEach((value) => value.dispose());
+        _inspector.children.forEach((value) => {
+            try {
+                value.dispose();
+            } catch {
+                // Tweakpane может бросить _TpError при повторном dispose
+            }
+        });
     }
 
     // ========================================================================

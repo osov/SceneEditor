@@ -5,10 +5,8 @@ import { preloadFont } from 'troika-three-text';
 import { MinificationTextureFilter, MagnificationTextureFilter, Wrapping } from 'three';
 import { FSEvent, TDictionary, TRecursiveDict, URL_PATHS, DataFormatType } from '../modules_editor/modules_editor_const';
 import { IBaseEntityData } from './types';
-import { get_client_api, api } from '../modules_editor/ClientAPI';
+import { api } from '../modules_editor/ClientAPI';
 import { Services } from '@editor/core/ServiceProvider';
-import { get_container } from '../core/di/Container';
-import { TOKENS } from '../core/di/tokens';
 import { get_file_name } from './helpers/file';
 import type { Slice9Mesh } from './objects/slice9';
 import { deepClone } from '../modules/utils';
@@ -35,7 +33,7 @@ import {
     type MaterialUniformParams,
 } from '@editor/engine/materials';
 
-// Re-export типов для обратной совместимости
+// Re-export типов
 export {
     MaterialUniformType,
     type MaterialInfo,
@@ -53,41 +51,6 @@ export interface SceneInfo {
 
 /** Тип возвращаемого значения ResourceManagerModule для DI */
 export type ILegacyResourceManager = ReturnType<typeof ResourceManagerModule>;
-
-/** Кэш для DI ResourceManager */
-let _resource_manager: ILegacyResourceManager | undefined;
-
-/** Получить ResourceManager из DI или создать новый */
-export function get_resource_manager(): ILegacyResourceManager {
-    if (_resource_manager !== undefined) {
-        return _resource_manager;
-    }
-
-    // Пробуем получить из DI контейнера
-    const container = get_container();
-    if (container !== undefined) {
-        const from_di = container.try_resolve<ILegacyResourceManager>(TOKENS.ResourceManager);
-        if (from_di !== undefined) {
-            _resource_manager = from_di;
-            return from_di;
-        }
-    }
-
-    // Создаём новый если DI недоступен
-    _resource_manager = ResourceManagerModule();
-    return _resource_manager;
-}
-
-export function register_resource_manager() {
-    const resource_manager = get_resource_manager();
-
-    const container = get_container();
-    if (container !== undefined && container.try_resolve(TOKENS.ResourceManager) === undefined) {
-        container.register_singleton(TOKENS.ResourceManager, () => resource_manager, {
-            name: 'ResourceManager',
-        });
-    }
-}
 
 /**
  * ResourceManager - координатор всех ресурсов.
@@ -156,7 +119,7 @@ export function ResourceManagerModule() {
             process_shader_includes: shader_manager.process_shader_includes,
             get_file_data: async (path: string) => {
                 // Загрузка данных файла через ClientAPI (без зависимости от AssetControl)
-                const resp = await get_client_api().get_data(path);
+                const resp = await Services.client_api.get_data(path);
                 if (resp === undefined || resp.result === 0 || resp.data === undefined) {
                     return null;
                 }
@@ -164,7 +127,7 @@ export function ResourceManagerModule() {
             },
             save_file_data: (path: string, data: string, format: DataFormatType = 'string') => {
                 // Сохранение данных файла через ClientAPI (без зависимости от AssetControl)
-                return get_client_api().save_data(path, data, format);
+                return Services.client_api.save_data(path, data, format);
             },
         });
 
@@ -467,7 +430,7 @@ export function ResourceManagerModule() {
     async function write_metadata() {
         try {
             const atlases_data = texture_manager.get_atlases_data();
-            const metadata = await get_client_api().get_info('atlases');
+            const metadata = await Services.client_api.get_info('atlases');
             if (!metadata.result) {
                 if (metadata.data !== undefined) {
                     throw new Error('Failed on get atlases metadata!');
@@ -490,12 +453,12 @@ export function ResourceManagerModule() {
                     };
                 }
             }
-            const save_result = await get_client_api().save_info('atlases', metadata_atlases);
+            const save_result = await Services.client_api.save_info('atlases', metadata_atlases);
             if (!save_result.result) {
                 throw new Error('Failed on save atlases metadata!');
             }
 
-            const layers_metadata = await get_client_api().get_info('layers');
+            const layers_metadata = await Services.client_api.get_info('layers');
             if (!layers_metadata.result && layers_metadata.data !== undefined) {
                 throw new Error('Failed on get layers metadata!');
             }
@@ -504,7 +467,7 @@ export function ResourceManagerModule() {
                 if (index === 0) return;
                 layers_dict[index.toString()] = layer;
             });
-            const save_layers_result = await get_client_api().save_info('layers', layers_dict);
+            const save_layers_result = await Services.client_api.save_info('layers', layers_dict);
             if (!save_layers_result.result) {
                 throw new Error('Failed on save layers metadata!');
             }
@@ -515,7 +478,7 @@ export function ResourceManagerModule() {
 
     async function update_from_metadata() {
         try {
-            const metadata = await get_client_api().get_info('atlases');
+            const metadata = await Services.client_api.get_info('atlases');
             if (!metadata.result) {
                 if (metadata.data === undefined) {
                     Services.logger.debug('Update resource manager from metadata: atlases not found!');
@@ -558,7 +521,7 @@ export function ResourceManagerModule() {
                 }
             }
 
-            const layers_metadata = await get_client_api().get_info('layers');
+            const layers_metadata = await Services.client_api.get_info('layers');
             if (!layers_metadata.result) {
                 if (layers_metadata.data === undefined) {
                     Services.logger.debug('Update resource manager from metadata: layers not found!');
@@ -688,7 +651,7 @@ export function ResourceManagerModule() {
         update_from_metadata,
         write_metadata,
 
-        // Для обратной совместимости - прямой доступ к данным моделей
+        // Прямой доступ к данным моделей
         get models() { return model_manager.models; },
         get animations() { return model_manager.animations; }
     };

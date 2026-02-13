@@ -1,5 +1,5 @@
-// Реэкспорт для обратной совместимости
-// Все классы перенесены в src/render_engine/objects/sub_types/
+// Реэкспорт классов
+// Все классы находятся в src/render_engine/objects/sub_types/
 
 export {
     GuiContainer,

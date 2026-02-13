@@ -6,7 +6,8 @@
  * - Открытие диалога управления слоями
  */
 
-import { Action, type cbDataItem, get_popups } from '../modules_editor/Popups';
+import { Action, type cbDataItem } from '../modules_editor/Popups';
+import { Services } from '@editor/core';
 import type { ILogger, IEventBus } from '@editor/core/di/types';
 
 /** Интерфейс сервиса диалогов ресурсов */
@@ -57,7 +58,7 @@ export function create_resource_dialog_service(params: ResourceDialogServicePara
             can_delete: true,
         }));
 
-        get_popups().open({
+        Services.popups.open({
             type: 'Layers',
             params: {
                 title: 'Atlas',
@@ -104,7 +105,7 @@ export function create_resource_dialog_service(params: ResourceDialogServicePara
                 can_delete: true,
             }));
 
-        get_popups().open({
+        Services.popups.open({
             type: 'Layers',
             params: {
                 title: 'Layer',

@@ -161,7 +161,7 @@ export type {
     ISceneManager,
 } from './render';
 
-// Контролы (legacy) - типы и интерфейсы
+// Контролы - типы и интерфейсы
 export { TransformMode } from './controls';
 
 export type {

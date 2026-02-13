@@ -1,11 +1,8 @@
 // Модуль операций со сценами
 
 import { SCENE_EXT } from '../../modules_editor/modules_editor_const';
-import { get_client_api } from '../../modules_editor/ClientAPI';
 import { error_popup } from '../../render_engine/helpers/utils';
 import { Services } from '@editor/core';
-import { get_popups } from '../../modules_editor/Popups';
-import { get_control_manager } from '../../modules_editor/ControlManager';
 import type { BaseEntityData } from '../../core/render/types';
 import type { AssetControlState } from './types';
 import { Quaternion, Vector3 } from 'three';
@@ -31,9 +28,9 @@ export function create_scene_operations(
             Services.logger.warn('[set_current_scene] Попытка установить сцену, но путь undefined');
             return false;
         }
-        const resp = await get_client_api().set_current_scene(path);
+        const resp = await Services.client_api.set_current_scene(path);
         if (!resp || resp.result === 0) {
-            get_popups().toast.error(`Серверу не удалось установить сцену текущей: ${resp.message}`);
+            Services.popups.toast.error(`Серверу не удалось установить сцену текущей: ${resp.message}`);
             return false;
         }
         state.current_scene.name = resp.data?.name as string;
@@ -45,9 +42,9 @@ export function create_scene_operations(
     }
 
     async function load_scene(path: string): Promise<void> {
-        const resp = await get_client_api().get_data(path);
+        const resp = await Services.client_api.get_data(path);
         if (!resp || resp.result === 0 || !resp.data) {
-            get_popups().toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
+            Services.popups.toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
             return;
         }
         const parsed = JSON.parse(resp.data) as BaseEntityData[] | { scene_data: BaseEntityData[] };
@@ -56,12 +53,12 @@ export function create_scene_operations(
         const scene_data = Array.isArray(parsed) ? parsed : parsed.scene_data;
 
         if (scene_data === undefined) {
-            get_popups().toast.error('Неверный формат файла сцены');
+            Services.popups.toast.error('Неверный формат файла сцены');
             return;
         }
 
         Services.scene.load_scene(scene_data);
-        get_control_manager().update_graph(true, state.current_scene.name, true);
+        Services.control_manager.update_graph(true, state.current_scene.name, true);
     }
 
     async function save_current_scene(
@@ -75,17 +72,17 @@ export function create_scene_operations(
         const path = state.current_scene.path as string;
         const name = state.current_scene.name as string;
         const data = Services.scene.save_scene();
-        const r = await get_client_api().save_data(path, JSON.stringify({ scene_data: data }));
+        const r = await Services.client_api.save_data(path, JSON.stringify({ scene_data: data }));
         if (r && r.result) {
             state.history_length_cache[path] = Services.history.get_undo_stack().length;
-            return get_popups().toast.success(`Сцена ${name} сохранена, путь: ${path}`);
+            return Services.popups.toast.success(`Сцена ${name} сохранена, путь: ${path}`);
         }
-        return get_popups().toast.error(`Не удалось сохранить сцену ${name}, путь: ${path}: ${r.message}`);
+        return Services.popups.toast.error(`Не удалось сохранить сцену ${name}, путь: ${path}: ${r.message}`);
     }
 
     async function new_scene(path: string, name: string) {
         const scene_path = `${path}/${name}.${SCENE_EXT}`;
-        const r = await get_client_api().save_data(scene_path, JSON.stringify({ scene_data: [] }));
+        const r = await Services.client_api.save_data(scene_path, JSON.stringify({ scene_data: [] }));
         if (r.result === 0) {
             error_popup(`Не удалось создать сцену, ответ сервера: ${r.message}`);
             return;
@@ -172,7 +169,7 @@ export function create_scene_operations(
     }
 
     function open_scene_exit_popup(current_path: string, new_path: string) {
-        get_popups().open({
+        Services.popups.open({
             type: 'Confirm',
             params: {
                 title: '',

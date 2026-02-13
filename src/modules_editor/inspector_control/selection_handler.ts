@@ -5,7 +5,6 @@
 import { Vector2, Vector3, Vector4, NearestFilter, LinearFilter } from 'three';
 import { Services } from '@editor/core';
 import { Property } from '../../core/inspector';
-import { get_control_manager } from '../ControlManager';
 import { get_basename, get_file_name } from '../../render_engine/helpers/utils';
 import { MaterialUniformType, type MaterialUniformParams } from '../../render_engine/resource_manager';
 import type { TextureOptionData } from '../../editor/inspector/options';
@@ -48,7 +47,7 @@ export function build_texture_selection_data(
         result.data.push({ name: Property.ASSET_ATLAS, data: atlas });
         result.data.push({
             name: Property.ATLAS_BUTTON, data: () => {
-                get_control_manager().open_atlas_manager();
+                Services.control_manager.open_atlas_manager();
             }
         });
 

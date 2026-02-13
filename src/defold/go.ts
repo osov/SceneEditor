@@ -15,7 +15,6 @@ import {
     type PlaybackMode, type EasingType
 } from "./utils";
 import { Services } from '@editor/core';
-import { get_audio_manager } from "@editor/render_engine/AudioManager";
 
 declare global {
     namespace go {
@@ -270,15 +269,15 @@ export function go_module() {
         }
         if (property == 'gain') {
             const id = uh_to_id(url);
-            return get_audio_manager().get_volume(id);
+            return Services.audio_manager.get_volume(id);
         }
         if (property == 'pan') {
             const id = uh_to_id(url);
-            return get_audio_manager().get_pan(id);
+            return Services.audio_manager.get_pan(id);
         }
         if (property == 'speed') {
             const id = uh_to_id(url);
-            return get_audio_manager().get_speed(id);
+            return Services.audio_manager.get_speed(id);
         }
         return get_nested_property(mesh as IBaseEntityAndThree, property);
     }
@@ -295,7 +294,7 @@ export function go_module() {
         }
         if (property == 'speed') {
             const id = uh_to_id(url);
-            get_audio_manager().set_speed(id, value as number);
+            Services.audio_manager.set_speed(id, value as number);
             return;
         }
         set_nested_property(mesh as IBaseEntityAndThree, property, value);

@@ -12,7 +12,6 @@
 import { is_base_mesh } from '../render_engine/helpers/utils';
 import type { IBaseMeshAndThree } from '../render_engine/types';
 import type { TreeItem } from './TreeControl';
-import { get_tree_control } from './TreeControl';
 import Stats from 'stats.js';
 import { IS_CAMERA_ORTHOGRAPHIC } from '../config';
 import { HistoryOwner } from './modules_editor_const';
@@ -42,22 +41,7 @@ type HistoryData = {
 /** Тип ControlManager */
 export type ControlManagerType = ReturnType<typeof ControlManagerCreate>;
 
-/** Модульный instance для использования через импорт */
-let control_manager_instance: ControlManagerType | undefined;
-
-/** Получить instance ControlManager */
-export function get_control_manager(): ControlManagerType {
-    if (control_manager_instance === undefined) {
-        throw new Error('ControlManager не инициализирован. Вызовите register_control_manager() сначала.');
-    }
-    return control_manager_instance;
-}
-
-export function register_control_manager() {
-    control_manager_instance = ControlManagerCreate();
-}
-
-function ControlManagerCreate() {
+export function ControlManagerCreate() {
     let current_draw_call = 0;
 
     // Создаём сервисы
@@ -73,7 +57,7 @@ function ControlManagerCreate() {
             scene_service: Services.scene as unknown as Parameters<typeof create_hierarchy_graph_service>[0]['scene_service'],
             selection_service: Services.selection,
             camera_service: Services.camera,
-            tree_control: get_tree_control(),
+            tree_control: Services.tree_control,
         });
 
         resource_dialog_service = create_resource_dialog_service({
@@ -131,7 +115,7 @@ function ControlManagerCreate() {
                 }
             }
             Services.selection.set_selected(list as unknown as ISceneObject[]);
-            get_tree_control().set_selected_items(e.list);
+            Services.tree_control.set_selected_items(e.list);
             if (list.length === 0) {
                 Services.event_bus.emit('selection:cleared', {});
             }

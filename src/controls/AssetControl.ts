@@ -10,11 +10,9 @@ import {
     TDictionary, texture_ext, URL_PATHS, AUDIO_EXT, FSEvent, ProtocolWrapper, NetMessagesEditor,
 } from '../modules_editor/modules_editor_const';
 import { span_elem, get_keys } from '../modules/utils';
-import { get_client_api } from '../modules_editor/ClientAPI';
 import { get_file_name } from '../render_engine/helpers/utils';
 import { WsWrap } from '@editor/modules/ws_wrap';
 import { Services } from '@editor/core';
-import { get_popups } from '../modules_editor/Popups';
 import type { PointerEventData, KeyEventData } from '@editor/core/services/InputService';
 import type { IBaseEntityData } from '@editor/render_engine/types';
 
@@ -29,27 +27,7 @@ import { create_asset_popups } from './asset_control/asset_popups';
 /** Тип AssetControl */
 export type AssetControlType = ReturnType<typeof AssetControlCreate>;
 
-/** Модульный instance для использования через импорт */
-let asset_control_instance: AssetControlType | undefined;
-
-/** Получить instance AssetControl */
-export function get_asset_control(): AssetControlType {
-    if (asset_control_instance === undefined) {
-        throw new Error('AssetControl не инициализирован. Вызовите register_asset_control() сначала.');
-    }
-    return asset_control_instance;
-}
-
-/** Попробовать получить instance AssetControl (без ошибки если не инициализирован) */
-export function try_get_asset_control(): AssetControlType | undefined {
-    return asset_control_instance;
-}
-
-export function register_asset_control() {
-    asset_control_instance = AssetControlCreate();
-}
-
-function AssetControlCreate() {
+export function AssetControlCreate() {
     // Инициализация состояния
     const filemanager = document.querySelector('.filemanager') as HTMLDivElement;
     const breadcrumbs = filemanager.querySelector('.breadcrumbs') as HTMLDivElement;
@@ -182,7 +160,7 @@ function AssetControlCreate() {
     async function go_to_dir(path: string, renew = false) {
         if (!state.current_project) return;
         if (state.current_dir === path && !renew) return;
-        const resp = await get_client_api().get_folder(path);
+        const resp = await Services.client_api.get_folder(path);
         if (resp.result === 1 && resp.data !== undefined) {
             localStorage.setItem('current_dir', path);
             const folder_content = resp.data;
@@ -510,12 +488,12 @@ function AssetControlCreate() {
     }
 
     async function on_key_up(event: KeyEventData) {
-        if (event.key === 'F2' && state.active_asset !== undefined && !get_popups().is_visible()) {
+        if (event.key === 'F2' && state.active_asset !== undefined && !Services.popups.is_visible()) {
             const path = state.active_asset.getAttribute('data-path') as string;
             const name = state.active_asset.getAttribute('data-name') as string;
             popups.rename_popup(path, name);
         }
-        if (event.key === 'Delete' && !get_popups().is_visible()) {
+        if (event.key === 'Delete' && !Services.popups.is_visible()) {
             popups.remove_popup();
         }
         if (Services.input.is_control()) {
@@ -567,7 +545,7 @@ function AssetControlCreate() {
 
     async function reload_current_project() {
         if (state.current_project) {
-            const load_project_resp = await get_client_api().load_project(state.current_project);
+            const load_project_resp = await Services.client_api.load_project(state.current_project);
             if (load_project_resp.result !== 1) {
                 Services.logger.warn(`Failed to reload current project (${state.current_project})`);
                 return;
@@ -629,10 +607,10 @@ function fileIsImg(path: string): boolean {
 }
 
 export async function run_debug_filemanager(project_to_load: string) {
-    const asset_control = get_asset_control();
+    const asset_control = Services.asset_control;
     let server_ok = false;
     try {
-        const resp = await get_client_api().test_server_ok();
+        const resp = await Services.client_api.test_server_ok();
         if (resp) {
             const text_response = await resp.text();
             const resp_data = JSON.parse(text_response);
@@ -661,7 +639,7 @@ export async function run_debug_filemanager(project_to_load: string) {
                 () => { },
                 (m) => {
                     const data = JSON.parse(m as string) as ProtocolWrapper;
-                    get_client_api().on_message_socket(data.id as keyof NetMessagesEditor, data.message);
+                    Services.client_api.on_message_socket(data.id as keyof NetMessagesEditor, data.message);
                 }
             );
             ws_client.set_reconnect_timer(WS_SERVER_URL, WS_RECONNECT_INTERVAL);
@@ -674,17 +652,17 @@ export async function run_debug_filemanager(project_to_load: string) {
             ws_client?.stop_reconnect_timer();
         }
 
-        const sessionResult = await get_client_api().waitForSessionId();
+        const sessionResult = await Services.client_api.waitForSessionId();
         if (!sessionResult.success) {
             Services.logger.warn('Не удалось получить sessionId:', sessionResult.error);
         }
 
-        const projects = await get_client_api().get_projects();
+        const projects = await Services.client_api.get_projects();
         const normalized_project_name = project_to_load.replace(/^\.\.\//, '');
         const current_project = localStorage.getItem('current_project');
         const current_dir = localStorage.getItem('current_dir');
         if (projects.includes(normalized_project_name)) {
-            const r = await get_client_api().load_project(normalized_project_name);
+            const r = await Services.client_api.load_project(normalized_project_name);
             if (r.result === 1) {
                 const data = r.data as ProjectLoadData;
                 let assets: FSObject[] | undefined = data.assets;

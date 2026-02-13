@@ -1,7 +1,7 @@
 // Модуль Drag & Drop и загрузки файлов
 
 import { FILE_UPLOAD_CMD, ServerResponses, URL_PATHS } from '../../modules_editor/modules_editor_const';
-import { api, get_client_api } from '../../modules_editor/ClientAPI';
+import { api } from '../../modules_editor/ClientAPI';
 import { json_parsable } from '../../modules/utils';
 import { error_popup } from '../../render_engine/helpers/utils';
 import { Services } from '@editor/core';
@@ -19,7 +19,7 @@ export function create_drag_drop_handler(
                 const asset_path = element.getAttribute('data-path') as string;
                 const name = element.getAttribute('data-name') as string;
                 const move_to = `${dir_to}/${name}`;
-                const r = await get_client_api().move(asset_path, move_to);
+                const r = await Services.client_api.move(asset_path, move_to);
                 if (r && r.result === 1) {
                     // Обновляем текущую папку, чтобы отобразить изменившееся число файлов
                     await go_to_dir(state.current_dir as string, true);

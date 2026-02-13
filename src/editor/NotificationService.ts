@@ -1,12 +1,12 @@
 /**
  * NotificationService - сервис уведомлений
  *
- * Обёртка над legacy Popups для доступа через DI.
+ * Обёртка над Popups для доступа через DI.
  * Позволяет показывать toast уведомления и диалоги.
  */
 
 import type { IDisposable, ILogger } from '../core/di/types';
-import { try_get_popups } from '../modules_editor/Popups';
+import { try_get_service } from '@editor/core';
 
 /** Тип уведомления */
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
@@ -63,7 +63,7 @@ export function create_notification_service(params: NotificationServiceParams): 
     const { logger } = params;
 
     function success(message: string): void {
-        const popups = try_get_popups();
+        const popups = try_get_service('popups');
         if (popups !== undefined) {
             popups.toast.success(message);
         } else {
@@ -72,7 +72,7 @@ export function create_notification_service(params: NotificationServiceParams): 
     }
 
     function error(message: string): void {
-        const popups = try_get_popups();
+        const popups = try_get_service('popups');
         if (popups !== undefined) {
             popups.toast.error(message);
         } else {
@@ -81,7 +81,7 @@ export function create_notification_service(params: NotificationServiceParams): 
     }
 
     function warning(message: string): void {
-        const popups = try_get_popups();
+        const popups = try_get_service('popups');
         if (popups !== undefined) {
             popups.toast.open({ type: 'warning', message });
         } else {
@@ -90,7 +90,7 @@ export function create_notification_service(params: NotificationServiceParams): 
     }
 
     function info(message: string): void {
-        const popups = try_get_popups();
+        const popups = try_get_service('popups');
         if (popups !== undefined) {
             popups.toast.open({ type: 'info', message });
         } else {
@@ -99,7 +99,7 @@ export function create_notification_service(params: NotificationServiceParams): 
     }
 
     function toast(notification: NotificationParams): void {
-        const popups = try_get_popups();
+        const popups = try_get_service('popups');
         if (popups !== undefined) {
             popups.toast.open({ type: notification.type, message: notification.message });
         } else {
@@ -109,7 +109,7 @@ export function create_notification_service(params: NotificationServiceParams): 
 
     function confirm(confirmParams: ConfirmParams): Promise<boolean> {
         return new Promise((resolve) => {
-            const popups = try_get_popups();
+            const popups = try_get_service('popups');
             if (popups === undefined) {
                 logger.warn('Popups не инициализирован');
                 resolve(false);
@@ -131,7 +131,7 @@ export function create_notification_service(params: NotificationServiceParams): 
 
     function rename(renameParams: RenameParams): Promise<string | undefined> {
         return new Promise((resolve) => {
-            const popups = try_get_popups();
+            const popups = try_get_service('popups');
             if (popups === undefined) {
                 logger.warn('Popups не инициализирован');
                 resolve(undefined);

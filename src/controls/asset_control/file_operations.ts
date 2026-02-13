@@ -1,10 +1,9 @@
 // Модуль файловых операций (CRUD)
 
 import { DataFormatType, FSObject, FONT_EXT, model_ext, texture_ext, URL_PATHS } from '../../modules_editor/modules_editor_const';
-import { api, get_client_api } from '../../modules_editor/ClientAPI';
+import { api } from '../../modules_editor/ClientAPI';
 import { error_popup } from '../../render_engine/helpers/utils';
 import { Services } from '@editor/core';
-import { get_popups } from '../../modules_editor/Popups';
 import { MoveType, RemoveType, type AssetControlState } from './types';
 
 /** Утилита для экранирования HTML */
@@ -53,7 +52,7 @@ export function create_file_operations(
         }
         let result = true;
         for (const path of to_remove) {
-            const r = await get_client_api().remove(path);
+            const r = await Services.client_api.remove(path);
             result = result && (r.result === 1);
         }
         if (!result) error_popup(`Некоторые файлы не удалось удалить`);
@@ -63,7 +62,7 @@ export function create_file_operations(
     async function paste_asset(name: string, path: string, move_type?: MoveType) {
         const move_to = state.current_dir ? `${state.current_dir as string}/${name}` : name;
         if (move_type === MoveType.MOVE) {
-            const resp = await get_client_api().move(path, move_to);
+            const resp = await Services.client_api.move(path, move_to);
             if (resp && resp.result === 1) {
                 Services.event_bus.emit('assets:moved', { name, path, new_path: move_to });
             } else if (resp.result === 0) {
@@ -71,7 +70,7 @@ export function create_file_operations(
             }
         }
         if (move_type === MoveType.COPY) {
-            const resp = await get_client_api().copy(path, move_to);
+            const resp = await Services.client_api.copy(path, move_to);
             if (resp && resp.result === 1) {
                 Services.event_bus.emit('assets:copied', { name, path, new_path: move_to });
             } else if (resp.result === 0) {
@@ -95,7 +94,7 @@ export function create_file_operations(
     async function duplicate_asset(path: string, name: string) {
         const ext = '.' + getFileExt(name);
         const base_name = name.replace(ext, '');
-        const get_folder_resp = await get_client_api().get_folder(state.current_dir as string);
+        const get_folder_resp = await Services.client_api.get_folder(state.current_dir as string);
         if (!get_folder_resp || get_folder_resp.result === 0) return;
         const folder_content = get_folder_resp.data as FSObject[];
 
@@ -132,32 +131,32 @@ export function create_file_operations(
         const new_name = next_number > 0 ? `${base_name} (${next_number})${ext}` : name;
         const move_to = `${state.current_dir}/${new_name}`;
 
-        const resp = await get_client_api().copy(path, move_to);
+        const resp = await Services.client_api.copy(path, move_to);
         if (resp && resp.result === 1) {
             Services.event_bus.emit('assets:copied', { name, path, new_path: move_to });
         }
     }
 
     async function get_file_data(path: string): Promise<string | null> {
-        const resp = await get_client_api().get_data(path);
+        const resp = await Services.client_api.get_data(path);
         if (!resp || resp.result === 0 || !resp.data) {
-            get_popups().toast.error(`Не удалось получить данные: ${resp.message}`);
+            Services.popups.toast.error(`Не удалось получить данные: ${resp.message}`);
             return null;
         }
         return resp.data;
     }
 
     function save_file_data(path: string, data: string, format: DataFormatType = 'string') {
-        return get_client_api().save_data(path, data, format);
+        return Services.client_api.save_data(path, data, format);
     }
 
     function save_base64_img(path: string, data: string) {
-        return get_client_api().save_data(path, data, 'base64');
+        return Services.client_api.save_data(path, data, 'base64');
     }
 
     async function rename_file(asset_path: string, new_name: string) {
         const new_path = state.current_dir ? `${state.current_dir}/${new_name}` : new_name;
-        const r = await get_client_api().rename(asset_path, new_path);
+        const r = await Services.client_api.rename(asset_path, new_path);
         if (r.result === 0) {
             return { success: false, message: r.message };
         }

@@ -1,6 +1,6 @@
 // Общие утилиты: math, popup
 
-import { get_popups } from '../../modules_editor/Popups';
+import { Services } from '@editor/core';
 
 export function lerp(a: number, b: number, t: number) {
     return a + (b - a) * t;
@@ -16,7 +16,7 @@ export function rand_float(a: number, b: number) {
 }
 
 export function error_popup(message: string) {
-    get_popups().open({
+    Services.popups.open({
         type: "Notify",
         params: { title: "Ошибка", text: message, button: "Ok", auto_close: true },
         callback: () => { }
