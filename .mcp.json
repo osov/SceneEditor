@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@upstash/context7-mcp@latest"]
+    },
+    "sequential-thinking": {
+  "type": "stdio",
+  "command": "cmd",
+  "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
+},
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant"
+      ]
+    }
+  }
+}
