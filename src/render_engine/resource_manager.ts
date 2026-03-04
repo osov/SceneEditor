@@ -23,7 +23,7 @@ NOTE: API для материалов:
         get_info_about_unique_materials
 */
 
-import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4, AudioLoader, Wrapping } from 'three';
+import { AnimationClip, CanvasTexture, Group, LoadingManager, Object3D, RepeatWrapping, Scene, SkinnedMesh, Texture, TextureLoader, Vector2, MinificationTextureFilter, MagnificationTextureFilter, ShaderMaterial, Vector3, IUniform, Vector4, AudioLoader, Wrapping, NormalBlending, CustomBlending, OneFactor, OneMinusSrcAlphaFactor, SrcAlphaFactor, ZeroFactor, DstAlphaFactor, OneMinusDstAlphaFactor, AddEquation, AlphaFormat, MinEquation, MaxEquation, ReverseSubtractEquation } from 'three';
 import { copy_material, get_file_name, get_material_hash } from './helpers/utils';
 import { parse_tp_data_to_uv } from './parsers/atlas_parser';
 import { preloadFont } from 'troika-three-text'
@@ -484,6 +484,7 @@ export function ResourceManagerModule() {
     async function load_texture(path: string) {
         const full_path = get_project_url(path);
         const texture = await texture_loader.loadAsync(full_path);
+        texture.premultiplyAlpha = true;
 
         // TODO: лучше добавить в Texture.userData
         (texture as any).path = full_path;
@@ -732,6 +733,8 @@ export function ResourceManagerModule() {
         material.fragmentShader = (fragmentShader) ? fragmentShader : shader.fragmentShader;
 
         material.transparent = data.transparent;
+        material.blending = NormalBlending;
+        material.premultipliedAlpha = true;
 
         Object.keys(data.uniforms).forEach((key) => {
             material_info.uniforms[key] = {
@@ -998,7 +1001,7 @@ export function ResourceManagerModule() {
         }
 
         if (material_info.instances[new_hash]) {
-            set_to_existing_copy(material_info, mesh_id, index, hash, new_hash);
+            set_to_existing_copy(material_info, mesh_id, index, new_hash, hash);
             return true;
         }
 

@@ -174,6 +174,7 @@ export function copy_material(material: ShaderMaterial) {
         transparent: material.transparent,
 
         blending: material.blending,
+        premultipliedAlpha: material.premultipliedAlpha,
 
         depthTest: material.depthTest,
         stencilWrite: material.stencilWrite,
