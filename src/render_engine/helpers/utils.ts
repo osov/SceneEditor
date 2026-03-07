@@ -171,9 +171,14 @@ export function copy_material(material: ShaderMaterial) {
         name: material.name,
         vertexShader: material.vertexShader,
         fragmentShader: material.fragmentShader,
-        transparent: material.transparent,
 
+        transparent: material.transparent,
         blending: material.blending,
+        blendSrc: material.blendSrc,
+        blendDst: material.blendDst,
+        blendSrcAlpha: material.blendSrcAlpha ?? undefined,
+        blendDstAlpha: material.blendDstAlpha ?? undefined,
+        blendEquation: material.blendEquation,
         premultipliedAlpha: material.premultipliedAlpha,
 
         depthTest: material.depthTest,
