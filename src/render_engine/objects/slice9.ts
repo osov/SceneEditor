@@ -378,7 +378,7 @@ export class Slice9Mesh extends EntityPlane {
     }
 
     get_alpha(): number {
-        return this.material.uniforms.alpha.value;
+        return this.material.uniforms.alpha?.value ?? 1;
     }
 
     set_alpha(value: number) {

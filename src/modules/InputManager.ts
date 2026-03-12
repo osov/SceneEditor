@@ -29,8 +29,6 @@ function InputModule() {
         body.addEventListener('keydown', (e) => {
             update_state_ext_keys(e);
             keys_state[e.key] = true;
-            if (e.repeat) return;
-            EventBus.trigger('SYS_VIEW_INPUT_KEY_DOWN', { key: e.key, target: e.target }, false);
             if (e.ctrlKey && (e.key == 'd' || e.key == 'в')) {
                 e.preventDefault(); // ctrl+d перехватывал браузер
             }
@@ -39,6 +37,17 @@ function InputModule() {
             if (e.ctrlKey && (e.key == 's' || e.key == 'ы')) {
                 e.preventDefault();
             }
+            if (e.ctrlKey && (e.key == 'l' || e.key == 'д')) {
+                e.preventDefault();
+            }
+            if (e.ctrlKey && (e.key == 'c' || e.key == 'с')) {
+                e.preventDefault();
+            }
+            if (e.ctrlKey && (e.key == 'v' || e.key == 'м')) {
+                e.preventDefault();
+            }
+            if (e.repeat) return;
+            EventBus.trigger('SYS_VIEW_INPUT_KEY_DOWN', { key: e.key, target: e.target }, false);
         });
 
         body.addEventListener('keyup', (e) => {

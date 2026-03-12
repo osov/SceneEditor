@@ -8,7 +8,6 @@ import { MaterialUniformType } from "./resource_manager";
 import { get_hash_by_mesh } from "@editor/inspectors/ui_utils";
 import { convertThreeJSBlendingToBlendMode, convertBlendModeToThreeJS } from "@editor/inspectors/helpers";
 import { BlendMode } from "@editor/inspectors/MeshInspector";
-import { get_depth } from "./parsers/tile_parser";
 
 export type TilesInfo =
     TDictionary<{ texture?: string, layers_mask?: number, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any>, z?: number }>;
@@ -74,6 +73,13 @@ export function TilePatcher(tilemap_path: string) {
             if (is_not_equal_color) {
                 if (!tiles_data[hash]) tiles_data[hash] = {};
                 tiles_data[hash].color = current_color;
+            }
+
+            const default_alpha = 1;
+            const current_alpha = (mesh as Slice9Mesh).get_alpha();
+            if (current_alpha != default_alpha) {
+                if (!tiles_data[hash]) tiles_data[hash] = {};
+                tiles_data[hash].alpha = current_alpha;
             }
 
             const material_info = ResourceManager.get_material_info(material.name);
@@ -160,6 +166,10 @@ export function TilePatcher(tilemap_path: string) {
 
             if (info.color) {
                 sprite.set_color(info.color);
+            }
+
+            if (info.alpha != undefined) {
+                sprite.set_alpha(info.alpha);
             }
 
             if (info.texture) {
