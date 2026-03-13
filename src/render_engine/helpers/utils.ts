@@ -176,8 +176,8 @@ export function copy_material(material: ShaderMaterial) {
         blending: material.blending,
         blendSrc: material.blendSrc,
         blendDst: material.blendDst,
-        blendSrcAlpha: material.blendSrcAlpha ?? undefined,
-        blendDstAlpha: material.blendDstAlpha ?? undefined,
+        ...(material.blendSrcAlpha !== null && { blendSrcAlpha: material.blendSrcAlpha }),
+        ...(material.blendDstAlpha !== null && { blendDstAlpha: material.blendDstAlpha }),
         blendEquation: material.blendEquation,
         premultipliedAlpha: material.premultipliedAlpha,
 
