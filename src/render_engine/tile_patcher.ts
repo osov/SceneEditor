@@ -10,7 +10,7 @@ import { convertThreeJSBlendingToBlendMode, convertBlendModeToThreeJS } from "@e
 import { BlendMode } from "@editor/inspectors/MeshInspector";
 
 export type TilesInfo =
-    TDictionary<{ texture?: string, layers_mask?: number, material_name?: string, blending?: Blending, color?: string, alpha?: number, uniforms?: TDictionary<any>, z?: number }>;
+    TDictionary<{ texture?: string, layers_mask?: number, material_name?: string, blending?: Blending, color?: string, uniforms?: TDictionary<any>, z?: number }>;
 
 
 export function TilePatcher(tilemap_path: string) {
@@ -75,13 +75,6 @@ export function TilePatcher(tilemap_path: string) {
                 tiles_data[hash].color = current_color;
             }
 
-            const default_alpha = 1;
-            const current_alpha = (mesh as Slice9Mesh).get_alpha();
-            if (current_alpha != default_alpha) {
-                if (!tiles_data[hash]) tiles_data[hash] = {};
-                tiles_data[hash].alpha = current_alpha;
-            }
-
             const material_info = ResourceManager.get_material_info(material.name);
 
             let uniforms: { [key: string]: any } = {};
@@ -90,6 +83,12 @@ export function TilePatcher(tilemap_path: string) {
                 Object.entries(material.uniforms).forEach(([key, value]) => {
                     uniforms[key] = value.value;
                 });
+            }
+
+            // NOTE: alpha всегда сохраняем в uniforms (в том числе для дефолтного материала)
+            if (uniforms['alpha'] === undefined) {
+                const alpha_val = (mesh as Slice9Mesh).get_alpha();
+                if (alpha_val !== 1) uniforms['alpha'] = alpha_val;
             }
 
             if (material_info && uniforms) {
@@ -166,10 +165,6 @@ export function TilePatcher(tilemap_path: string) {
 
             if (info.color) {
                 sprite.set_color(info.color);
-            }
-
-            if (info.alpha != undefined) {
-                sprite.set_alpha(info.alpha);
             }
 
             if (info.texture) {
