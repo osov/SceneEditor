@@ -1,20 +1,41 @@
 import { Vector2 } from "three";
 import { Slice9Mesh } from "../render_engine/objects/slice9";
 import { filter_intersect_list } from "../render_engine/helpers/utils";
-import { createGrassManager } from "../utils/grass_manager";
-import { get_selected_one_mesh, get_hash_by_mesh, get_selected_one_slice9 } from "../inspectors/ui_utils";
-import { IObjectTypes } from "@editor/render_engine/types";
+import { createTileSwayManager } from "../utils/tile_sway_manager";
+import { get_hash_by_mesh, get_selected_one_slice9 } from "../inspectors/ui_utils";
 
 declare global {
-    const GrassTreeControl: ReturnType<typeof GrassTreeControlCreate>;
+    const TileSwayControl: ReturnType<typeof TileSwayControlCreate>;
 }
 
-export function register_grass_tree_control() {
-    (window as any).GrassTreeControl = GrassTreeControlCreate();
+export const GRASS_TILE_NAMES = ['Flowers_1', 'Flowers_2', 'Flowers_3', 'Flowers_4', 'Flowers_5', 'Daisies_1', 'Daisies'];
+
+export interface LayerSwayConfig {
+    layer_bit: number;
+    material: string;
+    frequency?: number;
+    speed?: number;
+    max_amplitude?: number;
+    effect_time?: number;
 }
 
-function GrassTreeControlCreate() {
-    const gm = createGrassManager();
+export const LAYER_SWAY_CONFIGS: LayerSwayConfig[] = [
+    { layer_bit: 1 << 3, material: 'web', frequency: 1.5, speed: 4, effect_time: 1.2 },
+    { layer_bit: 1 << 4, material: 'grass', frequency: 3 },
+];
+
+export function register_tile_sway_control() {
+    const ctrl = TileSwayControlCreate();
+    (window as any).TileSwayControl = ctrl;
+}
+
+function TileSwayControlCreate() {
+    const grass_manager = createTileSwayManager({ material: 'grass', frequency: 3 });
+    const layer_managers = LAYER_SWAY_CONFIGS.map(cfg => ({
+        cfg,
+        manager: createTileSwayManager(cfg),
+    }));
+
     const mesh_list: { [k: string]: boolean } = {};
     let selected_mesh: Slice9Mesh | undefined;
 
@@ -56,10 +77,18 @@ function GrassTreeControlCreate() {
         EventBus.on('SYS_INPUT_POINTER_MOVE', (e) => {
             if (Input.is_shift()) {
                 const tmp = filter_intersect_list(RenderEngine.raycast_scene(new Vector2(e.x, e.y)));
-                const list = tmp.filter((m) => (['Flowers_1', 'Flowers_2', 'Flowers_3', 'Flowers_4', 'Flowers_5', 'Daisies_1', 'Daisies'].includes(m.get_texture()[0])));
-                for (const mesh of list) {
-                    gm.activate(mesh as any);
+
+                // Layer-based activation (configurable)
+                for (const { cfg, manager } of layer_managers) {
+                    const matched = tmp.filter((m) => ((m as any).layers.mask & cfg.layer_bit) !== 0);
+                    for (const mesh of matched)
+                        manager.activate(mesh as any);
                 }
+
+                // Name-based activation (grass, backward compat)
+                const grass_list = tmp.filter((m) => GRASS_TILE_NAMES.includes(m.get_texture()[0]));
+                for (const mesh of grass_list)
+                    grass_manager.activate(mesh as any);
             }
 
             if (Input.is_shift() && is_pointer_down) {
@@ -70,8 +99,12 @@ function GrassTreeControlCreate() {
                     return;
             }
         });
-        EventBus.on('SYS_ON_UPDATE', (e) => gm.update(e.dt));
 
+        EventBus.on('SYS_ON_UPDATE', (e) => {
+            grass_manager.update(e.dt);
+            for (const { manager } of layer_managers)
+                manager.update(e.dt);
+        });
     }
 
     async function activate(mesh: Slice9Mesh) {
@@ -83,7 +116,6 @@ function GrassTreeControlCreate() {
         mesh.set_material('move_vert');
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         mesh_list[key] = true;
-        //log('activated', key)
     }
 
     async function deactivate(mesh: Slice9Mesh) {
@@ -95,10 +127,7 @@ function GrassTreeControlCreate() {
         mesh.set_texture(tex_atlas[0], tex_atlas[1]);
         selected_mesh = undefined;
         delete mesh_list[key];
-        //log('deactivated', key)
     }
 
-    return { init }
+    return { init };
 }
-
-
