@@ -1,6 +1,6 @@
 varying vec2 vUv;
 varying vec4 vUvData;
-varying vec3 vColor; 
+varying vec3 vColor;
 
 #ifdef USE_TEXTURE
 uniform sampler2D u_texture;
@@ -38,7 +38,7 @@ void main(void) {
 #ifdef USE_TEXTURE
     vec4 color = texture2D(u_texture, newUV);
     //  if (color.a < 0.5) discard;
-    gl_FragColor = color * vec4(vColor, alpha);
+    gl_FragColor = vec4(color.rgb * vColor, color.a * alpha);
 #else
     gl_FragColor = vec4(vColor, alpha);
 #endif

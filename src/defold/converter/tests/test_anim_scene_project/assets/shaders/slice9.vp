@@ -1,19 +1,19 @@
-attribute vec4 uvData; 
-attribute vec3 color;  
+attribute vec4 uvData;
+attribute vec3 color;
 
 #ifdef USE_SLICE
-attribute vec4 sliceData; 
-varying vec4 vSliceData; 
+attribute vec4 sliceData;
+varying vec4 vSliceData;
 #endif
 
 varying vec2 vUv;
 varying vec4 vUvData;
-varying vec3 vColor; 
-        
+varying vec3 vColor;
+
 
 void main() {
     vColor = color;
-    vUv = uv; 
+    vUv = uv;
     vUvData = uvData;
 
 #ifdef USE_SLICE

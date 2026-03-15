@@ -10,20 +10,20 @@ import { BlendMode } from "@editor/inspectors/MeshInspector";
 
 export const shader = {
     vertexShader: `
-        attribute vec4 uvData; 
-        attribute vec3 color;  
+        attribute vec4 uvData;
+        attribute vec3 color;
 #ifdef USE_SLICE
-        attribute vec4 sliceData; 
-        varying vec4 vSliceData; 
+        attribute vec4 sliceData;
+        varying vec4 vSliceData;
 #endif
         varying vec2 vUv;
         varying vec4 vUvData;
-        varying vec3 vColor; 
-        
+        varying vec3 vColor;
+
 
         void main() {
             vColor = color;
-            vUv = uv; 
+            vUv = uv;
             vUvData = uvData;
 #ifdef USE_SLICE
             vSliceData = sliceData;
@@ -34,12 +34,12 @@ export const shader = {
     fragmentShader: `
         varying vec2 vUv;
         varying vec4 vUvData;
-        varying vec3 vColor; 
+        varying vec3 vColor;
 #ifdef USE_TEXTURE
         uniform sampler2D u_texture;
 #endif
 #ifdef USE_SLICE
-        varying vec4 vSliceData; 
+        varying vec4 vSliceData;
 
         float map(float value, float originalMin, float originalMax, float newMin, float newMax) {
             return (value - originalMin) / (originalMax - originalMin) * (newMax - newMin) + newMin;
@@ -67,7 +67,7 @@ export const shader = {
 #ifdef USE_TEXTURE
             vec4 color = texture2D(u_texture, newUV);
             //  if (color.a < 0.5) discard;
-            gl_FragColor = color * vec4(vColor, alpha);
+            gl_FragColor = vec4(color.rgb * vColor, color.a * alpha);
 #else
             gl_FragColor = vec4(vColor, alpha);
 #endif
