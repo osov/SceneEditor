@@ -67,9 +67,9 @@ export const shader = {
 #ifdef USE_TEXTURE
             vec4 color = texture2D(u_texture, newUV);
             //  if (color.a < 0.5) discard;
-            gl_FragColor = vec4(color.rgb * vColor, color.a * alpha);
+            gl_FragColor = vec4(color.rgb * vColor * alpha, color.a * alpha);
 #else
-            gl_FragColor = vec4(vColor, alpha);
+            gl_FragColor = vec4(vColor * alpha, alpha);
 #endif
         }`
 };
