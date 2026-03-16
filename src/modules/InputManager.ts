@@ -40,12 +40,6 @@ function InputModule() {
             if (e.ctrlKey && (e.key == 'l' || e.key == 'д')) {
                 e.preventDefault();
             }
-            if (e.ctrlKey && (e.key == 'c' || e.key == 'с')) {
-                e.preventDefault();
-            }
-            if (e.ctrlKey && (e.key == 'v' || e.key == 'м')) {
-                e.preventDefault();
-            }
             if (e.repeat) return;
             EventBus.trigger('SYS_VIEW_INPUT_KEY_DOWN', { key: e.key, target: e.target }, false);
         });
