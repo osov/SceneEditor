@@ -13,6 +13,7 @@ export function PathFinder() {
     
 
     const OBST_PADDING = 20 * 0.1 * 0.7;
+    // const OBST_PADDING = 1.17;
     const PADDING_DIAG = Math.sqrt(OBST_PADDING ** 2 + OBST_PADDING ** 2);
     const POLYGON_SPATIAL_HASH_CELL_SIZE = 40;
     const POLYGON_CELL_SIZE = 40;

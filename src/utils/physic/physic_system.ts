@@ -126,7 +126,18 @@ export function PhysicSystemCreate(obstacles: Line<any>[]) {
     function update(dt: number) {
         for (const entity of entities) {
             if (entity.is_moving) {
-                entity.shape.move(entity.speed * dt);
+                const move = entity.speed * dt;
+                const s = entity.shape;
+                let steps = 1;
+                if (move >= s.r) {
+                    steps = move / s.r;
+                    steps = (steps > 2) ? Math.ceil(steps) : 2;
+                    steps += 1;
+                }
+                for (let i = 0; i < steps; i++) {
+                    entity.shape.move(entity.speed * dt);
+                    update_obstacles_physic(s, dt);
+                }
             }
         }
         for (const entity of entities) {
