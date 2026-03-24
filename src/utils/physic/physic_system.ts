@@ -136,7 +136,7 @@ export function PhysicSystemCreate(obstacles: Line<any>[]) {
                 }
                 const step_move = move / steps;
                 for (let i = 0; i < steps; i++) {
-                    entity.shape.move(step_move);
+                    s.move(step_move);
                     update_obstacles_physic(s, dt);
                 }
             }
