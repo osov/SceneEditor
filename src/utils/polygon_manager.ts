@@ -165,14 +165,29 @@ export function ObstraclePolygonsManagerCreate(hash_cell_size = 40, obst_padding
                     y: cy - p.y * mul_scalar
                 })
             }
-            const arr: TGeometry[] = [];
+
+            // Note: В ситуации когда полилиния препятствия начинается и заканчивается в одной точке (например, это физическая граница уровня), 
+            // либо достаточно близко, то объединение через polygon_union_mult полигонов охватывающих сегменты этой линии склеивает их в кольцо, 
+            // создавая единый полигон препятствия, из-за чего, при использовании NavMeshGenerator для определения проходимых полигонов, это
+            // кольцо выглядит для NavMesh как одно большое препятствие, игнорируется область внутри неё. Из-за этого не строились проходимые 
+            // полигоны на некоторых уровнях. Вместо этого решил считать отдельным препятствием каждый полигон охватывающий сегменты всех полилиний
+
+            // Старый вариант
+            // const arr: TGeometry[] = [];
+            // for (let id = 0; id < polygon_points.length - 1; id++) {
+            //     const line = [polygon_points[id], polygon_points[id + 1]];
+            //     const offset_poly = offsetPolygon(line, obst_padding, offset_arc_segments);
+            //     arr.push(polygon_to_data([offset_poly]));
+            // }
+            // const poly_union = data_to_polygon(polygon_union_mult(arr));
+            // elements.push(...poly_union);
+            
+            // Новый вариант
             for (let id = 0; id < polygon_points.length - 1; id++) {
                 const line = [polygon_points[id], polygon_points[id + 1]];
                 const offset_poly = offsetPolygon(line, obst_padding, offset_arc_segments);
-                arr.push(polygon_to_data([offset_poly]));
+                elements.push([offset_poly]);
             }
-            const poly_union = data_to_polygon(polygon_union_mult(arr));
-            elements.push(...poly_union);
         }
         base.add_object(elements, obj.id, data);
         return elements;

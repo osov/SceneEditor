@@ -4,7 +4,7 @@ import { SpriteTileInfo, SpriteTileInfoDict, TileLoader } from "@editor/render_e
 import { SpatialHashManagerCreate, SpatialHashManagerUtils } from "./spatial_hash_manager";
 import { vec2_distance_to } from "./math_utils";
 import { Point } from "./geometry/shapes";
-import { IndentsSize } from "../../../SceneEditor_Kopateli/src/tiles_config";
+import { IndentsSize } from "../../../SceneEditor_Kopateli/src/game_modules/tiles_config";
 
 
 type Rect = {
@@ -130,10 +130,10 @@ export function SpawnZonesManager(
     end: PointLike, 
     figure_type: "hex" | "rhombus", 
     figure_size: number, 
-    iso_ratio: number, 
+    dim_ratio: number, 
 ) {
     const cells_manager = SpatialHashManagerCreate(cells_utils, figure_size);
-    const cells = (figure_type == "hex") ? make_hex_cells(start, end, figure_size, iso_ratio) : make_rhombus_cells(start, end, figure_size, iso_ratio);
+    const cells = (figure_type == "hex") ? make_hex_cells(start, end, figure_size, dim_ratio) : make_rhombus_cells(start, end, figure_size, dim_ratio);
     for (const c of cells)
         cells_manager.add_element(c);
 

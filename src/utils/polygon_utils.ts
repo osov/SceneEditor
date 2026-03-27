@@ -90,11 +90,10 @@ export function get_level_range(obstacles: Polygon[], padding: number) {
             maxY = Math.max(point.y, maxY);
         }
     }
-    const diag_padding = Math.sqrt(padding ** 2 + padding ** 2)
-    minX -= diag_padding;
-    minY -= diag_padding;
-    maxX += diag_padding;
-    maxY += diag_padding;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
     return {start: {x: minX, y: minY}, end: {x: maxX, y: maxY}};
 }
 

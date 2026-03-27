@@ -14,7 +14,7 @@ export function PathFinder() {
 
     const OBST_PADDING = 20 * 0.1 * 0.7;
     // const OBST_PADDING = 1.17;
-    const PADDING_DIAG = Math.sqrt(OBST_PADDING ** 2 + OBST_PADDING ** 2);
+    const LEVEL_PADDING = 10;
     const POLYGON_SPATIAL_HASH_CELL_SIZE = 40;
     const POLYGON_CELL_SIZE = 40;
     const OFFSET_ARC_SEGMENTS = 3;
@@ -53,13 +53,13 @@ export function PathFinder() {
             obst_manager.add_obstacle_object(obstacle_tile, mul_scalar);
         }
 
-        const all_elements = obst_manager.all_elements;
+        const obstacles_poly = obst_manager.all_elements;
         
-        const level_size = get_level_range(all_elements, OBST_PADDING);
-        const passable = build_navnmesh_polygons(level_size, all_elements, rasterizationCellSize)
-        const navmesh = new NavMesh(passable);
+        const level_size = get_level_range(obstacles_poly, LEVEL_PADDING);
+        const walkable_poly = build_navnmesh_polygons(level_size, obstacles_poly, rasterizationCellSize)
+        const navmesh = new NavMesh(walkable_poly);
         locations_navmesh[location] = navmesh;
-        return passable;
+        return {obstacles_poly, walkable_poly};
     }
 
     function make_cells(location: string, obstacles_data: ObstacleTileData[], mul_scalar: number) {
@@ -77,7 +77,7 @@ export function PathFinder() {
             const elements = obst_manager.add_obstacle_object(obstacle_tile, mul_scalar);
             all_elements.push(...elements);
         }
-        const {start: _start, end: _end} = get_level_range(all_elements, OBST_PADDING);
+        const {start: _start, end: _end} = get_level_range(all_elements, LEVEL_PADDING);
         start.x = _start.x; 
         start.y = _start.y; 
         end.x = _end.x; 
