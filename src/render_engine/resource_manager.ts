@@ -1561,7 +1561,6 @@ export function ResourceManagerModule() {
 
     async function load_asset(path: string) {
         path = get_project_url(path);
-        // TODO: нужна проверка на наличие файла, или отлавливать ошибку...
         return await (await fetch(path)).json();
     }
 

@@ -137,7 +137,15 @@ export function TilePatcher(tilemap_path: string) {
 
         const dir = tilemap_path.replace(new RegExp(`${tilemap_name}.*$`), '');
         const tilesinfo_path = `${dir}${tilemap_name}.tilesinfo`;
-        const tilesinfo = await ResourceManager.load_asset(tilesinfo_path) as TilesInfo;
+        let tilesinfo: TilesInfo;
+
+        try {
+            tilesinfo = await ResourceManager.load_asset(tilesinfo_path) as TilesInfo;
+        } catch (e) {
+            Log.log(`No tilesinfo file found for tilemap ${tilemap_name}`);
+            return;
+        }
+
         if (!tilesinfo) {
             Log.log(`No tilesinfo file found for tilemap ${tilemap_name}`);
             return;
