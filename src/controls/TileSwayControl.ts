@@ -8,38 +8,40 @@ declare global {
     const TileSwayControl: ReturnType<typeof TileSwayControlCreate>;
 }
 
-export const GRASS_TILE_NAMES = ['Flowers_1', 'Flowers_2', 'Flowers_3', 'Flowers_4', 'Flowers_5', 'Daisies_1', 'Daisies'];
+// Единый исключающий слой: тайлы с этим слоем не получают покачивание ни от одного конфига
+export const EXCLUDE_SWAY_LAYER = 'no_slay';
 
-export interface LayerSwayConfig {
-    layer_bit: number;
-    material: string;
+export interface NameSwayConfig {
+    names: string[];       // список имён тайлов для автоприменения шейдера
+    material: string;      // название материала шейдера покачивания
     frequency?: number;
     speed?: number;
     max_amplitude?: number;
     effect_time?: number;
 }
 
-export const LAYER_SWAY_CONFIGS: LayerSwayConfig[] = [
-    { layer_bit: 1 << 3, material: 'web', frequency: 1.5, speed: 4, effect_time: 1.2 },
-    { layer_bit: 1 << 4, material: 'grass', frequency: 3 },
-];
-
 export function register_tile_sway_control() {
     const ctrl = TileSwayControlCreate();
     (window as any).TileSwayControl = ctrl;
 }
 
+function is_sway_excluded(mesh: any): boolean {
+    const layer_names = ResourceManager.get_layers_names_by_mask(mesh.layers.mask);
+    return layer_names.includes(EXCLUDE_SWAY_LAYER);
+}
+
 function TileSwayControlCreate() {
-    const grass_manager = createTileSwayManager({ material: 'grass', frequency: 3 });
-    const layer_managers = LAYER_SWAY_CONFIGS.map(cfg => ({
-        cfg,
-        manager: createTileSwayManager(cfg),
-    }));
+    let sway_managers: { cfg: NameSwayConfig, manager: ReturnType<typeof createTileSwayManager> }[] = [];
 
     const mesh_list: { [k: string]: boolean } = {};
     let selected_mesh: Slice9Mesh | undefined;
 
-    function init() {
+    function init(configs: NameSwayConfig[]) {
+        sway_managers = configs.map(cfg => ({
+            cfg,
+            manager: createTileSwayManager(cfg),
+        }));
+
         EventBus.on('SYS_VIEW_INPUT_KEY_DOWN', (e) => {
             if (Input.is_shift()) {
                 if (e.key == 'R' || e.key == 'К') {
@@ -77,18 +79,14 @@ function TileSwayControlCreate() {
         EventBus.on('SYS_INPUT_POINTER_MOVE', (e) => {
             if (Input.is_shift()) {
                 const tmp = filter_intersect_list(RenderEngine.raycast_scene(new Vector2(e.x, e.y)));
-
-                // Layer-based activation (configurable)
-                for (const { cfg, manager } of layer_managers) {
-                    const matched = tmp.filter((m) => ((m as any).layers.mask & cfg.layer_bit) !== 0);
+                for (const { cfg, manager } of sway_managers) {
+                    const matched = tmp.filter((m) =>
+                        cfg.names.includes(m.get_texture()[0]) &&
+                        !is_sway_excluded(m)
+                    );
                     for (const mesh of matched)
                         manager.activate(mesh as any);
                 }
-
-                // Name-based activation (grass, backward compat)
-                const grass_list = tmp.filter((m) => GRASS_TILE_NAMES.includes(m.get_texture()[0]));
-                for (const mesh of grass_list)
-                    grass_manager.activate(mesh as any);
             }
 
             if (Input.is_shift() && is_pointer_down) {
@@ -101,8 +99,7 @@ function TileSwayControlCreate() {
         });
 
         EventBus.on('SYS_ON_UPDATE', (e) => {
-            grass_manager.update(e.dt);
-            for (const { manager } of layer_managers)
+            for (const { manager } of sway_managers)
                 manager.update(e.dt);
         });
     }

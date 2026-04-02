@@ -1561,6 +1561,7 @@ export function ResourceManagerModule() {
 
     async function load_asset(path: string) {
         path = get_project_url(path);
+        // TODO: нужна проверка на наличие файла, или отлавливать ошибку...
         return await (await fetch(path)).json();
     }
 
@@ -1706,8 +1707,9 @@ export function ResourceManagerModule() {
             const metadata_layers = layers_metadata.data as TRecursiveDict;
             Object.keys(metadata_layers).forEach(key => {
                 const layer = metadata_layers[key];
-                if (typeof layer === 'string') {
-                    layers.push(layer);
+                const index = parseInt(key);
+                if (typeof layer === 'string' && !isNaN(index)) {
+                    layers[index] = layer; // индекс в массиве = бит в layers.mask
                 }
             });
         } catch (error) {
@@ -1729,7 +1731,7 @@ export function ResourceManagerModule() {
     }
 
     function get_layers() {
-        return layers;
+        return layers.filter((l): l is string => l != undefined);
     }
 
     function has_layer(layer: string) {
@@ -1757,7 +1759,7 @@ export function ResourceManagerModule() {
     function get_layers_names_by_mask(mask: number) {
         const result: string[] = [];
         for (let i = 0; i < Math.min(10, layers.length); i++) {
-            if (mask & (1 << i)) {
+            if ((mask & (1 << i)) && layers[i] != undefined) {
                 result.push(layers[i]);
             }
         }
