@@ -33,6 +33,9 @@ function is_sway_excluded(mesh: any): boolean {
 function TileSwayControlCreate() {
     let sway_managers: { cfg: NameSwayConfig, manager: ReturnType<typeof createTileSwayManager> }[] = [];
 
+    const _raycast_pointer = new Vector2();
+    let _last_sway_raycast = 0;
+
     const mesh_list: { [k: string]: boolean } = {};
     let selected_mesh: Slice9Mesh | undefined;
 
@@ -78,14 +81,19 @@ function TileSwayControlCreate() {
 
         EventBus.on('SYS_INPUT_POINTER_MOVE', (e) => {
             if (Input.is_shift()) {
-                const tmp = filter_intersect_list(RenderEngine.raycast_scene(new Vector2(e.x, e.y)));
-                for (const { cfg, manager } of sway_managers) {
-                    const matched = tmp.filter((m) =>
-                        cfg.names.includes(m.get_texture()[0]) &&
-                        !is_sway_excluded(m)
-                    );
-                    for (const mesh of matched)
-                        manager.activate(mesh as any);
+                const now = System.now_with_ms();
+                if (now - _last_sway_raycast > 50) {
+                    _last_sway_raycast = now;
+                    _raycast_pointer.set(e.x, e.y);
+                    const tmp = filter_intersect_list(RenderEngine.raycast_scene(_raycast_pointer));
+                    for (const { cfg, manager } of sway_managers) {
+                        const matched = tmp.filter((m) =>
+                            cfg.names.includes(m.get_texture()[0]) &&
+                            !is_sway_excluded(m)
+                        );
+                        for (const mesh of matched)
+                            manager.activate(mesh as any);
+                    }
                 }
             }
 
