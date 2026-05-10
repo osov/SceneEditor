@@ -23,6 +23,7 @@ export interface TextSerializeData {
     text_align?: 'left' | 'right' | 'center' | 'justify'
     alpha?: number
     color?: string
+    linked_objects?: { id: number, url: string, name: string }[]
 }
 
 
@@ -201,6 +202,14 @@ export class TextMesh extends Text implements IBaseMesh {
     serialize(): TextSerializeData {
         const data: TextSerializeData = {};
 
+        if (Array.isArray(this.userData.linked_objects) && this.userData.linked_objects.length > 0) {
+            data.linked_objects = this.userData.linked_objects.map((item: any) => ({
+                id: item.id,
+                url: item.url,
+                name: item.name,
+            }));
+        }
+
         if (this.text != '') {
             data.text = this.text;
         }
@@ -224,6 +233,15 @@ export class TextMesh extends Text implements IBaseMesh {
     }
 
     deserialize(data: TextSerializeData) {
+        if (Array.isArray(data?.linked_objects))
+            this.userData.linked_objects = data.linked_objects.map((item: any) => ({
+                id: item.id,
+                url: item.url,
+                name: item.name,
+            }));
+        else
+            delete this.userData.linked_objects;
+
         // NOTE: сначала устанавливаем значения по умолчанию
         this.fontSize = 32;
         this.set_font('', false);

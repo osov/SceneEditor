@@ -77,6 +77,7 @@ export enum MeshProperty {
     CLIPPING_MODE = 'clipping_mode',
     INVERTED_CLIPPING = 'inverted_clipping',
     CLIPPING_VISIBLE = 'clipping_visible',
+    LINKED_OBJECTS = 'linked_objects',
 }
 
 export enum MeshPropertyTitle {
@@ -129,6 +130,7 @@ export enum MeshPropertyTitle {
     CLIPPING_MODE = 'Режим',
     INVERTED_CLIPPING = 'Инвертированный',
     CLIPPING_VISIBLE = 'Видимый',
+    LINKED_OBJECTS = 'Связанные объекты',
 }
 
 export enum ScreenPointPreset {
@@ -256,6 +258,8 @@ function MeshInspectorCreate() {
                     break;
             }
 
+            generateLinkedObjectFields(fields, mesh);
+
             return { id: mesh.mesh_data.id, fields };
         });
 
@@ -298,6 +302,103 @@ function MeshInspectorCreate() {
             type: PropertyType.BOOLEAN,
             onBeforeChange: saveActive,
             onChange: handleActiveChange
+        });
+
+    }
+
+    function resolveLinkedObject(link: any) {
+        const id_by_url = link.url ? SceneManager.get_mesh_id_by_url(link.url) : undefined;
+        if (id_by_url != undefined) {
+            const mesh_by_url = SceneManager.get_mesh_by_id(id_by_url);
+            if (mesh_by_url) return mesh_by_url;
+        }
+
+        if (link.id != undefined) {
+            const mesh_by_id = SceneManager.get_mesh_by_id(link.id);
+            if (mesh_by_id) return mesh_by_id;
+        }
+
+        return null;
+    }
+
+    function getLinkedObjects(mesh: IBaseMeshAndThree) {
+        if (!Array.isArray(mesh.userData.linked_objects)) return [];
+        return mesh.userData.linked_objects;
+    }
+
+    function generateLinkedObjectFields(fields: PropertyData<PropertyType>[], mesh: IBaseMeshAndThree) {
+        const links = getLinkedObjects(mesh);
+        if (links.length == 0) return;
+
+        const list_el = document.createElement('div');
+        list_el.style.cssText =
+            'display:flex;flex-direction:column;border:1px solid #3a3a3a;border-radius:4px;' +
+            'overflow:hidden;margin:4px 0 6px 0;background:#252525;';
+
+        links.forEach((link: any, index: number) => {
+            const linked_mesh = resolveLinkedObject(link);
+            const id = linked_mesh?.mesh_data.id ?? link.id ?? '?';
+            const name = linked_mesh?.name ?? link.name ?? link.url ?? 'не найден';
+
+            const row = document.createElement('div');
+            row.style.cssText =
+                'display:flex;align-items:center;width:100%;box-sizing:border-box;' +
+                'height:32px;padding:0 6px 0 9px;border-bottom:1px solid #333;gap:8px;';
+            if (index == links.length - 1)
+                row.style.borderBottom = 'none';
+            row.addEventListener('mouseenter', () => { row.style.background = '#303030'; });
+            row.addEventListener('mouseleave', () => { row.style.background = ''; });
+
+            const name_el = document.createElement('span');
+            name_el.textContent = `${name} (id: ${id})`;
+            name_el.title = name_el.textContent;
+            name_el.style.cssText =
+                'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
+                'color:#ddd;font-size:12px;line-height:1;';
+            row.appendChild(name_el);
+
+            const remove_btn = document.createElement('button');
+            remove_btn.textContent = '−';
+            remove_btn.title = 'Удалить связь';
+            remove_btn.style.cssText =
+                'flex-shrink:0;width:22px;height:22px;padding:0;' +
+                'background:#5a2e2e;color:#e88;border:1px solid #7a4040;' +
+                'border-radius:3px;cursor:pointer;font-size:18px;line-height:1;';
+            remove_btn.addEventListener('mouseenter', () => { remove_btn.style.background = '#6b3636'; });
+            remove_btn.addEventListener('mouseleave', () => { remove_btn.style.background = '#5a2e2e'; });
+            remove_btn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const actual_links = getLinkedObjects(mesh);
+                const next_links = actual_links.filter((item: any) => {
+                    if (link.url && item.url) return item.url !== link.url;
+                    return item.id !== link.id;
+                });
+
+                if (next_links.length > 0)
+                    mesh.userData.linked_objects = next_links;
+                else
+                    delete mesh.userData.linked_objects;
+
+                AssetControl.save_current_scene();
+                force_refresh();
+            });
+            row.appendChild(remove_btn);
+
+            list_el.appendChild(row);
+        });
+
+        const link_fields: PropertyData<PropertyType>[] = [];
+        link_fields.push({
+            key: `${MeshProperty.LINKED_OBJECTS}_list`,
+            value: list_el,
+            type: PropertyType.CUSTOM
+        });
+
+        fields.push({
+            key: MeshPropertyTitle.LINKED_OBJECTS,
+            value: link_fields,
+            type: PropertyType.FOLDER,
+            params: { expanded: true }
         });
     }
 

@@ -120,6 +120,28 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
         return new Vector2(this.parameters.width, this.parameters.height);
     }
 
+    protected serialize_base_data(data: any = {}) {
+        if (Array.isArray(this.userData.linked_objects) && this.userData.linked_objects.length > 0) {
+            data.linked_objects = this.userData.linked_objects.map((item: any) => ({
+                id: item.id,
+                url: item.url,
+                name: item.name,
+            }));
+        }
+        return data;
+    }
+
+    protected deserialize_base_data(data: any) {
+        if (Array.isArray(data?.linked_objects))
+            this.userData.linked_objects = data.linked_objects.map((item: any) => ({
+                id: item.id,
+                url: item.url,
+                name: item.name,
+            }));
+        else
+            delete this.userData.linked_objects;
+    }
+
     set_pivot(x: number, y: number, is_sync = false) {
     }
 
@@ -139,10 +161,11 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
         return [this.parameters.texture, this.parameters.atlas];
     }
     serialize() {
-        return {};
+        return this.serialize_base_data({});
     }
 
     deserialize(_data: any) {
+        this.deserialize_base_data(_data);
     }
 
     dispose() { }

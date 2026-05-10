@@ -34,7 +34,8 @@ export enum PropertyType {
     BUTTON,
     POINT_2D,
     LOG_DATA,
-    FOLDER
+    FOLDER,
+    CUSTOM
 }
 
 export type PropertyParams = {
@@ -53,6 +54,7 @@ export type PropertyParams = {
     [PropertyType.POINT_2D]: { x: { min: number, max: number, step?: number, format?: (value: number) => string, disabled?: boolean }, y: { min: number, max: number, step?: number, format?: (value: number) => string, disabled?: boolean } };
     [PropertyType.LOG_DATA]: {};
     [PropertyType.FOLDER]: { expanded: boolean };
+    [PropertyType.CUSTOM]: {};
 }
 
 export type PropertyValues = {
@@ -70,7 +72,8 @@ export type PropertyValues = {
     [PropertyType.BUTTON]: (...args: any[]) => void;
     [PropertyType.POINT_2D]: { x: number, y: number };
     [PropertyType.LOG_DATA]: string;
-    [PropertyType.FOLDER]: PropertyData<PropertyType>[]
+    [PropertyType.FOLDER]: PropertyData<PropertyType>[];
+    [PropertyType.CUSTOM]: HTMLElement;
 }
 
 export interface PropertyData<T extends PropertyType> {
@@ -134,7 +137,11 @@ interface Property {
     onChange?: (event: ChangeEvent) => void;
 }
 
-type Entity = Folder | Button | Property;
+interface Custom {
+    element: HTMLElement;
+}
+
+type Entity = Folder | Button | Property | Custom;
 
 
 function InspectorModule() {
@@ -562,6 +569,8 @@ function InspectorModule() {
                     rows: 6,
                     placeholder: 'Type here...'
                 });
+            case PropertyType.CUSTOM:
+                return createCustom(field as PropertyData<PropertyType.CUSTOM>);
             case PropertyType.SLIDER:
                 const slider_field = field as PropertyData<PropertyType.SLIDER>;
                 return createEntity(ids, field, {
@@ -588,6 +597,10 @@ function InspectorModule() {
         return (has_title && has_onClick);
     }
 
+    function isCustom(obj: Entity): obj is Custom {
+        return (obj as Custom).element instanceof HTMLElement;
+    }
+
     function createFolder(title: string, childrens: Entity[], expanded: boolean) {
         return {
             title,
@@ -602,6 +615,10 @@ function InspectorModule() {
             onClick: field.value,
             params: params ?? { title: field.title ?? field.key }
         }
+    }
+
+    function createCustom(field: PropertyData<PropertyType.CUSTOM>): Custom {
+        return { element: field.value };
     }
 
     function createEntity<T extends PropertyType>(ids: number[], field: PropertyData<T>, params?: any): Property {
@@ -691,6 +708,11 @@ function InspectorModule() {
             // кнопка
             if (isButton(entity)) {
                 place.addButton(entity.params).on('click', entity.onClick);
+                continue;
+            }
+
+            if (isCustom(entity)) {
+                (place as any).element.appendChild(entity.element);
                 continue;
             }
 

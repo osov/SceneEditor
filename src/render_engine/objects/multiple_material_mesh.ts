@@ -132,7 +132,7 @@ export class MultipleMaterialMesh extends EntityPlane {
 
     serialize() {
         // NOTE: кусок serialize из EntityPlane, без get_color
-        const data: any = {};
+        const data: any = this.serialize_base_data({});
         const size = this.get_size();
         const pivot = this.get_pivot();
 
@@ -201,6 +201,7 @@ export class MultipleMaterialMesh extends EntityPlane {
     }
 
     deserialize(data: MultipleMaterialMeshSerializeData) {
+        this.deserialize_base_data(data);
         if (data.mesh_name) {
             this.set_mesh(data.mesh_name);
         }

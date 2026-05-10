@@ -56,7 +56,7 @@ export class EntityPlane extends EntityBase implements IBaseMesh {
     }
 
     serialize() {
-        const data: any = {};
+        const data: any = this.serialize_base_data({});
         const size = this.get_size();
         const pivot = this.get_pivot();
         const color = this.get_color();
@@ -80,6 +80,7 @@ export class EntityPlane extends EntityBase implements IBaseMesh {
     }
 
     deserialize(_data: any) {
+        this.deserialize_base_data(_data);
         this.set_pivot(0.5, 0.5, false);
         this.set_size(32 * WORLD_SCALAR, 32 * WORLD_SCALAR);
         this.set_color('#fff');

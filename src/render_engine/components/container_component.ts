@@ -29,10 +29,11 @@ export class Component extends EntityBase implements IBaseEntity {
 
     serialize(params?: any) {
         const data = this.cmp.serialize(params);
-        return { type: this.sub_type, data };
+        return this.serialize_base_data({ type: this.sub_type, data });
     }
 
     deserialize(_data: any) {
+        this.deserialize_base_data(_data);
         this.sub_type = _data.type;
         this.cmp.deserialize(_data.data);
     }

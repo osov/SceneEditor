@@ -81,7 +81,7 @@ function TileSwayControlCreate() {
 
         EventBus.on('SYS_INPUT_POINTER_MOVE', (e) => {
             if (Input.is_shift()) {
-                const now = System.now_with_ms();
+                const now = System.now_ms();
                 if (now - _last_sway_raycast > 50) {
                     _last_sway_raycast = now;
                     _raycast_pointer.set(e.x, e.y);
