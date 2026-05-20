@@ -13,6 +13,9 @@ export function register_camera_control() {
 }
 
 function CameraControlCreate() {
+    const DEFAULT_ORTHOGRAPHIC_ZOOM = 0.9;
+    const MIN_ORTHOGRAPHIC_ZOOM = 0.01;
+    const MAX_ORTHOGRAPHIC_ZOOM = 100;
     let active_scene = '';
     const is_perspective = !IS_CAMERA_ORTHOGRAPHIC;
     const subsetOfTHREE = {
@@ -48,7 +51,7 @@ function CameraControlCreate() {
             control_orthographic.truckSpeed = 1;
             control_orthographic.dollySpeed = 1;
             control_orthographic.dollyToCursor = true;
-            control_orthographic.zoomTo(0.9);
+            control_orthographic.zoomTo(DEFAULT_ORTHOGRAPHIC_ZOOM);
             control_orthographic.addEventListener('controlend', () => save_state())
             control_orthographic.addEventListener('sleep', () => save_state());
 
@@ -122,6 +125,12 @@ function CameraControlCreate() {
         }
         else {
             const { up, target, pos, zoom, focal } = data;
+            if (!is_valid_orthographic_state(data)) {
+                Log.warn('Camera state ignored: invalid orthographic state', data);
+                set_position(540 / 2, -960 / 2);
+                set_zoom(DEFAULT_ORTHOGRAPHIC_ZOOM);
+                return;
+            }
 
             control_orthographic.camera.up.copy(up);
             control_orthographic.updateCameraUp();
@@ -130,6 +139,23 @@ function CameraControlCreate() {
             control_orthographic.setFocalOffset(focal.x, focal.y, focal.z);
             control_orthographic.zoomTo(zoom);
         }
+    }
+
+    function is_finite_vector(value: Vector3) {
+        return value != undefined
+            && Number.isFinite(value.x)
+            && Number.isFinite(value.y)
+            && Number.isFinite(value.z);
+    }
+
+    function is_valid_orthographic_state(data: { up: Vector3, target: Vector3, pos: Vector3, zoom: number, focal: Vector3 }) {
+        return Number.isFinite(data.zoom)
+            && data.zoom >= MIN_ORTHOGRAPHIC_ZOOM
+            && data.zoom <= MAX_ORTHOGRAPHIC_ZOOM
+            && is_finite_vector(data.up)
+            && is_finite_vector(data.target)
+            && is_finite_vector(data.pos)
+            && is_finite_vector(data.focal);
     }
 
     function get_bounds_from_list(list: any) {
