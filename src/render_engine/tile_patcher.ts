@@ -23,9 +23,34 @@ export type TilesInfo =
 
 const WATER_SEA_MATERIAL = 'water_sea';
 const WATER_SEA_TEXTURES = ['WavesOfShore', 'WavesOfShore_A', 'WavesOfShore_A_2', 'WaveDock'];
+const WATER_SIMPLE_MATERIAL = 'water_simple';
+const WATER_SIMPLE_TEXTURES = [
+    'Lake_05', 'Lake_06', 'Lake_07', 'Lake_08',
+    'Lake_12', 'Lake_13', 'Lake_14',
+    'Lake_17', 'Lake_18', 'Lake_19',
+    'Lake_20', 'Lake_21', 'Lake_22', 'Lake_23', 'Lake_24',
+    'Lake_25', 'Lake_26', 'Lake_27', 'Lake_28', 'Lake_29', 'Lake_30',
+    '1_01A', '2_01A', '3_01A', '4_01A', '5_01A',
+    '6_01A', '7_01A', '8_01A', '9_01A'
+];
+const WATER_SIMPLE_UNIFORMS = {
+    u_speed: 0.15,
+    u_normal_scale: 0.8,
+};
 
 function is_water_sea_tile(texture_name: string) {
     return WATER_SEA_TEXTURES.includes(texture_name);
+}
+
+function is_water_simple_tile(texture_name: string) {
+    return WATER_SIMPLE_TEXTURES.includes(texture_name);
+}
+
+function get_auto_material_name(texture_name: string) {
+    if (is_water_sea_tile(texture_name))
+        return WATER_SEA_MATERIAL;
+    if (is_water_simple_tile(texture_name))
+        return WATER_SIMPLE_MATERIAL;
 }
 
 function apply_auto_tile_material(sprite: GoSprite) {
@@ -34,10 +59,11 @@ function apply_auto_tile_material(sprite: GoSprite) {
     const texture_data = sprite.get_texture();
     const texture_name = texture_data[0];
     const atlas = texture_data[1];
-    if (!is_water_sea_tile(texture_name))
+    const material_name = get_auto_material_name(texture_name);
+    if (!material_name)
         return;
 
-    const material_info = ResourceManager.get_material_info(WATER_SEA_MATERIAL);
+    const material_info = ResourceManager.get_material_info(material_name);
     if (!material_info || !material_info.uniforms.u_texture)
         return;
 
@@ -47,12 +73,19 @@ function apply_auto_tile_material(sprite: GoSprite) {
     }
 
     const water_texture = ResourceManager.get_texture(texture_name, atlas);
-    sprite.set_material(WATER_SEA_MATERIAL);
-    if (sprite.material.name != WATER_SEA_MATERIAL)
+    sprite.set_material(material_name);
+    if (sprite.material.name != material_name)
         return;
 
     ResourceManager.set_material_uniform_for_mesh(sprite as Slice9Mesh, 'u_texture', water_texture.texture);
-    sprite.userData.auto_material_name = WATER_SEA_MATERIAL;
+    if (material_name == WATER_SIMPLE_MATERIAL) {
+        Object.entries(WATER_SIMPLE_UNIFORMS).forEach(([uniform_name, uniform_value]) => {
+            if (material_info.uniforms[uniform_name] == undefined)
+                return;
+            ResourceManager.set_material_uniform_for_mesh(sprite as Slice9Mesh, uniform_name, uniform_value);
+        });
+    }
+    sprite.userData.auto_material_name = material_name;
 }
 
 
