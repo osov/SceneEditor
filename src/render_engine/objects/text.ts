@@ -202,14 +202,6 @@ export class TextMesh extends Text implements IBaseMesh {
     serialize(): TextSerializeData {
         const data: TextSerializeData = {};
 
-        if (Array.isArray(this.userData.linked_objects) && this.userData.linked_objects.length > 0) {
-            data.linked_objects = this.userData.linked_objects.map((item: any) => ({
-                id: item.id,
-                url: item.url,
-                name: item.name,
-            }));
-        }
-
         if (this.text != '') {
             data.text = this.text;
         }

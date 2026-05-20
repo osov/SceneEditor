@@ -49,6 +49,12 @@ export function SceneManagerModule() {
 
     const mesh_url_to_mesh_id: TDictionary<number> = {};
     const mesh_id_to_url: TDictionary<string> = {};
+    type LinkedObjectInfo = { id?: number, url?: string, name?: string };
+    type SceneLinkEntry = {
+        source: { id?: number, url?: string, name?: string, tile_hash?: string },
+        linked_objects: LinkedObjectInfo[]
+    };
+    let scene_links: SceneLinkEntry[] = [];
 
     let id_counter = 0;
 
@@ -160,6 +166,69 @@ export function SceneManagerModule() {
         return mesh_url_to_mesh_id[url];
     }
 
+    function get_hash_by_mesh(mesh: IBaseEntityAndThree) {
+        let key = mesh.name;
+        if (mesh.userData && mesh.userData.tile) {
+            const tile = mesh.userData.tile as any;
+            if ('id_object' in tile)
+                key = tile.id_object + '';
+            else
+                key = mesh.userData.id_layer + '_' + tile.x + '.' + tile.y;
+        }
+        return key;
+    }
+
+    function get_scene_link_source(mesh: IBaseEntityAndThree) {
+        const source = {
+            id: mesh.mesh_data.id,
+            url: get_mesh_url_by_id(mesh.mesh_data.id) ?? '',
+            name: mesh.name,
+            tile_hash: undefined as string | undefined,
+        };
+        if (mesh.userData && mesh.userData.tile) {
+            source.tile_hash = get_hash_by_mesh(mesh);
+        }
+        return source;
+    }
+
+    function resolve_scene_link_source(source: SceneLinkEntry['source']) {
+        if (source.tile_hash) {
+            const by_tile_hash = get_mesh_by_hash(source.tile_hash);
+            if (by_tile_hash) return by_tile_hash;
+        }
+
+        if (source.url) {
+            const id_by_url = get_mesh_id_by_url(source.url);
+            if (id_by_url != undefined) {
+                const by_url = get_mesh_by_id(id_by_url);
+                if (by_url) return by_url;
+            }
+        }
+
+        if (source.id != undefined) {
+            const by_id = get_mesh_by_id(source.id);
+            if (by_id) return by_id;
+        }
+
+        if (source.name) {
+            const by_name = get_mesh_by_name(source.name);
+            if (by_name) return by_name;
+        }
+
+        return null;
+    }
+
+    function get_mesh_by_hash(key: string) {
+        let mesh: IBaseEntityAndThree | null = null;
+        scene.traverse((child) => {
+            if (mesh || !is_base_mesh(child)) return;
+            const candidate = child as IBaseEntityAndThree;
+            if (get_hash_by_mesh(candidate) == key)
+                mesh = candidate;
+        });
+        return mesh;
+    }
+
     function check_id_is_available_or_generate_new(id: number) {
         if (id != -1) {
             const m = get_mesh_by_id(id);
@@ -268,6 +337,51 @@ export function SceneManagerModule() {
             }
         }
         return list;
+    }
+
+    function save_scene_links() {
+        const links: SceneLinkEntry[] = [];
+        get_scene_list().forEach(mesh => {
+            const linked_objects = mesh.userData?.linked_objects;
+            if (!Array.isArray(linked_objects) || linked_objects.length == 0) return;
+
+            links.push({
+                source: get_scene_link_source(mesh),
+                linked_objects: linked_objects.map((item: any) => ({
+                    id: item.id,
+                    url: item.url ?? '',
+                    name: item.name ?? '',
+                }))
+            });
+        });
+        scene_links = links;
+        return links;
+    }
+
+    function set_scene_links(links: SceneLinkEntry[] = []) {
+        scene_links = Array.isArray(links) ? links : [];
+        apply_scene_links_to_scene();
+    }
+
+    function apply_scene_links_to_scene() {
+        if (scene_links.length == 0)
+            return;
+
+        get_scene_list().forEach(mesh => {
+            if (mesh.userData?.linked_objects)
+                delete mesh.userData.linked_objects;
+        });
+
+        scene_links.forEach(link => {
+            const source = resolve_scene_link_source(link.source);
+            if (!source || !Array.isArray(link.linked_objects) || link.linked_objects.length == 0) return;
+
+            source.userData.linked_objects = link.linked_objects.map(item => ({
+                id: item.id,
+                url: item.url ?? '',
+                name: item.name ?? '',
+            }));
+        });
     }
 
     function load_scene(data: IBaseEntityData[], sub_name = '') {
@@ -556,6 +670,9 @@ export function SceneManagerModule() {
         serialize_mesh,
         deserialize_mesh,
         save_scene,
+        save_scene_links,
+        set_scene_links,
+        apply_scene_links_to_scene,
         load_scene,
         get_scene_list,
         set_mesh_name,

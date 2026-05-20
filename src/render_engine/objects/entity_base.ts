@@ -121,13 +121,6 @@ export class EntityBase extends Mesh<BufferGeometry, ShaderMaterial, Object3DEve
     }
 
     protected serialize_base_data(data: any = {}) {
-        if (Array.isArray(this.userData.linked_objects) && this.userData.linked_objects.length > 0) {
-            data.linked_objects = this.userData.linked_objects.map((item: any) => ({
-                id: item.id,
-                url: item.url,
-                name: item.name,
-            }));
-        }
         return data;
     }
 

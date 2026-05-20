@@ -1139,8 +1139,9 @@ function AssetControlCreate() {
         const resp = await ClientAPI.get_data(path);
         if (!resp || resp.result === 0 || !resp.data)
             return Popups.toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
-        const data = JSON.parse(resp.data) as TDictionary<IBaseEntityData[]>;
+        const data = JSON.parse(resp.data) as TDictionary<any>;
         SceneManager.load_scene(data.scene_data);
+        SceneManager.set_scene_links(data.scene_links ?? []);
         ControlManager.update_graph(true, current_scene.name, true);
     }
 
@@ -1202,7 +1203,7 @@ function AssetControlCreate() {
         const path = current_scene.path as string;
         const name = current_scene.name as string;
         const data = SceneManager.save_scene();
-        const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: data }));
+        const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: data, scene_links: SceneManager.save_scene_links() }));
         if (r && r.result) {
             history_length_cache[path] = HistoryControl.get_history(current_scene.path).length;
             return Popups.toast.success(`Сцена ${name} сохранена, путь: ${path}`);
@@ -1393,4 +1394,3 @@ export async function run_debug_filemanager(project_to_load: string) {
         await AssetControl.draw_empty_project();
     }
 }
-

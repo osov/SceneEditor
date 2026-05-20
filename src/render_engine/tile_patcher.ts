@@ -10,7 +10,16 @@ import { convertThreeJSBlendingToBlendMode, convertBlendModeToThreeJS } from "@e
 import { BlendMode } from "@editor/inspectors/MeshInspector";
 
 export type TilesInfo =
-    TDictionary<{ texture?: string, layers_mask?: number, material_name?: string, blending?: Blending, color?: string, uniforms?: TDictionary<any>, z?: number }>;
+    TDictionary<{
+        texture?: string,
+        layers_mask?: number,
+        material_name?: string,
+        blending?: Blending,
+        color?: string,
+        uniforms?: TDictionary<any>,
+        z?: number,
+        linked_objects?: { id?: number, url?: string, name?: string }[]
+    }>;
 
 
 export function TilePatcher(tilemap_path: string) {
@@ -200,7 +209,19 @@ export function TilePatcher(tilemap_path: string) {
                 //sprite.set_color('#f00');
                 log('other Z', sprite.name);
             }
+
+            if (Array.isArray(info.linked_objects) && info.linked_objects.length > 0) {
+                sprite.userData.linked_objects = info.linked_objects.map(item => ({
+                    id: item.id,
+                    url: item.url ?? '',
+                    name: item.name ?? '',
+                }));
+            } else {
+                delete sprite.userData.linked_objects;
+            }
         });
+
+        SceneManager.apply_scene_links_to_scene();
     }
 
     return { patch, save_tilesinfo };
