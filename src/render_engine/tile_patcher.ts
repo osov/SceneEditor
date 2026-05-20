@@ -21,6 +21,40 @@ export type TilesInfo =
         linked_objects?: { id?: number, url?: string, name?: string }[]
     }>;
 
+const WATER_SEA_MATERIAL = 'water_sea';
+const WATER_SEA_TEXTURES = ['WavesOfShore', 'WavesOfShore_A', 'WavesOfShore_A_2', 'WaveDock'];
+
+function is_water_sea_tile(texture_name: string) {
+    return WATER_SEA_TEXTURES.includes(texture_name);
+}
+
+function apply_auto_tile_material(sprite: GoSprite) {
+    delete sprite.userData.auto_material_name;
+
+    const texture_data = sprite.get_texture();
+    const texture_name = texture_data[0];
+    const atlas = texture_data[1];
+    if (!is_water_sea_tile(texture_name))
+        return;
+
+    const material_info = ResourceManager.get_material_info(WATER_SEA_MATERIAL);
+    if (!material_info || !material_info.uniforms.u_texture)
+        return;
+
+    if (!ResourceManager.has_texture_name(texture_name, atlas)) {
+        Log.warn(`Auto water material skipped: texture "${texture_name}" not found in atlas "${atlas}"`);
+        return;
+    }
+
+    const water_texture = ResourceManager.get_texture(texture_name, atlas);
+    sprite.set_material(WATER_SEA_MATERIAL);
+    if (sprite.material.name != WATER_SEA_MATERIAL)
+        return;
+
+    ResourceManager.set_material_uniform_for_mesh(sprite as Slice9Mesh, 'u_texture', water_texture.texture);
+    sprite.userData.auto_material_name = WATER_SEA_MATERIAL;
+}
+
 
 export function TilePatcher(tilemap_path: string) {
     const tilemap_name = get_file_name(tilemap_path);
@@ -63,7 +97,8 @@ export function TilePatcher(tilemap_path: string) {
             }
 
             const default_material_name = 'slice9';
-            if (material.name != default_material_name) {
+            const auto_material_name = (mesh as Slice9Mesh).userData.auto_material_name;
+            if (material.name != default_material_name && material.name != auto_material_name) {
                 if (!tiles_data[hash]) tiles_data[hash] = {};
                 tiles_data[hash].material_name = material.name;
             }
@@ -87,8 +122,8 @@ export function TilePatcher(tilemap_path: string) {
             const material_info = ResourceManager.get_material_info(material.name);
 
             let uniforms: { [key: string]: any } = {};
-            if (optimized) uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh as Slice9Mesh) || {};
-            else if (material.name != default_material_name) {
+            if (optimized && material.name != auto_material_name) uniforms = ResourceManager.get_changed_uniforms_for_mesh(mesh as Slice9Mesh) || {};
+            else if (material.name != default_material_name && material.name != auto_material_name) {
                 Object.entries(material.uniforms).forEach(([key, value]) => {
                     uniforms[key] = value.value;
                 });
@@ -146,23 +181,21 @@ export function TilePatcher(tilemap_path: string) {
 
         const dir = tilemap_path.replace(new RegExp(`${tilemap_name}.*$`), '');
         const tilesinfo_path = `${dir}${tilemap_name}.tilesinfo`;
-        let tilesinfo: TilesInfo;
+        let tilesinfo: TilesInfo = {};
 
         try {
             tilesinfo = await ResourceManager.load_asset(tilesinfo_path) as TilesInfo;
         } catch (e) {
             Log.log(`No tilesinfo file found for tilemap ${tilemap_name}`);
-            return;
         }
 
         if (!tilesinfo) {
             Log.log(`No tilesinfo file found for tilemap ${tilemap_name}`);
-            return;
+            tilesinfo = {};
         }
 
-        Object.entries(tilesinfo).forEach(([id, info]) => {
-            const tile = tiles[id];
-            if (!tile) return;
+        Object.entries(tiles).forEach(([id, tile]) => {
+            const info = tilesinfo[id] ?? {};
 
             const sprite = tile._hash as GoSprite;
 
@@ -174,6 +207,7 @@ export function TilePatcher(tilemap_path: string) {
                 const texture_data = sprite.get_texture();
                 sprite.set_material(info.material_name);
                 sprite.set_texture(texture_data[0], texture_data[1]);
+                delete sprite.userData.auto_material_name;
             }
 
             if (info.blending != undefined) {
@@ -189,10 +223,18 @@ export function TilePatcher(tilemap_path: string) {
                 sprite.set_texture(texture_info[1], texture_info[0]);
             }
 
+            if (!info.material_name) {
+                apply_auto_tile_material(sprite);
+            }
+
             if (info.uniforms) {
                 const material_info = ResourceManager.get_material_info(sprite.material.name);
                 if (material_info) {
                     Object.entries(info.uniforms).forEach(([uniform_name, uniform_value]) => {
+                        if (material_info.uniforms[uniform_name] == undefined) {
+                            Log.warn(`Uniform "${uniform_name}" not found for material "${sprite.material.name}" on tile ${sprite.name}`);
+                            return;
+                        }
                         // NOTE: для текстур отдельно вызываем set_texture
                         if (material_info.uniforms[uniform_name].type == MaterialUniformType.SAMPLER2D) {
                             const texture_info = uniform_value.split('/');
