@@ -282,7 +282,7 @@ function ControlManagerCreate() {
     function open_layer_manager() {
         const list = ResourceManager.get_layers().filter(l => l != 'default').map((title, id) => {
             return {
-                id: id.toString(), title, can_delete: true
+                id: id.toString(), title, can_delete: !ResourceManager.is_reserved_layer(title)
             };
         });
 
@@ -342,4 +342,3 @@ function ControlManagerCreate() {
     init();
     return { clear_all_controls, set_active_control, get_tree_graph, update_graph, get_current_scene_name, open_atlas_manager, open_layer_manager, inc_draw_calls, clear_draw_calls };
 }
-

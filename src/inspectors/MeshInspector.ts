@@ -165,6 +165,7 @@ export enum BlendMode {
 
 
 function MeshInspectorCreate() {
+    const EDITABLE_LAYER_MASK = 0x000007FF;
     let _selected_meshes: number[] = [];
 
     function init() {
@@ -3710,7 +3711,7 @@ function MeshInspectorCreate() {
                 Log.error('[handleLayerChange] Mesh not found for id:', item.mesh_id);
                 return;
             }
-            return { mesh_id: item.mesh_id, value: (mesh.layers.mask & 0xFFFFFC00) | ResourceManager.get_layers_mask_by_names(item.value) };
+            return { mesh_id: item.mesh_id, value: (mesh.layers.mask & ~EDITABLE_LAYER_MASK) | ResourceManager.get_layers_mask_by_names(item.value) };
         }).filter(item => item != undefined) as MeshPropertyInfo<number>[];
         updateLayer(patched_data, info.data.event.last);
     }

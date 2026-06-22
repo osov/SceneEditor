@@ -157,6 +157,8 @@ export enum MaterialUniformType {
 }
 
 export function ResourceManagerModule() {
+    const MAX_LAYER_INDEX = 10;
+    const RESERVED_LAYERS = ['nodetect'];
     const font_characters = " !\"#$%&'()*+,-./0123456789:;<=> ?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~йцукенгшщзхфывапролджэячсмитьбюЙЦУКЕНГШЩЗХФЫВАПРОЛДЖЯЧСМИТЬБЮЭ";
     const texture_loader = new TextureLoader();
     const audio_loader = new AudioLoader();
@@ -1698,6 +1700,7 @@ export function ResourceManagerModule() {
             if (!layers_metadata.result) {
                 if (layers_metadata.data == undefined) {
                     Log.log('Update resource manager from metadata: layers not found!');
+                    if (ensure_reserved_layers()) await write_metadata();
                     return;
                 }
                 Log.warn('Update resource manager from metadata: failed on get layers!');
@@ -1711,9 +1714,24 @@ export function ResourceManagerModule() {
                     layers[index] = layer; // индекс в массиве = бит в layers.mask
                 }
             });
+            if (ensure_reserved_layers()) await write_metadata();
         } catch (error) {
             Log.error('Error updating resource manager:', error);
         }
+    }
+
+    function ensure_reserved_layers() {
+        let changed = false;
+        RESERVED_LAYERS.forEach((layer) => {
+            if (layers.includes(layer)) return;
+            add_layer(layer);
+            changed = true;
+        });
+        return changed;
+    }
+
+    function is_reserved_layer(layer: string) {
+        return RESERVED_LAYERS.includes(layer);
     }
 
     function add_layer(layer: string) {
@@ -1747,8 +1765,8 @@ export function ResourceManagerModule() {
                 Log.warn(`Layer "${layer}" not found in layers array`);
                 return 0;
             }
-            if (index > 10) {
-                Log.warn(`Layer "${layer}" index ${index} exceeds maximum allowed value of 10`);
+            if (index > MAX_LAYER_INDEX) {
+                Log.warn(`Layer "${layer}" index ${index} exceeds maximum allowed value of ${MAX_LAYER_INDEX}`);
                 return 0;
             }
             return 1 << index;
@@ -1757,7 +1775,7 @@ export function ResourceManagerModule() {
 
     function get_layers_names_by_mask(mask: number) {
         const result: string[] = [];
-        for (let i = 0; i < Math.min(10, layers.length); i++) {
+        for (let i = 0; i < Math.min(MAX_LAYER_INDEX + 1, layers.length); i++) {
             if ((mask & (1 << i)) && layers[i] != undefined) {
                 result.push(layers[i]);
             }
@@ -1854,6 +1872,7 @@ export function ResourceManagerModule() {
         get_sound_buffer,
         add_layer,
         remove_layer,
+        is_reserved_layer,
         get_layers,
         has_layer,
         get_layers_mask_by_names,
