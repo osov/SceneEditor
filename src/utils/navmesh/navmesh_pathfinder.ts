@@ -3,7 +3,7 @@ import NavMesh from "navmesh";
 import { ISegment, PointLike } from "@editor/utils/geometry/types";
 import { CellsManager, CellsManagerCreate, ObstraclePolygonsManager, ObstraclePolygonsManagerCreate, Polygon, PolyPoints } from "../polygon_manager";
 import { ObstacleTileData } from "../old_pathfinder/types";
-import { build_navnmesh_polygons, get_level_range } from "../polygon_utils";
+import { build_navnmesh_polygons, build_navnmesh_polygons_async, get_level_range } from "../polygon_utils";
 
 
 export function PathFinder() {
@@ -42,7 +42,7 @@ export function PathFinder() {
         locations_navmesh[location] = navmesh;
     }
     
-    function load_location(location: string, obstacles_data: ObstacleTileData[], mul_scalar: number) {
+    function prepare_obstacles(location: string, obstacles_data: ObstacleTileData[], mul_scalar: number) {
         let obst_manager = locations_obstacles[location];
         if (!obst_manager ) {
             obst_manager = ObstraclePolygonsManagerCreate(POLYGON_SPATIAL_HASH_CELL_SIZE, OBST_PADDING, OFFSET_ARC_SEGMENTS);
@@ -54,9 +54,22 @@ export function PathFinder() {
         }
 
         const obstacles_poly = obst_manager.all_elements;
-        
         const level_size = get_level_range(obstacles_poly, LEVEL_PADDING);
+        return {obstacles_poly, level_size};
+    }
+
+    function load_location(location: string, obstacles_data: ObstacleTileData[], mul_scalar: number) {
+        const {obstacles_poly, level_size} = prepare_obstacles(location, obstacles_data, mul_scalar);
         const walkable_poly = build_navnmesh_polygons(level_size, obstacles_poly, rasterizationCellSize)
+        const navmesh = new NavMesh(walkable_poly);
+        locations_navmesh[location] = navmesh;
+        return {obstacles_poly, walkable_poly};
+    }
+
+    /** Как load_location, но не блокирует страницу и сообщает прогресс построения (0..1) */
+    async function load_location_async(location: string, obstacles_data: ObstacleTileData[], mul_scalar: number, on_progress?: (progress: number) => void) {
+        const {obstacles_poly, level_size} = prepare_obstacles(location, obstacles_data, mul_scalar);
+        const walkable_poly = await build_navnmesh_polygons_async(level_size, obstacles_poly, rasterizationCellSize, on_progress);
         const navmesh = new NavMesh(walkable_poly);
         locations_navmesh[location] = navmesh;
         return {obstacles_poly, walkable_poly};
@@ -142,6 +155,6 @@ export function PathFinder() {
         return locations_navmesh[location];
     }
 
-    return { load_location, load_location_with_cells, set_location_navmesh, find_path, get_navmesh, make_cells, level_range: {start, end} }
+    return { load_location, load_location_async, load_location_with_cells, set_location_navmesh, find_path, get_navmesh, make_cells, level_range: {start, end} }
 }
 
