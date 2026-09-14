@@ -41,6 +41,8 @@ function AssetControlCreate() {
     let current_dir: string | undefined = undefined;
     let current_project: string | undefined = undefined;
     let current_scene: { path?: string, name?: string } = {};
+    /** Ключи файла сцены кроме scene_data/scene_links (данные проектов, например mob_zones), сохраняются как есть */
+    let current_scene_extra: TDictionary<any> = {};
     let drag_for_upload_now = false;
     let drag_asset_now = false;
     let history_length_cache: TDictionary<number> = {};
@@ -1127,6 +1129,8 @@ function AssetControlCreate() {
             Popups.toast.error(`Серверу не удалось установить сцену текущей: ${resp.message}`);
             return false;
         }
+        if (current_scene.path != resp.data?.path)
+            current_scene_extra = {};
         current_scene.name = resp.data?.name as string;
         current_scene.path = resp.data?.path as string;
         localStorage.setItem("current_scene_name", current_scene.name);
@@ -1140,8 +1144,10 @@ function AssetControlCreate() {
         if (!resp || resp.result === 0 || !resp.data)
             return Popups.toast.error(`Не удалось получить данные сцены от сервера: ${resp.message}`);
         const data = JSON.parse(resp.data) as TDictionary<any>;
-        SceneManager.load_scene(data.scene_data);
-        SceneManager.set_scene_links(data.scene_links ?? []);
+        const { scene_data, scene_links, ...extra } = data;
+        current_scene_extra = extra;
+        SceneManager.load_scene(scene_data);
+        SceneManager.set_scene_links(scene_links ?? []);
         ControlManager.update_graph(true, current_scene.name, true);
     }
 
@@ -1203,7 +1209,7 @@ function AssetControlCreate() {
         const path = current_scene.path as string;
         const name = current_scene.name as string;
         const data = SceneManager.save_scene();
-        const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: data, scene_links: SceneManager.save_scene_links() }));
+        const r = await ClientAPI.save_data(path, JSON.stringify({ scene_data: data, scene_links: SceneManager.save_scene_links(), ...current_scene_extra }));
         if (r && r.result) {
             history_length_cache[path] = HistoryControl.get_history(current_scene.path).length;
             return Popups.toast.success(`Сцена ${name} сохранена, путь: ${path}`);
@@ -1213,6 +1219,17 @@ function AssetControlCreate() {
 
     function get_current_scene() {
         return current_scene;
+    }
+
+    function get_scene_extra(key: string) {
+        return current_scene_extra[key];
+    }
+
+    function set_scene_extra(key: string, value: any) {
+        if (value === undefined)
+            delete current_scene_extra[key];
+        else
+            current_scene_extra[key] = value;
     }
 
     async function on_graph_drop(id: number) {
@@ -1302,7 +1319,7 @@ function AssetControlCreate() {
 
     init();
     return {
-        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene, select_file, loadPartOfSceneInPos, go_to_dir, reload_current_project
+        load_project, new_scene, new_scene_popup, save_current_scene, open_scene, set_current_scene, draw_assets, get_file_data, save_file_data, save_base64_img, draw_empty_project, get_current_scene, get_scene_extra, set_scene_extra, select_file, loadPartOfSceneInPos, go_to_dir, reload_current_project
     };
 }
 
